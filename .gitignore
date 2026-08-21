@@ -1,0 +1,23 @@
+# Dependencies & Build Files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python / Django
+venv/
+*.pyc
+__pycache__/
+*.sqldiff
+.env
+
+# Mobile Build Files
+.gradle/
+build/
+*.apk
+*.ipa
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
