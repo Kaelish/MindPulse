@@ -10,6 +10,7 @@ venv/
 __pycache__/
 *.sqldiff
 .env
+db.sqlite3
 
 # Mobile Build Files
 .gradle/
@@ -17,6 +18,7 @@ build/
 *.apk
 *.ipa
 .idea/
+.expo/
 
 # OS Files
 .DS_Store
