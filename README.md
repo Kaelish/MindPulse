@@ -124,3 +124,5 @@ main web, backend, or bare React Native mobile app.
 	exist before cloud session persistence works.
 - The Django API currently uses local SQLite and is a separate backend contract;
 	frontend session persistence currently targets Supabase directly.
+- Windows mobile development also requires Android Studio, Android SDK
+  Platform-Tools, an emulator or connected phone, and JDK 17.
