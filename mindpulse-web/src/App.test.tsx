@@ -1,9 +1,16 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders doctor dashboard shell with patient overview', async () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+
+  expect(screen.getByText(/Doctor Dashboard/i)).toBeInTheDocument();
+
+  await waitFor(() => {
+    expect(screen.getByText(/Patient list/i)).toBeInTheDocument();
+  });
+
+  expect(screen.getByText(/Today's schedule/i)).toBeInTheDocument();
+  expect(screen.getByText(/Quick insights/i)).toBeInTheDocument();
 });

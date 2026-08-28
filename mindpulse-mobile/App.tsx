@@ -1,33 +1,26 @@
-/**
- * MindPulse – App Entry Point
- * Mounts the Heart Rate Analysis module for development/preview.
- */
-
 import React, { useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
-import { OnboardingNavigator } from './src/screens/onboarding/OnboardingNavigator';
+import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
+import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { Colors } from './src/theme/colors';
 
+type Screen = 'dashboard' | 'call';
+
 function App() {
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [screen, setScreen] = useState<Screen>('dashboard');
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
       <View style={styles.root}>
-        {showOnboarding ? (
-          <OnboardingNavigator
-            onComplete={() => setShowOnboarding(false)}
-            onSignIn={() => setShowOnboarding(false)}
-          />
+        {screen === 'dashboard' ? (
+          <PatientDashboardScreen onStartVideoCall={() => setScreen('call')} />
         ) : (
-          <HeartRateNavigator
-            onExit={() => setShowOnboarding(true)}
-            onModuleComplete={bpm =>
-              console.log(`Heart rate module complete – BPM: ${bpm}`)
-            }
+          <VideoCallScreen
+            doctorId="doctor-123"
+            patientId="patient-456"
+            onEndCall={() => setScreen('dashboard')}
           />
         )}
       </View>
