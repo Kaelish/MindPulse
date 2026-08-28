@@ -549,6 +549,83 @@ button {
   font-size: 0.82rem;
 }
 
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: radial-gradient(circle at 15% 10%, #f8d7c4 0, transparent 34%), #f7f9fd;
+}
+
+.auth-card {
+  width: min(100%, 470px);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 34px;
+  box-shadow: 0 22px 60px rgba(28, 48, 82, 0.12);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.auth-brand .brand-mark { width: 36px; height: 36px; border-radius: 12px; color: #fff; }
+.auth-copy { margin: 54px 0 28px; }
+.auth-copy h1 { margin: 6px 0 10px; font-size: clamp(2rem, 5vw, 2.7rem); letter-spacing: -0.06em; }
+.auth-copy p { margin: 0; color: var(--muted); line-height: 1.6; }
+.auth-form { display: grid; gap: 16px; }
+.auth-field { display: grid; gap: 8px; color: var(--text); font-size: 0.82rem; font-weight: 700; }
+.auth-field input { width: 100%; border: 1px solid var(--line); border-radius: 11px; min-height: 48px; padding: 0 14px; color: var(--text); outline: none; }
+.auth-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.auth-primary { border: 0; min-height: 48px; border-radius: 11px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; display: flex; justify-content: center; gap: 12px; align-items: center; }
+.auth-primary span { font-size: 1.25rem; }
+.auth-link, .auth-switch button { border: 0; background: none; color: var(--primary); font-weight: 700; cursor: pointer; padding: 0; text-align: right; }
+.auth-switch { color: var(--muted); text-align: center; font-size: 0.88rem; margin: 24px 0 0; }
+.role-grid { display: grid; gap: 12px; }
+.role-card { position: relative; text-align: left; display: grid; gap: 7px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--text); cursor: pointer; }
+.role-card:hover { border-color: var(--primary); background: var(--primary-soft); }
+.role-card span { color: var(--muted); font-size: 0.84rem; padding-right: 20px; }
+.role-card b { position: absolute; right: 18px; top: 30px; color: var(--primary); }
+.admin-shell { min-height: 100vh; display: flex; background: #f3f6fa; }
+.admin-sidebar { width: 260px; background: #172338; color: #edf3ff; padding: 28px 20px; display: flex; flex-direction: column; gap: 28px; }
+.admin-main { flex: 1; min-width: 0; padding: 34px clamp(20px, 4vw, 60px); }
+.admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 26px 0; }
+.admin-stats article { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 12px; }
+.admin-stats span { color: var(--muted); font-size: 0.8rem; }
+.admin-stats strong { font-size: 2rem; letter-spacing: -0.06em; }
+.admin-stats b { color: var(--success); font-size: 0.78rem; }
+.admin-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+.admin-list { display: grid; gap: 4px; }
+.admin-list > div { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.admin-list p { flex: 1; margin: 0; display: grid; gap: 3px; }
+.admin-list small, .admin-list time { color: var(--muted); font-size: 0.76rem; }
+.admin-health { align-self: start; }
+.health-line { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.health-line b { color: var(--success); }
+
+@media (max-width: 820px) {
+  .admin-sidebar { width: 76px; padding: 22px 12px; }
+  .admin-sidebar .brand-block > div:not(.brand-mark), .admin-sidebar .nav-item { font-size: 0; justify-content: center; padding: 12px 0; }
+  .admin-sidebar .nav-item:first-letter { font-size: 1rem; }
+  .admin-stats { grid-template-columns: repeat(2, 1fr); }
+  .admin-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .auth-card { padding: 24px; }
+  .auth-copy { margin-top: 40px; }
+  .admin-main { padding: 24px 16px; }
+  .admin-stats { gap: 10px; }
+  .admin-stats article { padding: 14px; }
+  .admin-stats strong { font-size: 1.5rem; }
+}
+
 .loading-state,
 .error-state {
   display: flex;

@@ -49,7 +49,7 @@ const appointments: AppointmentItem[] = [
   { id: 'A-204', time: '3:00 PM', patient: 'Joseph Kim', type: 'Video Call', doctor: 'Dr. Gomez', status: 'Confirmed' },
 ];
 
-function App() {
+function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -143,6 +143,7 @@ function App() {
           </div>
 
           <div className="header-actions">
+            <button type="button" className="ghost-button" onClick={onSignOut}>Sign out</button>
             <button type="button" className="ghost-button">Export</button>
             <button type="button" className="primary-button">+ New visit</button>
           </div>
@@ -264,6 +265,83 @@ function App() {
       </main>
     </div>
   );
+}
+
+type WebScreen = 'register' | 'login' | 'forgot' | 'reset' | 'roles' | 'admin' | 'doctor';
+
+function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <main className="auth-page">
+      <section className="auth-card">
+        <div className="auth-brand"><span className="brand-mark">M</span><span>MindPulse</span></div>
+        <div className="auth-copy"><div className="eyebrow">Care platform</div><h1>{title}</h1><p>{subtitle}</p></div>
+        {children}
+      </section>
+    </main>
+  );
+}
+
+function AuthInput({ label, type = 'text', placeholder }: { label: string; type?: string; placeholder: string }) {
+  return <label className="auth-field"><span>{label}</span><input type={type} placeholder={placeholder} /></label>;
+}
+
+function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen: WebScreen) => void }) {
+  if (screen === 'register') {
+    return <AuthShell title="Create your account" subtitle="Start a calmer, more connected care experience.">
+      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen('roles'); }}>
+        <AuthInput label="Full name" placeholder="Your full name" />
+        <AuthInput label="Email address" type="email" placeholder="you@example.com" />
+        <AuthInput label="Password" type="password" placeholder="Create a password" />
+        <button className="auth-primary" type="submit">Create account <span>→</span></button>
+      </form>
+      <p className="auth-switch">Already have an account? <button type="button" onClick={() => setScreen('login')}>Sign in</button></p>
+    </AuthShell>;
+  }
+
+  if (screen === 'forgot' || screen === 'reset') {
+    const isReset = screen === 'reset';
+    return <AuthShell title={isReset ? 'Set a new password' : 'Recover your account'} subtitle={isReset ? 'Choose a secure password for your MindPulse account.' : 'We will send a secure reset link to your email.'}>
+      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen(isReset ? 'login' : 'reset'); }}>
+        {!isReset && <AuthInput label="Email address" type="email" placeholder="you@example.com" />}
+        {isReset && <><AuthInput label="New password" type="password" placeholder="Enter a new password" /><AuthInput label="Confirm password" type="password" placeholder="Repeat your password" /></>}
+        <button className="auth-primary" type="submit">{isReset ? 'Save password' : 'Send reset link'} <span>→</span></button>
+      </form>
+      <p className="auth-switch"><button type="button" onClick={() => setScreen('login')}>Back to sign in</button></p>
+    </AuthShell>;
+  }
+
+  return <AuthShell title="Welcome back" subtitle="Sign in to continue to your MindPulse workspace.">
+    <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen('roles'); }}>
+      <AuthInput label="Email address" type="email" placeholder="you@example.com" />
+      <AuthInput label="Password" type="password" placeholder="Enter your password" />
+      <button className="auth-link" type="button" onClick={() => setScreen('forgot')}>Forgot password?</button>
+      <button className="auth-primary" type="submit">Sign in <span>→</span></button>
+    </form>
+    <p className="auth-switch">New to MindPulse? <button type="button" onClick={() => setScreen('register')}>Create account</button></p>
+  </AuthShell>;
+}
+
+function RoleSelection({ setScreen }: { setScreen: (screen: WebScreen) => void }) {
+  return <AuthShell title="Choose your workspace" subtitle="Select the portal that matches your role.">
+    <div className="role-grid">
+      <button type="button" className="role-card" onClick={() => setScreen('admin')}><strong>Admin Dashboard</strong><span>Manage users, assessments, and analytics.</span><b>→</b></button>
+      <button type="button" className="role-card" onClick={() => setScreen('doctor')}><strong>Doctor Dashboard</strong><span>Review patients, schedules, and consultations.</span><b>→</b></button>
+    </div>
+  </AuthShell>;
+}
+
+function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
+  return <main className="admin-shell"><aside className="admin-sidebar"><div className="brand-block"><div className="brand-mark">M</div><div><div className="brand-name">MindPulse</div><div className="brand-subtitle">Admin Portal</div></div></div><nav className="nav-panel"><button className="nav-item active" type="button">⌂ Dashboard</button><button className="nav-item" type="button">👥 Users</button><button className="nav-item" type="button">▣ Assessment tools</button><button className="nav-item" type="button">▤ Results</button><button className="nav-item" type="button">◌ Analytics</button></nav></aside><section className="admin-main"><header className="topbar"><div><div className="eyebrow">Overview</div><h1>Admin Dashboard</h1></div><button className="ghost-button" type="button" onClick={onSignOut}>Sign out</button></header><section className="admin-stats"><article><span>Total users</span><strong>2,486</strong><b>+12.4%</b></article><article><span>Assessments completed</span><strong>8,942</strong><b>+18.7%</b></article><article><span>Active clinicians</span><strong>148</strong><b>+6.2%</b></article><article><span>Flagged results</span><strong>32</strong><b>−4.1%</b></article></section><section className="admin-grid"><article className="panel"><div className="panel-header"><h2>Recent activity</h2><button className="text-button" type="button">View all</button></div><div className="admin-list"><div><span className="avatar">A</span><p><strong>Ava Thompson</strong><small>Completed stress assessment</small></p><time>2 min ago</time></div><div><span className="avatar">M</span><p><strong>Marcus Lee</strong><small>New clinician account created</small></p><time>18 min ago</time></div><div><span className="avatar">N</span><p><strong>Nina Patel</strong><small>Result flagged for review</small></p><time>1 hr ago</time></div></div></article><article className="panel admin-health"><div className="panel-header"><h2>System health</h2><span className="status-pill status-stable">Operational</span></div><div className="health-line"><span>API services</span><b>99.98%</b></div><div className="health-line"><span>Assessment pipeline</span><b>98.4%</b></div><div className="health-line"><span>Video consultations</span><b>96.2%</b></div></article></section></section></main>;
+}
+
+function App() {
+  const [screen, setScreen] = useState<WebScreen>('register');
+  const signOut = () => setScreen('login');
+
+  if (screen === 'doctor') return <DoctorDashboard onSignOut={signOut} />;
+  if (screen === 'admin') return <AdminDashboard onSignOut={signOut} />;
+  if (screen === 'roles') return <RoleSelection setScreen={setScreen} />;
+  return <WebAuth screen={screen} setScreen={setScreen} />;
 }
 
 export default App;

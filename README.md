@@ -45,6 +45,10 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000).
 
+The web sequence is `WEB - REGISTER` -> `WEB - LOGIN` -> workspace selection.
+From workspace selection, `Admin Dashboard` and `Doctor Dashboard` are
+separate role-based destinations.
+
 Build for production:
 
 ```powershell
