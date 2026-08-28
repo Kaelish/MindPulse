@@ -3,23 +3,33 @@
  * Mounts the Heart Rate Analysis module for development/preview.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
+import { OnboardingNavigator } from './src/screens/onboarding/OnboardingNavigator';
 import { Colors } from './src/theme/colors';
 
 function App() {
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <View style={styles.root}>
-        <HeartRateNavigator
-          onExit={() => console.log('Exit heart rate module')}
-          onModuleComplete={bpm =>
-            console.log(`Heart rate module complete – BPM: ${bpm}`)
-          }
-        />
+        {showOnboarding ? (
+          <OnboardingNavigator
+            onComplete={() => setShowOnboarding(false)}
+            onSignIn={() => setShowOnboarding(false)}
+          />
+        ) : (
+          <HeartRateNavigator
+            onExit={() => setShowOnboarding(true)}
+            onModuleComplete={bpm =>
+              console.log(`Heart rate module complete – BPM: ${bpm}`)
+            }
+          />
+        )}
       </View>
     </SafeAreaProvider>
   );
