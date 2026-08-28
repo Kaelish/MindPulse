@@ -76,6 +76,16 @@ Set-Location "mindpulse-mobile"
 npm run android
 ```
 
+To preview the same mobile source in a browser without Android tooling:
+
+```powershell
+Set-Location "mindpulse-mobile"
+npm run web
+```
+
+Open [http://localhost:8082](http://localhost:8082). This is the mobile app
+preview; the doctor web dashboard remains at port 3000.
+
 For iOS, use macOS with Xcode and CocoaPods:
 
 ```powershell

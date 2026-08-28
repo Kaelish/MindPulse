@@ -37,6 +37,17 @@ In a second terminal, with an emulator running or a phone connected:
 npm run android
 ```
 
+## Run Mobile in a Browser
+
+To preview the actual mobile app source without an emulator or phone:
+
+```powershell
+npm run web
+```
+
+Open `http://localhost:8082`. This is a browser preview of `mindpulse-mobile`,
+not the separate doctor web dashboard in `mindpulse-web`.
+
 Check the Android connection with:
 
 ```powershell
