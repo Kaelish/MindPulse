@@ -48,6 +48,9 @@ npm run web
 Open `http://localhost:8082`. This is a browser preview of `mindpulse-mobile`,
 not the separate doctor web dashboard in `mindpulse-web`.
 
+The mobile startup sequence is `SPLASH SCREEN` -> `HEALTH-SETUP` -> `DASHBOARD`.
+The patient can then open the video consultation from the dashboard.
+
 Check the Android connection with:
 
 ```powershell

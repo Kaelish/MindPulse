@@ -86,6 +86,10 @@ npm run web
 Open [http://localhost:8082](http://localhost:8082). This is the mobile app
 preview; the doctor web dashboard remains at port 3000.
 
+The mobile preview follows the Figma sequence: `SPLASH SCREEN` ->
+`HEALTH-SETUP` -> `DASHBOARD`. The doctor web app starts directly on its
+dashboard at port 3000.
+
 For iOS, use macOS with Xcode and CocoaPods:
 
 ```powershell
