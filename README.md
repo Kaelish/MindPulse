@@ -20,32 +20,30 @@ npm run build
 
 ## Mobile app
 
-The current Expo app is in `mindpulse-expo`.
+The main mobile app is the bare React Native project in `mindpulse-mobile`.
 
-Install dependencies once:
-
-```powershell
-Set-Location "mindpulse-expo"
-npm ci
-```
-
-Start Expo:
+Start Metro:
 
 ```powershell
+Set-Location "mindpulse-mobile"
+npm install
 npm start
 ```
 
-Then press `w` for web, `a` for an Android emulator, or scan the QR code with Expo Go.
-
-Direct commands:
+In a second terminal, run the native app:
 
 ```powershell
-npm run web
+Set-Location "mindpulse-mobile"
 npm run android
+```
+
+For iOS, use macOS with Xcode and CocoaPods:
+
+```powershell
 npm run ios
 ```
 
-The iOS command requires macOS and Xcode.
+The `mindpulse-expo` folder is retained as a separate Expo prototype and is not the main mobile app.
 
 ## Backend
 
