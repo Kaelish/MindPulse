@@ -1,6 +1,33 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+This is the main MindPulse mobile app, built with [**React Native**](https://reactnative.dev).
 
 # Getting Started
+
+From the repository root:
+
+```powershell
+Set-Location "mindpulse-mobile"
+npm install
+```
+
+Start Metro in one terminal:
+
+```powershell
+npm start
+```
+
+In a second terminal, launch Android:
+
+```powershell
+npm run android
+```
+
+For iOS, use macOS with Xcode and CocoaPods:
+
+```powershell
+npm run ios
+```
+
+The Expo project in `mindpulse-expo` is a separate prototype and is not the main mobile app.
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
