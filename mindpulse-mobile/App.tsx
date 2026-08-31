@@ -6,13 +6,14 @@ import {
   DashboardTab,
   PatientDashboardScreen,
 } from './src/screens/patient/PatientDashboardScreen';
+import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
 import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { saveNewStressSession } from './src/services/dashboard';
 import { Colors } from './src/theme/colors';
 
-type ScreenMode = 'splash' | 'dashboard' | 'analysis' | 'clinics' | 'healthSetup' | 'call';
+type ScreenMode = 'splash' | 'dashboard' | 'profile' | 'analysis' | 'clinics' | 'healthSetup' | 'call';
 
 function App() {
   const [screenMode, setScreenMode] = useState<ScreenMode>('splash');
@@ -33,7 +34,7 @@ function App() {
     } else if (tab === 'clinics') {
       setScreenMode('clinics');
     } else if (tab === 'profile') {
-      setScreenMode('healthSetup');
+      setScreenMode('profile');
     } else {
       setScreenMode('dashboard');
     }
@@ -46,13 +47,13 @@ function App() {
       `Completed HR Camera assessment (${bpm} bpm)`,
       bpm,
     );
-    setCurrentTab('home');
-    setScreenMode('dashboard');
+    setCurrentTab('profile');
+    setScreenMode('profile');
   };
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#D6F5D6" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8ED" />
       <View style={styles.root}>
         {screenMode === 'splash' ? (
           <View style={styles.splash}>
@@ -69,7 +70,7 @@ function App() {
             onStartVideoCall={() => setScreenMode('call')}
             onRunSurvey={() => {
               setCurrentTab('profile');
-              setScreenMode('healthSetup');
+              setScreenMode('profile');
             }}
             onRunFaceScan={() => {
               setCurrentTab('analysis');
@@ -80,11 +81,26 @@ function App() {
               setScreenMode('analysis');
             }}
           />
+        ) : screenMode === 'profile' ? (
+          <PatientProfileScreen
+            onNavigateHome={() => {
+              setCurrentTab('home');
+              setScreenMode('dashboard');
+            }}
+            onNavigateTab={handleTabNavigate}
+            onSignOut={() => {
+              setCurrentTab('home');
+              setScreenMode('dashboard');
+            }}
+            onOpenHealthSetup={() => {
+              setScreenMode('healthSetup');
+            }}
+          />
         ) : screenMode === 'analysis' ? (
           <HeartRateNavigator
             onExit={() => {
-              setCurrentTab('home');
-              setScreenMode('dashboard');
+              setCurrentTab('profile');
+              setScreenMode('profile');
             }}
             onModuleComplete={handleAnalysisComplete}
           />
@@ -95,8 +111,8 @@ function App() {
         ) : screenMode === 'healthSetup' ? (
           <HealthSetupScreen
             onContinue={() => {
-              setCurrentTab('home');
-              setScreenMode('dashboard');
+              setCurrentTab('profile');
+              setScreenMode('profile');
             }}
           />
         ) : (
@@ -117,7 +133,7 @@ function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#D6F5D6',
+    backgroundColor: '#FAF8ED',
   },
   subScreenWrap: {
     flex: 1,

@@ -9,6 +9,10 @@ export interface StressSessionItem {
   statusColor: 'green' | 'yellow' | 'pink';
   heartRate?: number;
   notes?: string;
+  surveyScore?: number;
+  emotion?: string;
+  reactionTimeMs?: number;
+  faceConfidencePercent?: number;
 }
 
 export interface DashboardMetrics {
@@ -19,6 +23,7 @@ export interface DashboardMetrics {
   avgHeartRateStatus: string;
   avgStressScore: number;
   avgStressStatus: string;
+  totalAssessments: number;
 }
 
 export interface NotificationItem {
@@ -32,6 +37,8 @@ export interface NotificationItem {
 
 export interface PatientDashboardData {
   userName: string;
+  userEmail: string;
+  userInitials: string;
   greetingDate: string;
   metrics: DashboardMetrics;
   recentSessions: StressSessionItem[];
@@ -43,50 +50,70 @@ export const initialMockSessions: StressSessionItem[] = [
     id: 's-101',
     score: 68,
     title: 'High Stress',
-    date: 'Wed, March 18, 2025',
+    date: 'March 18, 2026',
     status: 'High',
     statusColor: 'pink',
     heartRate: 88,
+    surveyScore: 68,
+    emotion: 'Anxious',
+    reactionTimeMs: 430,
+    faceConfidencePercent: 71,
     notes: 'Work deadline tension detected. Elevated heart rate and facial strain.',
   },
   {
     id: 's-102',
     score: 42,
     title: 'Moderate Stress',
-    date: 'Sat, March 14, 2025',
+    date: 'March 14, 2026',
     status: 'Moderate',
     statusColor: 'yellow',
     heartRate: 76,
+    surveyScore: 45,
+    emotion: 'Calm',
+    reactionTimeMs: 380,
+    faceConfidencePercent: 84,
     notes: 'Post-exercise recovery session. Steady breathing pattern.',
   },
   {
     id: 's-103',
     score: 85,
     title: 'High Stress',
-    date: 'Tue, March 10, 2025',
+    date: 'March 10, 2026',
     status: 'High',
     statusColor: 'pink',
     heartRate: 94,
+    surveyScore: 82,
+    emotion: 'Stressed',
+    reactionTimeMs: 490,
+    faceConfidencePercent: 68,
     notes: 'Sleep deprivation identified from survey inputs.',
   },
   {
     id: 's-104',
     score: 22,
     title: 'Low Stress',
-    date: 'Thu, March 5, 2025',
+    date: 'March 5, 2026',
     status: 'Low',
     statusColor: 'green',
     heartRate: 64,
+    surveyScore: 20,
+    emotion: 'Relaxed',
+    reactionTimeMs: 320,
+    faceConfidencePercent: 92,
     notes: 'Optimal relaxation state after morning meditation.',
   },
   {
     id: 's-105',
     score: 55,
     title: 'Moderate Stress',
-    date: 'Thu, March 5, 2025',
+    date: 'February 28, 2026',
     status: 'Moderate',
     statusColor: 'yellow',
     heartRate: 80,
+    surveyScore: 58,
+    emotion: 'Neutral',
+    reactionTimeMs: 410,
+    faceConfidencePercent: 78,
     notes: 'Midday check-in. Normal physiological metrics.',
   },
 ];
@@ -122,17 +149,24 @@ export const fetchDashboardData = async (
   userId: string = 'user-john-doe',
 ): Promise<PatientDashboardData> => {
   let userName = 'John Doe';
+  let userEmail = 'johndoe@gmail.com';
+  let userInitials = 'JD';
   let sessions = [...initialMockSessions];
 
   try {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, email')
       .eq('id', userId)
       .single();
 
     if (profile?.full_name) {
       userName = profile.full_name;
+      const parts = userName.split(' ');
+      userInitials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : userName.substring(0, 2).toUpperCase();
+    }
+    if (profile?.email) {
+      userEmail = profile.email;
     }
 
     const { data: dbSessions, error } = await supabase
@@ -146,10 +180,14 @@ export const fetchDashboardData = async (
         id: String(row.id),
         score: Number(row.score ?? 50),
         title: row.title ?? (row.score > 60 ? 'High Stress' : row.score > 35 ? 'Moderate Stress' : 'Low Stress'),
-        date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+        date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'March 18, 2026',
         status: row.status ?? (row.score > 60 ? 'High' : row.score > 35 ? 'Moderate' : 'Low'),
         statusColor: row.score > 60 ? 'pink' : row.score > 35 ? 'yellow' : 'green',
         heartRate: row.heart_rate ?? 75,
+        surveyScore: row.survey_score ?? row.score ?? 68,
+        emotion: row.emotion ?? (row.score > 60 ? 'Anxious' : row.score > 35 ? 'Neutral' : 'Calm'),
+        reactionTimeMs: row.reaction_time_ms ?? 430,
+        faceConfidencePercent: row.face_confidence ?? 71,
         notes: row.notes ?? '',
       }));
     }
@@ -170,6 +208,8 @@ export const fetchDashboardData = async (
 
   return {
     userName,
+    userEmail,
+    userInitials,
     greetingDate: 'Thursday, 19 March',
     metrics: {
       latestScore,
@@ -179,6 +219,7 @@ export const fetchDashboardData = async (
       avgHeartRateStatus: avgHeartRate > 80 ? 'Slightly Elevated' : 'Normal Range',
       avgStressScore,
       avgStressStatus: avgStressScore > 60 ? 'High Overall' : avgStressScore > 35 ? 'Moderate Overall' : 'Low Overall',
+      totalAssessments: sessions.length || 5,
     },
     recentSessions: sessions,
     notifications: initialMockNotifications,
@@ -200,14 +241,17 @@ export const saveNewStressSession = async (
     score,
     title,
     date: new Date().toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
     }),
     status,
     statusColor,
     heartRate,
+    surveyScore: score,
+    emotion: score > 60 ? 'Anxious' : score > 35 ? 'Neutral' : 'Calm',
+    reactionTimeMs: Math.round(350 + Math.random() * 100),
+    faceConfidencePercent: Math.round(70 + Math.random() * 20),
     notes,
   };
 
@@ -217,6 +261,10 @@ export const saveNewStressSession = async (
       title,
       status,
       heart_rate: heartRate,
+      survey_score: newSession.surveyScore,
+      emotion: newSession.emotion,
+      reaction_time_ms: newSession.reactionTimeMs,
+      face_confidence: newSession.faceConfidencePercent,
       notes,
     });
   } catch (e) {
