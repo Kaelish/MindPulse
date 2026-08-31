@@ -3,8 +3,10 @@ import { DoctorVideoCallPanel } from '../../components/DoctorVideoCallPanel';
 import {
   WebChatMessage,
   WebConsultationItem,
+  fetchBookedSlotKeys,
   fetchWebChatMessages,
   fetchWebConsultations,
+  saveDoctorScheduleAppointment,
   sendWebChatMessage,
 } from '../../services/consultations';
 
@@ -17,13 +19,50 @@ export const ConsultationsView: React.FC = () => {
   const [showVideoCall, setShowVideoCall] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
+  // Manual Schedule Consultation Modal State
+  const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
+  const [scheduleStep, setScheduleStep] = useState<1 | 2>(1);
+  const [patientName, setPatientName] = useState<string>('John Doe');
+  const [patientAge, setPatientAge] = useState<string>('24');
+  const [patientEmail, setPatientEmail] = useState<string>('student.test@mindpulse.edu');
+  const [patientNotes, setPatientNotes] = useState<string>('Follow-up consultation');
+  const [selectedDate, setSelectedDate] = useState<string>('Today (Aug 31)');
+  const [selectedTime, setSelectedTime] = useState<string>('10:30 AM');
+  const [bookedSlotKeys, setBookedSlotKeys] = useState<Set<string>>(new Set());
+
+  // Real-life date generation
+  const realLifeDates = useMemo(() => {
+    const dates: { label: string; dateStr: string }[] = [];
+    const today = new Date();
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : daysOfWeek[d.getDay()];
+      const monthName = months[d.getMonth()];
+      const dayNum = d.getDate();
+      const dateStr = `${monthName} ${dayNum}`;
+      dates.push({
+        label: `${dayName} (${dateStr})`,
+        dateStr: `${monthName} ${dayNum}, ${d.getFullYear()}`,
+      });
+    }
+    return dates;
+  }, []);
+
+  const timeSlots = ['9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM', '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM'];
+
   useEffect(() => {
     let isActive = true;
     const loadData = async () => {
       setLoading(true);
       const res = await fetchWebConsultations();
+      const slots = await fetchBookedSlotKeys();
       if (isActive) {
         setConsultations(res);
+        setBookedSlotKeys(slots);
         setLoading(false);
       }
     };
@@ -33,13 +72,15 @@ export const ConsultationsView: React.FC = () => {
     };
   }, []);
 
-  // Poll Supabase chat messages in real time when live session or messages tab is open
+  // Poll Supabase chat messages & slot unavailability in real time
   useEffect(() => {
     let isSubscribed = true;
     const loadMessages = async () => {
       const msgs = await fetchWebChatMessages('1b64dd8f-48f1-4298-ac06-61377665e');
+      const slots = await fetchBookedSlotKeys();
       if (isSubscribed) {
         setWebChatMessages(msgs);
+        setBookedSlotKeys(slots);
       }
     };
     void loadMessages();
@@ -49,7 +90,7 @@ export const ConsultationsView: React.FC = () => {
       isSubscribed = false;
       clearInterval(interval);
     };
-  }, [activeSessionItem, consultTab]);
+  }, [activeSessionItem, consultTab, showScheduleModal]);
 
   const handleSendWebMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -60,6 +101,28 @@ export const ConsultationsView: React.FC = () => {
 
     const newMsg = await sendWebChatMessage('1b64dd8f-48f1-4298-ac06-61377665e', 'doctor', text);
     setWebChatMessages((prev) => [...prev, newMsg]);
+  };
+
+  const handleConfirmSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientName.trim() || !patientEmail.trim() || !selectedDate || !selectedTime) return;
+
+    const slotKey = `${selectedDate}_${selectedTime}`;
+    if (bookedSlotKeys.has(slotKey)) return;
+
+    const newConsult = await saveDoctorScheduleAppointment({
+      patientName: patientName.trim(),
+      age: patientAge.trim(),
+      patientEmail: patientEmail.trim(),
+      notes: patientNotes.trim(),
+      selectedDate,
+      selectedTime,
+    });
+
+    setConsultations((prev) => [newConsult, ...prev]);
+    setBookedSlotKeys((prev) => new Set([...Array.from(prev), slotKey]));
+    setShowScheduleModal(false);
+    setScheduleStep(1);
   };
 
   const upcomingConsultations = useMemo(
@@ -94,12 +157,16 @@ export const ConsultationsView: React.FC = () => {
           <button type="button" className="bell-btn" title="Notifications">
             🔔
           </button>
+          {/* Schedule Consultation Button opens Manual Booking Modal */}
           <button
             type="button"
             className="schedule-btn"
-            onClick={() => setConsultTab('messages')}
+            onClick={() => {
+              setScheduleStep(1);
+              setShowScheduleModal(true);
+            }}
           >
-            💬 Open Messages
+            + Schedule Consultation
           </button>
         </div>
       </header>
@@ -267,6 +334,193 @@ export const ConsultationsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* MANUAL SCHEDULE CONSULTATION BOOKING MODAL */}
+      {showScheduleModal && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Schedule Consultation</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  {scheduleStep === 1 ? 'Step 1: Walk-In Patient Information' : 'Step 2: Real-Life Date & Time Slot'}
+                </p>
+              </div>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                onClick={() => setShowScheduleModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {scheduleStep === 1 ? (
+              /* STEP 1: PATIENT INFORMATION TEXTBOXES */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Patient Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                    placeholder="e.g. John Doe"
+                    value={patientName}
+                    onChange={(e) => setPatientName(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      Age *
+                    </label>
+                    <input
+                      type="text"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                      placeholder="e.g. 24"
+                      value={patientAge}
+                      onChange={(e) => setPatientAge(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ flex: 2 }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      Patient Email *
+                    </label>
+                    <input
+                      type="email"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                      placeholder="student.test@mindpulse.edu"
+                      value={patientEmail}
+                      onChange={(e) => setPatientEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Clinical Notes / Reason
+                  </label>
+                  <textarea
+                    rows={3}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                    placeholder="Walk-in consultation notes..."
+                    value={patientNotes}
+                    onChange={(e) => setPatientNotes(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  style={{ background: '#5b6ef5', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
+                  onClick={() => {
+                    if (patientName.trim() && patientEmail.trim()) {
+                      setScheduleStep(2);
+                    }
+                  }}
+                >
+                  Proceed to Date & Time Slot →
+                </button>
+              </div>
+            ) : (
+              /* STEP 2: REAL-LIFE DATE & TIME BOOKING WITH UNAVAILABILITY */
+              <form onSubmit={handleConfirmSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Select Real-Life Booking Date
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+                    {realLifeDates.map((d) => (
+                      <button
+                        key={d.label}
+                        type="button"
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          border: selectedDate === d.label ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
+                          background: selectedDate === d.label ? '#eeedfe' : '#ffffff',
+                          color: selectedDate === d.label ? '#5b6ef5' : '#1e293b',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onClick={() => setSelectedDate(d.label)}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Select Available Time Slot
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                    {timeSlots.map((t) => {
+                      const slotKey = `${selectedDate}_${t}`;
+                      const isBooked = bookedSlotKeys.has(slotKey);
+                      const isSelected = selectedTime === t;
+
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          disabled={isBooked}
+                          style={{
+                            padding: '10px 4px',
+                            borderRadius: '8px',
+                            border: isBooked ? '1px dashed #cbd5e1' : isSelected ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
+                            background: isBooked ? '#f1f5f9' : isSelected ? '#5b6ef5' : '#ffffff',
+                            color: isBooked ? '#94a3b8' : isSelected ? '#ffffff' : '#1e293b',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: isBooked ? 'not-allowed' : 'pointer',
+                            textAlign: 'center',
+                          }}
+                          onClick={() => !isBooked && setSelectedTime(t)}
+                        >
+                          {t} {isBooked ? '🔒 (Unavailable)' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    style={{ flex: 1, background: '#e2e8f0', color: '#334155', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => setScheduleStep(1)}
+                  >
+                    ← Back
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={bookedSlotKeys.has(`${selectedDate}_${selectedTime}`)}
+                    style={{
+                      flex: 2,
+                      background: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? '#94a3b8' : '#5b6ef5',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '12px',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      cursor: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Confirm & Forward to Supabase
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* LIVE DOCTOR CONSULTATION & TWO-WAY CHAT MODAL */}
       {activeSessionItem && (

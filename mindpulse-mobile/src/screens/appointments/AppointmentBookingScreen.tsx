@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   ScrollView,
@@ -53,14 +53,32 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCrisisModal, setShowCrisisModal] = useState(false);
+  const [bookedSlotKeys, setBookedSlotKeys] = useState<Set<string>>(new Set());
 
   const realLifeDates = generateRealLifeDates();
   const timeSlots = ['9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM', '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM'];
 
+  useEffect(() => {
+    let isActive = true;
+    const loadSlots = async () => {
+      const { fetchBookedSlotKeys } = await import('../../services/appointments');
+      const slots = await fetchBookedSlotKeys();
+      if (isActive) {
+        setBookedSlotKeys(slots);
+      }
+    };
+    void loadSlots();
+    const interval = setInterval(loadSlots, 2000);
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [showBookingSheet]);
+
   const handleOpenBooking = (clinician: TelehealthClinician) => {
     setSelectedClinician(clinician);
     setSelectedDateIdx(0);
-    setSelectedTime('3:30 PM');
+    setSelectedTime('10:30 AM');
     setShowBookingSheet(true);
   };
 
@@ -472,20 +490,31 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               <Text style={modalStyles.sectionLabel}>⏰ Select Time</Text>
               <View style={modalStyles.timeGrid}>
                 {timeSlots.map((time, idx) => {
+                  const dateObj = selectedDateIdx !== null ? realLifeDates[selectedDateIdx] : null;
+                  const dateLabel = dateObj ? (dateObj.label === 'Today' || dateObj.label === 'Tomorrow' ? `${dateObj.label} (${dateObj.dateStr.split(',')[0]})` : dateObj.dateStr) : 'Today (Aug 31)';
+                  const slotKey = `${dateLabel}_${time}`;
+                  const isBooked = bookedSlotKeys.has(slotKey);
                   const isSelected = selectedTime === time;
+
                   return (
                     <TouchableOpacity
                       key={idx}
-                      style={[modalStyles.timeCard, isSelected && modalStyles.timeCardActive]}
-                      onPress={() => setSelectedTime(time)}
+                      disabled={isBooked}
+                      style={[
+                        modalStyles.timeCard,
+                        isSelected && modalStyles.timeCardActive,
+                        isBooked && { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderStyle: 'dashed' },
+                      ]}
+                      onPress={() => !isBooked && setSelectedTime(time)}
                     >
                       <Text
                         style={[
                           modalStyles.timeCardText,
                           isSelected && modalStyles.timeCardTextActive,
+                          isBooked && { color: '#94A3B8', fontSize: 10 },
                         ]}
                       >
-                        {time}
+                        {time} {isBooked ? '🔒 (Unavailable)' : ''}
                       </Text>
                     </TouchableOpacity>
                   );

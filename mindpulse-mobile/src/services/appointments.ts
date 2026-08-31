@@ -29,6 +29,8 @@ export interface ChatMessage {
   status?: 'sent' | 'delivered' | 'read';
 }
 
+export const memoryBookedSlotKeys: Set<string> = new Set(['Today (Aug 31)_3:30 PM', 'Today (Aug 31)_9:00 AM']);
+
 export const initialClinicians: TelehealthClinician[] = [
   {
     id: '1b64dd8f-48f1-4298-ac06-61377665e',
@@ -66,6 +68,33 @@ export const generateRealLifeDates = (): { label: string; dateStr: string }[] =>
   return dates;
 };
 
+export const fetchBookedSlotKeys = async (): Promise<Set<string>> => {
+  const slotSet = new Set<string>(memoryBookedSlotKeys);
+
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('appointments').select('*');
+      if (!error && data) {
+        data.forEach((row: any) => {
+          if (row.scheduled_for) {
+            const raw = String(row.scheduled_for).replace(' at ', ' ');
+            const parts = raw.split(' ');
+            if (parts.length >= 3) {
+              const timeStr = `${parts[parts.length - 2]} ${parts[parts.length - 1]}`;
+              const dateStr = parts.slice(0, parts.length - 2).join(' ');
+              slotSet.add(`${dateStr}_${timeStr}`);
+            }
+          }
+        });
+      }
+    }
+  } catch (e) {
+    // Offline fallback
+  }
+
+  return slotSet;
+};
+
 export const initialChatMessages: ChatMessage[] = [
   {
     id: 'm-1',
@@ -93,6 +122,9 @@ export const initialChatMessages: ChatMessage[] = [
 export const saveBookedAppointment = async (
   appointment: Omit<BookedAppointment, 'id' | 'createdAt'>,
 ): Promise<BookedAppointment> => {
+  const slotKey = `${appointment.selectedDate}_${appointment.selectedTime}`;
+  memoryBookedSlotKeys.add(slotKey);
+
   const newAppt: BookedAppointment = {
     id: `appt-${Date.now()}`,
     ...appointment,
