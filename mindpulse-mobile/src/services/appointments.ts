@@ -8,6 +8,7 @@ export interface TelehealthClinician {
   status: 'Available' | 'Offline';
   bio: string;
   tags: string[];
+  email: string;
 }
 
 export interface BookedAppointment {
@@ -30,31 +31,14 @@ export interface ChatMessage {
 
 export const initialClinicians: TelehealthClinician[] = [
   {
-    id: 'c-1',
-    name: 'Dr. Sarah Chen',
+    id: '1b64dd8f-48f1-4298-ac06-61377665e',
+    name: 'Dr. Monroe Leclair',
     specialty: 'Clinical Psychologist',
     avatar: '👩‍⚕️',
     status: 'Available',
-    bio: 'Specializing in cognitive behavioral therapy for student stress and anxiety disorders.',
+    bio: 'Specializing in cognitive behavioral therapy for student stress, burnout, and anxiety disorders.',
     tags: ['Stress', 'Anxiety', 'Mindfulness'],
-  },
-  {
-    id: 'c-2',
-    name: 'Dr. James Dunn',
-    specialty: 'Psychiatrist',
-    avatar: '👨‍⚕️',
-    status: 'Available',
-    bio: 'Expert in stress metrics evaluation and medication management for burnout and insomnia.',
-    tags: ['Depression', 'ADHD', 'PTSD'],
-  },
-  {
-    id: 'c-3',
-    name: 'Dr. Taylor Smith',
-    specialty: 'Telehealth Specialist',
-    avatar: '👩‍⚕️',
-    status: 'Offline',
-    bio: 'Holistic wellness counselor focusing on daily habit formation and work-life balance.',
-    tags: ['Habits', 'Burnout', 'Wellness'],
+    email: 'doctor.test@mindpulse.org',
   },
 ];
 
@@ -86,21 +70,21 @@ export const initialChatMessages: ChatMessage[] = [
   {
     id: 'm-1',
     sender: 'doctor',
-    text: 'Hello John! I reviewed your recent stress check score (68). How are you feeling today?',
+    text: 'Hello John! I am Dr. Monroe. I reviewed your recent stress check score (68). How are you feeling today?',
     timestamp: '9:00 AM',
     status: 'read',
   },
   {
     id: 'm-2',
     sender: 'patient',
-    text: "Hi Dr. Chen, I've been feeling quite stressed from work deadlines recently.",
+    text: "Hi Dr. Monroe, I've been feeling quite stressed from work and class deadlines recently.",
     timestamp: '9:02 AM',
     status: 'read',
   },
   {
     id: 'm-3',
     sender: 'doctor',
-    text: "I see. Let's start with a guided breathing exercise during our session.",
+    text: "I see. Let's start with a guided breathing exercise during our scheduled consultation.",
     timestamp: '9:05 AM',
     status: 'read',
   },
@@ -117,8 +101,8 @@ export const saveBookedAppointment = async (
 
   try {
     await supabase.from('appointments').insert({
-      patient_id: 'user-john-doe',
-      doctor_id: appointment.clinicianId,
+      patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
+      doctor_id: '1b64dd8f-48f1-4298-ac06-61377665e',
       scheduled_for: `${appointment.selectedDate} at ${appointment.selectedTime}`,
       status: 'confirmed',
       notes: `Booked session with ${appointment.clinicianName}`,
@@ -130,12 +114,11 @@ export const saveBookedAppointment = async (
   return newAppt;
 };
 
-export const fetchChatMessages = async (clinicianId: string): Promise<ChatMessage[]> => {
+export const fetchChatMessages = async (clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e'): Promise<ChatMessage[]> => {
   try {
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('clinician_id', clinicianId)
       .order('created_at', { ascending: true });
 
     if (!error && data && data.length > 0) {
@@ -155,7 +138,7 @@ export const fetchChatMessages = async (clinicianId: string): Promise<ChatMessag
 };
 
 export const sendChatMessage = async (
-  clinicianId: string,
+  clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e',
   sender: 'doctor' | 'patient',
   text: string,
 ): Promise<ChatMessage> => {
@@ -170,7 +153,8 @@ export const sendChatMessage = async (
 
   try {
     await supabase.from('chat_messages').insert({
-      clinician_id: clinicianId,
+      clinician_id: '1b64dd8f-48f1-4298-ac06-61377665e',
+      patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
       sender,
       text,
     });
@@ -185,7 +169,7 @@ export const generateDoctorReplyText = (patientText: string, clinicianName: stri
   const lower = patientText.toLowerCase();
 
   if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-    return `Hello John! How can I assist you with your mental health wellness today?`;
+    return `Hello John! This is Dr. Monroe. How can I assist you with your mental health wellness today?`;
   }
   if (lower.includes('stress') || lower.includes('anxious') || lower.includes('anxiety')) {
     return `I understand. High stress levels can affect sleep and heart rate. Let's try 4-7-8 breathing exercises and discuss coping strategies.`;
