@@ -92,6 +92,206 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
     [],
   );
 
+  type DoctorView = 'dashboard' | 'student-cases' | 'assessment-results' | 'consultations' | 'recommendations';
+  const [activeView, setActiveView] = useState<DoctorView>('dashboard');
+
+  const renderDoctorPanel = () => {
+    if (activeView === 'student-cases') {
+      return (
+        <div className="doctor-view-panel">
+          <div className="doctor-view-header">
+            <h2>Student Cases</h2>
+            <button type="button" className="text-button">Back to cases</button>
+          </div>
+          <div className="case-list">
+            {patientRows.slice(0, 3).map((patient) => (
+              <div key={patient.id} className="case-card">
+                <div className="case-avatar">{patient.name.charAt(0)}</div>
+                <div className="case-content">
+                  <div className="case-name-row">
+                    <strong>{patient.name}</strong>
+                    <span className={`status-pill status-${patient.status.toLowerCase()}`}>{patient.status}</span>
+                  </div>
+                  <p>{patient.condition}</p>
+                  <div className="case-meta-row">
+                    <span>{patient.id}</span>
+                    <span>{patient.score}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeView === 'assessment-results') {
+      return (
+        <div className="doctor-view-panel">
+          <div className="doctor-view-header">
+            <h2>Assessment Results</h2>
+            <button type="button" className="text-button">Filter</button>
+          </div>
+          <div className="results-grid">
+            {patientRows.map((patient) => (
+              <div key={patient.id} className="result-card">
+                <div className="result-topline">
+                  <strong>{patient.name}</strong>
+                  <span className={`status-pill status-${patient.status.toLowerCase()}`}>{patient.status}</span>
+                </div>
+                <p>{patient.condition}</p>
+                <div className="result-score">{patient.score}%</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeView === 'consultations') {
+      return (
+        <div className="doctor-view-panel">
+          <div className="doctor-view-header">
+            <h2>Consultations</h2>
+            <button type="button" className="text-button">New</button>
+          </div>
+          <div className="consultation-list">
+            {appointments.map((item) => (
+              <div key={item.id} className="consultation-card">
+                <div>
+                  <strong>{item.patient}</strong>
+                  <p>{item.type}</p>
+                </div>
+                <span>{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeView === 'recommendations') {
+      return (
+        <div className="doctor-view-panel">
+          <div className="doctor-view-header">
+            <h2>Recommendations</h2>
+            <button type="button" className="text-button">Add</button>
+          </div>
+          <div className="recommendation-list">
+            {patientRows.slice(0, 2).map((patient) => (
+              <div key={patient.id} className="recommendation-card">
+                <strong>{patient.name}</strong>
+                <p>Suggested follow-up plan for {patient.condition.toLowerCase()}.</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <section className="stats-grid" aria-label="Summary statistics">
+          {summaryCards.map((card) => (
+            <article key={card.label} className={`stat-card tone-${card.tone}`}>
+              <div className="stat-label">{card.label}</div>
+              <div className="stat-value">{card.value}</div>
+              <div className="stat-change">{card.change}</div>
+            </article>
+          ))}
+        </section>
+
+        <section className="content-grid">
+          <article className="panel patients-panel">
+            <div className="panel-header">
+              <h2>Patient list</h2>
+              <button type="button" className="text-button">View all</button>
+            </div>
+
+            <div className="table-header">
+              <span>Patient</span>
+              <span>Last visit</span>
+              <span>Score</span>
+              <span>Status</span>
+            </div>
+
+            <div className="table-body">
+              {patientRows.map((patient) => (
+                <div key={patient.id} className="patient-row">
+                  <div className="patient-identity">
+                    <div className="avatar">{patient.name.charAt(0)}</div>
+                    <div>
+                      <div className="patient-name">{patient.name}</div>
+                      <div className="patient-meta">
+                        {patient.id} · {patient.age} yrs
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="patient-subtle">{patient.lastVisit}</div>
+
+                  <div className="score-pill">{patient.score}</div>
+
+                  <div className={`status-pill status-${patient.status.toLowerCase()}`}>
+                    {patient.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel schedule-panel">
+            <div className="panel-header">
+              <h2>Today's schedule</h2>
+              <button type="button" className="text-button">Agenda</button>
+            </div>
+
+            <div className="appointment-list">
+              {appointments.map((item) => (
+                <div key={item.id} className="appointment-item">
+                  <div className="time-block">{item.time}</div>
+                  <div className="appointment-main">
+                    <div className="appointment-name">{item.patient}</div>
+                    <div className="appointment-meta">
+                      {item.type} · {item.doctor}
+                    </div>
+                  </div>
+                  <div className={`status-pill status-${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {item.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel insight-panel">
+            <div className="panel-header">
+              <h2>Quick insights</h2>
+              <button type="button" className="text-button">Update</button>
+            </div>
+
+            <div className="insight-stack">
+              <div className="insight-card">
+                <div className="insight-label">Active patients</div>
+                <div className="insight-value">{patientSummary.active}</div>
+              </div>
+              <div className="insight-card warning">
+                <div className="insight-label">Critical watchlist</div>
+                <div className="insight-value">{patientSummary.critical}</div>
+              </div>
+              <div className="insight-card success">
+                <div className="insight-label">Call readiness</div>
+                <div className="insight-value">96%</div>
+              </div>
+            </div>
+          </article>
+
+          <DoctorVideoCallPanel />
+        </section>
+      </>
+    );
+  };
+
   return (
     <div className="doctor-shell">
       <aside className="sidebar">
@@ -104,26 +304,23 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
         </div>
 
         <nav className="nav-panel" aria-label="Main sidebar navigation">
-          <button className="nav-item active" type="button">
-            <span className="nav-icon">⌂</span>
-            Dashboard
-          </button>
-          <button className="nav-item" type="button">
-            <span className="nav-icon">👥</span>
-            Patients
-          </button>
-          <button className="nav-item" type="button">
-            <span className="nav-icon">📅</span>
-            Schedule
-          </button>
-          <button className="nav-item" type="button">
-            <span className="nav-icon">📹</span>
-            Calls
-          </button>
-          <button className="nav-item" type="button">
-            <span className="nav-icon">📈</span>
-            Analytics
-          </button>
+          {[
+            { key: 'dashboard', label: 'Dashboard', icon: '⌂' },
+            { key: 'student-cases', label: 'Student Cases', icon: '👥' },
+            { key: 'assessment-results', label: 'Assessment Results', icon: '▣' },
+            { key: 'consultations', label: 'Consultations', icon: '📅' },
+            { key: 'recommendations', label: 'Recommendations', icon: '📈' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              className={`nav-item ${activeView === item.key ? 'active' : ''}`}
+              type="button"
+              onClick={() => setActiveView(item.key as DoctorView)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
         </nav>
 
         <div className="sidebar-card">
@@ -140,7 +337,7 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
         <header className="topbar">
           <div>
             <div className="eyebrow">Overview</div>
-            <h1>Doctor Dashboard</h1>
+            <h1>{activeView === 'dashboard' ? 'Doctor Dashboard' : activeView.replace('-', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}</h1>
           </div>
 
           <div className="header-actions">
@@ -163,105 +360,7 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
             </button>
           </div>
         ) : (
-          <>
-            <section className="stats-grid" aria-label="Summary statistics">
-              {summaryCards.map((card) => (
-                <article key={card.label} className={`stat-card tone-${card.tone}`}>
-                  <div className="stat-label">{card.label}</div>
-                  <div className="stat-value">{card.value}</div>
-                  <div className="stat-change">{card.change}</div>
-                </article>
-              ))}
-            </section>
-
-            <section className="content-grid">
-              <article className="panel patients-panel">
-                <div className="panel-header">
-                  <h2>Patient list</h2>
-                  <button type="button" className="text-button">View all</button>
-                </div>
-
-                <div className="table-header">
-                  <span>Patient</span>
-                  <span>Last visit</span>
-                  <span>Score</span>
-                  <span>Status</span>
-                </div>
-
-                <div className="table-body">
-                  {patientRows.map((patient) => (
-                    <div key={patient.id} className="patient-row">
-                      <div className="patient-identity">
-                        <div className="avatar">{patient.name.charAt(0)}</div>
-                        <div>
-                          <div className="patient-name">{patient.name}</div>
-                          <div className="patient-meta">
-                            {patient.id} · {patient.age} yrs
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="patient-subtle">{patient.lastVisit}</div>
-
-                      <div className="score-pill">{patient.score}</div>
-
-                      <div className={`status-pill status-${patient.status.toLowerCase()}`}>
-                        {patient.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="panel schedule-panel">
-                <div className="panel-header">
-                  <h2>Today's schedule</h2>
-                  <button type="button" className="text-button">Agenda</button>
-                </div>
-
-                <div className="appointment-list">
-                  {appointments.map((item) => (
-                    <div key={item.id} className="appointment-item">
-                      <div className="time-block">{item.time}</div>
-                      <div className="appointment-main">
-                        <div className="appointment-name">{item.patient}</div>
-                        <div className="appointment-meta">
-                          {item.type} · {item.doctor}
-                        </div>
-                      </div>
-                      <div className={`status-pill status-${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {item.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="panel insight-panel">
-                <div className="panel-header">
-                  <h2>Quick insights</h2>
-                  <button type="button" className="text-button">Update</button>
-                </div>
-
-                <div className="insight-stack">
-                  <div className="insight-card">
-                    <div className="insight-label">Active patients</div>
-                    <div className="insight-value">{patientSummary.active}</div>
-                  </div>
-                  <div className="insight-card warning">
-                    <div className="insight-label">Critical watchlist</div>
-                    <div className="insight-value">{patientSummary.critical}</div>
-                  </div>
-                  <div className="insight-card success">
-                    <div className="insight-label">Call readiness</div>
-                    <div className="insight-value">96%</div>
-                  </div>
-                </div>
-              </article>
-
-              <DoctorVideoCallPanel />
-            </section>
-          </>
+          renderDoctorPanel()
         )}
       </main>
     </div>
@@ -273,10 +372,23 @@ type WebScreen = 'register' | 'login' | 'forgot' | 'reset' | 'roles' | 'admin' |
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <main className="auth-page">
-      <section className="auth-card">
-        <div className="auth-brand"><span className="brand-mark">M</span><span>MindPulse</span></div>
-        <div className="auth-copy"><div className="eyebrow">Care platform</div><h1>{title}</h1><p>{subtitle}</p></div>
-        {children}
+      <section className="auth-panel">
+        <div className="auth-panel-left">
+          <div className="auth-brand auth-brand-large"><span className="brand-mark">M</span><span>MindPulse</span></div>
+          <div className="auth-hero-copy">
+            <h2>{title}</h2>
+            <p>{subtitle}</p>
+          </div>
+          <ul className="feature-list">
+            <li>Real-time Stress Detection</li>
+            <li>Comprehensive Analytics</li>
+            <li>Privacy First</li>
+          </ul>
+        </div>
+
+        <div className="auth-panel-right">
+          <div className="auth-inner">{children}</div>
+        </div>
       </section>
     </main>
   );
@@ -372,13 +484,24 @@ function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen:
   };
 
   if (screen === 'register') {
-    return <AuthShell title="Create your account" subtitle="Start a calmer, more connected care experience.">
+    return <AuthShell title="Start Your Journey with MindPulse" subtitle="Join leading organizations in transforming mental health monitoring through AI-powered facial analysis.">
+      <div className="auth-topbox">
+        <h3>Create Account</h3>
+        <p>Sign up to get started with MindPulse admin portal</p>
+        <div className="social-row">
+          <button type="button" className="social-btn">Google</button>
+          <button type="button" className="social-btn">Facebook</button>
+        </div>
+        <div className="auth-divider"><span>or continue with</span></div>
+      </div>
+
       <form className="auth-form" onSubmit={handleRegister}>
-        <AuthInput label="Full name" placeholder="Your full name" value={fullName} onChange={setFullName} />
-        <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
-        <AuthInput label="Password" type="password" placeholder="Create a password" value={password} onChange={setPassword} />
+        <AuthInput label="Full name" placeholder="Full name" value={fullName} onChange={setFullName} />
+        <AuthInput label="Email address" type="email" placeholder="Email address" value={email} onChange={setEmail} />
+        <AuthInput label="Password" type="password" placeholder="Password" value={password} onChange={setPassword} />
         {errorMessage && <p className="auth-error">{errorMessage}</p>}
-        <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : 'Create account'} <span>→</span></button>
+        <label className="checkbox-row"><input type="checkbox" /><span>I agree to MindPulse Terms &amp; Conditions.</span></label>
+        <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : 'Create account'}</button>
       </form>
       <p className="auth-switch">Already have an account? <button type="button" onClick={() => setScreen('login')}>Sign in</button></p>
     </AuthShell>;
@@ -386,25 +509,42 @@ function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen:
 
   if (screen === 'forgot' || screen === 'reset') {
     const isReset = screen === 'reset';
-    return <AuthShell title={isReset ? 'Set a new password' : 'Recover your account'} subtitle={isReset ? 'Choose a secure password for your MindPulse account.' : 'We will send a secure reset link to your email.'}>
+    return <AuthShell title={isReset ? 'Create New Password' : 'Reset Your Password'} subtitle={isReset ? 'Choose a strong password to protect your MindPulse admin account.' : "Don't worry, it happens to the best of us. Enter your email and we'll send you a link to reset your password."}>
+      <div className="auth-topbox minimal">
+        <button type="button" className="back-link" onClick={() => setScreen('login')}>&larr; Back to Sign In</button>
+        <h3>{isReset ? 'Reset Password' : 'Forgot Password?'}</h3>
+        <p>{isReset ? 'Please enter your new password below.' : 'No problem! Enter your email address and we\'ll send you instructions to reset your password.'}</p>
+      </div>
+
       <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen(isReset ? 'login' : 'reset'); }}>
-        {!isReset && <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />}
-        {isReset && <><AuthInput label="New password" type="password" placeholder="Enter a new password" value={password} onChange={setPassword} /><AuthInput label="Confirm password" type="password" placeholder="Repeat your password" value={password} onChange={setPassword} /></>}
-        <button className="auth-primary" type="submit">{isReset ? 'Save password' : 'Send reset link'} <span>→</span></button>
+        {!isReset && <AuthInput label="Email Address" type="email" placeholder="admin@mindpulse.com" value={email} onChange={setEmail} />}
+        {isReset && <><AuthInput label="New Password" type="password" placeholder="Enter new password" value={password} onChange={setPassword} /><AuthInput label="Confirm New Password" type="password" placeholder="Re-enter new password" value={password} onChange={setPassword} /></>}
+        <button className="auth-primary" type="submit">{isReset ? 'Reset Password' : 'Send Reset Link'}</button>
       </form>
-      <p className="auth-switch"><button type="button" onClick={() => setScreen('login')}>Back to sign in</button></p>
+      <p className="auth-switch">Remember your password? <button type="button" onClick={() => setScreen('login')}>Sign In</button></p>
     </AuthShell>;
   }
 
-  return <AuthShell title="Welcome back" subtitle="Sign in to continue to your MindPulse workspace.">
+  return <AuthShell title="Welcome Back to MindPulse" subtitle="AI-Based Emotional Stress Detection System Using Facial Analysis.">
+    <div className="auth-topbox">
+      <h3>Sign In</h3>
+      <p>Sign up to get started with MindPulse admin portal</p>
+      <div className="social-row">
+        <button type="button" className="social-btn">Google</button>
+        <button type="button" className="social-btn">Facebook</button>
+      </div>
+      <div className="auth-divider"><span>or continue with</span></div>
+    </div>
+
     <form className="auth-form" onSubmit={handleLogin}>
-      <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
-      <AuthInput label="Password" type="password" placeholder="Enter your password" value={password} onChange={setPassword} />
+      <AuthInput label="Email Address" type="email" placeholder="Email Address" value={email} onChange={setEmail} />
+      <AuthInput label="Password" type="password" placeholder="Password" value={password} onChange={setPassword} />
       {errorMessage && <p className="auth-error">{errorMessage}</p>}
-      <button className="auth-link" type="button" onClick={() => setScreen('forgot')}>Forgot password?</button>
-      <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Sign in'} <span>→</span></button>
+      <label className="checkbox-row"><input type="checkbox" /><span>I agree to MindPulse Terms &amp; Conditions.</span></label>
+      <button className="auth-link auth-inline-link" type="button" onClick={() => setScreen('forgot')}>Forgot password?</button>
+      <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Sign in'}</button>
     </form>
-    <p className="auth-switch">New to MindPulse? <button type="button" onClick={() => setScreen('register')}>Create account</button></p>
+    <p className="auth-switch">Don&apos;t have an account? <button type="button" onClick={() => setScreen('register')}>Sign Up</button></p>
   </AuthShell>;
 }
 
