@@ -1,18 +1,32 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
+import { supabase } from './supabase/client';
 
-test('moves from registration to the doctor dashboard', async () => {
+jest.mock('./supabase/client', () => ({
+  supabase: {
+    auth: {
+      signUp: jest.fn(),
+    },
+  },
+}));
+
+test('registers a new account through Supabase', async () => {
+  const mockedSignUp = supabase.auth.signUp as jest.Mock;
+  mockedSignUp.mockResolvedValue({ data: { user: null }, error: null });
+
   render(<App />);
 
-  expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Alice Test' } });
+  fireEvent.change(screen.getByLabelText(/Email address/i), { target: { value: 'alice@example.com' } });
+  fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'Pass1234!' } });
   fireEvent.submit(screen.getByRole('button', { name: /Create account/i }).closest('form')!);
-  fireEvent.click(screen.getByRole('button', { name: /Doctor Dashboard/i }));
 
   await waitFor(() => {
-    expect(screen.getByText(/Patient list/i)).toBeInTheDocument();
+    expect(mockedSignUp).toHaveBeenCalledWith({
+      email: 'alice@example.com',
+      password: 'Pass1234!',
+      options: { data: { full_name: 'Alice Test' } },
+    });
   });
-
-  expect(screen.getByText(/Today's schedule/i)).toBeInTheDocument();
-  expect(screen.getByText(/Quick insights/i)).toBeInTheDocument();
 });

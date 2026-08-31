@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DoctorVideoCallPanel } from './components/DoctorVideoCallPanel';
+import { supabase } from './supabase/client';
 import './App.css';
 
 interface SummaryCard {
@@ -281,18 +282,103 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
   );
 }
 
-function AuthInput({ label, type = 'text', placeholder }: { label: string; type?: string; placeholder: string }) {
-  return <label className="auth-field"><span>{label}</span><input type={type} placeholder={placeholder} /></label>;
+function AuthInput({ label, type = 'text', placeholder, value, onChange }: { label: string; type?: string; placeholder: string; value: string; onChange: (value: string) => void }) {
+  const inputId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  return (
+    <label className="auth-field" htmlFor={inputId}>
+      <span>{label}</span>
+      <input id={inputId} type={type} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
 }
 
 function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen: WebScreen) => void }) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setErrorMessage('Please complete all fields to create your account.');
+      return;
+    }
+
+    if (!supabase) {
+      setErrorMessage('Supabase is not configured. Add your project URL and publishable key first.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: fullName.trim() } },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setScreen('roles');
+    } catch (error) {
+      setErrorMessage('Unable to create your account right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Please enter both your email and password.');
+      return;
+    }
+
+    if (!supabase) {
+      setErrorMessage('Supabase is not configured. Add your project URL and publishable key first.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setScreen('roles');
+    } catch (error) {
+      setErrorMessage('Unable to sign in right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (screen === 'register') {
     return <AuthShell title="Create your account" subtitle="Start a calmer, more connected care experience.">
-      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen('roles'); }}>
-        <AuthInput label="Full name" placeholder="Your full name" />
-        <AuthInput label="Email address" type="email" placeholder="you@example.com" />
-        <AuthInput label="Password" type="password" placeholder="Create a password" />
-        <button className="auth-primary" type="submit">Create account <span>→</span></button>
+      <form className="auth-form" onSubmit={handleRegister}>
+        <AuthInput label="Full name" placeholder="Your full name" value={fullName} onChange={setFullName} />
+        <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
+        <AuthInput label="Password" type="password" placeholder="Create a password" value={password} onChange={setPassword} />
+        {errorMessage && <p className="auth-error">{errorMessage}</p>}
+        <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : 'Create account'} <span>→</span></button>
       </form>
       <p className="auth-switch">Already have an account? <button type="button" onClick={() => setScreen('login')}>Sign in</button></p>
     </AuthShell>;
@@ -302,8 +388,8 @@ function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen:
     const isReset = screen === 'reset';
     return <AuthShell title={isReset ? 'Set a new password' : 'Recover your account'} subtitle={isReset ? 'Choose a secure password for your MindPulse account.' : 'We will send a secure reset link to your email.'}>
       <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen(isReset ? 'login' : 'reset'); }}>
-        {!isReset && <AuthInput label="Email address" type="email" placeholder="you@example.com" />}
-        {isReset && <><AuthInput label="New password" type="password" placeholder="Enter a new password" /><AuthInput label="Confirm password" type="password" placeholder="Repeat your password" /></>}
+        {!isReset && <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />}
+        {isReset && <><AuthInput label="New password" type="password" placeholder="Enter a new password" value={password} onChange={setPassword} /><AuthInput label="Confirm password" type="password" placeholder="Repeat your password" value={password} onChange={setPassword} /></>}
         <button className="auth-primary" type="submit">{isReset ? 'Save password' : 'Send reset link'} <span>→</span></button>
       </form>
       <p className="auth-switch"><button type="button" onClick={() => setScreen('login')}>Back to sign in</button></p>
@@ -311,11 +397,12 @@ function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen:
   }
 
   return <AuthShell title="Welcome back" subtitle="Sign in to continue to your MindPulse workspace.">
-    <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen('roles'); }}>
-      <AuthInput label="Email address" type="email" placeholder="you@example.com" />
-      <AuthInput label="Password" type="password" placeholder="Enter your password" />
+    <form className="auth-form" onSubmit={handleLogin}>
+      <AuthInput label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
+      <AuthInput label="Password" type="password" placeholder="Enter your password" value={password} onChange={setPassword} />
+      {errorMessage && <p className="auth-error">{errorMessage}</p>}
       <button className="auth-link" type="button" onClick={() => setScreen('forgot')}>Forgot password?</button>
-      <button className="auth-primary" type="submit">Sign in <span>→</span></button>
+      <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Sign in'} <span>→</span></button>
     </form>
     <p className="auth-switch">New to MindPulse? <button type="button" onClick={() => setScreen('register')}>Create account</button></p>
   </AuthShell>;

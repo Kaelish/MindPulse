@@ -2,6 +2,60 @@
 
 MindPulse contains the web and mobile frontends plus the Django backend.
 
+## Shared Supabase connection
+
+This project uses one shared Supabase project for the app and backend connection.
+
+Project URL:
+https://whihfwcygbqpjtrpnlck.supabase.co
+
+Project ID:
+whihfwcygbqpjtrpnlck
+
+Region:
+ap-northeast-2
+
+### Frontend web app
+Create a local `.env` file in `mindpulse-web/`:
+
+```env
+REACT_APP_SUPABASE_URL=https://whihfwcygbqpjtrpnlck.supabase.co
+REACT_APP_SUPABASE_PUBLISHABLE_KEY=sb_publishable_WwxgnGMnrVQ-J2Ud6K-r8g_EJy9OSBP
+```
+
+### Mobile app
+The mobile app uses the same project in `mindpulse-mobile/src/supabase/config.ts`:
+
+```ts
+export const supabaseConfig = {
+  url: 'https://whihfwcygbqpjtrpnlck.supabase.co',
+  publishableKey: 'sb_publishable_WwxgnGMnrVQ-J2Ud6K-r8g_EJy9OSBP',
+};
+```
+
+### Backend
+Create a local `.env` file in `mindpulse-backend/`:
+
+```env
+SUPABASE_URL=https://whihfwcygbqpjtrpnlck.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_LCvW79yXx3Y5pAqWXAnWww_i6t58Sn-
+```
+
+Important:
+- Use the publishable key in browser/mobile code only.
+- Use the service role key only in backend/server code.
+- Never commit `.env` files or share the secret key publicly.
+
+## Team access
+
+Each teammate needs:
+1. Access to the Git repository.
+2. Access to the same Supabase project in the Supabase dashboard.
+3. A local copy of the environment files above.
+4. Dependencies installed for the app they are running.
+
+Do not commit `.env` files. The repository `.gitignore` already ignores these files.
+
 ## Prerequisites
 
 - Node.js 22 or newer
