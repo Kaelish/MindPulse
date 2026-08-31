@@ -106,7 +106,10 @@ function App() {
           />
         ) : screenMode === 'clinics' ? (
           <View style={styles.subScreenWrap}>
-            <AppointmentBookingScreen />
+            <AppointmentBookingScreen
+              onNavigateTab={handleTabNavigate}
+              onStartVideoCall={() => setScreenMode('call')}
+            />
           </View>
         ) : screenMode === 'healthSetup' ? (
           <HealthSetupScreen
