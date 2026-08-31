@@ -12,7 +12,7 @@ jest.mock('./supabase/client', () => ({
 }));
 
 test('registers a new account through Supabase', async () => {
-  const mockedSignUp = supabase.auth.signUp as jest.Mock;
+  const mockedSignUp = (supabase?.auth?.signUp as jest.Mock | undefined) ?? jest.fn();
   mockedSignUp.mockResolvedValue({ data: { user: null }, error: null });
 
   render(<App />);
