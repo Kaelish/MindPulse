@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DoctorVideoCallPanel } from './components/DoctorVideoCallPanel';
 import { supabase } from './supabase/client';
+import {
+  WebChatMessage,
+  WebConsultationItem,
+  fetchWebChatMessages,
+  fetchWebConsultations,
+  sendWebChatMessage,
+} from './services/consultations';
 import './App.css';
 
 interface SummaryCard {
@@ -53,22 +60,32 @@ const appointments: AppointmentItem[] = [
 function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  type DoctorView = 'dashboard' | 'student-cases' | 'assessment-results' | 'consultations' | 'recommendations';
+  const [activeView, setActiveView] = useState<DoctorView>('consultations');
+
+  // Consultations & Live Messaging State
+  const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
+  const [consultTab, setConsultTab] = useState<'upcoming' | 'completed'>('upcoming');
+  const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
+  const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
+  const [webInputMessage, setWebInputMessage] = useState<string>('');
+  const [showVideoCall, setShowVideoCall] = useState<boolean>(false);
 
   useEffect(() => {
     let isActive = true;
 
-    const loadDashboard = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
-        await new Promise<void>((resolve) => setTimeout(resolve, 500));
 
-        if (!isActive) {
-          return;
+        const fetchedConsultations = await fetchWebConsultations();
+        if (isActive) {
+          setConsultations(fetchedConsultations);
         }
       } catch (loadError) {
         if (isActive) {
-          setError('Unable to load the doctor dashboard. Please refresh and try again.');
+          setError('Unable to load consultations. Please try again.');
         }
       } finally {
         if (isActive) {
@@ -77,12 +94,55 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
       }
     };
 
-    void loadDashboard();
+    void loadData();
 
     return () => {
       isActive = false;
     };
   }, []);
+
+  // Poll Supabase chat messages in real time when live session modal is active
+  useEffect(() => {
+    if (!activeSessionItem) return;
+
+    let isSubscribed = true;
+
+    const loadMessages = async () => {
+      const msgs = await fetchWebChatMessages(activeSessionItem.id);
+      if (isSubscribed) {
+        setWebChatMessages(msgs);
+      }
+    };
+
+    void loadMessages();
+    const interval = setInterval(loadMessages, 1500);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [activeSessionItem]);
+
+  const handleSendWebMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!webInputMessage.trim() || !activeSessionItem) return;
+
+    const text = webInputMessage.trim();
+    setWebInputMessage('');
+
+    const newMsg = await sendWebChatMessage(activeSessionItem.id, 'doctor', text);
+    setWebChatMessages((prev) => [...prev, newMsg]);
+  };
+
+  const upcomingConsultations = useMemo(
+    () => consultations.filter((c) => c.status !== 'Completed'),
+    [consultations],
+  );
+
+  const completedConsultations = useMemo(
+    () => consultations.filter((c) => c.status === 'Completed'),
+    [consultations],
+  );
 
   const patientSummary = useMemo(
     () => ({
@@ -92,208 +152,9 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
     [],
   );
 
-  type DoctorView = 'dashboard' | 'student-cases' | 'assessment-results' | 'consultations' | 'recommendations';
-  const [activeView, setActiveView] = useState<DoctorView>('dashboard');
-
-  const renderDoctorPanel = () => {
-    if (activeView === 'student-cases') {
-      return (
-        <div className="doctor-view-panel">
-          <div className="doctor-view-header">
-            <h2>Student Cases</h2>
-            <button type="button" className="text-button">Back to cases</button>
-          </div>
-          <div className="case-list">
-            {patientRows.slice(0, 3).map((patient) => (
-              <div key={patient.id} className="case-card">
-                <div className="case-avatar">{patient.name.charAt(0)}</div>
-                <div className="case-content">
-                  <div className="case-name-row">
-                    <strong>{patient.name}</strong>
-                    <span className={`status-pill status-${patient.status.toLowerCase()}`}>{patient.status}</span>
-                  </div>
-                  <p>{patient.condition}</p>
-                  <div className="case-meta-row">
-                    <span>{patient.id}</span>
-                    <span>{patient.score}%</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'assessment-results') {
-      return (
-        <div className="doctor-view-panel">
-          <div className="doctor-view-header">
-            <h2>Assessment Results</h2>
-            <button type="button" className="text-button">Filter</button>
-          </div>
-          <div className="results-grid">
-            {patientRows.map((patient) => (
-              <div key={patient.id} className="result-card">
-                <div className="result-topline">
-                  <strong>{patient.name}</strong>
-                  <span className={`status-pill status-${patient.status.toLowerCase()}`}>{patient.status}</span>
-                </div>
-                <p>{patient.condition}</p>
-                <div className="result-score">{patient.score}%</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'consultations') {
-      return (
-        <div className="doctor-view-panel">
-          <div className="doctor-view-header">
-            <h2>Consultations</h2>
-            <button type="button" className="text-button">New</button>
-          </div>
-          <div className="consultation-list">
-            {appointments.map((item) => (
-              <div key={item.id} className="consultation-card">
-                <div>
-                  <strong>{item.patient}</strong>
-                  <p>{item.type}</p>
-                </div>
-                <span>{item.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'recommendations') {
-      return (
-        <div className="doctor-view-panel">
-          <div className="doctor-view-header">
-            <h2>Recommendations</h2>
-            <button type="button" className="text-button">Add</button>
-          </div>
-          <div className="recommendation-list">
-            {patientRows.slice(0, 2).map((patient) => (
-              <div key={patient.id} className="recommendation-card">
-                <strong>{patient.name}</strong>
-                <p>Suggested follow-up plan for {patient.condition.toLowerCase()}.</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <section className="stats-grid" aria-label="Summary statistics">
-          {summaryCards.map((card) => (
-            <article key={card.label} className={`stat-card tone-${card.tone}`}>
-              <div className="stat-label">{card.label}</div>
-              <div className="stat-value">{card.value}</div>
-              <div className="stat-change">{card.change}</div>
-            </article>
-          ))}
-        </section>
-
-        <section className="content-grid">
-          <article className="panel patients-panel">
-            <div className="panel-header">
-              <h2>Patient list</h2>
-              <button type="button" className="text-button">View all</button>
-            </div>
-
-            <div className="table-header">
-              <span>Patient</span>
-              <span>Last visit</span>
-              <span>Score</span>
-              <span>Status</span>
-            </div>
-
-            <div className="table-body">
-              {patientRows.map((patient) => (
-                <div key={patient.id} className="patient-row">
-                  <div className="patient-identity">
-                    <div className="avatar">{patient.name.charAt(0)}</div>
-                    <div>
-                      <div className="patient-name">{patient.name}</div>
-                      <div className="patient-meta">
-                        {patient.id} · {patient.age} yrs
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="patient-subtle">{patient.lastVisit}</div>
-
-                  <div className="score-pill">{patient.score}</div>
-
-                  <div className={`status-pill status-${patient.status.toLowerCase()}`}>
-                    {patient.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel schedule-panel">
-            <div className="panel-header">
-              <h2>Today's schedule</h2>
-              <button type="button" className="text-button">Agenda</button>
-            </div>
-
-            <div className="appointment-list">
-              {appointments.map((item) => (
-                <div key={item.id} className="appointment-item">
-                  <div className="time-block">{item.time}</div>
-                  <div className="appointment-main">
-                    <div className="appointment-name">{item.patient}</div>
-                    <div className="appointment-meta">
-                      {item.type} · {item.doctor}
-                    </div>
-                  </div>
-                  <div className={`status-pill status-${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                    {item.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel insight-panel">
-            <div className="panel-header">
-              <h2>Quick insights</h2>
-              <button type="button" className="text-button">Update</button>
-            </div>
-
-            <div className="insight-stack">
-              <div className="insight-card">
-                <div className="insight-label">Active patients</div>
-                <div className="insight-value">{patientSummary.active}</div>
-              </div>
-              <div className="insight-card warning">
-                <div className="insight-label">Critical watchlist</div>
-                <div className="insight-value">{patientSummary.critical}</div>
-              </div>
-              <div className="insight-card success">
-                <div className="insight-label">Call readiness</div>
-                <div className="insight-value">96%</div>
-              </div>
-            </div>
-          </article>
-
-          <DoctorVideoCallPanel />
-        </section>
-      </>
-    );
-  };
-
   return (
     <div className="doctor-shell">
+      {/* Sidebar matching screenshot design */}
       <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-mark">M</div>
@@ -323,92 +184,309 @@ function DoctorDashboard({ onSignOut }: { onSignOut: () => void }) {
           ))}
         </nav>
 
-        <div className="sidebar-card">
-          <div className="mini-label">Care load</div>
-          <div className="mini-metric">68%</div>
-          <div className="mini-track">
-            <span />
+        {/* Doctor Monroe Profile Footer Card */}
+        <div className="sidebar-profile-card">
+          <div className="sidebar-profile-top">
+            <div className="sidebar-doctor-avatar">👤</div>
+            <div className="sidebar-doctor-info">
+              <div className="sidebar-doctor-name">Doctor Monroe</div>
+              <div className="sidebar-doctor-email">dr.monroeLeclair@gmail.com</div>
+              <div className="sidebar-doctor-spec">Clinical Psychologist</div>
+            </div>
           </div>
-          <div className="mini-note">4 patients needing follow-up today</div>
+          <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>
+            ➔ Sign Out
+          </button>
         </div>
       </aside>
 
-      <main className="main-panel">
-        <header className="topbar">
-          <div>
-            <div className="eyebrow">Overview</div>
-            <h1>{activeView === 'dashboard' ? 'Doctor Dashboard' : activeView.replace('-', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}</h1>
+      {/* Main View Area */}
+      {activeView === 'consultations' ? (
+        /* CONSULTATIONS SCREEN MATCHING MEDIA_1788161347804.PNG */
+        <div className="consultations-page">
+          {/* Header */}
+          <header className="consultations-header">
+            <div className="consultations-title-wrap">
+              <h1>Consultations</h1>
+              <p>Manage consultations and provide recommendations</p>
+            </div>
+
+            <div className="consultations-header-actions">
+              <button type="button" className="bell-btn" title="Notifications">
+                🔔
+              </button>
+              <button
+                type="button"
+                className="schedule-btn"
+                onClick={() => {
+                  if (upcomingConsultations.length > 0) {
+                    setActiveSessionItem(upcomingConsultations[0]);
+                  }
+                }}
+              >
+                + Schedule Consultation
+              </button>
+            </div>
+          </header>
+
+          {/* 3 Top Stat Cards */}
+          <div className="consult-stats-grid">
+            <div className="consult-stat-card">
+              <div className="label">Total Consultations</div>
+              <div className="val">14</div>
+            </div>
+            <div className="consult-stat-card">
+              <div className="label">Upcoming</div>
+              <div className="val">4</div>
+            </div>
+            <div className="consult-stat-card">
+              <div className="label">Completed</div>
+              <div className="val">7</div>
+            </div>
           </div>
 
-          <div className="header-actions">
-            <button type="button" className="ghost-button" onClick={onSignOut}>Sign out</button>
-            <button type="button" className="ghost-button">Export</button>
-            <button type="button" className="primary-button">+ New visit</button>
-          </div>
-        </header>
+          {/* Main Consultations Table Card */}
+          <div className="consultations-panel-card">
+            {/* Tabs */}
+            <div className="consult-tabs-row">
+              <button
+                type="button"
+                className={`consult-tab-btn ${consultTab === 'upcoming' ? 'active' : ''}`}
+                onClick={() => setConsultTab('upcoming')}
+              >
+                Upcoming ({upcomingConsultations.length})
+              </button>
+              <button
+                type="button"
+                className={`consult-tab-btn ${consultTab === 'completed' ? 'active' : ''}`}
+                onClick={() => setConsultTab('completed')}
+              >
+                Completed ({completedConsultations.length})
+              </button>
+            </div>
 
-        {loading ? (
-          <div className="loading-state">
-            <div className="spinner" aria-label="Loading dashboard" />
-            <p>Loading dashboard data...</p>
+            {/* Items List */}
+            <div className="consultation-items-list">
+              {(consultTab === 'upcoming' ? upcomingConsultations : completedConsultations).map((item) => (
+                <div key={item.id} className="consult-item-row">
+                  <div className="consult-item-main">
+                    <div className="consult-item-left">
+                      <div className="consult-avatar">{item.avatarInitials}</div>
+                      <div className="consult-info">
+                        <div className="consult-patient-name">{item.patientName}</div>
+                        <div className="consult-student-id">{item.studentId}</div>
+                        <div className="consult-time-str">{item.scheduledTime}</div>
+                      </div>
+                    </div>
+
+                    <div className="consult-item-right">
+                      {item.status === 'Completed' ? (
+                        <>
+                          <span className="status-pill-green">Completed</span>
+                          <button
+                            type="button"
+                            className="view-case-btn"
+                            onClick={() => setActiveSessionItem(item)}
+                          >
+                            View Case
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="status-pill-blue">Scheduled</span>
+                          <button
+                            type="button"
+                            className="start-session-btn"
+                            onClick={() => setActiveSessionItem(item)}
+                          >
+                            Start Session
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {item.notes ? (
+                    <div className="consult-notes-box">
+                      <strong>Notes:</strong> {item.notes}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
-        ) : error ? (
-          <div className="error-state">
-            <p>{error}</p>
-            <button type="button" onClick={() => window.location.reload()}>
-              Retry
-            </button>
+        </div>
+      ) : (
+        <main className="main-panel">
+          <header className="topbar">
+            <div>
+              <div className="eyebrow">Overview</div>
+              <h1>{activeView === 'dashboard' ? 'Doctor Dashboard' : activeView.replace('-', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}</h1>
+            </div>
+
+            <div className="header-actions">
+              <button type="button" className="ghost-button" onClick={onSignOut}>Sign out</button>
+              <button type="button" className="ghost-button">Export</button>
+              <button type="button" className="primary-button">+ New visit</button>
+            </div>
+          </header>
+
+          <section className="stats-grid" aria-label="Summary statistics">
+            {summaryCards.map((card) => (
+              <article key={card.label} className={`stat-card tone-${card.tone}`}>
+                <div className="stat-label">{card.label}</div>
+                <div className="stat-value">{card.value}</div>
+                <div className="stat-change">{card.change}</div>
+              </article>
+            ))}
+          </section>
+
+          <section className="content-grid">
+            <article className="panel patients-panel">
+              <div className="panel-header">
+                <h2>Patient list</h2>
+                <button type="button" className="text-button">View all</button>
+              </div>
+
+              <div className="table-header">
+                <span>Patient</span>
+                <span>Last visit</span>
+                <span>Score</span>
+                <span>Status</span>
+              </div>
+
+              <div className="table-body">
+                {patientRows.map((patient) => (
+                  <div key={patient.id} className="patient-row">
+                    <div className="patient-identity">
+                      <div className="avatar">{patient.name.charAt(0)}</div>
+                      <div>
+                        <div className="patient-name">{patient.name}</div>
+                        <div className="patient-meta">
+                          {patient.id} · {patient.age} yrs
+                        </div>
+                      </div>
+                    </div>
+                    <div className="patient-subtle">{patient.lastVisit}</div>
+                    <div className="score-pill">{patient.score}</div>
+                    <div className={`status-pill status-${patient.status.toLowerCase()}`}>
+                      {patient.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="panel schedule-panel">
+              <div className="panel-header">
+                <h2>Today's schedule</h2>
+                <button type="button" className="text-button">Agenda</button>
+              </div>
+
+              <div className="appointment-list">
+                {appointments.map((item) => (
+                  <div key={item.id} className="appointment-item">
+                    <div className="time-block">{item.time}</div>
+                    <div className="appointment-main">
+                      <div className="appointment-name">{item.patient}</div>
+                      <div className="appointment-meta">
+                        {item.type} · {item.doctor}
+                      </div>
+                    </div>
+                    <div className={`status-pill status-${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {item.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </section>
+        </main>
+      )}
+
+      {/* LIVE DOCTOR CONSULTATION & TWO-WAY CHAT MODAL */}
+      {activeSessionItem && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box">
+            <div className="web-chat-modal-header">
+              <div>
+                <h3>Consultation Session: {activeSessionItem.patientName}</h3>
+                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  style={{
+                    background: '#2563eb',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                  onClick={() => setShowVideoCall(true)}
+                >
+                  📹 Start Video Call
+                </button>
+                <button
+                  type="button"
+                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+                  onClick={() => {
+                    setActiveSessionItem(null);
+                    setShowVideoCall(false);
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {showVideoCall ? (
+              <div style={{ flex: 1, padding: '10px' }}>
+                <DoctorVideoCallPanel />
+              </div>
+            ) : (
+              <>
+                <div className="web-chat-body">
+                  {webChatMessages.map((msg) => (
+                    <div key={msg.id} className={`web-msg-row ${msg.sender}`}>
+                      <div className={`web-msg-bubble ${msg.sender}`}>
+                        <div>{msg.text}</div>
+                        <div className="web-msg-time">{msg.timestamp}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
+                  <input
+                    type="text"
+                    placeholder={`Reply to ${activeSessionItem.patientName}...`}
+                    value={webInputMessage}
+                    onChange={(e) => setWebInputMessage(e.target.value)}
+                  />
+                  <button type="submit">Send</button>
+                </form>
+              </>
+            )}
           </div>
-        ) : (
-          renderDoctorPanel()
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
 
-type WebScreen = 'register' | 'login' | 'forgot' | 'reset' | 'roles' | 'admin' | 'doctor';
-
-function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  return (
-    <main className="auth-page">
-      <section className="auth-panel">
-        <div className="auth-panel-left">
-          <div className="auth-brand auth-brand-large"><span className="brand-mark">M</span><span>MindPulse</span></div>
-          <div className="auth-hero-copy">
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
-          </div>
-          <ul className="feature-list">
-            <li>Real-time Stress Detection</li>
-            <li>Comprehensive Analytics</li>
-            <li>Privacy First</li>
-          </ul>
-        </div>
-
-        <div className="auth-panel-right">
-          <div className="auth-inner">{children}</div>
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function AuthInput({ label, type = 'text', placeholder, value, onChange }: { label: string; type?: string; placeholder: string; value: string; onChange: (value: string) => void }) {
-  const inputId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-  return (
-    <label className="auth-field" htmlFor={inputId}>
-      <span>{label}</span>
-      <input id={inputId} type={type} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} />
-    </label>
-  );
-}
-
-function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen: WebScreen) => void }) {
-  const [fullName, setFullName] = useState('');
+function WebAuth({
+  screen,
+  setScreen,
+}: {
+  screen: 'login' | 'register' | 'forgot' | 'reset';
+  setScreen: (screen: 'login' | 'register' | 'forgot' | 'reset' | 'roles') => void;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -484,91 +562,65 @@ function WebAuth({ screen, setScreen }: { screen: WebScreen; setScreen: (screen:
   };
 
   if (screen === 'register') {
-    return <AuthShell title="Start Your Journey with MindPulse" subtitle="Join leading organizations in transforming mental health monitoring through AI-powered facial analysis.">
-      <div className="auth-topbox">
-        <h3>Create Account</h3>
-        <p>Sign up to get started with MindPulse admin portal</p>
-        <div className="social-row">
-          <button type="button" className="social-btn">Google</button>
-          <button type="button" className="social-btn">Facebook</button>
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <h1>Create your account</h1>
+          <p>Start a calmer, more connected care experience.</p>
+          <form className="auth-form" onSubmit={handleRegister}>
+            <input placeholder="Your full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {errorMessage && <p className="auth-error">{errorMessage}</p>}
+            <button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'Create account'}</button>
+          </form>
+          <p className="auth-switch">Already have an account? <button type="button" onClick={() => setScreen('login')}>Sign in</button></p>
         </div>
-        <div className="auth-divider"><span>or continue with</span></div>
       </div>
-
-      <form className="auth-form" onSubmit={handleRegister}>
-        <AuthInput label="Full name" placeholder="Full name" value={fullName} onChange={setFullName} />
-        <AuthInput label="Email address" type="email" placeholder="Email address" value={email} onChange={setEmail} />
-        <AuthInput label="Password" type="password" placeholder="Password" value={password} onChange={setPassword} />
-        {errorMessage && <p className="auth-error">{errorMessage}</p>}
-        <label className="checkbox-row"><input type="checkbox" /><span>I agree to MindPulse Terms &amp; Conditions.</span></label>
-        <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : 'Create account'}</button>
-      </form>
-      <p className="auth-switch">Already have an account? <button type="button" onClick={() => setScreen('login')}>Sign in</button></p>
-    </AuthShell>;
+    );
   }
 
-  if (screen === 'forgot' || screen === 'reset') {
-    const isReset = screen === 'reset';
-    return <AuthShell title={isReset ? 'Create New Password' : 'Reset Your Password'} subtitle={isReset ? 'Choose a strong password to protect your MindPulse admin account.' : "Don't worry, it happens to the best of us. Enter your email and we'll send you a link to reset your password."}>
-      <div className="auth-topbox minimal">
-        <button type="button" className="back-link" onClick={() => setScreen('login')}>&larr; Back to Sign In</button>
-        <h3>{isReset ? 'Reset Password' : 'Forgot Password?'}</h3>
-        <p>{isReset ? 'Please enter your new password below.' : 'No problem! Enter your email address and we\'ll send you instructions to reset your password.'}</p>
+  return (
+    <div className="auth-shell">
+      <div className="auth-card">
+        <h1>Welcome back</h1>
+        <p>Sign in to continue to your MindPulse workspace.</p>
+        <form className="auth-form" onSubmit={handleLogin}>
+          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          {errorMessage && <p className="auth-error">{errorMessage}</p>}
+          <button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Sign in'}</button>
+        </form>
+        <p className="auth-switch">New to MindPulse? <button type="button" onClick={() => setScreen('register')}>Create account</button></p>
       </div>
-
-      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); setScreen(isReset ? 'login' : 'reset'); }}>
-        {!isReset && <AuthInput label="Email Address" type="email" placeholder="admin@mindpulse.com" value={email} onChange={setEmail} />}
-        {isReset && <><AuthInput label="New Password" type="password" placeholder="Enter new password" value={password} onChange={setPassword} /><AuthInput label="Confirm New Password" type="password" placeholder="Re-enter new password" value={password} onChange={setPassword} /></>}
-        <button className="auth-primary" type="submit">{isReset ? 'Reset Password' : 'Send Reset Link'}</button>
-      </form>
-      <p className="auth-switch">Remember your password? <button type="button" onClick={() => setScreen('login')}>Sign In</button></p>
-    </AuthShell>;
-  }
-
-  return <AuthShell title="Welcome Back to MindPulse" subtitle="AI-Based Emotional Stress Detection System Using Facial Analysis.">
-    <div className="auth-topbox">
-      <h3>Sign In</h3>
-      <p>Sign up to get started with MindPulse admin portal</p>
-      <div className="social-row">
-        <button type="button" className="social-btn">Google</button>
-        <button type="button" className="social-btn">Facebook</button>
-      </div>
-      <div className="auth-divider"><span>or continue with</span></div>
     </div>
-
-    <form className="auth-form" onSubmit={handleLogin}>
-      <AuthInput label="Email Address" type="email" placeholder="Email Address" value={email} onChange={setEmail} />
-      <AuthInput label="Password" type="password" placeholder="Password" value={password} onChange={setPassword} />
-      {errorMessage && <p className="auth-error">{errorMessage}</p>}
-      <label className="checkbox-row"><input type="checkbox" /><span>I agree to MindPulse Terms &amp; Conditions.</span></label>
-      <button className="auth-link auth-inline-link" type="button" onClick={() => setScreen('forgot')}>Forgot password?</button>
-      <button className="auth-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Sign in'}</button>
-    </form>
-    <p className="auth-switch">Don&apos;t have an account? <button type="button" onClick={() => setScreen('register')}>Sign Up</button></p>
-  </AuthShell>;
+  );
 }
 
-function RoleSelection({ setScreen }: { setScreen: (screen: WebScreen) => void }) {
-  return <AuthShell title="Choose your workspace" subtitle="Select the portal that matches your role.">
-    <div className="role-grid">
-      <button type="button" className="role-card" onClick={() => setScreen('admin')}><strong>Admin Dashboard</strong><span>Manage users, assessments, and analytics.</span><b>→</b></button>
-      <button type="button" className="role-card" onClick={() => setScreen('doctor')}><strong>Doctor Dashboard</strong><span>Review patients, schedules, and consultations.</span><b>→</b></button>
+function RoleSelection({ setScreen }: { setScreen: (screen: 'doctor' | 'admin' | 'login') => void }) {
+  return (
+    <div className="auth-shell">
+      <div className="auth-card">
+        <h1>Choose your workspace</h1>
+        <p>Select the portal that matches your role.</p>
+        <div className="role-grid">
+          <button type="button" className="role-card" onClick={() => setScreen('doctor')}>
+            <strong>Doctor Dashboard</strong>
+            <span>Review patients, schedules, and consultations.</span>
+          </button>
+        </div>
+      </div>
     </div>
-  </AuthShell>;
-}
-
-function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
-  return <main className="admin-shell"><aside className="admin-sidebar"><div className="brand-block"><div className="brand-mark">M</div><div><div className="brand-name">MindPulse</div><div className="brand-subtitle">Admin Portal</div></div></div><nav className="nav-panel"><button className="nav-item active" type="button">⌂ Dashboard</button><button className="nav-item" type="button">👥 Users</button><button className="nav-item" type="button">▣ Assessment tools</button><button className="nav-item" type="button">▤ Results</button><button className="nav-item" type="button">◌ Analytics</button></nav></aside><section className="admin-main"><header className="topbar"><div><div className="eyebrow">Overview</div><h1>Admin Dashboard</h1></div><button className="ghost-button" type="button" onClick={onSignOut}>Sign out</button></header><section className="admin-stats"><article><span>Total users</span><strong>2,486</strong><b>+12.4%</b></article><article><span>Assessments completed</span><strong>8,942</strong><b>+18.7%</b></article><article><span>Active clinicians</span><strong>148</strong><b>+6.2%</b></article><article><span>Flagged results</span><strong>32</strong><b>−4.1%</b></article></section><section className="admin-grid"><article className="panel"><div className="panel-header"><h2>Recent activity</h2><button className="text-button" type="button">View all</button></div><div className="admin-list"><div><span className="avatar">A</span><p><strong>Ava Thompson</strong><small>Completed stress assessment</small></p><time>2 min ago</time></div><div><span className="avatar">M</span><p><strong>Marcus Lee</strong><small>New clinician account created</small></p><time>18 min ago</time></div><div><span className="avatar">N</span><p><strong>Nina Patel</strong><small>Result flagged for review</small></p><time>1 hr ago</time></div></div></article><article className="panel admin-health"><div className="panel-header"><h2>System health</h2><span className="status-pill status-stable">Operational</span></div><div className="health-line"><span>API services</span><b>99.98%</b></div><div className="health-line"><span>Assessment pipeline</span><b>98.4%</b></div><div className="health-line"><span>Video consultations</span><b>96.2%</b></div></article></section></section></main>;
+  );
 }
 
 function App() {
-  const [screen, setScreen] = useState<WebScreen>('register');
+  const [screen, setScreen] = useState<'doctor' | 'roles' | 'login' | 'register'>('doctor');
   const signOut = () => setScreen('login');
 
   if (screen === 'doctor') return <DoctorDashboard onSignOut={signOut} />;
-  if (screen === 'admin') return <AdminDashboard onSignOut={signOut} />;
-  if (screen === 'roles') return <RoleSelection setScreen={setScreen} />;
-  return <WebAuth screen={screen} setScreen={setScreen} />;
+  if (screen === 'roles') return <RoleSelection setScreen={(s) => setScreen(s === 'doctor' ? 'doctor' : 'login')} />;
+  return <WebAuth screen={screen === 'register' ? 'register' : 'login'} setScreen={(s) => setScreen(s as any)} />;
 }
 
 export default App;
