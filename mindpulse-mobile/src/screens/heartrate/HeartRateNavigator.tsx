@@ -3,19 +3,23 @@
  * State-based navigator for the 3-screen Heart Rate Analysis journey.
  */
 import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { HeartRateInstructionsScreen } from './HeartRateInstructionsScreen';
 import { HeartRateEntryScreen } from './HeartRateEntryScreen';
 import { HeartRateResultScreen } from './HeartRateResultScreen';
+import { BottomTabBar, BottomNavTab } from '../../components/navigation/BottomTabBar';
 
 type Screen = 'instructions' | 'entry' | 'result';
 
 interface Props {
   onExit?: () => void;
+  onNavigateTab?: (tab: BottomNavTab) => void;
   onModuleComplete?: (bpm: number) => void;
 }
 
 export const HeartRateNavigator: React.FC<Props> = ({
   onExit,
+  onNavigateTab,
   onModuleComplete,
 }) => {
   const [screen, setScreen] = useState<Screen>('instructions');
@@ -28,31 +32,45 @@ export const HeartRateNavigator: React.FC<Props> = ({
     setScreen('result');
   };
 
-  switch (screen) {
-    case 'instructions':
-      return (
-        <HeartRateInstructionsScreen
-          onBack={() => onExit?.()}
-          onReady={() => setScreen('entry')}
-        />
-      );
+  const renderScreen = () => {
+    switch (screen) {
+      case 'instructions':
+        return (
+          <HeartRateInstructionsScreen
+            onBack={() => onExit?.()}
+            onReady={() => setScreen('entry')}
+          />
+        );
 
-    case 'entry':
-      return (
-        <HeartRateEntryScreen
-          onBack={() => setScreen('instructions')}
-          onCalculate={handleCalculate}
-        />
-      );
+      case 'entry':
+        return (
+          <HeartRateEntryScreen
+            onBack={() => setScreen('instructions')}
+            onCalculate={handleCalculate}
+          />
+        );
 
-    case 'result':
-      return (
-        <HeartRateResultScreen
-          bpm={bpmResult}
-          beats={beatsResult}
-          onRedo={() => setScreen('entry')}
-          onNext={() => onModuleComplete?.(bpmResult)}
-        />
-      );
-  }
+      case 'result':
+        return (
+          <HeartRateResultScreen
+            bpm={bpmResult}
+            beats={beatsResult}
+            onRedo={() => setScreen('entry')}
+            onNext={() => onModuleComplete?.(bpmResult)}
+          />
+        );
+    }
+  };
+
+  return <View style={styles.container}>{renderScreen()}</View>;
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF8ED',
+  },
+  content: {
+    flex: 1,
+  },
+});

@@ -172,14 +172,6 @@ export const StressAnalysisLayout: React.FC<Props> = ({
         keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
-
-      {/* ── Bottom nav bar ── */}
-      <View style={layout.bottomBar}>
-        <BottomTab icon="⌂" label="Home" />
-        <BottomTab icon="🧠" label="Analysis" active />
-        <BottomTab icon="🩺" label="Clinics" />
-        <BottomTab icon="👤" label="Profile" />
-      </View>
     </SafeAreaView>
   );
 };

@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { AppSpacing, Shadows } from '../../theme/tokens';
+import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import {
   PatientDashboardData,
   StressSessionItem,
@@ -594,41 +595,6 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
           </View>
         )}
       </ScrollView>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => onNavigateTab?.('home')}
-        >
-          <Text style={styles.tabIconEmoji}>🏠</Text>
-          <Text style={styles.tabLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => onNavigateTab?.('analysis')}
-        >
-          <Text style={styles.tabIconEmoji}>🧠</Text>
-          <Text style={styles.tabLabel}>Analysis</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => onNavigateTab?.('clinics')}
-        >
-          <Text style={styles.tabIconEmoji}>🩺</Text>
-          <Text style={styles.tabLabel}>Clinics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => onNavigateTab?.('profile')}
-        >
-          <Text style={[styles.tabIconEmoji, { opacity: 1 }]}>👤</Text>
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Settings Info Modal */}
       {infoModalTitle && (

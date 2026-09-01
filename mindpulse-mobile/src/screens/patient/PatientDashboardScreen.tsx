@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { AppRadius, AppSpacing, AppTypography, Shadows } from '../../theme/tokens';
+import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import {
   DashboardMetrics,
   NotificationItem,
@@ -378,53 +379,6 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          activeOpacity={0.8}
-          onPress={() => onNavigate?.('home')}
-        >
-          <HomeTabIcon active={activeTab === 'home'} />
-          <Text style={[styles.tabLabel, activeTab === 'home' && styles.tabLabelActive]}>
-            Home
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          activeOpacity={0.8}
-          onPress={() => onNavigate?.('analysis')}
-        >
-          <AnalysisTabIcon />
-          <Text style={[styles.tabLabel, activeTab === 'analysis' && styles.tabLabelActive]}>
-            Analysis
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          activeOpacity={0.8}
-          onPress={() => onNavigate?.('clinics')}
-        >
-          <ClinicsTabIcon />
-          <Text style={[styles.tabLabel, activeTab === 'clinics' && styles.tabLabelActive]}>
-            Clinics
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          activeOpacity={0.8}
-          onPress={() => onNavigate?.('profile')}
-        >
-          <ProfileTabIcon />
-          <Text style={[styles.tabLabel, activeTab === 'profile' && styles.tabLabelActive]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Session Details Modal */}
       {selectedSession && (

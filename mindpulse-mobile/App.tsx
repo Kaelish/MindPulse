@@ -2,42 +2,32 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar, StyleSheet, Text as RNText, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HealthSetupScreen } from './src/screens/onboarding/HealthSetupScreen';
-import {
-  DashboardTab,
-  PatientDashboardScreen,
-} from './src/screens/patient/PatientDashboardScreen';
+import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
 import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
+import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
 import { saveNewStressSession } from './src/services/dashboard';
 import { Colors } from './src/theme/colors';
 
-type ScreenMode = 'splash' | 'dashboard' | 'profile' | 'analysis' | 'clinics' | 'healthSetup' | 'call';
+type ScreenMode = 'splash' | 'main' | 'healthSetup' | 'call';
 
 function App() {
   const [screenMode, setScreenMode] = useState<ScreenMode>('splash');
-  const [currentTab, setCurrentTab] = useState<DashboardTab>('home');
+  const [currentTab, setCurrentTab] = useState<BottomNavTab>('home');
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setScreenMode('dashboard');
+      setScreenMode('main');
       setCurrentTab('home');
     }, 1400);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleTabNavigate = (tab: DashboardTab) => {
+  const handleTabNavigate = (tab: BottomNavTab) => {
     setCurrentTab(tab);
-    if (tab === 'analysis') {
-      setScreenMode('analysis');
-    } else if (tab === 'clinics') {
-      setScreenMode('clinics');
-    } else if (tab === 'profile') {
-      setScreenMode('profile');
-    } else {
-      setScreenMode('dashboard');
-    }
+    setScreenMode('main');
   };
 
   const handleAnalysisComplete = async (bpm: number) => {
@@ -48,7 +38,7 @@ function App() {
       bpm,
     );
     setCurrentTab('profile');
-    setScreenMode('profile');
+    setScreenMode('main');
   };
 
   return (
@@ -63,70 +53,64 @@ function App() {
             <RNText style={styles.logoText}>MindPulse</RNText>
             <RNText style={styles.tagline}>Your personal stress companion</RNText>
           </View>
-        ) : screenMode === 'dashboard' ? (
-          <PatientDashboardScreen
-            activeTab={currentTab}
-            onNavigate={handleTabNavigate}
-            onStartVideoCall={() => setScreenMode('call')}
-            onRunSurvey={() => {
-              setCurrentTab('profile');
-              setScreenMode('profile');
-            }}
-            onRunFaceScan={() => {
-              setCurrentTab('analysis');
-              setScreenMode('analysis');
-            }}
-            onRunDailyCheck={() => {
-              setCurrentTab('analysis');
-              setScreenMode('analysis');
-            }}
-          />
-        ) : screenMode === 'profile' ? (
-          <PatientProfileScreen
-            onNavigateHome={() => {
-              setCurrentTab('home');
-              setScreenMode('dashboard');
-            }}
-            onNavigateTab={handleTabNavigate}
-            onSignOut={() => {
-              setCurrentTab('home');
-              setScreenMode('dashboard');
-            }}
-            onOpenHealthSetup={() => {
-              setScreenMode('healthSetup');
-            }}
-          />
-        ) : screenMode === 'analysis' ? (
-          <HeartRateNavigator
-            onExit={() => {
-              setCurrentTab('profile');
-              setScreenMode('profile');
-            }}
-            onModuleComplete={handleAnalysisComplete}
-          />
-        ) : screenMode === 'clinics' ? (
-          <View style={styles.subScreenWrap}>
-            <AppointmentBookingScreen
-              onNavigateTab={handleTabNavigate}
-              onStartVideoCall={() => setScreenMode('call')}
-            />
-          </View>
         ) : screenMode === 'healthSetup' ? (
           <HealthSetupScreen
             onContinue={() => {
               setCurrentTab('profile');
-              setScreenMode('profile');
+              setScreenMode('main');
             }}
           />
-        ) : (
+        ) : screenMode === 'call' ? (
           <VideoCallScreen
             doctorId="doctor-123"
             patientId="patient-456"
             onEndCall={() => {
               setCurrentTab('home');
-              setScreenMode('dashboard');
+              setScreenMode('main');
             }}
           />
+        ) : (
+          /* MAIN PATIENT PORTAL: SINGLE BLUE NAVIGATION BAR AT BOTTOM */
+          <View style={styles.mainWrapper}>
+            <View style={styles.tabViewArea}>
+              {currentTab === 'home' ? (
+                <PatientDashboardScreen
+                  activeTab={currentTab}
+                  onNavigate={handleTabNavigate}
+                  onStartVideoCall={() => setScreenMode('call')}
+                  onRunSurvey={() => setCurrentTab('profile')}
+                  onRunFaceScan={() => setCurrentTab('analysis')}
+                  onRunDailyCheck={() => setCurrentTab('analysis')}
+                />
+              ) : currentTab === 'profile' ? (
+                <PatientProfileScreen
+                  onNavigateHome={() => setCurrentTab('home')}
+                  onNavigateTab={handleTabNavigate}
+                  onSignOut={() => setCurrentTab('home')}
+                  onOpenHealthSetup={() => setScreenMode('healthSetup')}
+                />
+              ) : currentTab === 'analysis' ? (
+                <HeartRateNavigator
+                  onExit={() => setCurrentTab('profile')}
+                  onNavigateTab={handleTabNavigate}
+                  onModuleComplete={handleAnalysisComplete}
+                />
+              ) : (
+                <View style={styles.subScreenWrap}>
+                  <AppointmentBookingScreen
+                    onNavigateTab={handleTabNavigate}
+                    onStartVideoCall={() => setScreenMode('call')}
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* SINGLE AUTHORITATIVE BLUE NAVIGATION BAR */}
+            <BottomTabBar
+              activeTab={currentTab}
+              onNavigate={handleTabNavigate}
+            />
+          </View>
         )}
       </View>
     </SafeAreaProvider>
@@ -137,6 +121,13 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#FAF8ED',
+  },
+  mainWrapper: {
+    flex: 1,
+    backgroundColor: '#FAF8ED',
+  },
+  tabViewArea: {
+    flex: 1,
   },
   subScreenWrap: {
     flex: 1,
