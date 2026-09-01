@@ -43,7 +43,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register'>('register');
+  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register' | 'forgot' | 'reset'>('register');
   const signOut = () => setScreen('login');
 
   if (screen === 'doctor') return <DoctorPortal onSignOut={signOut} />;
@@ -54,7 +54,7 @@ function App() {
 
   return (
     <WebAuth
-      screen={screen === 'register' ? 'register' : 'login'}
+      screen={screen === 'forgot' || screen === 'reset' ? screen : screen === 'register' ? 'register' : 'login'}
       setScreen={(next) => setScreen(next === 'roles' ? 'roles' : next)}
     />
   );
