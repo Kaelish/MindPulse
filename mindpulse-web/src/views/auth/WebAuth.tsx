@@ -91,9 +91,18 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
           <h1>Create your account</h1>
           <p>Start a calmer, more connected care experience.</p>
           <form className="auth-form" onSubmit={handleRegister}>
-            <input placeholder="Your full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label>
+              <span>Full name</span>
+              <input placeholder="Your full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </label>
+            <label>
+              <span>Email address</span>
+              <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </label>
             {errorMessage && <p className="auth-error">{errorMessage}</p>}
             <button className="primary-button" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Creating...' : 'Create account'}
@@ -116,8 +125,14 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         <h1>Welcome back</h1>
         <p>Sign in to continue to your MindPulse workspace.</p>
         <form className="auth-form" onSubmit={handleLogin}>
-          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label>
+            <span>Email address</span>
+            <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
           {errorMessage && <p className="auth-error">{errorMessage}</p>}
           <button className="primary-button" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Signing in...' : 'Sign in'}

@@ -20,7 +20,7 @@ test('registers a new account through Supabase', async () => {
   fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Alice Test' } });
   fireEvent.change(screen.getByLabelText(/Email address/i), { target: { value: 'alice@example.com' } });
   fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'Pass1234!' } });
-  fireEvent.submit(screen.getByRole('button', { name: /Create account/i }).closest('form')!);
+  fireEvent.click(screen.getByRole('button', { name: /Create account/i }));
 
   await waitFor(() => {
     expect(mockedSignUp).toHaveBeenCalledWith({
