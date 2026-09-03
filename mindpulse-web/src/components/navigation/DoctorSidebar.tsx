@@ -5,7 +5,8 @@ export type DoctorView =
   | 'student-cases'
   | 'assessment-results'
   | 'consultations'
-  | 'recommendations';
+  | 'recommendations'
+  | 'profile-setting';
 
 interface DoctorSidebarProps {
   activeView: DoctorView;
@@ -50,17 +51,33 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
         ))}
       </nav>
 
-      {/* Doctor Monroe Leclair Profile Footer Card */}
-      <div className="sidebar-profile-card">
+      {/* Doctor Monroe Leclair Profile Footer Card (Clicking opens Profile Setting) */}
+      <div
+        className="sidebar-profile-card"
+        style={{
+          cursor: 'pointer',
+          border: activeView === 'profile-setting' ? '2px solid #5B6EF5' : '1px solid #e2e8f0',
+          backgroundColor: activeView === 'profile-setting' ? '#EEEDFE' : '#ffffff',
+          transition: 'all 0.15s ease',
+        }}
+        onClick={() => setActiveView('profile-setting')}
+      >
         <div className="sidebar-profile-top">
-          <div className="sidebar-doctor-avatar">👩‍⚕️</div>
+          <div className="sidebar-doctor-avatar">👤</div>
           <div className="sidebar-doctor-info">
             <div className="sidebar-doctor-name">Dr. Monroe Leclair</div>
-            <div className="sidebar-doctor-email">doctor.test@mindpulse.org</div>
+            <div className="sidebar-doctor-email">dr.monroeLeclair@gmail.com</div>
             <div className="sidebar-doctor-spec">Clinical Psychologist</div>
           </div>
         </div>
-        <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>
+        <button
+          type="button"
+          className="sidebar-signout-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSignOut();
+          }}
+        >
           ➔ Sign Out
         </button>
       </div>

@@ -5,6 +5,7 @@ import { StudentCasesView } from './views/doctor/StudentCasesView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView } from './views/doctor/ConsultationsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
+import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
 import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth } from './views/auth/WebAuth';
 import { RoleSelection } from './views/auth/RoleSelection';
@@ -25,6 +26,8 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
         return <ConsultationsView />;
       case 'recommendations':
         return <RecommendationsView />;
+      case 'profile-setting':
+        return <DoctorProfileSettingView />;
       default:
         return <ConsultationsView />;
     }
@@ -43,7 +46,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register' | 'forgot' | 'reset'>('register');
+  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register' | 'forgot' | 'reset'>('doctor');
   const signOut = () => setScreen('login');
 
   if (screen === 'doctor') return <DoctorPortal onSignOut={signOut} />;
