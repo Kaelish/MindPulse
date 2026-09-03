@@ -4,7 +4,7 @@ import './AdminAnalyticsView.css';
 
 interface AdminAnalyticsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'analytics') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics') => void;
 }
 
 const metrics = [

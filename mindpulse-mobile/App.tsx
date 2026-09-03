@@ -7,16 +7,20 @@ import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen
 import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
+import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
+import { FinalStressScoreScreen } from './src/screens/results/FinalStressScoreScreen';
 import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { Colors } from './src/theme/colors';
 
-type ScreenMode = 'splash' | 'main' | 'healthSetup' | 'call';
+type ScreenMode = 'splash' | 'main' | 'healthSetup' | 'reaction' | 'finalResults' | 'call';
 
 function App() {
   const [screenMode, setScreenMode] = useState<ScreenMode>('splash');
   const [currentTab, setCurrentTab] = useState<BottomNavTab>('home');
+  const [heartRateBpm, setHeartRateBpm] = useState(0);
+  const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,17 +48,39 @@ function App() {
       return;
     }
 
+    if (screenMode === 'reaction') {
+      setScreenMode('main');
+      setCurrentTab('analysis');
+      return;
+    }
+
+    if (screenMode === 'finalResults') {
+      setScreenMode('reaction');
+      return;
+    }
+
     if (screenMode === 'main' && currentTab !== 'home') {
       setCurrentTab('home');
     }
   };
 
-  const handleAnalysisComplete = async (bpm: number) => {
-    const score = Math.min(100, Math.max(20, Math.round(bpm * 0.85)));
+  const handleReactionComplete = async (result: ReactionResult) => {
+    setReactionResult(result);
+    setScreenMode('finalResults');
+  };
+
+  const handleAnalysisComplete = (bpm: number) => {
+    setHeartRateBpm(bpm);
+    setScreenMode('reaction');
+  };
+
+  const handleFinalResultsDone = async () => {
+    if (!reactionResult) return;
+    const score = Math.min(100, Math.max(20, reactionResult.score));
     await saveNewStressSession(
       score,
-      `Completed HR Camera assessment (${bpm} bpm)`,
-      bpm,
+      `Completed reaction time assessment (${reactionResult.average} ms average)`,
+      heartRateBpm,
     );
     setCurrentTab('profile');
     setScreenMode('main');
@@ -94,6 +120,20 @@ function App() {
             />
             <BackButton onPress={handleBack} />
           </View>
+        ) : screenMode === 'reaction' ? (
+          <View style={styles.screenWithBackButton}>
+            <ReactionGameScreen
+              onBack={handleBack}
+              onComplete={handleReactionComplete}
+            />
+          </View>
+        ) : screenMode === 'finalResults' && reactionResult ? (
+          <FinalStressScoreScreen
+            heartRate={heartRateBpm}
+            reaction={reactionResult}
+            onBack={handleBack}
+            onDone={handleFinalResultsDone}
+          />
         ) : (
           /* MAIN PATIENT PORTAL: SINGLE BLUE NAVIGATION BAR AT BOTTOM */
           <View style={styles.mainWrapper}>

@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
+import { AdminUsersView } from './AdminUsersView';
+import { AdminResultsView } from './AdminResultsView';
 
 interface AdminDashboardViewProps {
   onSignOut: () => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOut }) => {
-  const [activeView, setActiveView] = useState<'dashboard' | 'analytics'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'results' | 'analytics'>('dashboard');
 
   if (activeView === 'analytics') {
     return <AdminAnalyticsView onSignOut={onSignOut} onNavigate={setActiveView} />;
   }
+  if (activeView === 'users') return <AdminUsersView onSignOut={onSignOut} onNavigate={setActiveView} />;
+  if (activeView === 'results') return <AdminResultsView onSignOut={onSignOut} onNavigate={setActiveView} />;
 
   return (
     <div className="doctor-shell">
