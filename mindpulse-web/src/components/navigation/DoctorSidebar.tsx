@@ -3,6 +3,7 @@ import React from 'react';
 export type DoctorView =
   | 'dashboard'
   | 'student-cases'
+  | 'student-case-detail'
   | 'assessment-results'
   | 'consultations'
   | 'recommendations'

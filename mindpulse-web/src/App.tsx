@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCasesView } from './views/doctor/StudentCasesView';
+import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView } from './views/doctor/ConsultationsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
@@ -19,9 +20,11 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
       case 'dashboard':
         return <DoctorDashboardView onSignOut={onSignOut} />;
       case 'student-cases':
-        return <StudentCasesView />;
+        return <StudentCasesView onViewDetails={() => setActiveView('student-case-detail')} />;
+      case 'student-case-detail':
+        return <StudentCaseDetailView onBack={() => setActiveView('student-cases')} />;
       case 'assessment-results':
-        return <AssessmentResultsView />;
+        return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':
         return <ConsultationsView />;
       case 'recommendations':

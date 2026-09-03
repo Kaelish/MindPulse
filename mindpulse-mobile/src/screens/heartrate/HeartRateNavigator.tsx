@@ -6,10 +6,11 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { HeartRateInstructionsScreen } from './HeartRateInstructionsScreen';
 import { HeartRateEntryScreen } from './HeartRateEntryScreen';
+import { HeartRateTimerScreen } from './HeartRateTimerScreen';
 import { HeartRateResultScreen } from './HeartRateResultScreen';
 import { BottomTabBar, BottomNavTab } from '../../components/navigation/BottomTabBar';
 
-type Screen = 'instructions' | 'entry' | 'result';
+type Screen = 'instructions' | 'timer' | 'entry' | 'result';
 
 interface Props {
   onExit?: () => void;
@@ -38,7 +39,15 @@ export const HeartRateNavigator: React.FC<Props> = ({
         return (
           <HeartRateInstructionsScreen
             onBack={() => onExit?.()}
-            onReady={() => setScreen('entry')}
+            onReady={() => setScreen('timer')}
+          />
+        );
+
+      case 'timer':
+        return (
+          <HeartRateTimerScreen
+            onBack={() => setScreen('instructions')}
+            onComplete={() => setScreen('entry')}
           />
         );
 
