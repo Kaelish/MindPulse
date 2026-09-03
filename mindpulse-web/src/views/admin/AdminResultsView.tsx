@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 
 interface AdminResultsViewProps {
@@ -7,31 +7,55 @@ interface AdminResultsViewProps {
 }
 
 const results = [
-  { id: 'MP-1042', patient: 'John Doe', date: 'Mar 18, 2026', score: 68, level: 'High', heartRate: '88 bpm', reaction: '430 ms' },
-  { id: 'MP-1038', patient: 'John Doe', date: 'Mar 14, 2026', score: 42, level: 'Moderate', heartRate: '76 bpm', reaction: '380 ms' },
-  { id: 'MP-1031', patient: 'John Doe', date: 'Mar 10, 2026', score: 85, level: 'High', heartRate: '94 bpm', reaction: '490 ms' },
-  { id: 'MP-1025', patient: 'John Doe', date: 'Mar 5, 2026', score: 22, level: 'Low', heartRate: '64 bpm', reaction: '320 ms' },
+  { id: 'SD-2845', patient: 'John Doe', date: '2026-04-04 14:23:15', emotion: 'Calm', confidence: '96.5%', tension: 12, heartRate: '72 bpm', level: 'Low' },
+  { id: 'SD-2846', patient: 'Sarah Smith', date: '2026-04-04 13:58:30', emotion: 'Neutral', confidence: '91.8%', tension: 45, heartRate: '82 bpm', level: 'Moderate' },
+  { id: 'SD-2847', patient: 'Mike Johnson', date: '2026-04-04 13:41:08', emotion: 'Neutral', confidence: '89.4%', tension: 22, heartRate: '76 bpm', level: 'Low' },
+  { id: 'SD-2848', patient: 'Emma Wilson', date: '2026-04-04 12:35:44', emotion: 'Anxious', confidence: '78.2%', tension: 68, heartRate: '94 bpm', level: 'High' },
 ];
 
-export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, onNavigate }) => (
-  <div className="doctor-shell">
+export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, onNavigate }) => {
+  const [level, setLevel] = useState('All Levels');
+  const [emotion, setEmotion] = useState('All Emotions');
+  const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(2026, 8, 1));
+  const filteredResults = useMemo(() => results.filter((result) =>
+    (level === 'All Levels' || result.level === level.replace('Moderate', 'Moderate')) &&
+    (emotion === 'All Emotions' || result.emotion === emotion) &&
+    (!selectedDate || result.date.startsWith(selectedDate)) &&
+    `${result.id} ${result.patient}`.toLowerCase().includes(search.toLowerCase()),
+  ), [level, emotion, search, selectedDate]);
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
+    const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+    const previousMonthDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 0).getDate();
+    return Array.from({ length: 42 }, (_, index) => {
+      const dayNumber = index - firstDay + 1;
+      if (dayNumber < 1) return { day: previousMonthDays + dayNumber, currentMonth: false, date: '' };
+      if (dayNumber > daysInMonth) return { day: dayNumber - daysInMonth, currentMonth: false, date: '' };
+      const month = String(calendarMonth.getMonth() + 1).padStart(2, '0');
+      const day = String(dayNumber).padStart(2, '0');
+      return { day: dayNumber, currentMonth: true, date: `${calendarMonth.getFullYear()}-${month}-${day}` };
+    });
+  }, [calendarMonth]);
+
+  const selectDate = (date: string) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setCalendarOpen(false);
+  };
+
+  return <div className="doctor-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="results" onNavigate={onNavigate} />
-    <main className="main-panel">
-      <header className="topbar">
-        <div><div className="eyebrow">Assessment Tools</div><h1>Results</h1></div>
-        <div className="header-actions"><button type="button" className="ghost-button">Filter</button><button type="button" className="primary-button">Export results</button></div>
-      </header>
-      <section className="stats-grid compact-stats">
-        <article className="stat-card tone-blue"><div className="stat-label">Assessments</div><div className="stat-value">24</div><div className="stat-change">This month</div></article>
-        <article className="stat-card tone-purple"><div className="stat-label">Average score</div><div className="stat-value">54</div><div className="stat-change">Across all patients</div></article>
-        <article className="stat-card tone-green"><div className="stat-label">Low stress</div><div className="stat-value">42%</div><div className="stat-change">Of completed results</div></article>
-      </section>
-      <section className="content-panel">
-        <div className="panel-heading"><div><h2>Recent assessment results</h2><p>Review the latest multi-signal stress measurements.</p></div><select className="table-select" aria-label="Filter results"><option>All levels</option><option>High</option><option>Moderate</option><option>Low</option></select></div>
-        <div className="table-wrap"><table className="data-table"><thead><tr><th>Assessment</th><th>Patient</th><th>Stress score</th><th>Heart rate</th><th>Reaction</th><th>Date</th></tr></thead><tbody>{results.map((result) => <tr key={result.id}>
-          <td><strong>{result.id}</strong><span className="cell-muted">Full assessment</span></td><td>{result.patient}</td><td><span className={`status-pill status-${result.level.toLowerCase()}`}>{result.score}/100 · {result.level}</span></td><td>{result.heartRate}</td><td>{result.reaction}</td><td className="cell-muted">{result.date}</td>
-        </tr>)}</tbody></table></div>
-      </section>
+    <main className="main-panel detection-results-main">
+      <header className="topbar detection-results-topbar"><div><h1>Detection Results</h1><p className="page-subtitle">View and analyze stress detection scan results</p></div><div className="header-actions"><button type="button" className="ghost-button">⌕ Filter</button><button type="button" className="ghost-button">⇩ Export</button><button type="button" className="notification-button" aria-label="Notifications">🔔</button></div></header>
+      <section className="detection-summary-grid"><Summary label="Total Scans Today" value="2,847" change="+12.5% from yesterday" tone="green" /><Summary label="Avg Confidence" value="1,243" change="+2.1% from yesterday" tone="green" /><Summary label="High Stress Count" value="47" change="-15.3% from yesterday" tone="red" /><Summary label="Anomalies Detected" value="3" change="Requires review" tone="neutral" /></section>
+      <section className="detection-filter-bar"><label className="detection-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label><select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter stress level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select><select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter emotion"><option>All Emotions</option><option>Calm</option><option>Neutral</option><option>Anxious</option><option>Stressed</option></select><div className="date-filter-wrap"><button type="button" className="date-filter" onClick={() => setCalendarOpen((open) => !open)}>▣ {selectedDate || 'Today'}</button>{calendarOpen && <div className="calendar-popover" role="dialog" aria-label="Choose scan date"><div className="calendar-header"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Previous month">‹</button><strong>{calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</strong><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} aria-label="Next month">›</button></div><div className="calendar-weekdays">{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{calendarDays.map((item, index) => <button type="button" key={`${item.date}-${index}`} className={`${item.currentMonth ? '' : 'outside-month'} ${selectedDate === item.date ? 'selected-day' : ''}`} onClick={() => selectDate(item.date)} disabled={!item.currentMonth}>{item.day}</button>)}</div><div className="calendar-footer"><button type="button" onClick={() => { setSelectedDate(''); setCalendarOpen(false); }}>Clear</button><button type="button" onClick={() => { setSelectedDate('2026-09-03'); setCalendarOpen(false); }}>Today</button></div></div>}</div></section>
+      <section className="detection-results-panel"><h2>Recent Scans</h2><div className="scan-list">{filteredResults.map((result) => <article className="scan-row" key={result.id}><div className="scan-identity"><span className="scan-label">Scan ID</span><strong>{result.id}</strong><div className="scan-user"><span className="account-avatar">●</span><span><b>{result.patient}</b><small>{result.date}</small></span></div></div><div className="scan-detail"><span>Emotion</span><b className="emotion-badge">{result.emotion}</b><span>Stress Level</span><b className={`stress-text ${result.level.toLowerCase()}`}>{result.level}</b></div><div className="scan-detail"><span>Confidence</span><strong>{result.confidence}</strong><span>Heart Rate</span><strong>{result.heartRate}</strong></div><div className="tension-detail"><span>Facial Tension <small>{result.tension}%</small></span><div className="tension-track"><i style={{ width: `${result.tension}%` }} className={result.tension > 50 ? 'high' : ''} /></div></div><button type="button" className="view-details-button">View Details</button></article>)}</div>{filteredResults.length === 0 && <p className="empty-table">No scans match your filters.</p>}</section>
     </main>
-  </div>
-);
+  </div>;
+};
+
+const Summary: React.FC<{ label: string; value: string; change: string; tone: 'green' | 'red' | 'neutral' }> = ({ label, value, change, tone }) => <article className={`detection-summary-card ${tone}`}><span>{label}</span><strong>{value}</strong><small>{change}</small></article>;

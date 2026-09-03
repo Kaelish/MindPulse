@@ -1373,6 +1373,54 @@ button {
 .recommendation-form input, .recommendation-form textarea { display: block; width: 100%; }
 .recommendation-form textarea { min-height: 100px; resize: vertical; }
 .save-confirmation { margin-left: 10px; color: var(--success); font-size: 0.8rem; font-weight: 700; }
+.detection-results-main { background: #f5f7fb; }
+.detection-results-topbar { margin-bottom: 20px; }
+.detection-results-topbar h1 { font-size: 2rem; margin: 0; }
+.detection-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.detection-summary-card { min-height: 84px; padding: 14px 16px; background: #fff; border: 1px solid #dfe5ec; border-radius: 7px; box-shadow: 0 3px 8px rgba(15, 23, 42, 0.03); }
+.detection-summary-card span, .detection-summary-card small { display: block; color: #6b7280; font-size: 0.72rem; }
+.detection-summary-card strong { display: block; margin: 9px 0 4px; color: #202938; font-size: 1.05rem; font-weight: 600; }
+.detection-summary-card.green small { color: #31a86d; }
+.detection-summary-card.red small { color: #e05c5c; }
+.detection-summary-card.neutral small { color: #6b7280; }
+.detection-filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 10px 12px; background: #fff; border: 1px solid #dfe5ec; border-radius: 7px; }
+.detection-filter-bar select, .date-filter { min-width: 135px; border: 1px solid #dfe5ec; border-radius: 6px; background: #fff; padding: 8px 10px; color: #475569; font-size: 0.72rem; }
+.detection-search { display: flex; align-items: center; gap: 5px; flex: 1; max-width: 220px; border: 1px solid #dfe5ec; border-radius: 6px; padding: 5px 8px; color: #8b95a5; }
+.detection-search input { width: 100%; border: 0; outline: 0; font-size: 0.72rem; }
+.date-filter-wrap { position: relative; margin-left: auto; }
+.date-filter { min-width: 100px; cursor: pointer; }
+.calendar-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 244px; padding: 12px; background: #fff; border: 1px solid #dfe5ec; border-radius: 7px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16); }
+.calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; color: #202938; font-size: 0.76rem; }
+.calendar-header button, .calendar-footer button { border: 0; background: transparent; color: var(--primary); cursor: pointer; font-weight: 700; }
+.calendar-header button { width: 24px; height: 24px; border-radius: 4px; font-size: 1.1rem; }
+.calendar-header button:hover, .calendar-footer button:hover { background: var(--primary-soft); }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+.calendar-weekdays { margin-bottom: 4px; color: #87909d; font-size: 0.6rem; font-weight: 700; }
+.calendar-grid button { height: 27px; border: 0; border-radius: 4px; background: transparent; color: #374151; font-size: 0.68rem; cursor: pointer; }
+.calendar-grid button:hover, .calendar-grid button.selected-day { background: var(--primary); color: #fff; }
+.calendar-grid button.outside-month { color: #c2c8d0; cursor: default; }
+.calendar-footer { display: flex; justify-content: space-between; margin-top: 9px; padding-top: 8px; border-top: 1px solid #edf1f5; font-size: 0.7rem; }
+.detection-results-panel { padding: 14px 12px 12px; background: #fff; border: 1px solid #dfe5ec; border-radius: 7px; }
+.detection-results-panel h2 { margin: 0 0 12px; padding: 0 4px; font-size: 0.88rem; color: #202938; }
+.scan-list { display: grid; gap: 8px; }
+.scan-row { display: grid; grid-template-columns: 1.05fr 0.8fr 0.75fr 1fr auto; align-items: center; gap: 14px; padding: 10px 8px; border: 1px solid #e3e8ee; border-radius: 7px; }
+.scan-label, .scan-detail span, .tension-detail span { display: block; color: #7b8796; font-size: 0.62rem; }
+.scan-identity > strong { display: block; margin: 3px 0 7px; font-size: 0.7rem; color: #4b5563; }
+.scan-user { display: flex; align-items: center; gap: 6px; }
+.scan-user .account-avatar { width: 20px; height: 20px; font-size: 0.55rem; }
+.scan-user b, .scan-user small { display: block; font-size: 0.63rem; color: #202938; }
+.scan-user small { color: #9aa3af; font-size: 0.55rem; margin-top: 2px; }
+.scan-detail strong { display: block; margin: 4px 0 8px; color: #374151; font-size: 0.68rem; }
+.emotion-badge { display: inline-block; margin: 3px 0 7px; padding: 2px 6px; border-radius: 3px; background: #e5f7ee; color: #36a86d; font-size: 0.58rem; }
+.stress-text { display: block; margin-top: 4px; font-size: 0.62rem; }
+.stress-text.low { color: #36a86d; }.stress-text.moderate { color: #df991e; }.stress-text.high { color: #e05c5c; }
+.tension-detail { align-self: center; }
+.tension-detail span { display: flex; justify-content: space-between; color: #7b8796; }
+.tension-detail span small { color: #7b8796; font-size: 0.6rem; }
+.tension-track { width: 100%; min-width: 80px; height: 5px; margin-top: 8px; border-radius: 5px; background: #edf1f5; overflow: hidden; }
+.tension-track i { display: block; height: 100%; background: #31bf78; }.tension-track i.high { background: #e6a624; }
+.view-details-button { border: 1px solid #dfe5ec; border-radius: 5px; background: #fff; padding: 6px 9px; color: #374151; font-size: 0.62rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.view-details-button:hover { border-color: var(--primary); color: var(--primary); }
 
 @media (max-width: 900px) {
   .result-score-grid, .recommendation-layout { grid-template-columns: 1fr 1fr; }
@@ -1389,6 +1437,13 @@ button {
   .user-summary-grid { grid-template-columns: 1fr 1fr; }
   .account-list-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
   .doctor-search { width: 100%; }
+  .detection-summary-grid { grid-template-columns: 1fr 1fr; }
+  .detection-filter-bar { align-items: stretch; flex-direction: column; }
+  .detection-search { max-width: none; }
+  .date-filter-wrap { margin-left: 0; }
+  .calendar-popover { left: 0; right: auto; }
+  .scan-row { grid-template-columns: 1fr 1fr; }
+  .view-details-button { justify-self: start; }
 }
 
 .consult-tabs-row {
