@@ -1346,7 +1346,7 @@ button {
 .modal-heading h2 { margin: 5px 0 0; }
 .modal-close { border: 0; background: transparent; color: #64748b; font-size: 1.5rem; cursor: pointer; }
 .account-modal label { display: grid; gap: 6px; color: #475569; font-size: 0.75rem; font-weight: 700; }
-.account-modal input { width: 100%; border: 1px solid #dfe5ec; border-radius: 7px; padding: 10px; font: inherit; font-size: 0.82rem; font-weight: 400; }
+.account-modal input, .account-modal select { width: 100%; border: 1px solid #dfe5ec; border-radius: 7px; padding: 10px; font: inherit; font-size: 0.82rem; font-weight: 400; background: #fff; }
 .account-modal .primary-button { margin-top: 5px; }
 .results-patient-header h3 small { color: var(--muted); font-size: 0.7em; font-weight: 500; }
 .result-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
