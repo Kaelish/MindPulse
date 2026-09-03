@@ -29,11 +29,10 @@ export const FinalStressScoreScreen: React.FC<Props> = ({ heartRate, reaction, o
       activeSection="results"
       heartRateDone
       onBack={onBack}
+      subtitle="Multi-modal stress assessment"
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Assessment complete</Text>
         <Text style={styles.title}>Final Stress Score</Text>
-        <Text style={styles.subtitle}>Your heart rate and reaction time are combined below.</Text>
       </View>
 
       <View style={styles.scoreCard}>
@@ -45,62 +44,88 @@ export const FinalStressScoreScreen: React.FC<Props> = ({ heartRate, reaction, o
           <Text style={[styles.levelText, { color: level.color }]}>{level.label}</Text>
         </View>
         <Text style={styles.message}>{level.message}</Text>
-      </View>
-
-      <View style={styles.signalCard}>
-        <Text style={styles.cardTitle}>Assessment signals</Text>
-        <Signal label="Heart rate" value={`${heartRate} bpm`} detail="40% of final score" color={Colors.tabHeartDot} />
-        <Signal label="Reaction time" value={`${reaction.average} ms`} detail="60% of final score" color={Colors.primary} />
-      </View>
-
-      <View style={styles.noteCard}>
-        <Text style={styles.noteIcon}>♥</Text>
-        <View style={styles.noteCopy}>
-          <Text style={styles.noteTitle}>A score is a guide, not a diagnosis</Text>
-          <Text style={styles.noteText}>Repeat the assessment when you are rested and discuss persistent concerns with a clinician.</Text>
+        <View style={styles.levelGuide}>
+          <Text style={styles.guideLow}>● Low (0-30)</Text>
+          <Text style={styles.guideModerate}>● Moderate (31-60)</Text>
+          <Text style={styles.guideHigh}>● High (61-100)</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.doneButton} onPress={onDone} accessibilityRole="button" accessibilityLabel="Finish assessment">
-        <Text style={styles.doneText}>Finish Assessment</Text>
-      </TouchableOpacity>
+      <View style={styles.signalCard}>
+        <Text style={styles.cardTitle}>Multi-Modal Fusion ({score} / 20 / 20 / 20)</Text>
+        <FusionSignal label="Survey (PSS + Physio)" value={50} color={Colors.tabSurveyDot} />
+        <FusionSignal label="Facial Emotion" value={80} color={Colors.tabFaceDot} />
+        <FusionSignal label="Heart Rate" value={Math.min(100, heartRateScore)} color={Colors.tabHeartDot} />
+        <FusionSignal label="Reaction Time" value={Math.max(0, Math.min(100, reaction.score))} color={Colors.ctaRed} />
+      </View>
+
+      <View style={[styles.guidanceCard, { backgroundColor: level.bg }]}>
+        <Text style={styles.guidanceIcon}>{score >= 70 ? '♧' : '⚠'}</Text>
+        <Text style={[styles.guidanceTitle, { color: level.color }]}>{score >= 70 ? 'You seem relaxed today' : 'Your stress indicators are elevated'}</Text>
+        <Text style={styles.guidanceText}>{score >= 70 ? 'Maintain healthy routines — good sleep, regular physical activity, and social connection keep stress low.' : 'Try relaxing or practicing breathing techniques. Consider reaching out to a mental health professional if stress persists.'}</Text>
+        <Text style={styles.guidanceItem}>✓ Keep up your sleep schedule</Text>
+        <Text style={styles.guidanceItem}>✓ Stay hydrated and eat well</Text>
+        <Text style={styles.guidanceItem}>✓ Continue positive activities</Text>
+      </View>
+
+      <View style={styles.clinicCard}><Text style={styles.clinicTitle}>⌾ Find Nearby Psych Clinics</Text><Text style={styles.clinicSubtitle}>Suggested based on your stress level</Text><Clinic name="MindFresh Psychological Clinic" distance="0.3 km" /><Clinic name="University Wellness Center" distance="0.8 km" /><Clinic name="Mindbridge Psych Clinic" distance="1.2 km" /></View>
+
+      <View style={styles.emergencyCard}><Text style={styles.cardTitle}>Emergency Mental Health Hotlines</Text><Hotline name="National Crisis Hotline" number="988 · 24/7 free and confidential" color="#F0444F" /><Hotline name="In Touch Crisis Line" number="0917-558-4673 · 24/7 support" color="#F59E0B" /><Hotline name="NCMH Crisis Hotline" number="1553 · Free hotline" color="#22A6DF" /><Hotline name="Crisis Text Line" number="Text HOME to 741741" color="#22A6DF" /></View>
+
+      <View style={styles.actionRow}><TouchableOpacity style={styles.saveButton} onPress={onDone} accessibilityRole="button"><Text style={styles.doneText}>Save Result</Text></TouchableOpacity><TouchableOpacity style={styles.helpButton} onPress={onDone} accessibilityRole="button"><Text style={styles.doneText}>Get Help  →</Text></TouchableOpacity></View>
     </StressAnalysisLayout>
   );
 };
 
-const Signal: React.FC<{ label: string; value: string; detail: string; color: string }> = ({ label, value, detail, color }) => (
-  <View style={styles.signalRow}>
-    <View style={[styles.signalDot, { backgroundColor: color }]} />
-    <View style={styles.signalCopy}><Text style={styles.signalLabel}>{label}</Text><Text style={styles.signalDetail}>{detail}</Text></View>
-    <Text style={styles.signalValue}>{value}</Text>
-  </View>
-);
+const FusionSignal: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => <View style={styles.fusionRow}><View style={styles.fusionLabel}><Text style={styles.signalLabel}>{label}</Text><Text style={styles.fusionValue}>{value}</Text></View><View style={styles.fusionTrack}><View style={[styles.fusionFill, { width: `${value}%`, backgroundColor: color }]} /></View></View>;
+const Clinic: React.FC<{ name: string; distance: string }> = ({ name, distance }) => <View style={styles.clinicRow}><Text style={styles.clinicPin}>⌾</Text><View style={styles.clinicCopy}><Text style={styles.clinicName}>{name}</Text><Text style={styles.clinicDistance}>{distance} · Mental health support</Text></View><TouchableOpacity style={styles.callButton}><Text style={styles.callText}>Call</Text></TouchableOpacity></View>;
+const Hotline: React.FC<{ name: string; number: string; color: string }> = ({ name, number, color }) => <View style={styles.hotlineRow}><View style={[styles.hotlineIcon, { backgroundColor: color }]}><Text style={styles.hotlineIconText}>☎</Text></View><View><Text style={styles.hotlineName}>{name}</Text><Text style={styles.hotlineNumber}>{number}</Text></View></View>;
 
 const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: Spacing.xs },
-  eyebrow: { ...Typography.label, color: Colors.textSecondary, textTransform: 'uppercase' },
   title: { ...Typography.h1, color: Colors.textPrimary },
-  subtitle: { ...Typography.body2, color: Colors.textSecondary, textAlign: 'center' },
-  scoreCard: { backgroundColor: Colors.resultCardBg, borderRadius: Radius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  scoreRing: { width: 168, height: 168, borderRadius: 84, borderWidth: 12, borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
-  score: { fontSize: 58, fontWeight: '800', lineHeight: 62, color: Colors.textPrimary },
-  outOf: { ...Typography.caption, color: Colors.textSecondary, marginTop: -2 },
+  scoreCard: { backgroundColor: Colors.resultCardBg, borderRadius: Radius.xl, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
+  scoreRing: { width: 126, height: 126, borderRadius: 63, borderWidth: 9, borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  score: { fontSize: 48, fontWeight: '800', lineHeight: 54, color: Colors.textPrimary },
+  outOf: { ...Typography.caption, color: Colors.textSecondary },
   levelPill: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   levelText: { ...Typography.label },
   message: { ...Typography.body2, color: Colors.textSecondary, textAlign: 'center', maxWidth: 270 },
-  signalCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, gap: Spacing.md },
-  cardTitle: { ...Typography.h3, color: Colors.textPrimary },
-  signalRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.divider },
-  signalDot: { width: 10, height: 10, borderRadius: 5 },
-  signalCopy: { flex: 1 },
-  signalLabel: { ...Typography.body1, color: Colors.textPrimary, fontWeight: '600' },
-  signalDetail: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
-  signalValue: { ...Typography.label, color: Colors.textPrimary },
-  noteCard: { flexDirection: 'row', gap: Spacing.md, backgroundColor: Colors.tipBg, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.tipBorder },
-  noteIcon: { fontSize: 20, color: Colors.ctaRed },
-  noteCopy: { flex: 1, gap: Spacing.xs },
-  noteTitle: { ...Typography.label, color: Colors.tipText },
-  noteText: { ...Typography.caption, color: Colors.tipText },
-  doneButton: { backgroundColor: Colors.primary, borderRadius: Radius.full, alignItems: 'center', paddingVertical: 16 },
-  doneText: { ...Typography.button, color: Colors.white },
+  levelGuide: { alignSelf: 'stretch', gap: 4 },
+  guideLow: { ...Typography.caption, color: Colors.badgeNormalText },
+  guideModerate: { ...Typography.caption, color: Colors.badgeElevatedText },
+  guideHigh: { ...Typography.caption, color: Colors.badgeHighText },
+  signalCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm },
+  cardTitle: { ...Typography.h3, color: Colors.textPrimary, fontSize: 15 },
+  fusionRow: { gap: 4 },
+  fusionLabel: { flexDirection: 'row', justifyContent: 'space-between' },
+  signalLabel: { ...Typography.caption, color: Colors.textPrimary },
+  fusionValue: { ...Typography.caption, color: Colors.textSecondary },
+  fusionTrack: { height: 7, borderRadius: 5, backgroundColor: Colors.divider, overflow: 'hidden' },
+  fusionFill: { height: '100%', borderRadius: 5 },
+  guidanceCard: { borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: 4 },
+  guidanceIcon: { fontSize: 22 },
+  guidanceTitle: { ...Typography.h3 },
+  guidanceText: { ...Typography.body2, color: Colors.textSecondary },
+  guidanceItem: { ...Typography.caption, color: Colors.textSecondary },
+  clinicCard: { backgroundColor: Colors.badgeHighBg, borderRadius: Radius.lg, padding: Spacing.md, gap: Spacing.sm },
+  clinicTitle: { ...Typography.h3, color: Colors.badgeHighText, fontSize: 15 },
+  clinicSubtitle: { ...Typography.caption, color: Colors.badgeHighText },
+  clinicRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.sm },
+  clinicPin: { fontSize: 20, color: Colors.badgeHighText },
+  clinicCopy: { flex: 1 },
+  clinicName: { ...Typography.caption, color: Colors.textPrimary, fontWeight: '700' },
+  clinicDistance: { ...Typography.caption, color: Colors.textSecondary },
+  callButton: { backgroundColor: Colors.badgeHighText, borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 5 },
+  callText: { ...Typography.caption, color: Colors.white, fontWeight: '700' },
+  emergencyCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm },
+  hotlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  hotlineIcon: { width: 22, height: 22, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
+  hotlineIconText: { color: Colors.white, fontSize: 12 },
+  hotlineName: { ...Typography.caption, color: Colors.textPrimary, fontWeight: '700' },
+  hotlineNumber: { ...Typography.caption, color: Colors.textSecondary },
+  actionRow: { flexDirection: 'row', gap: Spacing.sm },
+  saveButton: { flex: 1, backgroundColor: Colors.badgeNormalText, borderRadius: Radius.lg, alignItems: 'center', paddingVertical: 14 },
+  helpButton: { flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.lg, alignItems: 'center', paddingVertical: 14 },
+  doneText: { ...Typography.button, color: Colors.white, fontSize: 13 },
 });

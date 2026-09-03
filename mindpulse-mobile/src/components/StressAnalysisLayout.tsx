@@ -30,6 +30,7 @@ interface Props {
   /** Whether the Heart Rate tab shows a ✓ completion badge */
   heartRateDone?: boolean;
   onBack?: () => void;
+  subtitle?: string;
 }
 
 // ─── Module step tabs (top row of 4 chips) ────────────────────────────────────
@@ -109,6 +110,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   children,
   heartRateDone,
   onBack,
+  subtitle = 'Complete all steps then view your fused result',
 }) => {
   return (
     <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
@@ -116,9 +118,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
       {/* ── Page header ── */}
       <View style={layout.header}>
         <Text style={layout.title}>Stress Analysis</Text>
-        <Text style={layout.subtitle}>
-          Complete all steps then view your fused result
-        </Text>
+        <Text style={layout.subtitle}>{subtitle}</Text>
       </View>
 
       {/* ── Module step tabs ── */}
