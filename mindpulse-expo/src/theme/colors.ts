@@ -70,4 +70,27 @@ export const Colors = {
   tabBarBg: '#5B8FD9',       // medium blue
   tabBarActive: '#FFFFFF',
   tabBarInactive: '#C2D6F5',
+
+  // Reaction game – trigger box states
+  triggerWait: '#F5A623',      // warm amber – waiting
+  triggerWaitBg: '#FFF4E0',
+  triggerGo: '#27AE60',        // bright green – tap now
+  triggerGoBg: '#E8F8EF',
+  triggerEarly: '#E05C5C',     // red – false start
+  triggerEarlyBg: '#FCEAEA',
+  triggerIdle: '#E8EAF0',      // neutral grey – idle/ready
+
+  // Reaction result cards
+  reactionCardAvgBg: '#EAF3FB',
+  reactionCardFastBg: '#E8F8EF',
+  reactionCardSlowBg: '#FFF4E0',
+  reactionCardMistakeBg: '#FCEAEA',
+
+  // Cognitive stress badge
+  cogLowBg: '#D6F5E3',
+  cogLowText: '#1A7A45',
+  cogModerateBg: '#FFF3CD',
+  cogModerateText: '#B26A00',
+  cogHighBg: '#FFD6D6',
+  cogHighText: '#C0392B',
 };

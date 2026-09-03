@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
+import { ReactionNavigator } from './src/screens/reaction/ReactionNavigator';
 import { Colors } from './src/theme/colors';
 
 export default function App() {
@@ -9,9 +9,11 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" backgroundColor={Colors.white} />
       <View style={styles.root}>
-        <HeartRateNavigator
-          onExit={() => console.log('Exit')}
-          onModuleComplete={(bpm) => console.log('BPM result:', bpm)}
+        <ReactionNavigator
+          onBack={() => console.log('Back')}
+          onModuleComplete={(result) =>
+            console.log('Reaction complete', JSON.stringify(result, null, 2))
+          }
         />
       </View>
     </SafeAreaProvider>

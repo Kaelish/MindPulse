@@ -28,6 +28,8 @@ interface Props {
   children: React.ReactNode;
   /** Whether the Heart Rate tab shows a ✓ completion badge */
   heartRateDone?: boolean;
+  /** Whether the Reaction tab shows a ✓ completion badge */
+  reactionDone?: boolean;
 }
 
 // ─── Module step tabs (top row of 4 chips) ────────────────────────────────────
@@ -106,6 +108,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   activeSection,
   children,
   heartRateDone,
+  reactionDone,
 }) => {
   return (
     <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
@@ -140,6 +143,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
         <ModuleChip
           label="Reaction"
           dotColor={Colors.tabReactionDot}
+          chipBg="#F5F0FF"
           active={activeModule === 'reaction'}
         />
       </View>
@@ -156,6 +160,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
           label="Reaction"
           icon="⚡"
           active={activeSection === 'reaction'}
+          badge={reactionDone ? '✓' : undefined}
         />
         <SecTab
           label="Results"
