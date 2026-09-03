@@ -3,7 +3,7 @@ import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 
 interface AdminUsersViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile') => void;
 }
 
 type UserRole = 'Students' | 'Doctors';

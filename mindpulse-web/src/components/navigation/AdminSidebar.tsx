@@ -3,8 +3,8 @@ import './AdminSidebar.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'results' | 'analytics';
-  onNavigate?: (view: 'dashboard' | 'users' | 'results' | 'analytics') => void;
+  activeView?: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile';
+  onNavigate?: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile') => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
@@ -26,7 +26,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
         <button className="nav-item" type="button">⚙ Settings</button>
       </nav>
       <div className="admin-account-area">
-        <div className="admin-account">
+        <div className={`admin-account ${activeView === 'profile' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => onNavigate?.('profile')}>
           <span className="admin-account-avatar">●</span>
           <span><strong>Admin User</strong><small>admin@mindpulse.com</small></span>
         </div>
