@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { StatusBar, StyleSheet, Text as RNText, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  StatusBar,
+  StyleSheet,
+  Text as RNText,
+  View,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { OnboardingNavigator } from './src/screens/onboarding/OnboardingNavigator';
+import { AuthScreen } from './src/screens/auth/AuthScreen';
 import { HealthSetupScreen } from './src/screens/onboarding/HealthSetupScreen';
 import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
@@ -14,22 +23,116 @@ import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { Colors } from './src/theme/colors';
 
-type ScreenMode = 'splash' | 'main' | 'healthSetup' | 'reaction' | 'finalResults' | 'call';
+type ScreenMode =
+  | 'splash'
+  | 'onboarding'
+  | 'auth'
+  | 'healthSetup'
+  | 'main'
+  | 'reaction'
+  | 'finalResults'
+  | 'call';
 
+/* ─────────── Splash Screen ─────────── */
+const SplashScreen = () => {
+  // Animate the loading dots
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+  const dot4 = useRef(new Animated.Value(0)).current;
+  const dot5 = useRef(new Animated.Value(0)).current;
+  const dot6 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animateDot = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.delay(600),
+        ]),
+      );
+
+    const dots = [dot1, dot2, dot3, dot4, dot5, dot6];
+    const anims = dots.map((d, i) => animateDot(d, i * 120));
+    anims.forEach(a => a.start());
+
+    return () => anims.forEach(a => a.stop());
+  }, [dot1, dot2, dot3, dot4, dot5, dot6]);
+
+  const dotScale = (d: Animated.Value) =>
+    d.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
+  const dotOpacity = (d: Animated.Value) =>
+    d.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
+
+  return (
+    <View style={splashStyles.container}>
+      {/* Logo mark: head silhouette with pulse line */}
+      <View style={splashStyles.logoMark}>
+        {/* Head outline */}
+        <View style={splashStyles.headOutline} />
+        {/* Pulse line inside the head */}
+        <View style={splashStyles.pulseWrap}>
+          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 12, width: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 20, width: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 8, width: 2 }]} />
+          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
+        </View>
+      </View>
+
+      <RNText style={splashStyles.brandName}>MindPulse</RNText>
+      <RNText style={splashStyles.tagline}>Your personal stress companion</RNText>
+
+      {/* Loading dots */}
+      <View style={splashStyles.dotsRow}>
+        {[dot1, dot2, dot3, dot4, dot5, dot6].map((d, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              splashStyles.dot,
+              {
+                transform: [{ scale: dotScale(d) }],
+                opacity: dotOpacity(d),
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+/* ─────────── App ─────────── */
 function App() {
   const [screenMode, setScreenMode] = useState<ScreenMode>('splash');
   const [currentTab, setCurrentTab] = useState<BottomNavTab>('home');
   const [heartRateBpm, setHeartRateBpm] = useState(0);
   const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
+  const [registeredUserName, setRegisteredUserName] = useState('John');
 
+  /* Splash → Onboarding after 2 s */
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setScreenMode('main');
-      setCurrentTab('home');
-    }, 1400);
+    if (screenMode !== 'splash') return;
+    const timer = setTimeout(() => setScreenMode('onboarding'), 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [screenMode]);
 
+  /* ── Navigation helpers ── */
   const handleTabNavigate = (tab: BottomNavTab) => {
     setCurrentTab(tab);
     setScreenMode('main');
@@ -41,24 +144,20 @@ function App() {
       setCurrentTab('profile');
       return;
     }
-
     if (screenMode === 'call') {
       setScreenMode('main');
       setCurrentTab('home');
       return;
     }
-
     if (screenMode === 'reaction') {
       setScreenMode('main');
       setCurrentTab('analysis');
       return;
     }
-
     if (screenMode === 'finalResults') {
       setScreenMode('reaction');
       return;
     }
-
     if (screenMode === 'main' && currentTab !== 'home') {
       setCurrentTab('home');
     }
@@ -86,29 +185,62 @@ function App() {
     setScreenMode('main');
   };
 
+  /* ── Auth success handler ── */
+  const handleAuthSuccess = (isNewUser: boolean) => {
+    if (isNewUser) {
+      setScreenMode('healthSetup');
+    } else {
+      setCurrentTab('home');
+      setScreenMode('main');
+    }
+  };
+
+  /* ─────────── Render ─────────── */
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF8ED" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8F3" />
       <View style={styles.root}>
-        {screenMode === 'splash' ? (
-          <View style={styles.splash}>
-            <View style={styles.logoMark}>
-              <View style={styles.logoPulse} />
-            </View>
-            <RNText style={styles.logoText}>MindPulse</RNText>
-            <RNText style={styles.tagline}>Your personal stress companion</RNText>
-          </View>
-        ) : screenMode === 'healthSetup' ? (
+
+        {/* ── SPLASH ── */}
+        {screenMode === 'splash' && <SplashScreen />}
+
+        {/* ── ONBOARDING SLIDES ── */}
+        {screenMode === 'onboarding' && (
+          <OnboardingNavigator
+            onComplete={(tab) => {
+              setAuthTab(tab ?? 'register');
+              setScreenMode('auth');
+            }}
+            onSignIn={() => {
+              setAuthTab('login');
+              setScreenMode('auth');
+            }}
+          />
+        )}
+
+        {/* ── AUTH (Login / Register) ── */}
+        {screenMode === 'auth' && (
+          <AuthScreen
+            initialTab={authTab}
+            onAuthSuccess={handleAuthSuccess}
+          />
+        )}
+
+        {/* ── HEALTH SETUP (3-step wizard) ── */}
+        {screenMode === 'healthSetup' && (
           <View style={styles.screenWithBackButton}>
             <HealthSetupScreen
+              userName={registeredUserName}
               onContinue={() => {
-                setCurrentTab('profile');
+                setCurrentTab('home');
                 setScreenMode('main');
               }}
             />
-            <BackButton onPress={handleBack} />
           </View>
-        ) : screenMode === 'call' ? (
+        )}
+
+        {/* ── VIDEO CALL ── */}
+        {screenMode === 'call' && (
           <View style={styles.screenWithBackButton}>
             <VideoCallScreen
               doctorId="doctor-123"
@@ -120,25 +252,33 @@ function App() {
             />
             <BackButton onPress={handleBack} />
           </View>
-        ) : screenMode === 'reaction' ? (
+        )}
+
+        {/* ── REACTION GAME ── */}
+        {screenMode === 'reaction' && (
           <View style={styles.screenWithBackButton}>
             <ReactionGameScreen
               onBack={handleBack}
               onComplete={handleReactionComplete}
             />
           </View>
-        ) : screenMode === 'finalResults' && reactionResult ? (
+        )}
+
+        {/* ── FINAL RESULTS ── */}
+        {screenMode === 'finalResults' && reactionResult && (
           <FinalStressScoreScreen
             heartRate={heartRateBpm}
             reaction={reactionResult}
             onBack={handleBack}
             onDone={handleFinalResultsDone}
           />
-        ) : (
-          /* MAIN PATIENT PORTAL: SINGLE BLUE NAVIGATION BAR AT BOTTOM */
+        )}
+
+        {/* ── MAIN PATIENT PORTAL ── */}
+        {screenMode === 'main' && (
           <View style={styles.mainWrapper}>
             <View style={styles.tabViewArea}>
-              {currentTab === 'home' ? (
+              {currentTab === 'home' && (
                 <PatientDashboardScreen
                   activeTab={currentTab}
                   onNavigate={handleTabNavigate}
@@ -147,34 +287,37 @@ function App() {
                   onRunFaceScan={() => setCurrentTab('analysis')}
                   onRunDailyCheck={() => setCurrentTab('analysis')}
                 />
-              ) : currentTab === 'profile' ? (
+              )}
+              {currentTab === 'profile' && (
                 <PatientProfileScreen
                   onNavigateHome={() => setCurrentTab('home')}
                   onNavigateTab={handleTabNavigate}
-                  onSignOut={() => setCurrentTab('home')}
+                  onSignOut={() => {
+                    setAuthTab('login');
+                    setScreenMode('auth');
+                  }}
                   onOpenHealthSetup={() => setScreenMode('healthSetup')}
                 />
-              ) : currentTab === 'analysis' ? (
+              )}
+              {currentTab === 'analysis' && (
                 <HeartRateNavigator
                   onExit={() => setCurrentTab('profile')}
                   onNavigateTab={handleTabNavigate}
                   onModuleComplete={handleAnalysisComplete}
                 />
-              ) : (
-                <View style={styles.subScreenWrap}>
-                  <AppointmentBookingScreen
-                    onNavigateTab={handleTabNavigate}
-                    onStartVideoCall={() => setScreenMode('call')}
-                  />
-                </View>
               )}
+              {currentTab !== 'home' &&
+                currentTab !== 'profile' &&
+                currentTab !== 'analysis' && (
+                  <View style={styles.subScreenWrap}>
+                    <AppointmentBookingScreen
+                      onNavigateTab={handleTabNavigate}
+                      onStartVideoCall={() => setScreenMode('call')}
+                    />
+                  </View>
+                )}
             </View>
-
-            {/* SINGLE AUTHORITATIVE BLUE NAVIGATION BAR */}
-            <BottomTabBar
-              activeTab={currentTab}
-              onNavigate={handleTabNavigate}
-            />
+            <BottomTabBar activeTab={currentTab} onNavigate={handleTabNavigate} />
           </View>
         )}
       </View>
@@ -182,57 +325,85 @@ function App() {
   );
 }
 
+/* ─────────── App Styles ─────────── */
 const styles = StyleSheet.create({
-  root: {
+  root: { flex: 1, backgroundColor: '#FAF8F3' },
+  mainWrapper: { flex: 1, backgroundColor: '#FAF8F3' },
+  tabViewArea: { flex: 1 },
+  subScreenWrap: { flex: 1, backgroundColor: Colors.pageBg },
+  screenWithBackButton: { flex: 1 },
+});
+
+/* ─────────── Splash Styles ─────────── */
+const splashStyles = StyleSheet.create({
+  container: {
     flex: 1,
-    backgroundColor: '#FAF8ED',
-  },
-  mainWrapper: {
-    flex: 1,
-    backgroundColor: '#FAF8ED',
-  },
-  tabViewArea: {
-    flex: 1,
-  },
-  subScreenWrap: {
-    flex: 1,
-    backgroundColor: Colors.pageBg,
-  },
-  screenWithBackButton: {
-    flex: 1,
-  },
-  splash: {
-    flex: 1,
+    backgroundColor: '#FAF8F3',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FAF8ED',
   },
+
+  /* Logo mark */
   logoMark: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'transparent',
+    borderWidth: 3,
+    borderColor: '#C87850',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#5B9EF7',
-    marginBottom: 14,
+    marginBottom: 18,
+    overflow: 'hidden',
   },
-  logoPulse: {
-    width: 48,
-    height: 22,
-    borderTopWidth: 4,
-    borderBottomWidth: 4,
-    borderColor: '#FFFFFF',
-    transform: [{ rotate: '-12deg' }],
+  headOutline: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2.5,
+    borderColor: '#C87850',
+    position: 'absolute',
+    top: 20,
   },
-  logoText: {
-    color: '#5B9EF7',
+  pulseWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 24,
+    position: 'absolute',
+    top: 52,
+  },
+  pulseSeg: {
+    width: 4,
+    backgroundColor: '#C87850',
+    marginHorizontal: 1,
+    borderRadius: 1,
+  },
+
+  brandName: {
+    color: '#C87850',
     fontSize: 22,
     fontWeight: '800',
+    letterSpacing: 0.3,
+    marginBottom: 8,
   },
   tagline: {
-    marginTop: 180,
-    color: '#64748B',
+    color: '#9AA0A6',
     fontSize: 13,
+    marginBottom: 80,
+  },
+
+  /* Loading dots */
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    position: 'absolute',
+    bottom: 110,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#C87850',
   },
 });
 
