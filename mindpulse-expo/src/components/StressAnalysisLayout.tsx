@@ -5,8 +5,11 @@
  *   - 4-step module tab chips  (Survey / Face Scan / Heart Rate / Reaction)
  *   - Secondary section tabs   (Heart Rate / Reaction / Results)
  *   - Bottom navigation tab bar
+ *
+ * Secondary tabs are wired to TabNavigationContext so pressing them
+ * actually switches the active screen in StressFlowNavigator.
  */
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -17,6 +20,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
+import {
+  TabNavigationContext,
+  type FlowScreen,
+} from '../navigation/StressFlowNavigator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ModuleTab = 'survey' | 'faceScan' | 'heartRate' | 'reaction';
@@ -110,6 +117,16 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   heartRateDone,
   reactionDone,
 }) => {
+  // Pull live navigation state + handler from the root navigator context.
+  // Falls back gracefully when rendered outside the context (e.g. standalone).
+  const nav = useContext(TabNavigationContext);
+
+  // Prefer context values (live) over props (static) for the done badges
+  const hrDone  = nav.heartRateDone  || heartRateDone  || false;
+  const rxnDone = nav.reactionDone   || reactionDone   || false;
+
+  const handleTabPress = (tab: FlowScreen) => nav.onTabPress(tab);
+
   return (
     <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
       {/* ── Page header ── */}
@@ -148,24 +165,27 @@ export const StressAnalysisLayout: React.FC<Props> = ({
         />
       </View>
 
-      {/* ── Secondary section tabs ── */}
+      {/* ── Secondary section tabs — wired to real navigation ── */}
       <View style={layout.secTabs}>
         <SecTab
           label="Heart Rate"
           icon="♥"
           active={activeSection === 'heartRate'}
-          badge={heartRateDone ? '✓' : undefined}
+          badge={hrDone ? '✓' : undefined}
+          onPress={() => handleTabPress('heartRate')}
         />
         <SecTab
           label="Reaction"
           icon="⚡"
           active={activeSection === 'reaction'}
-          badge={reactionDone ? '✓' : undefined}
+          badge={rxnDone ? '✓' : undefined}
+          onPress={() => handleTabPress('reaction')}
         />
         <SecTab
           label="Results"
           icon="◎"
           active={activeSection === 'results'}
+          onPress={() => handleTabPress('results')}
         />
       </View>
 
