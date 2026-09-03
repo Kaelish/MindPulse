@@ -77,6 +77,7 @@ const BPMDisplay: React.FC<BPMDisplayProps> = ({ bpm }) => {
 interface Props {
   bpm: number;
   beats: number;          // raw beat count the user entered
+  onBack: () => void;
   onRedo: () => void;
   onNext: () => void;
 }
@@ -84,6 +85,7 @@ interface Props {
 export const HeartRateResultScreen: React.FC<Props> = ({
   bpm,
   beats,
+  onBack,
   onRedo,
   onNext,
 }) => {
@@ -103,7 +105,8 @@ export const HeartRateResultScreen: React.FC<Props> = ({
     <StressAnalysisLayout
       activeModule="heartRate"
       activeSection="heartRate"
-      heartRateDone>
+      heartRateDone
+      onBack={onBack}>
 
       {/* ── Result card ── */}
       <Animated.View style={[card.wrapper, { opacity: fadeIn }]}>

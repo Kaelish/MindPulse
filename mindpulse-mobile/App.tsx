@@ -8,6 +8,7 @@ import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
+import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { Colors } from './src/theme/colors';
 
@@ -28,6 +29,24 @@ function App() {
   const handleTabNavigate = (tab: BottomNavTab) => {
     setCurrentTab(tab);
     setScreenMode('main');
+  };
+
+  const handleBack = () => {
+    if (screenMode === 'healthSetup') {
+      setScreenMode('main');
+      setCurrentTab('profile');
+      return;
+    }
+
+    if (screenMode === 'call') {
+      setScreenMode('main');
+      setCurrentTab('home');
+      return;
+    }
+
+    if (screenMode === 'main' && currentTab !== 'home') {
+      setCurrentTab('home');
+    }
   };
 
   const handleAnalysisComplete = async (bpm: number) => {
@@ -54,21 +73,27 @@ function App() {
             <RNText style={styles.tagline}>Your personal stress companion</RNText>
           </View>
         ) : screenMode === 'healthSetup' ? (
-          <HealthSetupScreen
-            onContinue={() => {
-              setCurrentTab('profile');
-              setScreenMode('main');
-            }}
-          />
+          <View style={styles.screenWithBackButton}>
+            <HealthSetupScreen
+              onContinue={() => {
+                setCurrentTab('profile');
+                setScreenMode('main');
+              }}
+            />
+            <BackButton onPress={handleBack} />
+          </View>
         ) : screenMode === 'call' ? (
-          <VideoCallScreen
-            doctorId="doctor-123"
-            patientId="patient-456"
-            onEndCall={() => {
-              setCurrentTab('home');
-              setScreenMode('main');
-            }}
-          />
+          <View style={styles.screenWithBackButton}>
+            <VideoCallScreen
+              doctorId="doctor-123"
+              patientId="patient-456"
+              onEndCall={() => {
+                setCurrentTab('home');
+                setScreenMode('main');
+              }}
+            />
+            <BackButton onPress={handleBack} />
+          </View>
         ) : (
           /* MAIN PATIENT PORTAL: SINGLE BLUE NAVIGATION BAR AT BOTTOM */
           <View style={styles.mainWrapper}>
@@ -132,6 +157,9 @@ const styles = StyleSheet.create({
   subScreenWrap: {
     flex: 1,
     backgroundColor: Colors.pageBg,
+  },
+  screenWithBackButton: {
+    flex: 1,
   },
   splash: {
     flex: 1,

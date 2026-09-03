@@ -55,6 +55,7 @@ export const HeartRateNavigator: React.FC<Props> = ({
           <HeartRateResultScreen
             bpm={bpmResult}
             beats={beatsResult}
+            onBack={() => setScreen('entry')}
             onRedo={() => setScreen('entry')}
             onNext={() => onModuleComplete?.(bpmResult)}
           />

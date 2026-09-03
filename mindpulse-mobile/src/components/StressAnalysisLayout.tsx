@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
+import { BackButton } from './navigation/BackButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ModuleTab = 'survey' | 'faceScan' | 'heartRate' | 'reaction';
@@ -28,6 +29,7 @@ interface Props {
   children: React.ReactNode;
   /** Whether the Heart Rate tab shows a ✓ completion badge */
   heartRateDone?: boolean;
+  onBack?: () => void;
 }
 
 // ─── Module step tabs (top row of 4 chips) ────────────────────────────────────
@@ -106,9 +108,11 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   activeSection,
   children,
   heartRateDone,
+  onBack,
 }) => {
   return (
     <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
+      {onBack && <BackButton onPress={onBack} />}
       {/* ── Page header ── */}
       <View style={layout.header}>
         <Text style={layout.title}>Stress Analysis</Text>
