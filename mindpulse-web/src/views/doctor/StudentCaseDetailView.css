@@ -1,0 +1,77 @@
+.student-detail-main { background: #f5f7fb; }
+.student-detail-main .trend-chart { position: relative; height: 190px; display: block; padding: 0 10px 25px 36px; background: repeating-linear-gradient(to top, transparent 0, transparent 39px, #edf1f5 40px); border-bottom: 1px solid #dfe6ee; }
+.student-detail-main .trend-chart svg { position: absolute; left: 36px; top: 0; width: calc(100% - 46px); height: 160px; overflow: visible; }
+.student-detail-main .trend-chart path { fill: none; stroke: #f78b19; stroke-width: 2.5; }
+.student-detail-main .trend-chart circle { fill: #f78b19; }
+.student-detail-main .chart-y-label { position: absolute; left: 0; color: #718096; font-size: 0.62rem; }
+.student-detail-main .chart-y-label.top { top: 0; }
+.student-detail-main .chart-y-label.middle { top: 39px; }
+.student-detail-main .chart-y-label.lower { top: 78px; }
+.student-detail-main .chart-y-label.bottom { top: 117px; }
+.student-detail-main .chart-x-labels { position: absolute; left: 36px; right: 10px; bottom: 0; display: flex; justify-content: space-between; color: #718096; font-size: 0.58rem; }
+.student-detail-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 2px 14px; border-bottom: 1px solid #e3e8ef; color: #202938; }
+.student-detail-topbar strong { font-size: 0.95rem; }
+.student-detail-topbar .notification-button { color: #64748b; }
+.back-to-cases { margin: 20px 0 18px; border: 0; background: transparent; color: #718096; font-size: 0.78rem; cursor: pointer; }
+.back-to-cases:hover { color: var(--primary); }
+.student-profile-card { padding: 18px 20px 0; background: #fff; border: 1px solid #e0e7ef; border-radius: 10px; }
+.student-profile-heading { display: flex; align-items: center; gap: 12px; }
+.student-initials { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 9px; background: linear-gradient(135deg, #6758f5, #932be8); color: #fff; font-size: 1.1rem; font-weight: 700; }
+.student-profile-heading h1 { margin: 0 0 4px; font-size: 1.25rem; }
+.student-profile-heading > div:nth-child(2) > span { color: #718096; font-size: 0.75rem; }
+.student-profile-heading p { margin: 10px 0 0; color: #718096; font-size: 0.7rem; }
+.student-risk { margin-left: auto; display: flex; flex-direction: column; align-items: center; }
+.student-risk span { padding: 6px 22px; border-radius: 6px; color: #e0454f; background: #ffe1e2; font-size: 0.7rem; }
+.student-risk strong { margin-top: 7px; color: #202938; font-size: 1.45rem; }
+.student-risk small { color: #718096; font-size: 0.65rem; }
+.student-contact-row { display: flex; justify-content: space-between; gap: 14px; margin-top: 18px; padding: 14px 0; border-top: 1px solid #edf1f5; color: #718096; font-size: 0.68rem; }
+.student-detail-tabs { display: flex; gap: 26px; margin: 15px 0 18px; border-bottom: 1px solid #e2e8f0; }
+.student-detail-tabs button { position: relative; border: 0; background: transparent; padding: 0 3px 12px; color: #718096; font-size: 0.75rem; cursor: pointer; }
+.student-detail-tabs button.active { color: #5b6ef5; font-weight: 700; }
+.student-detail-tabs button.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: #5b6ef5; }
+.student-detail-content { display: grid; gap: 16px; }
+.detail-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.detail-stat { padding: 16px 14px; background: #fff; border: 1px solid #e0e7ef; border-radius: 8px; }
+.detail-stat span { display: block; color: #718096; font-size: 0.7rem; }
+.detail-stat strong { display: block; margin-top: 10px; color: #202938; font-size: 0.95rem; }
+.danger-text { color: #ef4444 !important; }
+.detail-panels { display: grid; grid-template-columns: 1.45fr 0.8fr; gap: 16px; }
+.detail-panel, .detail-assessment-card { padding: 18px; background: #fff; border: 1px solid #e0e7ef; border-radius: 9px; }
+.detail-panel h2, .detail-assessment-card h2 { margin: 0 0 16px; color: #202938; font-size: 0.85rem; }
+.trend-chart { height: 160px; display: flex; align-items: flex-end; gap: 18px; padding: 0 20px 0 35px; border-bottom: 1px solid #dfe6ee; background: repeating-linear-gradient(to top, transparent 0, transparent 39px, #edf1f5 40px); }
+.trend-chart i { width: 18%; display: block; border-radius: 4px 4px 0 0; background: linear-gradient(#ffb43b, #f78b19); }
+.risk-indicator { margin: 14px 0; }
+.risk-indicator div { display: flex; justify-content: space-between; color: #718096; font-size: 0.7rem; }
+.risk-indicator b { color: #374151; }
+.risk-indicator i { display: block; height: 6px; margin-top: 7px; border-radius: 5px; background: #f0444f; }
+.risk-indicator:nth-child(3) i { background: #e9a313; }
+.risk-indicator:nth-child(4) i { background: #31bd70; }
+.detail-assessment-card { display: grid; grid-template-columns: 1fr auto; gap: 15px; }
+.detail-assessment-card h2 { margin-bottom: 7px; }
+.detail-assessment-card h2 .risk-badge { margin-left: 8px; }
+.detail-assessment-card p, .consultation-detail p, .consultation-detail small { color: #718096; font-size: 0.72rem; }
+.detail-assessment-card > strong { color: #e0454f; font-size: 1.5rem; text-align: right; }
+.detail-assessment-card > strong small { display: block; color: #718096; font-size: 0.65rem; font-weight: 400; }
+.detail-emotion-bars { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding-top: 10px; border-top: 1px solid #edf1f5; }
+.detail-emotion div { display: flex; justify-content: space-between; margin-bottom: 6px; color: #718096; font-size: 0.7rem; }
+.detail-emotion b { color: #374151; }
+.detail-emotion i { display: block; height: 7px; border-radius: 6px; background: #f97316; }
+.detail-emotion i.blue { background: #3387f3; }
+.detail-emotion i.green { background: #22c55e; }
+.detail-assessment-card footer { grid-column: 1 / -1; color: #718096; font-size: 0.7rem; }
+.consultation-detail h2 { display: flex; justify-content: space-between; }
+.consultation-detail h3 { margin: 18px 0 5px; font-size: 0.72rem; }
+.notes-detail { display: grid; gap: 10px; }
+.notes-detail h2 { margin-bottom: 2px; }
+.notes-detail label { margin-top: 3px; color: #374151; font-size: 0.72rem; font-weight: 700; }
+.notes-detail textarea { min-height: 105px; padding: 12px; border: 1px solid #e0e7ef; border-radius: 7px; resize: vertical; font: inherit; font-size: 0.75rem; }
+
+@media (max-width: 760px) {
+  .student-contact-row { flex-direction: column; }
+  .detail-stat-grid { grid-template-columns: 1fr 1fr; }
+  .detail-panels { grid-template-columns: 1fr; }
+  .student-detail-tabs { gap: 12px; overflow-x: auto; }
+  .student-detail-tabs button { white-space: nowrap; }
+  .detail-emotion-bars { grid-template-columns: 1fr; }
+  .assessment-card-header { gap: 10px; }
+}

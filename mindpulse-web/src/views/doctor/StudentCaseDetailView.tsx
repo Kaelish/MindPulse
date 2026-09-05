@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StudentCase } from './StudentCasesView';
+import './StudentCaseDetailView.css';
 
 interface StudentCaseDetailViewProps {
   onBack: () => void;

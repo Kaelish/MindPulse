@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabase/client';
+import { getUserProfileRole } from '../../services/userProfile';
 
 interface WebAuthProps {
   screen: 'login' | 'register' | 'forgot' | 'reset';
-  setScreen: (screen: 'login' | 'register' | 'roles' | 'forgot' | 'reset') => void;
+  setScreen: (screen: 'doctor' | 'admin' | 'login' | 'register' | 'roles' | 'forgot' | 'reset') => void;
 }
 
 export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
@@ -30,7 +31,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { data: { full_name: fullName.trim() } },
@@ -38,6 +39,12 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
 
       if (error) {
         setErrorMessage(error.message);
+        return;
+      }
+
+      if (!data.session) {
+        setErrorMessage('Registration successful. Confirm your email, then sign in to choose your workspace.');
+        setScreen('login');
         return;
       }
 
@@ -76,7 +83,8 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         return;
       }
 
-      setScreen('roles');
+      const profileRole = await getUserProfileRole();
+      setScreen(profileRole || 'roles');
     } catch (error) {
       setErrorMessage('Unable to sign in right now. Please try again.');
     } finally {

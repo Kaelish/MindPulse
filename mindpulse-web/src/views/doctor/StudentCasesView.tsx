@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import './StudentCasesView.css';
 
 interface StudentCasesViewProps {
   onViewDetails?: (student: StudentCase) => void;
