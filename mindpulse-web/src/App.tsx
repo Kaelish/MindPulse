@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
-import { StudentCase, StudentCasesView, students } from './views/doctor/StudentCasesView';
+import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
 import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView } from './views/doctor/ConsultationsView';
@@ -14,7 +14,7 @@ import './App.css';
 
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>('consultations');
-  const [selectedStudent, setSelectedStudent] = useState<StudentCase>(students[0]);
+  const [selectedStudent, setSelectedStudent] = useState<StudentCase | null>(null);
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -23,7 +23,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
       case 'student-cases':
         return <StudentCasesView onViewDetails={(student) => { setSelectedStudent(student); setActiveView('student-case-detail'); }} />;
       case 'student-case-detail':
-        return <StudentCaseDetailView student={selectedStudent} onBack={() => setActiveView('student-cases')} />;
+        return selectedStudent ? <StudentCaseDetailView student={selectedStudent} onBack={() => setActiveView('student-cases')} /> : <StudentCasesView />;
       case 'assessment-results':
         return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':

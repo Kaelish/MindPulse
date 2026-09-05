@@ -1,5 +1,5 @@
-import { Bell } from 'lucide-react';
+import bellImage from '../assets/notifications/bell.png';
 
 export const NotificationBell = () => (
-  <Bell className="notification-bell-icon" aria-hidden="true" size={18} strokeWidth={1.6} />
+  <img className="notification-bell-icon" src={bellImage} alt="" aria-hidden="true" />
 );

@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { fetchStudentCases, StudentCaseRecord } from '../../services/studentCases';
+import { NotificationBell } from '../../components/NotificationBell';
 import './StudentCasesView.css';
 
 interface StudentCasesViewProps {
@@ -7,43 +9,44 @@ interface StudentCasesViewProps {
 
 export type CaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk';
 
-export interface StudentCase {
-  name: string;
-  id: string;
-  initials: string;
-  program: string;
-  age: number;
-  status: CaseStatus;
-  lastAssessment: string;
-  score: number;
-  trend: string;
-}
+export type StudentCase = StudentCaseRecord;
 
-export const students: StudentCase[] = [
-  { name: 'John Doe', id: 'STU-002', initials: 'JD', program: 'Computer Science', age: 20, status: 'High Risk', lastAssessment: '2 hours ago', score: 85, trend: 'Increasing' },
-  { name: 'Sarah Smith', id: 'STU-003', initials: 'SS', program: 'Engineering', age: 21, status: 'Moderate Risk', lastAssessment: '5 hours ago', score: 60, trend: 'Stable' },
-  { name: 'Mike Johnson', id: 'STU-004', initials: 'MJ', program: 'Psychology', age: 19, status: 'Low Risk', lastAssessment: '2 days ago', score: 34, trend: 'Decreasing' },
-  { name: 'Emma Wilson', id: 'STU-005', initials: 'EW', program: 'Business Administration', age: 22, status: 'Low Risk', lastAssessment: '1 hour ago', score: 12, trend: 'Decreasing' },
-  { name: 'Alex Brown', id: 'STU-006', initials: 'AB', program: 'Nursing', age: 19, status: 'Low Risk', lastAssessment: '30 minutes ago', score: 22, trend: 'Decreasing' },
-];
+export const students: StudentCase[] = [];
 
 export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetails }) => {
+  const [loadedStudents, setLoadedStudents] = useState<StudentCase[]>(students);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Status');
-  const filteredStudents = useMemo(() => students.filter((student) =>
+  useEffect(() => {
+    let active = true;
+    void fetchStudentCases().then((records) => {
+      if (active) setLoadedStudents(records);
+    }).catch((error) => {
+      if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load student cases.');
+    }).finally(() => {
+      if (active) setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const filteredStudents = useMemo(() => loadedStudents.filter((student) =>
     (status === 'All Status' || student.status === status) &&
     `${student.name} ${student.program}`.toLowerCase().includes(search.toLowerCase()),
-  ), [search, status]);
+  ), [loadedStudents, search, status]);
 
   return (
     <main className="main-panel student-cases-main">
       <header className="topbar student-cases-topbar">
         <div><h1>Student Cases</h1><p className="page-subtitle">Manage and review all assigned student cases</p></div>
-        <div className="header-actions"><button type="button" className="export-report-button">⇩ Export Report</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div>
+        <div className="header-actions"><button type="button" className="export-report-button">⇩ Export Report</button><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></div>
       </header>
-      <section className="case-summary-grid"><Summary label="Total Cases" value="14" /><Summary label="High Risk" value="4" /><Summary label="Moderate Risk" value="7" /><Summary label="Low Risk" value="3" /></section>
+      <section className="case-summary-grid"><Summary label="Total Cases" value={String(loadedStudents.length)} /><Summary label="High Risk" value={String(loadedStudents.filter((student) => student.status === 'High Risk').length)} /><Summary label="Moderate Risk" value={String(loadedStudents.filter((student) => student.status === 'Moderate Risk').length)} /><Summary label="Low Risk" value={String(loadedStudents.filter((student) => student.status === 'Low Risk').length)} /></section>
       <section className="case-filter-bar"><label className="case-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, ID, or program" /></label><select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status"><option>All Status</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select></section>
       <section className="case-table-panel">
+        {isLoading && <p className="case-loading">Loading student cases...</p>}
+        {loadError && <p className="case-load-error">{loadError}</p>}
         <div className="case-table-wrap">
           <table className="case-table">
             <thead><tr><th>Student</th><th>Program</th><th>Status</th><th>Last Assessment</th><th>Stress Level</th><th>Trend</th><th>Actions</th></tr></thead>

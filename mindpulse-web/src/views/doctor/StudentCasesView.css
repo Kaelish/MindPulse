@@ -30,6 +30,8 @@
 .case-trend.decreasing { color: #31a86d; border-color: #31a86d; }
 .case-table .view-details-button { padding: 6px 9px; font-size: 0.6rem; white-space: nowrap; }
 .empty-table { padding: 20px; color: #718096; text-align: center; font-size: 0.8rem; }
+.case-loading, .case-load-error { padding: 14px 8px; color: #718096; font-size: 0.75rem; }
+.case-load-error { color: #bf344d; }
 
 @media (max-width: 700px) {
   .case-summary-grid { grid-template-columns: 1fr 1fr; }

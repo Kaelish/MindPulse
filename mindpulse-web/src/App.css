@@ -76,6 +76,9 @@ button {
 .notification-bell-icon {
   display: block;
   flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .doctor-shell {
