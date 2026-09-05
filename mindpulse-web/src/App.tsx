@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
-import { StudentCasesView } from './views/doctor/StudentCasesView';
+import { StudentCase, StudentCasesView, students } from './views/doctor/StudentCasesView';
 import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView } from './views/doctor/ConsultationsView';
@@ -14,15 +14,16 @@ import './App.css';
 
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>('consultations');
+  const [selectedStudent, setSelectedStudent] = useState<StudentCase>(students[0]);
 
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
         return <DoctorDashboardView onSignOut={onSignOut} />;
       case 'student-cases':
-        return <StudentCasesView onViewDetails={() => setActiveView('student-case-detail')} />;
+        return <StudentCasesView onViewDetails={(student) => { setSelectedStudent(student); setActiveView('student-case-detail'); }} />;
       case 'student-case-detail':
-        return <StudentCaseDetailView onBack={() => setActiveView('student-cases')} />;
+        return <StudentCaseDetailView student={selectedStudent} onBack={() => setActiveView('student-cases')} />;
       case 'assessment-results':
         return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':
@@ -39,7 +40,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   return (
     <div className="doctor-shell">
       <DoctorSidebar
-        activeView={activeView}
+        activeView={activeView === 'student-case-detail' ? 'student-cases' : activeView}
         setActiveView={setActiveView}
         onSignOut={onSignOut}
       />
@@ -49,7 +50,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register' | 'forgot' | 'reset'>('doctor');
+  const [screen, setScreen] = useState<'doctor' | 'admin' | 'roles' | 'login' | 'register' | 'forgot' | 'reset'>('register');
   const signOut = () => setScreen('login');
 
   if (screen === 'doctor') return <DoctorPortal onSignOut={signOut} />;

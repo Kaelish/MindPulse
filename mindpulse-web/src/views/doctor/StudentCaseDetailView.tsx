@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { StudentCase } from './StudentCasesView';
 
 interface StudentCaseDetailViewProps {
   onBack: () => void;
+  student: StudentCase;
 }
 
 type DetailTab = 'Overview' | 'Assessment Results' | 'Consultations' | 'Add Notes';
 
-export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ onBack }) => {
+export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ onBack, student }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [saved, setSaved] = useState(false);
 
@@ -15,7 +17,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications">🔔</button></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
-        <div className="student-profile-heading"><div className="student-initials">SJ</div><div><h1>Sarah Johnson</h1><span>STU-001</span><p>♙ 20 years, Female&nbsp;&nbsp; · &nbsp;&nbsp;▣ Computer Science&nbsp;&nbsp; · &nbsp;&nbsp;▦ 3rd Year</p></div><div className="student-risk"><span>High Risk</span><strong>85%</strong><small>Current Stress Level</small></div></div>
+        <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>♙ {student.age} years, Female&nbsp;&nbsp; · &nbsp;&nbsp;▣ {student.program}&nbsp;&nbsp; · &nbsp;&nbsp;▦ 3rd Year</p></div><div className="student-risk"><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
         <div className="student-contact-row"><span>✉ sarah.johnson@university.edu</span><span>⌕ +1 (555) 123-4567</span><span>⌖ 123 Campus Drive, University City</span></div>
       </section>
       <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Add Notes'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
