@@ -1,5 +1,7 @@
 import React, { FormEvent, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { NotificationBell } from '../../components/NotificationBell';
+import './AdminUsersView.css';
 
 interface AdminUsersViewProps {
   onSignOut: () => void;
@@ -91,7 +93,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
           <div><div className="eyebrow">System Management</div><h1>Manage {activeRole === 'Doctors' ? 'Doctor' : 'Student'} Accounts</h1><p className="page-subtitle">View, add, edit, and manage {activeRole.toLowerCase()} accounts</p></div>
           <div className="account-actions">
             <div className="add-account-wrap"><button type="button" className="add-account-button" onClick={() => setShowAddMenu((open) => !open)}>＋ Add {activeRole === 'Doctors' ? 'Doctor' : 'Student'}</button>{showAddMenu && <div className="add-account-menu"><button type="button" onClick={() => openAddForm('Students')}>＋ Add Student</button><button type="button" onClick={() => openAddForm('Doctors')}>＋ Add Doctor</button></div>}</div>
-            <button type="button" className="notification-button" aria-label="View notifications" onClick={() => setShowNotifications((open) => !open)}>🔔<span className="notification-dot">{notifications.length}</span></button>
+            <button type="button" className="notification-button" aria-label="View notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /><span className="notification-dot">{notifications.length}</span></button>
             {showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong><button type="button" onClick={() => setNotifications([])}>Clear</button></div>{notifications.length ? notifications.map((notification, index) => <div className="notification-item" key={`${notification}-${index}`}><span className="notification-symbol">●</span><span>{notification}</span></div>) : <p className="empty-notifications">No new notifications</p>}</aside>}
           </div>
         </header>

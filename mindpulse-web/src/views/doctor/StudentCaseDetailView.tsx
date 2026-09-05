@@ -15,7 +15,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   return (
     <main className="main-panel student-detail-main">
-      <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications">🔔</button></header>
+      <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
         <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>♙ {student.age} years, Female&nbsp;&nbsp; · &nbsp;&nbsp;▣ {student.program}&nbsp;&nbsp; · &nbsp;&nbsp;▦ 3rd Year</p></div><div className="student-risk"><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>

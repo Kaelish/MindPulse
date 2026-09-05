@@ -1,4 +1,5 @@
 import React, { FormEvent, useState } from 'react';
+import { NotificationBell } from '../../components/NotificationBell';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 
 type ProfileTab = 'personal' | 'professional' | 'security' | 'notifications';
@@ -28,7 +29,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   return <div className="admin-shell admin-profile-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
     <main className="admin-main admin-profile-main">
-      <header className="admin-profile-header"><div><h1>Profile Settings</h1><p>Manage your personal information and preferences</p></div><button type="button" className="notification-button" aria-label="Notifications">🔔</button></header>
+      <header className="admin-profile-header"><div><h1>Profile Settings</h1><p>Manage your personal information and preferences</p></div><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></header>
       <section className="admin-profile-card"><div className="admin-avatar-large">●</div><div className="admin-profile-identity"><h2>Admin User</h2><span>System Administrator</span><p>✉ admin@mindpulse.com &nbsp;&nbsp; ☎ +1 (555) 123-4567 &nbsp;&nbsp; ▣ IT &amp; Technology</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
       <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security'], ['notifications', 'Notifications']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setSaved(false); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">Changes saved successfully.</div>}
@@ -38,7 +39,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
         {activeTab === 'security' && <ProfileSection title="Change Password"><Field label="Current Password" value="" editing={true} placeholder="Enter current password" password /><Field label="New Password" value="" editing={true} placeholder="Enter new password" password /><Field label="Confirm New Password" value="" editing={true} placeholder="Confirm new password" password /><div className="security-divider" /><h3>Two-Factor Authentication</h3><p className="form-helper">Add an extra layer of security to your account.</p><button type="button" className="small-profile-button">Enable 2FA</button></ProfileSection>}
         {activeTab === 'notifications' && <ProfileSection title="Notification Preferences"><Toggle label="Email Notifications" description="Receive notifications via email" value={emailNotifications} onChange={setEmailNotifications} /><Toggle label="Push Notifications" description="Receive push notifications in your browser" value={pushNotifications} onChange={setPushNotifications} /><Toggle label="SMS Notifications" description="Receive notifications via text message" value={smsNotifications} onChange={setSmsNotifications} /><Toggle label="Weekly Reports" description="Receive weekly summary reports" value={weeklyReports} onChange={setWeeklyReports} /><Toggle label="Critical Alerts" description="Receive alerts for high-risk cases" value={criticalAlerts} onChange={setCriticalAlerts} /></ProfileSection>}
         {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button">▣ Save Changes</button>}
-        {activeTab === 'security' && <button type="submit" className="small-profile-button">♧ Change Password</button>}
+          {activeTab === 'security' && <button type="submit" className="small-profile-button">♧ Change Password</button>}
         {activeTab === 'notifications' && <button type="submit" className="small-profile-button">▣ Save Preferences</button>}
       </form>
     </main>

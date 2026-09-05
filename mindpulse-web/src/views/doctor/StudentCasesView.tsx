@@ -39,7 +39,7 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
     <main className="main-panel student-cases-main">
       <header className="topbar student-cases-topbar">
         <div><h1>Student Cases</h1><p className="page-subtitle">Manage and review all assigned student cases</p></div>
-        <div className="header-actions"><button type="button" className="export-report-button">⇩ Export Report</button><button type="button" className="notification-button" aria-label="Notifications">🔔</button></div>
+        <div className="header-actions"><button type="button" className="export-report-button">⇩ Export Report</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div>
       </header>
       <section className="case-summary-grid"><Summary label="Total Cases" value="14" /><Summary label="High Risk" value="4" /><Summary label="Moderate Risk" value="7" /><Summary label="Low Risk" value="3" /></section>
       <section className="case-filter-bar"><label className="case-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, ID, or program" /></label><select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status"><option>All Status</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select></section>

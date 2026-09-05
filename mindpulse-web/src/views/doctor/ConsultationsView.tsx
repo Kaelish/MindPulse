@@ -155,7 +155,7 @@ export const ConsultationsView: React.FC = () => {
 
         <div className="consultations-header-actions">
           <button type="button" className="bell-btn" title="Notifications">
-            🔔
+            <span className="bell-icon" />
           </button>
           {/* Schedule Consultation Button opens Manual Booking Modal */}
           <button

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { NotificationBell } from '../../components/NotificationBell';
 import './AdminAnalyticsView.css';
 
 interface AdminAnalyticsViewProps {
@@ -25,7 +26,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
             <p>Comprehensive insights and performance metrics</p>
           </div>
           <div className="analytics-actions">
-            <button type="button" className="analytics-icon-button" aria-label="Notifications">♧</button>
+            <button type="button" className="analytics-icon-button" aria-label="Notifications"><NotificationBell /></button>
             <select className="analytics-select" defaultValue="6">
               <option value="6">Last 6 Months</option>
               <option value="12">Last 12 Months</option>
