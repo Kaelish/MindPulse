@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { recordPlantSession } from './plantProgress';
 
 export interface StressSessionItem {
   id: string;
@@ -267,6 +268,7 @@ export const saveNewStressSession = async (
       face_confidence: newSession.faceConfidencePercent,
       notes,
     });
+    await recordPlantSession();
   } catch (e) {
     // Graceful offline fallback
   }

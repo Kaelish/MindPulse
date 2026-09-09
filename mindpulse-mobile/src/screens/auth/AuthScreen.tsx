@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { supabase } from '../../supabase/client';
 
 interface AuthScreenProps {
   initialTab?: 'login' | 'register';
@@ -65,6 +66,53 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const saveStudentProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+    const email = user.email || regEmail.trim();
+    const first = firstName.trim() || String(user.user_metadata?.full_name || 'MindPulse').split(' ')[0];
+    const last = lastName.trim() || 'User';
+    const { error } = await supabase.from('USER').upsert({
+      USER_ID: user.id,
+      USERNAME: email,
+      EMAIL: email,
+      ROLE: 'STUDENT',
+      FIRST_NAME: first,
+      LAST_NAME: last,
+      ACCOUNT_STATUS: 'active',
+    }, { onConflict: 'USER_ID' });
+    if (error) throw new Error(error.message);
+  };
+
+  const handleAuth = async (isRegister: boolean) => {
+    setAuthError('');
+    const email = isRegister ? regEmail.trim() : loginEmail.trim();
+    const password = isRegister ? regPassword : loginPassword;
+    if (!email || !password || (isRegister && (!firstName.trim() || !lastName.trim()))) {
+      setAuthError(isRegister ? 'Please complete all registration fields.' : 'Please enter your email and password.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const result = isRegister
+        ? await supabase.auth.signUp({ email, password, options: { data: { full_name: `${firstName.trim()} ${lastName.trim()}` } } })
+        : await supabase.auth.signInWithPassword({ email, password });
+      if (result.error) throw new Error(result.error.message);
+      if (!result.data.user) throw new Error('Supabase did not return a user.');
+      if (isRegister && !result.data.session) {
+        setAuthError('Account created. Confirm your email, then sign in.');
+        setActiveTab('login');
+        return;
+      }
+      await saveStudentProfile(result.data.user);
+      onAuthSuccess(isRegister);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Unable to authenticate right now.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -143,8 +191,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   </Pressable>
                 </View>
 
-                <Pressable style={styles.primaryBtn} onPress={() => onAuthSuccess(false)}>
-                  <Text style={styles.primaryBtnText}>Sign in</Text>
+                {authError && <Text style={styles.authError}>{authError}</Text>}
+                <Pressable style={styles.primaryBtn} disabled={isSubmitting} onPress={() => void handleAuth(false)}>
+                  <Text style={styles.primaryBtnText}>{isSubmitting ? 'Signing in...' : 'Sign in'}</Text>
                 </Pressable>
 
                 <View style={styles.switchRow}>
@@ -225,8 +274,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   </Pressable>
                 </View>
 
-                <Pressable style={styles.primaryBtn} onPress={() => onAuthSuccess(true)}>
-                  <Text style={styles.primaryBtnText}>Create Account</Text>
+                {authError && <Text style={styles.authError}>{authError}</Text>}
+                <Pressable style={styles.primaryBtn} disabled={isSubmitting} onPress={() => void handleAuth(true)}>
+                  <Text style={styles.primaryBtnText}>{isSubmitting ? 'Creating...' : 'Create Account'}</Text>
                 </Pressable>
 
                 <View style={styles.switchRow}>
@@ -456,6 +506,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   primaryBtnText: { color: WHITE, fontWeight: '700', fontSize: 16 },
+  authError: { marginTop: 12, color: '#B23A48', fontSize: 12, textAlign: 'center' },
 
   /* Switch link */
   switchRow: {

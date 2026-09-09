@@ -256,11 +256,14 @@ function App() {
 
         {/* ── REACTION GAME ── */}
         {screenMode === 'reaction' && (
-          <View style={styles.screenWithBackButton}>
-            <ReactionGameScreen
-              onBack={handleBack}
-              onComplete={handleReactionComplete}
-            />
+          <View style={styles.mainWrapper}>
+            <View style={styles.tabViewArea}>
+              <ReactionGameScreen
+                onBack={handleBack}
+                onComplete={handleReactionComplete}
+              />
+            </View>
+            <BottomTabBar activeTab="analysis" onNavigate={handleTabNavigate} />
           </View>
         )}
 

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { AppSpacing, Shadows } from '../../theme/tokens';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { PlantProgressScreen } from './PlantProgressScreen';
 import {
   PatientDashboardData,
   StressSessionItem,
@@ -566,33 +567,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
           </View>
         ) : (
           /* MY PROFILE TAB CONTENT */
-          <View style={styles.tabBody}>
-            <View style={styles.myProfileCard}>
-              <Text style={styles.myProfileTitle}>Personal Profile</Text>
-              
-              <View style={styles.profileField}>
-                <Text style={styles.fieldLabel}>Full Name</Text>
-                <Text style={styles.fieldValue}>{userName}</Text>
-              </View>
-
-              <View style={styles.profileField}>
-                <Text style={styles.fieldLabel}>Email Address</Text>
-                <Text style={styles.fieldValue}>{userEmail}</Text>
-              </View>
-
-              <View style={styles.profileField}>
-                <Text style={styles.fieldLabel}>Care Plan Status</Text>
-                <Text style={styles.fieldValue}>Active MindPulse Plan</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.editProfileButton}
-                onPress={() => onOpenHealthSetup?.()}
-              >
-                <Text style={styles.editProfileButtonText}>Edit Health Profile</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <PlantProgressScreen onBack={() => setActiveSegment('history')} />
         )}
       </ScrollView>
 
