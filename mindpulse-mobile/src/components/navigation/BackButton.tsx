@@ -1,19 +1,25 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 
 interface BackButtonProps {
   onPress: () => void;
+  /** Optional style override for the button container */
+  style?: object;
 }
 
-export const BackButton: React.FC<BackButtonProps> = ({ onPress }) => (
+export const BackButton: React.FC<BackButtonProps> = ({ onPress, style }) => (
   <TouchableOpacity
     accessibilityLabel="Go back"
     accessibilityRole="button"
     activeOpacity={0.8}
     onPress={onPress}
-    style={styles.button}
+    style={[styles.button, style]}
   >
-    <Text style={styles.arrow}>‹</Text>
+    {/* Arrow drawn from Views — left-pointing chevron */}
+    <View style={styles.arrowWrap}>
+      <View style={styles.arrowTop} />
+      <View style={styles.arrowBottom} />
+    </View>
   </TouchableOpacity>
 );
 
@@ -21,27 +27,43 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
     borderRadius: 22,
-    borderWidth: 1,
-    elevation: 4,
+    elevation: 6,
     height: 44,
     justifyContent: 'center',
     left: 16,
     position: 'absolute',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    top: 12,
+    ...Platform.select({
+      web: { boxShadow: '0px 3px 6px rgba(26,35,64,0.14)' },
+      default: {
+        shadowColor: '#1A2340',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.14,
+        shadowRadius: 6,
+      }
+    }),
+    top: 14,
     width: 44,
     zIndex: 10,
   },
-  arrow: {
-    color: '#5B6EF5',
-    fontSize: 34,
-    fontWeight: '300',
-    lineHeight: 38,
-    marginTop: -3,
+  arrowWrap: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowTop: {
+    width: 10,
+    height: 2.5,
+    backgroundColor: '#4A7DC7',
+    borderRadius: 1.5,
+    transform: [{ rotate: '-45deg' }, { translateY: 3.5 }],
+  },
+  arrowBottom: {
+    width: 10,
+    height: 2.5,
+    backgroundColor: '#4A7DC7',
+    borderRadius: 1.5,
+    transform: [{ rotate: '45deg' }, { translateY: -3.5 }],
   },
 });

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Platform,
   StatusBar,
   StyleSheet,
   Text as RNText,
@@ -18,6 +19,7 @@ import { AppointmentBookingScreen } from './src/screens/appointments/Appointment
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
 import { FinalStressScoreScreen } from './src/screens/results/FinalStressScoreScreen';
+import { FaceScanNavigator } from './src/screens/facescan/FaceScanNavigator';
 import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
@@ -29,6 +31,7 @@ type ScreenMode =
   | 'auth'
   | 'healthSetup'
   | 'main'
+  | 'faceScan'
   | 'reaction'
   | 'finalResults'
   | 'call';
@@ -52,13 +55,13 @@ const SplashScreen = () => {
             toValue: 1,
             duration: 400,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.timing(dot, {
             toValue: 0,
             duration: 400,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.delay(600),
         ]),
@@ -122,6 +125,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState<BottomNavTab>('home');
   const [heartRateBpm, setHeartRateBpm] = useState(0);
   const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
+  const [faceScanResult, setFaceScanResult] = useState<{ expression: string; score: number } | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
   const [registeredUserName, setRegisteredUserName] = useState('John');
 
@@ -147,6 +151,11 @@ function App() {
     if (screenMode === 'call') {
       setScreenMode('main');
       setCurrentTab('home');
+      return;
+    }
+    if (screenMode === 'faceScan') {
+      setScreenMode('main');
+      setCurrentTab('analysis');
       return;
     }
     if (screenMode === 'reaction') {
@@ -198,7 +207,7 @@ function App() {
   /* ─────────── Render ─────────── */
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF8F3" />
+      <StatusBar barStyle="light-content" backgroundColor="#3D6FC7" />
       <View style={styles.root}>
 
         {/* ── SPLASH ── */}
@@ -239,19 +248,32 @@ function App() {
           </View>
         )}
 
-        {/* ── VIDEO CALL ── */}
         {screenMode === 'call' && (
           <View style={styles.screenWithBackButton}>
             <VideoCallScreen
               doctorId="doctor-123"
               patientId="patient-456"
+              doctorName="Dr. Sarah Chen"
+              doctorSpecialty="Clinical Psychologist"
               onEndCall={() => {
                 setCurrentTab('home');
                 setScreenMode('main');
               }}
+              onNavigateTab={handleTabNavigate}
             />
-            <BackButton onPress={handleBack} />
           </View>
+        )}
+
+        {/* ── FACE SCAN ── */}
+        {screenMode === 'faceScan' && (
+          <FaceScanNavigator
+            onBack={handleBack}
+            onFinishScan={(result) => {
+              setFaceScanResult(result);
+              setScreenMode('main');
+              setCurrentTab('analysis');
+            }}
+          />
         )}
 
         {/* ── REACTION GAME ── */}
@@ -287,7 +309,7 @@ function App() {
                   onNavigate={handleTabNavigate}
                   onStartVideoCall={() => setScreenMode('call')}
                   onRunSurvey={() => setCurrentTab('profile')}
-                  onRunFaceScan={() => setCurrentTab('analysis')}
+                  onRunFaceScan={() => setScreenMode('faceScan')}
                   onRunDailyCheck={() => setCurrentTab('analysis')}
                 />
               )}

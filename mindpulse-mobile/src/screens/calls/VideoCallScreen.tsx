@@ -1,229 +1,274 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  Animated,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Colors } from '../../theme/colors';
-import { AppRadius, AppSpacing, AppTypography, Shadows } from '../../theme/tokens';
-import { CallSessionPayload, launchDoctorVideoCall } from '../../services/video';
+import { Ionicons } from '@expo/vector-icons';
+import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 
 interface VideoCallScreenProps {
-  doctorId: string;
-  patientId: string;
+  doctorId?: string;
+  patientId?: string;
+  doctorName?: string;
+  doctorSpecialty?: string;
   onEndCall?: () => void;
+  onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
-export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
-  doctorId,
-  patientId,
-  onEndCall,
-}) => {
-  const [session, setSession] = useState<CallSessionPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// ── Animated recording timer ──
+const CallTimer = () => {
+  const [seconds, setSeconds] = useState(0);
+  const dot = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const initializeCall = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const result = await launchDoctorVideoCall(doctorId, patientId);
-        setSession(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to start the call.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void initializeCall();
-  }, [doctorId, patientId]);
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Connecting to patient call...</Text>
-      </View>
+    const timer = setInterval(() => setSeconds(s => s + 1), 1000);
+    const blink = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dot, { toValue: 0, duration: 500, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(dot, { toValue: 1, duration: 500, useNativeDriver: Platform.OS !== 'web' }),
+      ])
     );
-  }
+    blink.start();
+    return () => { clearInterval(timer); blink.stop(); };
+  }, [dot]);
 
-  if (error || !session) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorTitle}>Call unavailable</Text>
-        <Text style={styles.errorText}>{error ?? 'Unable to create the meeting room.'}</Text>
-        <TouchableOpacity style={styles.actionButton} onPress={onEndCall}>
-          <Text style={styles.actionButtonText}>Go back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const ss = String(seconds % 60).padStart(2, '0');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.videoStage}>
-        <View style={styles.remoteCard}>
-          <Text style={styles.remoteLabel}>Patient video</Text>
-          <Text style={styles.remoteName}>Sarah Johnson</Text>
-        </View>
+    <View style={styles.timerBadge}>
+      <Animated.View style={[styles.timerDot, { opacity: dot }]} />
+      <Text style={styles.timerText}>{mm}:{ss}</Text>
+    </View>
+  );
+};
 
-        <View style={styles.localCard}>
-          <Text style={styles.localLabel}>You</Text>
-          <Text style={styles.localName}>Dr. Chen</Text>
-        </View>
-      </View>
-
-      <View style={styles.bottomPanel}>
-        <Text style={styles.stateLabel}>Call status</Text>
-        <Text style={styles.statusText}>Connecting to room: {session.roomName}</Text>
-        <Text style={styles.metaText}>Meeting URL: {session.meetingUrl}</Text>
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Mute</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.endButton]} onPress={onEndCall}>
-            <Text style={styles.actionButtonText}>End call</Text>
-          </TouchableOpacity>
-        </View>
+// ── Doctor avatar ──
+const DoctorAvatar = ({ name }: { name: string }) => {
+  const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <View style={styles.avatarWrap}>
+      <View style={styles.avatarCircle}>
+        <Ionicons name="person" size={32} color="#8B9ED4" />
       </View>
     </View>
   );
 };
 
+export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
+  doctorName = 'Dr. Sarah Chen',
+  doctorSpecialty = 'Clinical Psychologist',
+  onEndCall,
+  onNavigateTab,
+}) => {
+  const [muted, setMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  const [inChat, setInChat] = useState(false);
+  const [activeTab] = useState<'home' | 'analysis' | 'clinics' | 'profile'>('clinics');
+
+  return (
+    <View style={styles.root}>
+      {/* ── Remote video area (grey placeholder) ── */}
+      <View style={styles.remoteVideo}>
+        {/* Recording timer top-left */}
+        <CallTimer />
+
+        {/* Local video PiP — top-right placeholder */}
+        <View style={styles.localPip}>
+          <Ionicons name="person" size={22} color="#B0B8C8" />
+        </View>
+      </View>
+
+      {/* ── Doctor info ── */}
+      <View style={styles.doctorInfo}>
+        <DoctorAvatar name={doctorName} />
+        <Text style={styles.doctorName}>{doctorName}</Text>
+        <Text style={styles.doctorSpecialty}>{doctorSpecialty}</Text>
+      </View>
+
+      {/* ── Control bar ── */}
+      <View style={styles.controlBar}>
+        <TouchableOpacity
+          style={[styles.ctrlBtn, muted && styles.ctrlBtnActive]}
+          onPress={() => setMuted(v => !v)}
+        >
+          <Ionicons
+            name={muted ? 'mic-off' : 'mic'}
+            size={22}
+            color={muted ? '#FFF' : '#6B7A99'}
+          />
+          <Text style={[styles.ctrlLabel, muted && { color: '#FFF' }]}>Mute</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.endCallBtn} onPress={onEndCall}>
+          <Ionicons name="call" size={24} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
+          <Text style={styles.endCallLabel}>End</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.ctrlBtn, cameraOff && styles.ctrlBtnActive]}
+          onPress={() => setCameraOff(v => !v)}
+        >
+          <Ionicons
+            name={cameraOff ? 'videocam-off' : 'videocam'}
+            size={22}
+            color={cameraOff ? '#FFF' : '#6B7A99'}
+          />
+          <Text style={[styles.ctrlLabel, cameraOff && { color: '#FFF' }]}>Camera</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.ctrlBtn, inChat && styles.ctrlBtnBlue]}
+          onPress={() => setInChat(v => !v)}
+        >
+          <Ionicons
+            name="chatbubble-outline"
+            size={22}
+            color={inChat ? '#FFF' : '#6B7A99'}
+          />
+          <Text style={[styles.ctrlLabel, inChat && { color: '#FFF' }]}>Chat</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Bottom Tab ── */}
+      <BottomTabBar activeTab={activeTab} onNavigate={tab => onNavigateTab?.(tab)} />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    padding: AppSpacing.lg,
-    justifyContent: 'space-between',
+    backgroundColor: '#FAF8F3',
   },
-  loadingText: {
-    marginTop: AppSpacing.md,
-    color: Colors.white,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  errorTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  errorText: {
-    marginTop: AppSpacing.sm,
-    color: '#D6E3FF',
-    textAlign: 'center',
-  },
-  videoStage: {
+
+  /* Remote video placeholder */
+  remoteVideo: {
     flex: 1,
-    minHeight: 420,
-    borderRadius: AppRadius.xl,
-    overflow: 'hidden',
-    backgroundColor: '#111827',
+    backgroundColor: '#E2E6EE',
+    margin: 16,
+    marginTop: 20,
+    borderRadius: 20,
     position: 'relative',
-    ...Shadows.medium,
-  },
-  remoteCard: {
-    flex: 1,
-    backgroundColor: '#1F2937',
-    justifyContent: 'center',
+    minHeight: 320,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  remoteLabel: {
-    color: '#D6E3FF',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.1,
-  },
-  remoteName: {
-    marginTop: AppSpacing.sm,
-    color: Colors.white,
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  localCard: {
+
+  /* Recording timer */
+  timerBadge: {
     position: 'absolute',
-    right: 18,
-    bottom: 18,
-    width: 120,
-    height: 150,
-    backgroundColor: '#2F6FED',
-    borderRadius: AppRadius.lg,
+    top: 14,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 6,
+  },
+  timerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+  },
+  timerText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  /* Local PiP */
+  localPip: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 72,
+    height: 90,
+    backgroundColor: '#C8CDD8',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: '#FFF',
   },
-  localLabel: {
-    color: '#EAF2FF',
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  localName: {
-    marginTop: AppSpacing.sm,
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  bottomPanel: {
-    backgroundColor: '#111827',
-    borderRadius: AppRadius.xl,
-    padding: AppSpacing.lg,
-    marginTop: AppSpacing.md,
-  },
-  stateLabel: {
-    ...AppTypography.label,
-    color: '#9DB8FF',
-    textTransform: 'uppercase',
-  },
-  statusText: {
-    marginTop: AppSpacing.sm,
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  metaText: {
-    marginTop: AppSpacing.sm,
-    color: '#D6E3FF',
-    fontSize: 12,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: AppSpacing.sm,
-    marginTop: AppSpacing.lg,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#1F2937',
-    borderRadius: AppRadius.md,
-    paddingVertical: 12,
+
+  /* Doctor info */
+  doctorInfo: {
     alignItems: 'center',
+    paddingVertical: 18,
   },
-  secondaryButtonText: {
-    color: Colors.white,
-    fontWeight: '700',
+  avatarWrap: {
+    marginBottom: 10,
   },
-  actionButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: AppRadius.md,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+  avatarCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#E8ECFA',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  endButton: {
-    backgroundColor: '#D95D5D',
+  doctorName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A2E44',
+    marginBottom: 3,
   },
-  actionButtonText: {
+  doctorSpecialty: {
+    fontSize: 13,
+    color: '#7A90A8',
+  },
+
+  /* Control bar */
+  controlBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  ctrlBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#EBEBEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  ctrlBtnActive: {
+    backgroundColor: '#EF4444',
+  },
+  ctrlBtnBlue: {
+    backgroundColor: '#4A90D9',
+  },
+  ctrlLabel: {
+    fontSize: 10,
+    color: '#6B7A99',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  endCallBtn: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  endCallLabel: {
+    fontSize: 10,
+    color: '#FFF',
     fontWeight: '700',
-    color: Colors.white,
+    marginTop: 2,
   },
 });

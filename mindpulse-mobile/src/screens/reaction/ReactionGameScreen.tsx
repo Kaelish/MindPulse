@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
@@ -85,7 +86,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
     >
       {phase === 'instructions' && (
         <View style={styles.card}>
-          <Text style={styles.emoji}>⚡</Text>
+          <Ionicons name="flash" size={48} color={Colors.primary} style={{marginBottom: 12, textAlign: 'center'}} />
           <Text style={styles.title}>Reaction Time Test</Text>
           <Text style={styles.body}>
             Tap the panel as soon as it turns green. Complete three rounds to measure your reaction speed.
@@ -111,7 +112,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
             accessibilityRole="button"
             accessibilityLabel={phase === 'go' ? 'Tap now' : 'Wait for green'}
           >
-            <Text style={styles.triggerIcon}>{phase === 'go' ? '🟢' : '🟡'}</Text>
+            <Ionicons name="radio-button-on" size={64} color={phase === 'go' ? '#FFF' : 'rgba(255,255,255,0.8)'} />
             <Text style={styles.triggerTitle}>{phase === 'go' ? 'TAP NOW!' : 'Wait...'}</Text>
             <Text style={styles.triggerSubtitle}>{phase === 'go' ? 'Tap as fast as you can' : 'Do not tap yet'}</Text>
           </TouchableOpacity>
@@ -120,7 +121,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
 
       {phase === 'results' && (
         <View style={styles.card}>
-          <Text style={styles.emoji}>✓</Text>
+          <Ionicons name="checkmark-circle" size={48} color={Colors.primary} style={{marginBottom: 12, textAlign: 'center'}} />
           <Text style={styles.title}>Reaction Test Complete</Text>
           <Text style={styles.resultValue}>{Math.round(attempts.reduce((sum, value) => sum + value, 0) / attempts.length)}<Text style={styles.resultUnit}> ms</Text></Text>
           <Text style={styles.resultLabel}>Average reaction time</Text>

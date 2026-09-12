@@ -4,7 +4,7 @@
  * terracotta "Start 15-Second Timer" button.
  */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
@@ -87,10 +87,10 @@ const screen = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.md,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${2 }px ${6}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2  } }
+    }),
   },
   cardTitle: {
     fontSize: 16,
@@ -127,10 +127,10 @@ const screen = StyleSheet.create({
     gap: 10,
     marginTop: Spacing.sm,
     elevation: 3,
-    shadowColor: Colors.ctaRed,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${4 }px ${8}px rgba(0,0,0,${0.3})` },
+      default: { shadowColor: Colors.ctaRed, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4  } }
+    }),
   },
   ctaHeart: {
     fontSize: 18,

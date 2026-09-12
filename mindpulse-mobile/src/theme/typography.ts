@@ -3,24 +3,24 @@
  */
 export const Typography = {
   // Headings
-  h1: { fontSize: 26, fontWeight: '700' as const, letterSpacing: -0.5 },
-  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3 },
-  h3: { fontSize: 18, fontWeight: '600' as const, letterSpacing: -0.2 },
+  h1: { fontSize: 32, fontWeight: '800' as const, letterSpacing: -1 },
+  h2: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.5 },
+  h3: { fontSize: 18, fontWeight: '700' as const, letterSpacing: -0.2 },
 
   // Body
-  body1: { fontSize: 15, fontWeight: '400' as const, lineHeight: 22 },
-  body2: { fontSize: 13, fontWeight: '400' as const, lineHeight: 20 },
+  body1: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
+  body2: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
 
   // Labels / Captions
-  label: { fontSize: 12, fontWeight: '600' as const, letterSpacing: 0.5 },
-  caption: { fontSize: 11, fontWeight: '400' as const, lineHeight: 16 },
+  label: { fontSize: 13, fontWeight: '600' as const, letterSpacing: 0.2 },
+  caption: { fontSize: 11, fontWeight: '500' as const, lineHeight: 16 },
 
   // Metric display
-  metric: { fontSize: 56, fontWeight: '800' as const, letterSpacing: -2 },
-  metricUnit: { fontSize: 22, fontWeight: '600' as const },
+  metric: { fontSize: 48, fontWeight: '800' as const, letterSpacing: -1.5 },
+  metricUnit: { fontSize: 18, fontWeight: '600' as const },
 
   // Button
-  button: { fontSize: 16, fontWeight: '700' as const, letterSpacing: 0.3 },
+  button: { fontSize: 16, fontWeight: '700' as const, letterSpacing: 0.2 },
 };
 
 export const Spacing = {

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
@@ -167,10 +168,10 @@ const screen = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.sm,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${2 }px ${6}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2  } }
+    }),
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -241,10 +242,10 @@ const screen = StyleSheet.create({
     padding: Spacing.lg,
     gap: 10,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${2 }px ${6}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2  } }
+    }),
   },
   refTitle: {
     fontSize: 13,
@@ -262,10 +263,10 @@ const screen = StyleSheet.create({
   calcBtnActive: {
     backgroundColor: Colors.primary,
     elevation: 3,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${4 }px ${8}px rgba(0,0,0,${0.3})` },
+      default: { shadowColor: Colors.primary, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4  } }
+    }),
   },
   calcBtnLabel: {
     fontSize: 16,

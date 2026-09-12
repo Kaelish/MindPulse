@@ -1,4 +1,9 @@
 {
-  "name": "MindPulseMobile",
-  "displayName": "MindPulseMobile"
+  "expo": {
+    "name": "MindPulseMobile",
+    "slug": "mindpulse-mobile",
+    "plugins": [
+      "expo-status-bar"
+    ]
+  }
 }

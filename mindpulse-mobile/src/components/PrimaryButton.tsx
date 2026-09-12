@@ -2,7 +2,7 @@
  * PrimaryButton – Full-width accessible CTA button
  */
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, Radius } from '../theme/typography';
 
@@ -58,10 +58,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${4 }px ${8}px rgba(0,0,0,${0.25})` },
+      default: { shadowColor: Colors.primary, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4  } }
+    }),
   },
   btnDisabled: {
     opacity: 0.5,

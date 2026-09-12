@@ -3,7 +3,7 @@
  * Shows back arrow, screen title, and optional step progress indicator
  */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, Radius } from '../theme/typography';
 
@@ -98,10 +98,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${2 }px ${4}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2  } }
+    }),
   },
   row: {
     flexDirection: 'row',

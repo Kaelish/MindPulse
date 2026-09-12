@@ -2,6 +2,7 @@
  * MindPulse shared design tokens
  * Source of truth for spacing, color, radius, and typography.
  */
+import { Platform } from 'react-native';
 
 export const BrandColors = {
   primary: '#4A90D9',
@@ -70,16 +71,26 @@ export const AppTypography = {
 };
 
 export const Shadows = {
-  small: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  medium: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
+  small: Platform.select({
+    web: {
+      boxShadow: '0px 3px 8px rgba(0,0,0,0.06)',
+    },
+    default: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+    },
+  }),
+  medium: Platform.select({
+    web: {
+      boxShadow: '0px 6px 12px rgba(0,0,0,0.12)',
+    },
+    default: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+    },
+  }),
 };

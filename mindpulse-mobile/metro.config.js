@@ -1,15 +1,15 @@
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {
-	resolver: {
-		blockList: [/node_modules[\\/]fsevents[\\/].*/],
-	},
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(__dirname);
+
+// Block .gradle and fsevents directories on Windows to prevent path errors
+config.resolver = {
+  ...config.resolver,
+  blockList: [
+    /node_modules[\\/].*[\\/]\.gradle[\\/].*/,
+    /node_modules[\\/]fsevents[\\/].*/,
+  ],
 };
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = config;

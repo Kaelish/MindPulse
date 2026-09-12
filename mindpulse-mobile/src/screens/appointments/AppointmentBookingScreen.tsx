@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
+  Dimensions,
+  FlatList,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,1236 +11,639 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AppSpacing, Shadows } from '../../theme/tokens';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { Colors } from '../../theme/colors';
+import { Radius, Spacing, Typography } from '../../theme/typography';
 import {
-  BookedAppointment,
-  ChatMessage,
   TelehealthClinician,
   generateRealLifeDates,
-  initialChatMessages,
   initialClinicians,
-  saveBookedAppointment,
 } from '../../services/appointments';
+
+const { width: SW } = Dimensions.get('window');
 
 interface AppointmentBookingScreenProps {
   onStartVideoCall?: (doctorId?: string) => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
-export type TelehealthTab = 'clinicians' | 'messages';
+// ─── Extended clinicians list (reference has 3) ───────────────────────────────
+const CLINICIANS: TelehealthClinician[] = [
+  {
+    id: '1',
+    name: 'Dr. Sarah Chen',
+    specialty: 'Clinical Psychologist',
+    avatar: 'SC',
+    status: 'Available',
+    bio: 'Specializing in cognitive behavioral therapy for student stress, burnout, and anxiety disorders.',
+    tags: ['CBT', 'Stress', 'Anxiety'],
+    email: 'sarah.chen@mindpulse.org',
+  },
+  {
+    id: '2',
+    name: 'Dr. James Delos',
+    specialty: 'Behavioral Therapist',
+    avatar: 'JD',
+    status: 'Available',
+    bio: 'Expert in behavioral interventions and emotional regulation management.',
+    tags: ['Behavioral', 'Trauma', 'Depression'],
+    email: 'james.delos@mindpulse.org',
+  },
+  {
+    id: '3',
+    name: 'Dr. Taylor Swift',
+    specialty: 'Mindfulness Coach',
+    avatar: 'TS',
+    status: 'Offline',
+    bio: 'Certified mindfulness coach specializing in stress reduction and relaxation techniques.',
+    tags: ['Mindfulness', 'Meditation', 'Stress'],
+    email: 'taylor.swift@mindpulse.org',
+  },
+];
 
-const CheckmarkCircleIcon = () => (
-  <View style={iconStyles.checkCircle}>
-    <Text style={iconStyles.checkText}>✓</Text>
+const TIME_SLOTS = [
+  '9:00 AM', '10:30 AM', '11:45 AM',
+  '1:30 PM', '2:15 PM', '3:30 PM',
+  '4:45 PM', '5:30 PM',
+];
+
+// ─── Avatar circle ────────────────────────────────────────────────────────────
+const ClinicianAvatar = ({ initials, available }: { initials: string; available: boolean }) => (
+  <View style={styles.avatarWrap}>
+    <View style={styles.avatarCircle}>
+      <Text style={styles.avatarInitials}>{initials}</Text>
+    </View>
+    <View style={[styles.avatarDot, { backgroundColor: available ? '#27AE60' : '#B0B8C8' }]} />
   </View>
 );
 
+// ─── Clinician card ───────────────────────────────────────────────────────────
+const ClinicianCard = ({
+  clinician, onConnect,
+}: { clinician: TelehealthClinician; onConnect: () => void }) => (
+  <View style={styles.clinicianCard}>
+    <ClinicianAvatar initials={clinician.avatar} available={clinician.status === 'Available'} />
+    <View style={styles.clinicianInfo}>
+      <Text style={styles.clinicianName}>{clinician.name}</Text>
+      <Text style={styles.clinicianSpec}>{clinician.specialty}</Text>
+      <Text style={styles.clinicianBio} numberOfLines={2}>{clinician.bio}</Text>
+      <View style={styles.tagRow}>
+        {clinician.tags.slice(0, 3).map(t => (
+          <View key={t} style={styles.tag}>
+            <Text style={styles.tagText}>{t}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+    <TouchableOpacity
+      style={[
+        styles.connectBtn,
+        clinician.status !== 'Available' && styles.connectBtnDisabled,
+      ]}
+      onPress={onConnect}
+      disabled={clinician.status !== 'Available'}
+    >
+      <Text style={styles.connectBtnText}>
+        {clinician.status === 'Available' ? 'Connect' : 'Offline'}
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+
+// ─── Chat bubble ──────────────────────────────────────────────────────────────
+const ChatBubble = ({
+  text, isMe, time,
+}: { text: string; isMe: boolean; time: string }) => (
+  <View style={[styles.bubbleWrap, isMe && styles.bubbleWrapMe]}>
+    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
+      <Text style={[styles.bubbleText, isMe && { color: '#FFF' }]}>{text}</Text>
+    </View>
+    <Text style={styles.bubbleTime}>{time}</Text>
+  </View>
+);
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
   onStartVideoCall,
   onNavigateTab,
 }) => {
-  const [activeTab, setActiveTab] = useState<TelehealthTab>('clinicians');
-  const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
-  const [showBookingSheet, setShowBookingSheet] = useState(false);
-  const [selectedDateIdx, setSelectedDateIdx] = useState<number | null>(0);
-  const [selectedTime, setSelectedTime] = useState<string | null>('3:30 PM');
-  const [confirmedAppt, setConfirmedAppt] = useState<BookedAppointment | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [activeChatClinician, setActiveChatClinician] = useState<TelehealthClinician | null>(null);
-
-  // Interactive Chat State
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatMessages);
-  const [inputMessage, setInputMessage] = useState('');
-  const [senderRole, setSenderRole] = useState<'patient' | 'doctor'>('patient');
-  const [isDoctorTyping, setIsDoctorTyping] = useState(false);
-
+  const [activeTab, setActiveTab] = useState<'clinicians' | 'messages'>('clinicians');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCrisisModal, setShowCrisisModal] = useState(false);
-  const [bookedSlotKeys, setBookedSlotKeys] = useState<Set<string>>(new Set());
+  const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedDateIdx, setSelectedDateIdx] = useState(0);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [msgFilter, setMsgFilter] = useState<'all' | 'providers' | 'support'>('all');
+  const [chatMessages, setChatMessages] = useState([
+    { id: '1', sender: 'doctor', text: 'Hello! How are you feeling today?', time: '9:41 AM' },
+    { id: '2', sender: 'patient', text: 'I\'ve been feeling a bit anxious lately.', time: '9:42 AM' },
+    { id: '3', sender: 'doctor', text: 'That\'s understandable. Let\'s schedule a session to talk through it.', time: '9:43 AM' },
+  ]);
 
-  const realLifeDates = generateRealLifeDates();
-  const timeSlots = ['9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM', '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM'];
+  const dates = generateRealLifeDates();
 
-  useEffect(() => {
-    let isActive = true;
-    const loadSlots = async () => {
-      const { fetchBookedSlotKeys } = await import('../../services/appointments');
-      const slots = await fetchBookedSlotKeys();
-      if (isActive) {
-        setBookedSlotKeys(slots);
-      }
-    };
-    void loadSlots();
-    const interval = setInterval(loadSlots, 2000);
-    return () => {
-      isActive = false;
-      clearInterval(interval);
-    };
-  }, [showBookingSheet]);
+  const filtered = CLINICIANS.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.specialty.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleOpenBooking = (clinician: TelehealthClinician) => {
-    setSelectedClinician(clinician);
-    setSelectedDateIdx(0);
-    setSelectedTime('10:30 AM');
-    setShowBookingSheet(true);
+  const handleConnect = (c: TelehealthClinician) => {
+    setSelectedClinician(c);
+    setShowBookingModal(true);
   };
 
-  const handleConfirmAppointment = async () => {
-    if (!selectedClinician || selectedDateIdx === null || !selectedTime) return;
-
-    const dateObj = realLifeDates[selectedDateIdx];
-    const newAppt = await saveBookedAppointment({
-      clinicianId: selectedClinician.id,
-      clinicianName: selectedClinician.name,
-      specialty: selectedClinician.specialty,
-      selectedDate: dateObj.label === 'Today' || dateObj.label === 'Tomorrow' ? `${dateObj.label} (${dateObj.dateStr.split(',')[0]})` : dateObj.dateStr,
-      selectedTime,
-    });
-
-    setConfirmedAppt(newAppt);
-    setShowBookingSheet(false);
+  const handleConfirm = () => {
+    setShowBookingModal(false);
     setShowSuccessModal(true);
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const currentRole = senderRole;
-    const messageText = inputMessage.trim();
-    const clinician = activeChatClinician || initialClinicians[0];
-
-    setInputMessage('');
-
-    // Save message via appointments service & Supabase
-    const { sendChatMessage, generateDoctorReplyText } = await import('../../services/appointments');
-    const newMsg = await sendChatMessage(clinician.id, currentRole, messageText);
-
-    setChatMessages((prev) => [...prev, newMsg]);
-
-    // If sent by patient, simulate real-time typing indicator & Doctor reply
-    if (currentRole === 'patient') {
-      setIsDoctorTyping(true);
-      setTimeout(async () => {
-        setIsDoctorTyping(false);
-        const replyText = generateDoctorReplyText(messageText, clinician.name);
-        const docMsg = await sendChatMessage(clinician.id, 'doctor', replyText);
-        setChatMessages((prev) => [...prev, docMsg]);
-      }, 1300);
-    }
+  const sendMessage = () => {
+    if (!chatInput.trim()) return;
+    setChatMessages(prev => [
+      ...prev,
+      { id: Date.now().toString(), sender: 'patient', text: chatInput.trim(), time: 'now' },
+    ]);
+    setChatInput('');
   };
 
   return (
-    <View style={styles.screenRoot}>
-      {/* 1. Header Area (TeleHealth) */}
-      {!activeChatClinician ? (
-        <View style={styles.headerArea}>
-          <Text style={styles.headerTitle}>TeleHealth</Text>
-          <Text style={styles.headerSub}>Connect with mental health professionals</Text>
-
-          {/* Top Segment Switcher: Clinicians | Messages */}
-          <View style={styles.segmentRow}>
-            <TouchableOpacity
-              style={[styles.segmentTab, activeTab === 'clinicians' && styles.segmentTabActive]}
-              onPress={() => setActiveTab('clinicians')}
-            >
-              <Text
-                style={[styles.segmentText, activeTab === 'clinicians' && styles.segmentTextActive]}
-              >
-                Clinicians
-              </Text>
-              {activeTab === 'clinicians' && <View style={styles.activeLine} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.segmentTab, activeTab === 'messages' && styles.segmentTabActive]}
-              onPress={() => setActiveTab('messages')}
-            >
-              <Text
-                style={[styles.segmentText, activeTab === 'messages' && styles.segmentTextActive]}
-              >
-                Messages
-              </Text>
-              {activeTab === 'messages' && <View style={styles.activeLine} />}
-            </TouchableOpacity>
+    <View style={styles.root}>
+      {/* ── Header ── */}
+      <SafeAreaView edges={['top']} style={styles.headerSafe}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>TeleHealth</Text>
+            <Text style={styles.headerSub}>Connect with mental health professionals</Text>
           </View>
         </View>
-      ) : (
-        /* Chat Header Screen 7 */
-        <View style={styles.chatHeader}>
+
+        {/* Tab row */}
+        <View style={styles.tabRow}>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setActiveChatClinician(null)}
+            style={[styles.tabBtn, activeTab === 'clinicians' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('clinicians')}
           >
-            <Text style={styles.backButtonText}>‹</Text>
+            <Text style={[styles.tabText, activeTab === 'clinicians' && styles.tabTextActive]}>
+              Clinicians
+            </Text>
           </TouchableOpacity>
-
-          <View style={styles.chatHeaderAvatar}>
-            <Text style={{ fontSize: 18 }}>{activeChatClinician.avatar}</Text>
-          </View>
-
-          <View style={styles.chatHeaderTextWrap}>
-            <Text style={styles.chatHeaderName}>{activeChatClinician.name}</Text>
-            <Text style={styles.chatHeaderSpecialty}>{activeChatClinician.specialty}</Text>
-          </View>
-
           <TouchableOpacity
-            style={styles.callIconBtn}
-            onPress={() => onStartVideoCall?.(activeChatClinician.id)}
+            style={[styles.tabBtn, activeTab === 'messages' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('messages')}
           >
-            <Text style={{ fontSize: 20 }}>📹</Text>
+            <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
+              Messages
+            </Text>
           </TouchableOpacity>
         </View>
-      )}
+      </SafeAreaView>
 
-      {/* Main Body */}
-      {activeChatClinician ? (
-        /* SCREEN 7: Direct Consultation Chat */
-        <View style={styles.chatBody}>
-          <ScrollView
-            style={styles.chatScrollView}
-            contentContainerStyle={styles.chatScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.dateSeparatorWrap}>
-              <Text style={styles.dateSeparatorText}>
-                {confirmedAppt ? confirmedAppt.selectedDate : 'August 31, 2026'}
-              </Text>
-            </View>
-
-            {chatMessages.map((msg) => {
-              const isPatient = msg.sender === 'patient';
-              return (
-                <View
-                  key={msg.id}
-                  style={[
-                    styles.messageRow,
-                    isPatient ? styles.messageRowRight : styles.messageRowLeft,
-                  ]}
-                >
-                  {!isPatient && (
-                    <View style={styles.chatMsgAvatar}>
-                      <Text style={{ fontSize: 14 }}>{activeChatClinician.avatar}</Text>
-                    </View>
-                  )}
-                  <View
-                    style={[
-                      styles.messageBubble,
-                      isPatient ? styles.bubblePatient : styles.bubbleDoctor,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        isPatient ? styles.msgTextPatient : styles.msgTextDoctor,
-                      ]}
-                    >
-                      {msg.text}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.messageTime,
-                        isPatient ? styles.msgTimePatient : styles.msgTimeDoctor,
-                      ]}
-                    >
-                      {msg.timestamp} {isPatient ? '✓✓' : ''}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-
-            {/* Doctor Typing Indicator */}
-            {isDoctorTyping && (
-              <View style={[styles.messageRow, styles.messageRowLeft]}>
-                <View style={styles.chatMsgAvatar}>
-                  <Text style={{ fontSize: 14 }}>{activeChatClinician.avatar}</Text>
-                </View>
-                <View style={[styles.messageBubble, styles.bubbleDoctor, { paddingVertical: 8, paddingHorizontal: 12 }]}>
-                  <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
-                    {activeChatClinician.name} is typing...
-                  </Text>
-                </View>
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Chat Input Bar */}
-          <View style={styles.inputBarRow}>
-            {/* Sender Role Toggle Pill */}
-            <TouchableOpacity
-              style={styles.senderRolePill}
-              onPress={() => setSenderRole(senderRole === 'patient' ? 'doctor' : 'patient')}
-            >
-              <Text style={styles.senderRoleText}>
-                {senderRole === 'patient' ? 'You 👤' : 'Doc 👩‍⚕️'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.attachBtn}>
-              <Text style={{ fontSize: 18 }}>📎</Text>
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.chatInput}
-              placeholder={senderRole === 'patient' ? 'Type message to doctor...' : 'Type message as doctor...'}
-              placeholderTextColor="#94A3B8"
-              value={inputMessage}
-              onChangeText={setInputMessage}
-              onSubmitEditing={handleSendMessage}
-            />
-
-            <TouchableOpacity style={styles.sendBtn} onPress={handleSendMessage}>
-              <Text style={styles.sendBtnIcon}>➤</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : activeTab === 'clinicians' ? (
-        /* SCREEN 1: Clinicians View */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+      {/* ── Clinicians Tab ── */}
+      {activeTab === 'clinicians' && (
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
           {/* Crisis Support Banner */}
           <View style={styles.crisisBanner}>
-            <Text style={styles.crisisIcon}>🆘</Text>
-            <View style={styles.crisisTextWrap}>
+            <View style={styles.crisisLeft}>
+              <View style={styles.onlinePill}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.onlineText}>Online</Text>
+              </View>
               <Text style={styles.crisisTitle}>Crisis Support</Text>
-              <Text style={styles.crisisSub}>24/7 Hotline: 1-800-273-TALK</Text>
+              <Text style={styles.crisisPhone}>988 · 24/7 free & confidential</Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.callNowBtn}
-              onPress={() => setShowCrisisModal(true)}
-            >
+            <TouchableOpacity style={styles.callNowBtn}>
+              <Ionicons name="call" size={14} color="#FFF" />
               <Text style={styles.callNowText}>Call Now</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Available Clinicians Header */}
-          <Text style={styles.sectionHeaderTitle}>Available Clinicians</Text>
-
-          {/* Clinicians Cards List */}
-          <View style={styles.clinicianList}>
-            {initialClinicians.map((clinician) => (
-              <View key={clinician.id} style={styles.clinicianCard}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.avatarWrap}>
-                    <Text style={{ fontSize: 24 }}>{clinician.avatar}</Text>
-                  </View>
-
-                  <View style={styles.cardTitleWrap}>
-                    <Text style={styles.clinicianName}>{clinician.name}</Text>
-                    <Text style={styles.clinicianSpecialty}>{clinician.specialty}</Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.statusPill,
-                      clinician.status === 'Available' ? styles.statusAvailable : styles.statusOffline,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusPillText,
-                        clinician.status === 'Available'
-                          ? styles.statusTextAvailable
-                          : styles.statusTextOffline,
-                      ]}
-                    >
-                      {clinician.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.bioText}>{clinician.bio}</Text>
-
-                {/* Tag Chips & Book Button */}
-                <View style={styles.cardFooterRow}>
-                  <View style={styles.tagRow}>
-                    {clinician.tags.map((tag, idx) => (
-                      <View key={idx} style={styles.tagChip}>
-                        <Text style={styles.tagChipText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.bookButton}
-                    onPress={() => handleOpenBooking(clinician)}
-                  >
-                    <Text style={styles.bookButtonText}>Book</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      ) : (
-        /* SCREEN 6: Messages Tab View */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Search Bar */}
+          {/* Search */}
           <View style={styles.searchBar}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+            <Ionicons name="search" size={16} color={Colors.textHint} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search conversations..."
-              placeholderTextColor="#94A3B8"
+              placeholder="Search clinicians..."
+              placeholderTextColor={Colors.textHint}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
 
-          {/* Filter Chips */}
-          <View style={styles.filterRow}>
-            <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]}>
-              <Text style={[styles.filterChipText, styles.filterChipTextActive]}>All Messages</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterChipText}>Providers</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterChipText}>Support</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.sectionLabel}>Available Clinicians</Text>
 
-          {/* Conversation List Item */}
-          <View style={styles.conversationList}>
-            <TouchableOpacity
-              style={styles.convCard}
-              onPress={() => setActiveChatClinician(initialClinicians[0])}
-            >
-              <View style={styles.convAvatar}>
-                <Text style={{ fontSize: 22 }}>{initialClinicians[0].avatar}</Text>
-              </View>
-
-              <View style={styles.convTextWrap}>
-                <View style={styles.convTitleRow}>
-                  <Text style={styles.convName}>{initialClinicians[0].name}</Text>
-                  <Text style={styles.convTime}>Today</Text>
-                </View>
-                <Text style={styles.convSub}>{initialClinicians[0].specialty}</Text>
-                <Text style={styles.convPreview}>
-                  {confirmedAppt
-                    ? `Your appointment is confirmed for ${confirmedAppt.selectedDate} at ${confirmedAppt.selectedTime}`
-                    : 'Your appointment is confirmed...'}
-                </Text>
-              </View>
-
-              <Text style={{ fontSize: 18, color: '#94A3B8', marginLeft: 6 }}>›</Text>
-            </TouchableOpacity>
-          </View>
+          {filtered.map(c => (
+            <ClinicianCard key={c.id} clinician={c} onConnect={() => handleConnect(c)} />
+          ))}
         </ScrollView>
       )}
 
-      {/* SCREEN 2, 3, 4: Booking Bottom Sheet Modal */}
-      {showBookingSheet && selectedClinician && (
-        <Modal
-          visible={showBookingSheet}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowBookingSheet(false)}
-        >
-          <View style={modalStyles.sheetOverlay}>
-            <View style={modalStyles.sheetBox}>
-              <View style={modalStyles.sheetHandle} />
-
-              <View style={modalStyles.sheetHeaderRow}>
-                <View>
-                  <Text style={modalStyles.sheetTitle}>Schedule Session</Text>
-                  <Text style={modalStyles.sheetSub}>
-                    {selectedClinician.name} · {selectedClinician.specialty}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setShowBookingSheet(false)}>
-                  <Text style={modalStyles.closeX}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Section 1: Select Day (Real-Life Dates) */}
-              <Text style={modalStyles.sectionLabel}>📅 Select Day</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={modalStyles.dayPillsScroll}
-              >
-                {realLifeDates.map((dObj, idx) => {
-                  const isSelected = selectedDateIdx === idx;
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[modalStyles.dayPill, isSelected && modalStyles.dayPillActive]}
-                      onPress={() => setSelectedDateIdx(idx)}
-                    >
-                      <Text
-                        style={[
-                          modalStyles.dayPillText,
-                          isSelected && modalStyles.dayPillTextActive,
-                        ]}
-                      >
-                        {dObj.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-
-              {/* Section 2: Select Time */}
-              <Text style={modalStyles.sectionLabel}>⏰ Select Time</Text>
-              <View style={modalStyles.timeGrid}>
-                {timeSlots.map((time, idx) => {
-                  const dateObj = selectedDateIdx !== null ? realLifeDates[selectedDateIdx] : null;
-                  const dateLabel = dateObj ? (dateObj.label === 'Today' || dateObj.label === 'Tomorrow' ? `${dateObj.label} (${dateObj.dateStr.split(',')[0]})` : dateObj.dateStr) : 'Today (Aug 31)';
-                  const slotKey = `${dateLabel}_${time}`;
-                  const isBooked = bookedSlotKeys.has(slotKey);
-                  const isSelected = selectedTime === time;
-
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      disabled={isBooked}
-                      style={[
-                        modalStyles.timeCard,
-                        isSelected && modalStyles.timeCardActive,
-                        isBooked && { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderStyle: 'dashed' },
-                      ]}
-                      onPress={() => !isBooked && setSelectedTime(time)}
-                    >
-                      <Text
-                        style={[
-                          modalStyles.timeCardText,
-                          isSelected && modalStyles.timeCardTextActive,
-                          isBooked && { color: '#94A3B8', fontSize: 10 },
-                        ]}
-                      >
-                        {time} {isBooked ? '🔒 (Unavailable)' : ''}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Confirm Appointment Button */}
+      {/* ── Messages Tab ── */}
+      {activeTab === 'messages' && (
+        <View style={styles.body}>
+          {/* Filter pills */}
+          <View style={styles.msgFilterRow}>
+            {(['all', 'providers', 'support'] as const).map(f => (
               <TouchableOpacity
-                style={[
-                  modalStyles.confirmBtn,
-                  selectedDateIdx !== null && selectedTime
-                    ? modalStyles.confirmBtnActive
-                    : modalStyles.confirmBtnDisabled,
-                ]}
-                disabled={selectedDateIdx === null || !selectedTime}
-                onPress={handleConfirmAppointment}
+                key={f}
+                style={[styles.filterPill, msgFilter === f && styles.filterPillActive]}
+                onPress={() => setMsgFilter(f)}
               >
-                <Text style={modalStyles.confirmBtnText}>Confirm Appointment</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* SCREEN 5: Appointment Booked Confirmation Modal */}
-      {showSuccessModal && (
-        <Modal
-          visible={showSuccessModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowSuccessModal(false)}
-        >
-          <View style={modalStyles.sheetOverlay}>
-            <View style={[modalStyles.sheetBox, { alignItems: 'center', paddingVertical: 30 }]}>
-              <TouchableOpacity
-                style={{ position: 'absolute', top: 16, right: 16 }}
-                onPress={() => {
-                  setShowSuccessModal(false);
-                  setActiveTab('messages');
-                }}
-              >
-                <Text style={modalStyles.closeX}>✕</Text>
-              </TouchableOpacity>
-
-              <CheckmarkCircleIcon />
-
-              <Text style={modalStyles.successTitle}>Appointment Booked!</Text>
-              <Text style={modalStyles.successBody}>
-                Your session with{' '}
-                <Text style={{ fontWeight: '800' }}>{selectedClinician?.name}</Text> is set for{' '}
-                <Text style={{ fontWeight: '800' }}>
-                  {confirmedAppt ? confirmedAppt.selectedDate : 'Today'} at {selectedTime}
+                <Text style={[styles.filterText, msgFilter === f && styles.filterTextActive]}>
+                  {f === 'all' ? 'All Messages' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </Text>
-                .
-              </Text>
-
-              <TouchableOpacity
-                style={[modalStyles.confirmBtn, modalStyles.confirmBtnActive, { width: '100%', marginTop: 24 }]}
-                onPress={() => {
-                  setShowSuccessModal(false);
-                  setActiveTab('messages');
-                  setActiveChatClinician(selectedClinician);
-                }}
-              >
-                <Text style={modalStyles.confirmBtnText}>Go to Messages</Text>
               </TouchableOpacity>
-            </View>
+            ))}
           </View>
-        </Modal>
+
+          {/* Conversation preview */}
+          <TouchableOpacity style={styles.convoRow}>
+            <View style={styles.convoAvatar}>
+              <Text style={styles.convoAvatarText}>SC</Text>
+            </View>
+            <View style={styles.convoInfo}>
+              <Text style={styles.convoName}>Dr. Sarah Chen</Text>
+              <Text style={styles.convoPreview} numberOfLines={1}>
+                Let's schedule a session to talk through it.
+              </Text>
+            </View>
+            <View style={styles.convoMeta}>
+              <Text style={styles.convoTime}>Today</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Chat thread */}
+          <ScrollView style={styles.chatScroll} contentContainerStyle={{ padding: Spacing.md, gap: 12 }}>
+            {chatMessages.map(m => (
+              <ChatBubble
+                key={m.id}
+                text={m.text}
+                isMe={m.sender === 'patient'}
+                time={m.time}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Input row */}
+          <View style={styles.inputRow}>
+            <TouchableOpacity style={styles.attachBtn}>
+              <Ionicons name="attach" size={20} color={Colors.textSecondary} />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.msgInput}
+              placeholder="Type your message here..."
+              placeholderTextColor={Colors.textHint}
+              value={chatInput}
+              onChangeText={setChatInput}
+              multiline
+            />
+            <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
+              <Ionicons name="send" size={18} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
-      {/* Crisis Support Call Modal */}
-      {showCrisisModal && (
-        <Modal
-          visible={showCrisisModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowCrisisModal(false)}
-        >
-          <View style={modalStyles.sheetOverlay}>
-            <View style={modalStyles.sheetBox}>
-              <Text style={modalStyles.sheetTitle}>Crisis Support Hotline</Text>
-              <Text style={modalStyles.sheetSub}>
-                Connecting to 24/7 National Mental Health Emergency Line: 1-800-273-TALK.
-              </Text>
-
-              <TouchableOpacity
-                style={[modalStyles.confirmBtn, { backgroundColor: '#E05C5C', marginTop: 16 }]}
-                onPress={() => setShowCrisisModal(false)}
-              >
-                <Text style={modalStyles.confirmBtnText}>Dial 1-800-273-TALK</Text>
+      {/* ── Booking Modal ── */}
+      <Modal visible={showBookingModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Schedule Session</Text>
+                <Text style={styles.modalSubtitle}>
+                  {selectedClinician?.name} · {selectedClinician?.specialty}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowBookingModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
-      )}
 
-      </View>
+            <Text style={styles.modalSectionLabel}>Select Day</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {dates.map((d, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.dateChip, selectedDateIdx === i && styles.dateChipActive]}
+                    onPress={() => setSelectedDateIdx(i)}
+                  >
+                    <Text style={[styles.dateChipDay, selectedDateIdx === i && { color: '#FFF' }]}>
+                      {d.label}
+                    </Text>
+                    <Text style={[styles.dateChipDate, selectedDateIdx === i && { color: 'rgba(255,255,255,0.8)' }]}>
+                      {d.dateStr.split(',')[0]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <Text style={styles.modalSectionLabel}>Select Time</Text>
+            <View style={styles.timeGrid}>
+              {TIME_SLOTS.map(t => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.timeSlot, selectedTime === t && styles.timeSlotActive]}
+                  onPress={() => setSelectedTime(t)}
+                >
+                  <Text style={[styles.timeSlotText, selectedTime === t && { color: '#FFF' }]}>
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.confirmBtn, !selectedTime && styles.confirmBtnDisabled]}
+              onPress={handleConfirm}
+              disabled={!selectedTime}
+            >
+              <Text style={styles.confirmBtnText}>Confirm Appointment</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Success Modal ── */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.successSheet}>
+            <View style={styles.successIcon}>
+              <Ionicons name="checkmark" size={36} color="#FFF" />
+            </View>
+            <Text style={styles.successTitle}>Appointment Booked!</Text>
+            <Text style={styles.successBody}>
+              Your session with {selectedClinician?.name} has been confirmed.{'\n'}
+              Check the Terms and Conditions.
+            </Text>
+            <TouchableOpacity
+              style={styles.successBtn}
+              onPress={() => {
+                setShowSuccessModal(false);
+                onStartVideoCall?.(selectedClinician?.id);
+              }}
+            >
+              <Text style={styles.successBtnText}>Start Video Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successDismiss}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Bottom Tab ── */}
+      <BottomTabBar activeTab="clinics" onNavigate={tab => onNavigateTab?.(tab)} />
+    </View>
   );
 };
 
-const iconStyles = StyleSheet.create({
-  checkCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+const ACCENT = '#5B6EF5';
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.pageBg },
+
+  /* Header */
+  headerSafe: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  headerSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+
+  /* Tabs */
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border, paddingHorizontal: 20 },
+  tabBtn: { paddingVertical: 10, paddingHorizontal: 4, marginRight: 20 },
+  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: ACCENT },
+  tabText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  tabTextActive: { color: ACCENT },
+
+  /* Body */
+  body: { flex: 1 },
+  bodyContent: { padding: 16, gap: 14, paddingBottom: 100 },
+
+  /* Crisis Banner */
+  crisisBanner: {
+    backgroundColor: '#FFF1F1',
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#FFD6D6',
+  },
+  crisisLeft: { gap: 3 },
+  onlinePill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#27AE60' },
+  onlineText: { fontSize: 11, color: '#27AE60', fontWeight: '700' },
+  crisisTitle: { fontSize: 15, fontWeight: '800', color: '#E05C5C' },
+  crisisPhone: { fontSize: 11, color: Colors.textSecondary },
+  callNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E05C5C',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  callNowText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+
+  /* Search */
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: -4 },
+
+  /* Clinician card */
+  clinicianCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  avatarWrap: { position: 'relative' },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EAF0FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: { fontSize: 16, fontWeight: '800', color: ACCENT },
+  avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFF' },
+  clinicianInfo: { flex: 1, gap: 3 },
+  clinicianName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  clinicianSpec: { fontSize: 12, color: ACCENT, fontWeight: '600' },
+  clinicianBio: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+  tagRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
+  tag: { backgroundColor: '#EEF0FB', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  tagText: { fontSize: 10, color: ACCENT, fontWeight: '600' },
+  connectBtn: {
+    backgroundColor: ACCENT,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  connectBtnDisabled: { backgroundColor: Colors.border },
+  connectBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+
+  /* Messages */
+  msgFilterRow: { flexDirection: 'row', padding: 12, gap: 8 },
+  filterPill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: Colors.divider },
+  filterPillActive: { backgroundColor: ACCENT },
+  filterText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  filterTextActive: { color: '#FFF' },
+  convoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  convoAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EAF0FB', alignItems: 'center', justifyContent: 'center' },
+  convoAvatarText: { fontSize: 14, fontWeight: '800', color: ACCENT },
+  convoInfo: { flex: 1 },
+  convoName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  convoPreview: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  convoMeta: { alignItems: 'flex-end' },
+  convoTime: { fontSize: 11, color: Colors.textHint },
+  chatScroll: { flex: 1 },
+  bubbleWrap: { alignItems: 'flex-start', marginBottom: 6 },
+  bubbleWrapMe: { alignItems: 'flex-end' },
+  bubble: { maxWidth: '75%', borderRadius: 16, padding: 12 },
+  bubbleThem: { backgroundColor: '#F0F2F6', borderBottomLeftRadius: 4 },
+  bubbleMe: { backgroundColor: ACCENT, borderBottomRightRadius: 4 },
+  bubbleText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  bubbleTime: { fontSize: 10, color: Colors.textHint, marginTop: 3 },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  attachBtn: { padding: 6 },
+  msgInput: {
+    flex: 1,
+    backgroundColor: Colors.divider,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    maxHeight: 80,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: ACCENT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Booking modal */
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  modalSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  modalSectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10 },
+
+  dateChip: {
+    alignItems: 'center',
+    backgroundColor: Colors.divider,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 64,
+  },
+  dateChipActive: { backgroundColor: ACCENT },
+  dateChipDay: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  dateChipDate: { fontSize: 10, color: Colors.textSecondary, marginTop: 2 },
+
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  timeSlot: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: Colors.surface,
+  },
+  timeSlotActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  timeSlotText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+
+  confirmBtn: {
+    backgroundColor: ACCENT,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  confirmBtnDisabled: { opacity: 0.4 },
+  confirmBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+
+  /* Success modal */
+  successSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    paddingBottom: 48,
+  },
+  successIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#27AE60',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  checkText: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '800',
-  },
-});
-
-const styles = StyleSheet.create({
-  screenRoot: {
-    flex: 1,
-    backgroundColor: '#FAF8ED',
-  },
-  headerArea: {
-    backgroundColor: '#FAF8ED',
-    paddingHorizontal: AppSpacing.md,
-    paddingTop: AppSpacing.xl,
-    paddingBottom: 0,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  headerSub: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    width: '100%',
-    marginTop: AppSpacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  segmentTab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  segmentTabActive: {},
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  segmentTextActive: {
-    color: '#0F172A',
-  },
-  activeLine: {
-    position: 'absolute',
-    bottom: -1,
-    height: 3,
-    width: '50%',
-    backgroundColor: '#5B6EF5',
-    borderRadius: 2,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: AppSpacing.md,
-    paddingBottom: 85,
-  },
-  crisisBanner: {
-    backgroundColor: '#FCE5DE',
-    borderRadius: 20,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: AppSpacing.md,
-  },
-  crisisIcon: {
-    fontSize: 22,
-  },
-  crisisTextWrap: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  crisisTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  crisisSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  callNowBtn: {
-    backgroundColor: '#E05C5C',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  callNowText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  sectionHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  clinicianList: {
-    gap: 12,
-  },
-  clinicianCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    ...Shadows.small,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarWrap: {
-    width: 44,
-    height: 44,
+  successTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginBottom: 10 },
+  successBody: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  successBtn: {
+    backgroundColor: ACCENT,
     borderRadius: 14,
-    backgroundColor: '#EEEDFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitleWrap: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  clinicianName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  clinicianSpecialty: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  statusAvailable: {
-    backgroundColor: '#D6F5E3',
-  },
-  statusOffline: {
-    backgroundColor: '#F1F5F9',
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  statusTextAvailable: {
-    color: '#27AE60',
-  },
-  statusTextOffline: {
-    color: '#64748B',
-  },
-  bioText: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 10,
-    lineHeight: 17,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  tagChip: {
-    backgroundColor: '#EEEDFE',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  tagChipText: {
-    fontSize: 10,
-    color: '#5B6EF5',
-    fontWeight: '700',
-  },
-  bookButton: {
-    backgroundColor: '#5B6EF5',
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-  },
-  bookButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 12,
-    ...Shadows.small,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#0F172A',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  filterChip: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  filterChipActive: {
-    backgroundColor: '#5B6EF5',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  conversationList: {
-    gap: 10,
-  },
-  convCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...Shadows.small,
-  },
-  convAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#EEEDFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  convTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  convTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  convName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  convTime: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  convSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  convPreview: {
-    fontSize: 12,
-    color: '#334155',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  chatHeader: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: AppSpacing.xl,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  backButton: {
-    paddingRight: 10,
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: '#5B6EF5',
-    fontWeight: '300',
-  },
-  chatHeaderAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#EEEDFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatHeaderTextWrap: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  chatHeaderName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  chatHeaderSpecialty: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  callIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EEEDFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatBody: {
-    flex: 1,
-    backgroundColor: '#FAF8ED',
-  },
-  chatScrollView: {
-    flex: 1,
-  },
-  chatScrollContent: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  dateSeparatorWrap: {
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  dateSeparatorText: {
-    fontSize: 11,
-    color: '#94A3B8',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 10,
-    fontWeight: '600',
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginVertical: 6,
-    alignItems: 'flex-end',
-  },
-  messageRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  messageRowRight: {
-    justifyContent: 'flex-end',
-  },
-  chatMsgAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EEEDFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  messageBubble: {
-    maxWidth: '75%',
-    borderRadius: 18,
-    padding: 12,
-  },
-  bubbleDoctor: {
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 4,
-  },
-  bubblePatient: {
-    backgroundColor: '#5B9EF7',
-    borderBottomRightRadius: 4,
-  },
-  messageText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  msgTextDoctor: {
-    color: '#0F172A',
-  },
-  msgTextPatient: {
-    color: '#FFFFFF',
-  },
-  messageTime: {
-    fontSize: 9,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  msgTimeDoctor: {
-    color: '#94A3B8',
-  },
-  msgTimePatient: {
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  inputBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  senderRolePill: {
-    backgroundColor: '#EEEDFE',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 4,
-  },
-  senderRoleText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#5B6EF5',
-  },
-  attachBtn: {
-    padding: 6,
-  },
-  chatInput: {
-    flex: 1,
-    height: 38,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 19,
-    paddingHorizontal: 14,
-    fontSize: 13,
-    color: '#0F172A',
-    marginHorizontal: 8,
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#5B9EF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnIcon: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginLeft: 2,
-  },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#5B9EF7',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabIconEmoji: {
-    fontSize: 18,
-    opacity: 0.8,
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  tabLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-});
-
-const modalStyles = StyleSheet.create({
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheetBox: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 20,
-    paddingBottom: 30,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  sheetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  sheetSub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  closeX: {
-    fontSize: 18,
-    color: '#94A3B8',
-    padding: 4,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  dayPillsScroll: {
-    marginBottom: 12,
-  },
-  dayPill: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
-  },
-  dayPillActive: {
-    backgroundColor: '#5B6EF5',
-  },
-  dayPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  dayPillTextActive: {
-    color: '#FFFFFF',
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 20,
-  },
-  timeCard: {
-    width: '23%',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  timeCardActive: {
-    backgroundColor: '#5B6EF5',
-  },
-  timeCardText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  timeCardTextActive: {
-    color: '#FFFFFF',
-  },
-  confirmBtn: {
-    borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 40,
+    marginBottom: 14,
+    width: '100%',
     alignItems: 'center',
   },
-  confirmBtnDisabled: {
-    backgroundColor: 'rgba(91, 110, 245, 0.4)',
-  },
-  confirmBtnActive: {
-    backgroundColor: '#5B6EF5',
-  },
-  confirmBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  successTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 8,
-  },
-  successBody: {
-    fontSize: 13,
-    color: '#475569',
-    textAlign: 'center',
-    marginTop: 6,
-    paddingHorizontal: 20,
-    lineHeight: 18,
-  },
+  successBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  successDismiss: { fontSize: 13, color: Colors.textSecondary },
 });

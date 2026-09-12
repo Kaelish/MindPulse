@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Platform,
 } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
@@ -66,7 +67,7 @@ const BPMDisplay: React.FC<BPMDisplayProps> = ({ bpm }) => {
   useEffect(() => {
     anim.setValue(0);
     const id = anim.addListener(({ value }) => setShown(Math.round(value)));
-    Animated.timing(anim, { toValue: bpm, duration: 800, useNativeDriver: false }).start();
+    Animated.timing(anim, { toValue: bpm, duration: 800, useNativeDriver: Platform.OS !== 'web' }).start();
     return () => anim.removeListener(id);
   }, [bpm]);
 
@@ -97,7 +98,7 @@ export const HeartRateResultScreen: React.FC<Props> = ({
     Animated.timing(fadeIn, {
       toValue: 1,
       duration: 500,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, []);
 
@@ -175,10 +176,10 @@ const card = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${3 }px ${8}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3  } }
+    }),
   },
   topRow: {
     flexDirection: 'row',
@@ -231,10 +232,10 @@ const summary = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.md,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${2 }px ${6}px rgba(0,0,0,${0.04})` },
+      default: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2  } }
+    }),
   },
   text: {
     fontSize: 13,
@@ -282,10 +283,10 @@ const actions = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
-    shadowColor: Colors.nextBg,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { boxShadow: `${0}px ${4 }px ${8}px rgba(0,0,0,${0.3})` },
+      default: { shadowColor: Colors.nextBg, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4  } }
+    }),
   },
   nextLabel: {
     fontSize: 15,

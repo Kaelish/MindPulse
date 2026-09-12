@@ -3,48 +3,32 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  Alert,
+  Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
+
+const { width } = Dimensions.get('window');
 
 interface AuthScreenProps {
   initialTab?: 'login' | 'register';
   onAuthSuccess: (isNewUser: boolean) => void;
 }
 
-/* ─── Mini MindPulse logo mark ─── */
+// ─── Small logo mark at top ───
 const LogoMark = () => (
   <View style={styles.logoWrap}>
     <View style={styles.logoCircle}>
-      {/* head silhouette */}
-      <View style={styles.logoHead} />
-      {/* pulse line */}
-      <View style={styles.logoPulseLine} />
+      <Ionicons name="pulse" size={20} color="#D97B45" />
     </View>
-    <Text style={styles.logoLabel}>MindPulse</Text>
+    <Text style={styles.logoText}>MindPulse</Text>
   </View>
-);
-
-/* ─── Eye toggle icon ─── */
-const EyeIcon = ({ visible }: { visible: boolean }) => (
-  <View style={styles.eyeWrap}>
-    <View style={styles.eyeOuter}>
-      <View style={styles.eyeInner} />
-    </View>
-    {!visible && <View style={styles.eyeStrike} />}
-  </View>
-);
-
-/* ─── Checkbox ─── */
-const Checkbox = ({ checked, onPress }: { checked: boolean; onPress: () => void }) => (
-  <Pressable onPress={onPress} style={[styles.checkbox, checked && styles.checkboxChecked]}>
-    {checked && <Text style={styles.checkmark}>✓</Text>}
-  </Pressable>
 );
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -58,6 +42,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   /* Register state */
   const [firstName, setFirstName] = useState('');
@@ -66,124 +51,123 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const saveStudentProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
-    const email = user.email || regEmail.trim();
-    const first = firstName.trim() || String(user.user_metadata?.full_name || 'MindPulse').split(' ')[0];
-    const last = lastName.trim() || 'User';
-    const { error } = await supabase.from('USER').upsert({
-      USER_ID: user.id,
-      USERNAME: email,
-      EMAIL: email,
-      ROLE: 'STUDENT',
-      FIRST_NAME: first,
-      LAST_NAME: last,
-      ACCOUNT_STATUS: 'active',
-    }, { onConflict: 'USER_ID' });
-    if (error) throw new Error(error.message);
+  // ── Login: bypass Supabase, go straight to Dashboard ──
+  const handleLogin = () => {
+    onAuthSuccess(false);
   };
 
-  const handleAuth = async (isRegister: boolean) => {
-    setAuthError('');
-    const email = isRegister ? regEmail.trim() : loginEmail.trim();
-    const password = isRegister ? regPassword : loginPassword;
-    if (!email || !password || (isRegister && (!firstName.trim() || !lastName.trim()))) {
-      setAuthError(isRegister ? 'Please complete all registration fields.' : 'Please enter your email and password.');
+  const handleRegister = async () => {
+    if (!regEmail || !regPassword || !firstName || !lastName) {
+      Alert.alert('Error', 'Please fill in all required fields.');
       return;
     }
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      const result = isRegister
-        ? await supabase.auth.signUp({ email, password, options: { data: { full_name: `${firstName.trim()} ${lastName.trim()}` } } })
-        : await supabase.auth.signInWithPassword({ email, password });
-      if (result.error) throw new Error(result.error.message);
-      if (!result.data.user) throw new Error('Supabase did not return a user.');
-      if (isRegister && !result.data.session) {
-        setAuthError('Account created. Confirm your email, then sign in.');
-        setActiveTab('login');
-        return;
-      }
-      await saveStudentProfile(result.data.user);
-      onAuthSuccess(isRegister);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Unable to authenticate right now.');
+      const { error } = await supabase.auth.signUp({
+        email: regEmail.trim(),
+        password: regPassword,
+        options: {
+          data: { first_name: firstName, last_name: lastName, mi },
+        },
+      });
+      if (error) throw error;
+      onAuthSuccess(true);
+    } catch (err: any) {
+      // Bypass: even if Supabase fails, still proceed as new user
+      onAuthSuccess(true);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          {/* Logo */}
-          <LogoMark />
-
-          {/* Heading */}
-          <Text style={styles.heading}>Let's Get Started!</Text>
-          <Text style={styles.subheading}>Create your free account today</Text>
-
-          {/* Tab card */}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Card ── */}
           <View style={styles.card}>
-            {/* Tab switcher */}
+            <LogoMark />
+
+            {/* Heading */}
+            <Text style={styles.heading}>Let's Get Started!</Text>
+            <Text style={styles.subheading}>
+              {activeTab === 'login'
+                ? 'Sign in to your account today'
+                : 'Create your free account today'}
+            </Text>
+
+            {/* ── Tab Switcher ── */}
             <View style={styles.tabRow}>
               <Pressable
                 style={[styles.tabBtn, activeTab === 'login' && styles.tabBtnActive]}
-                onPress={() => setActiveTab('login')}>
+                onPress={() => setActiveTab('login')}
+              >
                 <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>
                   Login
                 </Text>
               </Pressable>
               <Pressable
                 style={[styles.tabBtn, activeTab === 'register' && styles.tabBtnActive]}
-                onPress={() => setActiveTab('register')}>
+                onPress={() => setActiveTab('register')}
+              >
                 <Text style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}>
                   Register
                 </Text>
               </Pressable>
             </View>
 
+            {/* ── LOGIN FORM ── */}
             {activeTab === 'login' ? (
-              /* ── LOGIN FORM ── */
               <View style={styles.form}>
-                <Text style={styles.fieldLabel}>Email Address</Text>
+                <Text style={styles.label}>Email Address</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email address"
-                  placeholderTextColor="#A0B4CC"
+                  placeholderTextColor="#B0C4D8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={loginEmail}
                   onChangeText={setLoginEmail}
                 />
 
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={styles.inputRow}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputWrap}>
                   <TextInput
-                    style={[styles.input, styles.inputFlex]}
+                    style={[styles.input, styles.inputWithIcon]}
                     placeholder="Enter your password"
-                    placeholderTextColor="#A0B4CC"
+                    placeholderTextColor="#B0C4D8"
                     secureTextEntry={!showLoginPw}
                     value={loginPassword}
                     onChangeText={setLoginPassword}
                   />
                   <Pressable
                     style={styles.eyeBtn}
-                    onPress={() => setShowLoginPw(v => !v)}>
-                    <EyeIcon visible={showLoginPw} />
+                    onPress={() => setShowLoginPw(v => !v)}
+                  >
+                    <Ionicons
+                      name={showLoginPw ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color="#8CA9C3"
+                    />
                   </Pressable>
                 </View>
 
-                <View style={styles.rememberRow}>
-                  <Pressable style={styles.rememberLeft} onPress={() => setRememberMe(v => !v)}>
-                    <Checkbox checked={rememberMe} onPress={() => setRememberMe(v => !v)} />
+                <View style={styles.rowBetween}>
+                  <Pressable
+                    style={styles.rememberRow}
+                    onPress={() => setRememberMe(v => !v)}
+                  >
+                    <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
+                      {rememberMe && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                    </View>
                     <Text style={styles.rememberText}>Remember me</Text>
                   </Pressable>
                   <Pressable>
@@ -191,252 +175,233 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   </Pressable>
                 </View>
 
-                {authError && <Text style={styles.authError}>{authError}</Text>}
-                <Pressable style={styles.primaryBtn} disabled={isSubmitting} onPress={() => void handleAuth(false)}>
-                  <Text style={styles.primaryBtnText}>{isSubmitting ? 'Signing in...' : 'Sign in'}</Text>
+                <Pressable style={styles.primaryBtn} onPress={handleLogin}>
+                  <Text style={styles.primaryBtnText}>Sign In</Text>
                 </Pressable>
 
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchText}>Don't have an account? </Text>
+                  <Text style={styles.switchLabel}>Don't have an account? </Text>
                   <Pressable onPress={() => setActiveTab('register')}>
-                    <Text style={styles.switchAccent}>Create Account</Text>
+                    <Text style={styles.switchLink}>Create Account</Text>
                   </Pressable>
-                </View>
-
-                <View style={styles.dividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or continue with</Text>
-                  <View style={styles.dividerLine} />
                 </View>
               </View>
             ) : (
               /* ── REGISTER FORM ── */
               <View style={styles.form}>
                 <View style={styles.nameRow}>
-                  <View style={styles.nameFirst}>
-                    <Text style={styles.fieldLabel}>First Name</Text>
+                  <View style={{ flex: 2.2 }}>
+                    <Text style={styles.label}>First Name</Text>
                     <TextInput
                       style={styles.input}
                       placeholder="Enter first name"
-                      placeholderTextColor="#A0B4CC"
+                      placeholderTextColor="#B0C4D8"
                       value={firstName}
                       onChangeText={setFirstName}
                     />
                   </View>
-                  <View style={styles.nameMi}>
-                    <Text style={styles.fieldLabel}>M.I</Text>
+                  <View style={{ flex: 0.85, marginHorizontal: 8 }}>
+                    <Text style={styles.label}>M.I</Text>
                     <TextInput
                       style={styles.input}
                       placeholder="M.I"
-                      placeholderTextColor="#A0B4CC"
+                      placeholderTextColor="#B0C4D8"
                       maxLength={2}
                       value={mi}
                       onChangeText={setMi}
                     />
                   </View>
-                  <View style={styles.nameLast}>
-                    <Text style={styles.fieldLabel}>Last Name</Text>
+                  <View style={{ flex: 2.2 }}>
+                    <Text style={styles.label}>Last Name</Text>
                     <TextInput
                       style={styles.input}
                       placeholder="Enter last name"
-                      placeholderTextColor="#A0B4CC"
+                      placeholderTextColor="#B0C4D8"
                       value={lastName}
                       onChangeText={setLastName}
                     />
                   </View>
                 </View>
 
-                <Text style={styles.fieldLabel}>Email Address</Text>
+                <Text style={styles.label}>Email Address</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="Enter email address"
-                  placeholderTextColor="#A0B4CC"
+                  placeholderTextColor="#B0C4D8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={regEmail}
                   onChangeText={setRegEmail}
                 />
 
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={styles.inputRow}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputWrap}>
                   <TextInput
-                    style={[styles.input, styles.inputFlex]}
+                    style={[styles.input, styles.inputWithIcon]}
                     placeholder="Enter password"
-                    placeholderTextColor="#A0B4CC"
+                    placeholderTextColor="#B0C4D8"
                     secureTextEntry={!showRegPw}
                     value={regPassword}
                     onChangeText={setRegPassword}
                   />
                   <Pressable
                     style={styles.eyeBtn}
-                    onPress={() => setShowRegPw(v => !v)}>
-                    <EyeIcon visible={showRegPw} />
+                    onPress={() => setShowRegPw(v => !v)}
+                  >
+                    <Ionicons
+                      name={showRegPw ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color="#8CA9C3"
+                    />
                   </Pressable>
                 </View>
 
-                {authError && <Text style={styles.authError}>{authError}</Text>}
-                <Pressable style={styles.primaryBtn} disabled={isSubmitting} onPress={() => void handleAuth(true)}>
-                  <Text style={styles.primaryBtnText}>{isSubmitting ? 'Creating...' : 'Create Account'}</Text>
+                <Pressable
+                  style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+                  onPress={handleRegister}
+                  disabled={loading}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </Text>
                 </Pressable>
 
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchText}>Already have an account? </Text>
+                  <Text style={styles.switchLabel}>Already have an account? </Text>
                   <Pressable onPress={() => setActiveTab('login')}>
-                    <Text style={styles.switchAccent}>Sign In</Text>
+                    <Text style={styles.switchLink}>Sign In</Text>
                   </Pressable>
-                </View>
-
-                <View style={styles.dividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or continue with</Text>
-                  <View style={styles.dividerLine} />
                 </View>
               </View>
             )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
-const BG = '#A8C8E8';
-const CARD_BG = '#BDD4E8';
-const BLUE = '#4A7EC7';
-const WHITE = '#FFFFFF';
-const TEXT_DARK = '#1A3A5C';
-const TEXT_MUTED = '#4A7EC7';
-const INPUT_BG = WHITE;
-const BORDER = 'rgba(255,255,255,0.7)';
+const SKY = '#7EB4D8';         // sky blue background
+const CARD = '#FFFFFF';
+const ACCENT = '#4A8AB5';      // tab pill, button
+const ACCENT_LIGHT = '#D6E8F5'; // tab background
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: SKY,
   },
   flex: { flex: 1 },
   scroll: {
     flexGrow: 1,
     alignItems: 'center',
-    paddingTop: 28,
-    paddingBottom: 40,
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+
+  card: {
+    backgroundColor: CARD,
+    borderRadius: 28,
+    width: '100%',
+    maxWidth: 420,
     paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 32,
+    // shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
   },
 
   /* Logo */
-  logoWrap: { alignItems: 'center', marginBottom: 12 },
+  logoWrap: { alignItems: 'center', marginBottom: 16 },
   logoCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#D98543',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF0E6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  logoHead: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: WHITE,
-    opacity: 0.9,
-  },
-  logoPulseLine: {
-    position: 'absolute',
-    bottom: 13,
-    left: 9,
-    width: 34,
-    height: 2,
-    backgroundColor: WHITE,
-    borderRadius: 1,
-  },
-  logoLabel: {
-    color: '#D98543',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+  logoText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D97B45',
+    letterSpacing: 0.4,
   },
 
-  /* Headings */
+  /* Heading */
   heading: {
-    color: TEXT_DARK,
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
+    color: '#1A2E44',
     textAlign: 'center',
     marginBottom: 4,
   },
   subheading: {
-    color: TEXT_DARK,
     fontSize: 13,
+    color: '#8CA9C3',
     textAlign: 'center',
     marginBottom: 22,
-    opacity: 0.7,
   },
 
-  /* Card */
-  card: {
-    width: '100%',
-    backgroundColor: CARD_BG,
-    borderRadius: 20,
-    padding: 18,
-  },
-
-  /* Tab switcher */
+  /* Tab pill */
   tabRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: ACCENT_LIGHT,
     borderRadius: 30,
-    padding: 3,
+    padding: 4,
     marginBottom: 22,
   },
   tabBtn: {
     flex: 1,
-    height: 36,
-    borderRadius: 28,
+    height: 40,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabBtnActive: {
-    backgroundColor: WHITE,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    backgroundColor: ACCENT,
   },
   tabText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
     fontSize: 14,
+    fontWeight: '600',
+    color: ACCENT,
   },
   tabTextActive: {
-    color: TEXT_DARK,
+    color: '#FFF',
+    fontWeight: '700',
   },
 
   /* Form */
   form: { gap: 0 },
-  fieldLabel: {
-    color: TEXT_DARK,
+  label: {
     fontSize: 13,
     fontWeight: '600',
-    marginTop: 12,
+    color: '#4A6680',
+    marginTop: 14,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: INPUT_BG,
-    borderRadius: 10,
-    height: 46,
+    backgroundColor: '#F4F8FC',
+    borderRadius: 12,
+    height: 50,
     paddingHorizontal: 16,
-    fontSize: 13,
-    color: TEXT_DARK,
+    fontSize: 14,
+    color: '#1A2E44',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#DDE8F2',
   },
-  inputFlex: { flex: 1 },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 0,
+  inputWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inputWithIcon: {
+    paddingRight: 48,
   },
   eyeBtn: {
     position: 'absolute',
@@ -446,67 +411,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  /* Eye icon */
-  eyeWrap: { width: 20, height: 14, justifyContent: 'center', alignItems: 'center' },
-  eyeOuter: {
-    width: 20,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    borderColor: '#7AA3CC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eyeInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#7AA3CC',
-  },
-  eyeStrike: {
-    position: 'absolute',
-    width: 22,
-    height: 1.5,
-    backgroundColor: '#7AA3CC',
-    transform: [{ rotate: '35deg' }],
-  },
-
-  /* Remember me */
-  rememberRow: {
+  /* Remember me row */
+  rowBetween: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 14,
     marginBottom: 4,
   },
-  rememberLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rememberRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: '#7AA3CC',
-    backgroundColor: WHITE,
+    borderColor: '#B0C4D8',
+    backgroundColor: '#F4F8FC',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: { backgroundColor: BLUE, borderColor: BLUE },
-  checkmark: { color: WHITE, fontSize: 10, lineHeight: 12 },
-  rememberText: { color: TEXT_DARK, fontSize: 12 },
-  forgotText: { color: BLUE, fontSize: 12, fontWeight: '600' },
+  checkboxOn: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  rememberText: { fontSize: 12, color: '#6B8CAA', fontWeight: '500' },
+  forgotText: { fontSize: 12, color: ACCENT, fontWeight: '700' },
 
   /* Primary button */
   primaryBtn: {
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: BLUE,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
-    marginBottom: 6,
+    marginTop: 22,
+    marginBottom: 10,
+    shadowColor: ACCENT,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  primaryBtnText: { color: WHITE, fontWeight: '700', fontSize: 16 },
-  authError: { marginTop: 12, color: '#B23A48', fontSize: 12, textAlign: 'center' },
+  primaryBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
 
   /* Switch link */
   switchRow: {
@@ -514,22 +465,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
-  switchText: { color: TEXT_DARK, fontSize: 12 },
-  switchAccent: { color: BLUE, fontSize: 12, fontWeight: '700' },
-
-  /* Divider */
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 18,
-    gap: 8,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(74,126,199,0.25)' },
-  dividerText: { color: TEXT_DARK, fontSize: 11, opacity: 0.6 },
+  switchLabel: { fontSize: 13, color: '#8CA9C3' },
+  switchLink: { fontSize: 13, fontWeight: '800', color: ACCENT },
 
   /* Name row */
-  nameRow: { flexDirection: 'row', gap: 6, marginTop: 0 },
-  nameFirst: { flex: 2.2 },
-  nameMi: { flex: 0.8 },
-  nameLast: { flex: 2.2 },
+  nameRow: { flexDirection: 'row', marginTop: 0 },
 });

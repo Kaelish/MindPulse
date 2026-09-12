@@ -2,18 +2,20 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../theme/colors';
-import { AppRadius, AppSpacing, AppTypography, Shadows } from '../../theme/tokens';
+import { Radius, Spacing, Typography } from '../../theme/typography';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  DashboardMetrics,
-  NotificationItem,
   PatientDashboardData,
   StressSessionItem,
   fetchDashboardData,
@@ -30,82 +32,48 @@ interface PatientDashboardScreenProps {
   onRunDailyCheck?: () => void;
 }
 
-/* Custom Vector-Like Icon Components using React Native Views */
-const BellIcon = () => (
-  <View style={iconStyles.bellWrap}>
-    <View style={iconStyles.bellTop} />
-    <View style={iconStyles.bellBody} />
-    <View style={iconStyles.bellClapper} />
-  </View>
+/* ─── Quick Action Card ─── */
+const QuickAction = ({
+  icon, label, bg, iconColor, onPress, isMaterial
+}: { icon: any; label: string; bg: string; iconColor: string; onPress?: () => void; isMaterial?: boolean }) => (
+  <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: bg }]} onPress={onPress} activeOpacity={0.85}>
+    <View style={[styles.quickActionIconBox, { backgroundColor: iconColor }]}>
+      {isMaterial ? (
+        <MaterialCommunityIcons name={icon} size={22} color={Colors.white} />
+      ) : (
+        <Ionicons name={icon} size={22} color={Colors.white} />
+      )}
+    </View>
+    <Text style={[styles.quickActionLabel, { color: iconColor }]}>{label}</Text>
+  </TouchableOpacity>
 );
 
-const ClipboardIcon = () => (
-  <View style={iconStyles.clipboardWrap}>
-    <View style={iconStyles.clipboardBody} />
-    <View style={iconStyles.clipboardClip} />
-    <View style={iconStyles.clipboardLine1} />
-    <View style={iconStyles.clipboardLine2} />
-  </View>
-);
+/* ─── Session Row ─── */
+const SessionRow = ({ session, onPress }: { session: StressSessionItem; onPress: () => void }) => {
+  const isHigh = session.statusColor === 'pink';
+  const isModerate = session.statusColor === 'yellow';
 
-const CameraIcon = () => (
-  <View style={iconStyles.cameraWrap}>
-    <View style={iconStyles.cameraBody} />
-    <View style={iconStyles.cameraLens} />
-    <View style={iconStyles.cameraFlash} />
-  </View>
-);
+  const scoreBg = isHigh ? '#FCE5DE' : isModerate ? '#FFF3CD' : '#D6F5E3';
+  const scoreText = isHigh ? '#E05C5C' : isModerate ? '#E08A00' : '#27AE60';
+  const pillLabel = isHigh ? 'High' : isModerate ? 'Moderate' : 'Low';
 
-const GraphIcon = () => (
-  <View style={iconStyles.graphWrap}>
-    <View style={[iconStyles.graphBar, { height: 7 }]} />
-    <View style={[iconStyles.graphBar, { height: 12 }]} />
-    <View style={[iconStyles.graphBar, { height: 17 }]} />
-  </View>
-);
+  return (
+    <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.85}>
+      <View style={[styles.sessionScoreCircle, { backgroundColor: scoreBg }]}>
+        <Text style={[styles.sessionScoreText, { color: scoreText }]}>{session.score}</Text>
+      </View>
+      <View style={styles.sessionTextWrap}>
+        <Text style={styles.sessionTitle}>{session.title}</Text>
+        <Text style={styles.sessionDate}>{session.date}</Text>
+      </View>
+      <View style={[styles.sessionPill, { backgroundColor: scoreBg }]}>
+        <Text style={[styles.sessionPillText, { color: scoreText }]}>{pillLabel}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
-const VideoCameraIcon = () => (
-  <View style={iconStyles.videoWrap}>
-    <View style={iconStyles.videoBody} />
-    <View style={iconStyles.videoLens} />
-  </View>
-);
-
-const BrainIcon = () => (
-  <View style={iconStyles.brainWrap}>
-    <View style={iconStyles.brainLeft} />
-    <View style={iconStyles.brainRight} />
-  </View>
-);
-
-const HomeTabIcon = ({ active }: { active?: boolean }) => (
-  <View style={[iconStyles.homeWrap, active && iconStyles.tabActiveCircle]}>
-    <View style={iconStyles.homeRoof} />
-    <View style={iconStyles.homeBase} />
-  </View>
-);
-
-const AnalysisTabIcon = () => (
-  <View style={iconStyles.analysisWrap}>
-    <View style={iconStyles.analysisCircle} />
-    <View style={iconStyles.analysisDot} />
-  </View>
-);
-
-const ClinicsTabIcon = () => (
-  <View style={iconStyles.clinicsWrap}>
-    <View style={iconStyles.stethoscopeTube} />
-    <View style={iconStyles.stethoscopeBell} />
-  </View>
-);
-
-const ProfileTabIcon = () => (
-  <View style={iconStyles.profileWrap}>
-    <View style={iconStyles.profileHead} />
-    <View style={iconStyles.profileBody} />
-  </View>
-);
-
+/* ─── Main Screen ─── */
 export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   activeTab = 'home',
   onNavigate,
@@ -116,304 +84,164 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 }) => {
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAllSessions, setShowAllSessions] = useState(false);
   const [selectedSession, setSelectedSession] = useState<StressSessionItem | null>(null);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showAllSessions, setShowAllSessions] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-
     const loadData = async () => {
       setLoading(true);
       const res = await fetchDashboardData();
-      if (isMounted) {
-        setData(res);
-        setLoading(false);
-      }
+      if (isMounted) { setData(res); setLoading(false); }
     };
-
     void loadData();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   if (loading || !data) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5B8FD9" />
-        <Text style={styles.loadingText}>Loading MindPulse Dashboard...</Text>
+        <ActivityIndicator size="large" color={Colors.btnBlue} />
+        <Text style={styles.loadingText}>Loading your dashboard…</Text>
       </View>
     );
   }
 
   const { userName, greetingDate, metrics, recentSessions, notifications } = data;
+  const unreadCount = notifications.filter(n => !n.read).length;
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <View style={styles.screenRoot}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header with Green Gradient theme */}
-        <View style={styles.headerGradient}>
-          <View style={styles.headerTopRow}>
-            <View>
-              <Text style={styles.greetingEyebrow}>Good Morning,</Text>
-              <View style={styles.nameRow}>
-                <Text style={styles.greetingName}>{userName}</Text>
-                <Text style={styles.waveEmoji}>👋</Text>
+    <View style={styles.root}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* ── Green Gradient Header ── */}
+        <LinearGradient
+          colors={[Colors.gradGreenTop, Colors.gradGreenBot]}
+          style={styles.header}
+        >
+          <SafeAreaView>
+            <View style={styles.headerTopRow}>
+              <View>
+                <Text style={styles.greetingEyebrow}>Good Morning,</Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.greetingName}>{userName}</Text>
+                  <MaterialCommunityIcons name="hand-wave" size={20} color="#E2B852" />
+                </View>
+                <Text style={styles.dateText}>{greetingDate}</Text>
               </View>
-              <Text style={styles.dateSubtext}>{greetingDate}</Text>
+              <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotificationsModal(true)}>
+                <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+                {unreadCount > 0 && <View style={styles.bellBadge} />}
+              </TouchableOpacity>
             </View>
+          </SafeAreaView>
+        </LinearGradient>
 
-            <TouchableOpacity
-              style={styles.bellButton}
-              activeOpacity={0.8}
-              onPress={() => setShowNotificationsModal(true)}
-            >
-              <BellIcon />
-              {unreadCount > 0 && <View style={styles.unreadBadge} />}
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* ── White Body ── */}
+        <View style={styles.body}>
 
-        {/* Main Dashboard Rounded Container */}
-        <View style={styles.mainContainer}>
-          {/* Latest Stress Level Card */}
-          <TouchableOpacity
-            style={styles.latestStressCard}
-            activeOpacity={0.9}
-            onPress={() => {
-              if (recentSessions.length > 0) {
-                setSelectedSession(recentSessions[0]);
-              }
-            }}
-          >
-            <View style={styles.latestStressLeft}>
-              <Text style={styles.latestStressTitle}>Latest Stress Level</Text>
-              <Text style={styles.latestStressValue}>{metrics.latestLevel}</Text>
-              <Text style={styles.latestStressTrend}>📈 {metrics.latestTrend}</Text>
+          {/* Latest Stress Card */}
+          <TouchableOpacity style={styles.stressCard} activeOpacity={0.9}
+            onPress={() => recentSessions.length > 0 && setSelectedSession(recentSessions[0])}>
+            <View style={styles.stressCardLeft}>
+              <Text style={styles.stressCardLabel}>Latest Stress Level</Text>
+              <Text style={styles.stressCardLevel}>{metrics.latestLevel}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
+                <Text style={styles.stressCardTrend}>{metrics.latestTrend}</Text>
+              </View>
             </View>
-
-            <View style={styles.scoreCircleWrap}>
-              <Text style={styles.scoreCircleValue}>{metrics.latestScore}</Text>
+            <View style={styles.scoreCircle}>
+              <Text style={styles.scoreCircleNum}>{metrics.latestScore}</Text>
               <Text style={styles.scoreCircleLabel}>Score</Text>
             </View>
           </TouchableOpacity>
 
-          {/* Quick Actions Header */}
-          <Text style={styles.sectionHeaderTitle}>Quick Actions</Text>
-
-          {/* Quick Actions Grid */}
+          {/* Quick Actions */}
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            {/* 1. Survey */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, { backgroundColor: '#EEEDFE' }]}
-              activeOpacity={0.85}
-              onPress={onRunSurvey}
-            >
-              <View style={[styles.quickActionIconBox, { backgroundColor: '#5B6EF5' }]}>
-                <ClipboardIcon />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: '#5B6EF5' }]}>Survey</Text>
-            </TouchableOpacity>
-
-            {/* 2. Face Scan */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, { backgroundColor: '#F9F4E5' }]}
-              activeOpacity={0.85}
-              onPress={onRunFaceScan || (() => onNavigate?.('analysis'))}
-            >
-              <View style={[styles.quickActionIconBox, { backgroundColor: '#D9B346' }]}>
-                <CameraIcon />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: '#B08B28' }]}>Face Scan</Text>
-            </TouchableOpacity>
-
-            {/* 3. Analysis */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, { backgroundColor: '#E6F7F5' }]}
-              activeOpacity={0.85}
-              onPress={() => onNavigate?.('analysis')}
-            >
-              <View style={[styles.quickActionIconBox, { backgroundColor: '#38B2AC' }]}>
-                <GraphIcon />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: '#2C7A7B' }]}>Analysis</Text>
-            </TouchableOpacity>
-
-            {/* 4. Consult */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, { backgroundColor: '#FDECEF' }]}
-              activeOpacity={0.85}
-              onPress={() => onNavigate?.('clinics')}
-            >
-              <View style={[styles.quickActionIconBox, { backgroundColor: '#EE7773' }]}>
-                <VideoCameraIcon />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: '#C54E4A' }]}>Consult</Text>
-            </TouchableOpacity>
+            <QuickAction icon="clipboard-list" isMaterial label="Survey" bg={Colors.dashSurveyBg} iconColor={Colors.dashSurveyIcon} onPress={onRunSurvey} />
+            <QuickAction icon="camera-outline" label="Face Scan" bg={Colors.dashFaceBg} iconColor={Colors.dashFaceIcon} onPress={onRunFaceScan} />
+            <QuickAction icon="pulse-outline" label="Analysis" bg={Colors.dashAnalysisBg} iconColor={Colors.dashAnalysisIcon} onPress={() => onNavigate?.('analysis')} />
+            <QuickAction icon="tv-outline" label="Consult" bg={Colors.dashConsultBg} iconColor={Colors.dashConsultIcon} onPress={() => onNavigate?.('clinics')} />
           </View>
 
           {/* Daily Stress Check Banner */}
-          <TouchableOpacity
-            style={styles.dailyCheckBanner}
-            activeOpacity={0.9}
-            onPress={onRunDailyCheck || (() => onNavigate?.('analysis'))}
-          >
-            <View style={styles.dailyCheckBrainBox}>
-              <BrainIcon />
+          <TouchableOpacity style={styles.dailyCheckBanner} activeOpacity={0.9}
+            onPress={onRunDailyCheck || (() => onNavigate?.('analysis'))}>
+            <View style={styles.dailyCheckIconWrap}>
+              <MaterialCommunityIcons name="brain" size={24} color={Colors.dashStressCheckBg} />
             </View>
-
-            <View style={styles.dailyCheckTextWrap}>
+            <View style={styles.dailyCheckText}>
               <Text style={styles.dailyCheckTitle}>Daily Stress Check</Text>
               <Text style={styles.dailyCheckSub}>Survey + Face + HR Analysis</Text>
             </View>
-
-            <View style={styles.dailyCheckArrowCircle}>
-              <Text style={styles.dailyCheckArrowText}>›</Text>
+            <View style={styles.dailyCheckArrow}>
+              <Ionicons name="chevron-forward" size={20} color={Colors.white} />
             </View>
           </TouchableOpacity>
 
-          {/* Metrics Cards (2 side-by-side) */}
+          {/* Metrics Row */}
           <View style={styles.metricsRow}>
-            {/* Avg Heart Rate */}
-            <TouchableOpacity
-              style={styles.metricCard}
-              activeOpacity={0.85}
-              onPress={() => onNavigate?.('analysis')}
-            >
-              <View style={styles.metricHeaderRow}>
-                <Text style={styles.metricIconEmoji}>❤️</Text>
-                <Text style={styles.metricTitle}>Avg Heart Rate</Text>
+            <TouchableOpacity style={styles.metricCard} activeOpacity={0.85} onPress={() => onNavigate?.('analysis')}>
+              <View style={styles.metricLabelRow}>
+                <Ionicons name="heart" size={16} color="#E05C5C" />
+                <Text style={styles.metricLabel}>Avg Heart Rate</Text>
               </View>
-
               <View style={styles.metricValueRow}>
-                <Text style={styles.metricValueNum}>{metrics.avgHeartRate}</Text>
+                <Text style={styles.metricNum}>{metrics.avgHeartRate}</Text>
                 <Text style={styles.metricUnit}>bpm</Text>
               </View>
-
-              <Text style={[styles.metricSubtext, { color: '#E05C5C' }]}>
-                {metrics.avgHeartRateStatus}
-              </Text>
+              <Text style={[styles.metricStatus, { color: '#E05C5C' }]}>{metrics.avgHeartRateStatus}</Text>
             </TouchableOpacity>
 
-            {/* Avg Stress */}
-            <TouchableOpacity
-              style={styles.metricCard}
-              activeOpacity={0.85}
-              onPress={() => onNavigate?.('analysis')}
-            >
-              <View style={styles.metricHeaderRow}>
-                <Text style={styles.metricIconEmoji}>📈</Text>
-                <Text style={styles.metricTitle}>Avg Stress</Text>
+            <TouchableOpacity style={styles.metricCard} activeOpacity={0.85} onPress={() => onNavigate?.('analysis')}>
+              <View style={styles.metricLabelRow}>
+                <Ionicons name="trending-up" size={16} color="#E08A00" />
+                <Text style={styles.metricLabel}>Avg Stress</Text>
               </View>
-
               <View style={styles.metricValueRow}>
-                <Text style={styles.metricValueNum}>{metrics.avgStressScore}</Text>
+                <Text style={styles.metricNum}>{metrics.avgStressScore}</Text>
                 <Text style={styles.metricUnit}>/100</Text>
               </View>
-
-              <Text style={[styles.metricSubtext, { color: '#E08A00' }]}>
-                {metrics.avgStressStatus}
-              </Text>
+              <Text style={[styles.metricStatus, { color: '#E08A00' }]}>{metrics.avgStressStatus}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Recent Sessions Header */}
+          {/* Recent Sessions */}
           <View style={styles.sessionsHeaderRow}>
-            <Text style={styles.sectionHeaderTitle}>Recent Sessions</Text>
-            <TouchableOpacity onPress={() => setShowAllSessions(!showAllSessions)}>
-              <Text style={styles.seeAllText}>{showAllSessions ? 'Show less' : 'See all'}</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Recent Sessions</Text>
+            <Pressable onPress={() => setShowAllSessions(v => !v)}>
+              <Text style={styles.seeAll}>{showAllSessions ? 'Show less' : 'See all'}</Text>
+            </Pressable>
           </View>
-
-          {/* Recent Sessions List */}
           <View style={styles.sessionsList}>
-            {displaySessions.map((session) => {
-              const badgeBg =
-                session.statusColor === 'pink'
-                  ? '#FCE5DE'
-                  : session.statusColor === 'yellow'
-                  ? '#FFF3CD'
-                  : '#D6F5E3';
-
-              const badgeTextColor =
-                session.statusColor === 'pink'
-                  ? '#E05C5C'
-                  : session.statusColor === 'yellow'
-                  ? '#E08A00'
-                  : '#27AE60';
-
-              return (
-                <TouchableOpacity
-                  key={session.id}
-                  style={styles.sessionItemCard}
-                  activeOpacity={0.85}
-                  onPress={() => setSelectedSession(session)}
-                >
-                  <View style={[styles.sessionScoreBadge, { backgroundColor: badgeBg }]}>
-                    <Text style={[styles.sessionScoreBadgeText, { color: badgeTextColor }]}>
-                      {session.score}
-                    </Text>
-                  </View>
-
-                  <View style={styles.sessionTextWrap}>
-                    <Text style={styles.sessionTitle}>{session.title}</Text>
-                    <Text style={styles.sessionDate}>{session.date}</Text>
-                  </View>
-
-                  <View style={[styles.sessionPill, { backgroundColor: badgeBg }]}>
-                    <Text style={[styles.sessionPillText, { color: badgeTextColor }]}>
-                      {session.status}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {displaySessions.map(session => (
+              <SessionRow key={session.id} session={session} onPress={() => setSelectedSession(session)} />
+            ))}
           </View>
         </View>
       </ScrollView>
 
       {/* Session Details Modal */}
       {selectedSession && (
-        <Modal
-          visible={Boolean(selectedSession)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSelectedSession(null)}
-        >
+        <Modal visible transparent animationType="fade" onRequestClose={() => setSelectedSession(null)}>
           <View style={modalStyles.overlay}>
-            <View style={modalStyles.modalBox}>
-              <Text style={modalStyles.modalTitle}>Session Details</Text>
-              <Text style={modalStyles.modalScore}>
-                Score: {selectedSession.score} / 100 ({selectedSession.status})
-              </Text>
-              <Text style={modalStyles.modalDate}>{selectedSession.date}</Text>
-
-              {selectedSession.heartRate ? (
-                <Text style={modalStyles.modalMeta}>
-                  Recorded Heart Rate: {selectedSession.heartRate} bpm
-                </Text>
-              ) : null}
-
-              {selectedSession.notes ? (
-                <View style={modalStyles.notesBox}>
+            <View style={modalStyles.box}>
+              <Text style={modalStyles.title}>Session Details</Text>
+              <Text style={modalStyles.score}>Score: {selectedSession.score} / 100 ({selectedSession.status})</Text>
+              <Text style={modalStyles.date}>{selectedSession.date}</Text>
+              {selectedSession.heartRate && <Text style={modalStyles.meta}>Heart Rate: {selectedSession.heartRate} bpm</Text>}
+              {selectedSession.notes && (
+                <View style={modalStyles.notes}>
                   <Text style={modalStyles.notesLabel}>Analysis Notes:</Text>
                   <Text style={modalStyles.notesText}>{selectedSession.notes}</Text>
                 </View>
-              ) : null}
-
-              <TouchableOpacity
-                style={modalStyles.closeButton}
-                onPress={() => setSelectedSession(null)}
-              >
-                <Text style={modalStyles.closeButtonText}>Close</Text>
+              )}
+              <TouchableOpacity style={modalStyles.closeBtn} onPress={() => setSelectedSession(null)}>
+                <Text style={modalStyles.closeBtnText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -422,18 +250,12 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
       {/* Notifications Modal */}
       {showNotificationsModal && (
-        <Modal
-          visible={showNotificationsModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowNotificationsModal(false)}
-        >
+        <Modal visible transparent animationType="slide" onRequestClose={() => setShowNotificationsModal(false)}>
           <View style={modalStyles.overlay}>
-            <View style={modalStyles.modalBox}>
-              <Text style={modalStyles.modalTitle}>Notifications</Text>
-
-              <ScrollView style={{ maxHeight: 260, marginVertical: 10 }}>
-                {notifications.map((n) => (
+            <View style={modalStyles.box}>
+              <Text style={modalStyles.title}>Notifications</Text>
+              <ScrollView style={{ maxHeight: 260, marginVertical: 12 }}>
+                {notifications.map(n => (
                   <View key={n.id} style={modalStyles.notifItem}>
                     <Text style={modalStyles.notifTitle}>{n.title}</Text>
                     <Text style={modalStyles.notifBody}>{n.message}</Text>
@@ -441,12 +263,8 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                   </View>
                 ))}
               </ScrollView>
-
-              <TouchableOpacity
-                style={modalStyles.closeButton}
-                onPress={() => setShowNotificationsModal(false)}
-              >
-                <Text style={modalStyles.closeButtonText}>Done</Text>
+              <TouchableOpacity style={modalStyles.closeBtn} onPress={() => setShowNotificationsModal(false)}>
+                <Text style={modalStyles.closeBtnText}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -456,664 +274,99 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   );
 };
 
-const iconStyles = StyleSheet.create({
-  bellWrap: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellTop: {
-    width: 4,
-    height: 3,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  bellBody: {
-    width: 14,
-    height: 12,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-  },
-  bellClapper: {
-    width: 5,
-    height: 3,
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-    marginTop: 1,
-  },
-  clipboardWrap: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-  },
-  clipboardBody: {
-    width: 16,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    borderRadius: 3,
-  },
-  clipboardClip: {
-    width: 8,
-    height: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    top: -1,
-  },
-  clipboardLine1: {
-    width: 8,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    top: 6,
-  },
-  clipboardLine2: {
-    width: 8,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    top: 10,
-  },
-  cameraWrap: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 18,
-    height: 13,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 3,
-  },
-  cameraLens: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    borderWidth: 2,
-    borderColor: '#D9B346',
-    position: 'absolute',
-  },
-  cameraFlash: {
-    width: 5,
-    height: 3,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    top: 1,
-    right: 2,
-  },
-  graphWrap: {
-    width: 20,
-    height: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-around',
-  },
-  graphBar: {
-    width: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-  },
-  videoWrap: {
-    width: 20,
-    height: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoBody: {
-    width: 12,
-    height: 11,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-  },
-  videoLens: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 5,
-    borderTopColor: 'transparent',
-    borderBottomWidth: 5,
-    borderBottomColor: 'transparent',
-    borderLeftWidth: 6,
-    borderLeftColor: '#FFFFFF',
-    marginLeft: 2,
-  },
-  brainWrap: {
-    width: 22,
-    height: 22,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 2,
-  },
-  brainLeft: {
-    width: 8,
-    height: 14,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  brainRight: {
-    width: 8,
-    height: 14,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  homeWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  tabActiveCircle: {
-    backgroundColor: '#3575DA',
-  },
-  homeRoof: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightWidth: 8,
-    borderRightColor: 'transparent',
-    borderBottomWidth: 7,
-    borderBottomColor: '#FFFFFF',
-  },
-  homeBase: {
-    width: 12,
-    height: 9,
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-  },
-  analysisWrap: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  analysisCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  analysisDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-  },
-  clinicsWrap: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stethoscopeTube: {
-    width: 14,
-    height: 12,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    borderTopWidth: 0,
-  },
-  stethoscopeBell: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#FFFFFF',
-    marginTop: 1,
-  },
-  profileWrap: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileHead: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#FFFFFF',
-  },
-  profileBody: {
-    width: 14,
-    height: 7,
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    backgroundColor: '#FFFFFF',
-    marginTop: 1,
-  },
-});
-
+/* ─── Styles ─── */
 const styles = StyleSheet.create({
-  screenRoot: {
-    flex: 1,
-    backgroundColor: '#E2F8E2',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 85,
-  },
-  headerGradient: {
-    backgroundColor: '#D6F5D6',
-    paddingHorizontal: AppSpacing.lg,
-    paddingTop: AppSpacing.xl + 10,
-    paddingBottom: AppSpacing.xl,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  greetingEyebrow: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#4B6B4B',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  greetingName: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1A2D1A',
-  },
-  waveEmoji: {
-    fontSize: 22,
-    marginLeft: 6,
-  },
-  dateSubtext: {
-    fontSize: 13,
-    color: '#5A7B5A',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  bellButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(134, 169, 134, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unreadBadge: {
-    position: 'absolute',
-    top: 9,
-    right: 9,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E05C5C',
-  },
-  mainContainer: {
-    backgroundColor: '#FAF8ED',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -16,
-    paddingHorizontal: AppSpacing.md,
-    paddingTop: AppSpacing.lg,
-    paddingBottom: AppSpacing.xl,
-    gap: AppSpacing.md,
-  },
-  latestStressCard: {
-    backgroundColor: '#FCE5DE',
-    borderRadius: 22,
-    padding: AppSpacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  latestStressLeft: {
-    flex: 1,
-  },
-  latestStressTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  latestStressValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 2,
-  },
-  latestStressTrend: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#E05C5C',
-    marginTop: 6,
-  },
-  scoreCircleWrap: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.small,
-  },
-  scoreCircleValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#E05C5C',
-  },
-  scoreCircleLabel: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: -2,
-  },
-  sectionHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 4,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickActionCard: {
-    flex: 1,
-    borderRadius: 18,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  dailyCheckBanner: {
-    backgroundColor: '#5B9EF7',
-    borderRadius: 22,
-    padding: AppSpacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dailyCheckBrainBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dailyCheckTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  dailyCheckTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  dailyCheckSub: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 2,
-  },
-  dailyCheckArrowCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dailyCheckArrowText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    marginTop: -2,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: AppSpacing.md,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: AppSpacing.md,
-    ...Shadows.small,
-  },
-  metricHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metricIconEmoji: {
-    fontSize: 15,
-  },
-  metricTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  metricValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 10,
-    gap: 4,
-  },
-  metricValueNum: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  metricUnit: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  metricSubtext: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  sessionsHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#27AE60',
-  },
-  sessionsList: {
-    gap: 10,
-  },
-  sessionItemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...Shadows.small,
-  },
-  sessionScoreBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sessionScoreBadgeText: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  sessionTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  sessionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  sessionDate: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  sessionPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  sessionPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#5B9EF7',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  tabLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAF8ED',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#64748B',
-  },
+  root: { flex: 1, backgroundColor: Colors.pageBg },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  loadingText: { color: Colors.textSecondary, ...Typography.body2 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 90 },
+
+  /* Header */
+  header: { paddingHorizontal: Spacing.lg, paddingTop: 0, paddingBottom: Spacing.xxl + 8 },
+  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 16 },
+  greetingEyebrow: { color: 'rgba(30,50,30,0.65)', fontSize: 14, fontWeight: '600' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  greetingName: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
+  waveEmoji: { fontSize: 22, marginLeft: 8 },
+  dateText: { color: 'rgba(30,50,30,0.55)', fontSize: 13, marginTop: 4, fontWeight: '500' },
+  bellBtn: { width: 48, height: 48, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
+  bellIcon: { fontSize: 20 },
+  bellBadge: { position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: '#E05C5C', borderWidth: 1.5, borderColor: Colors.white },
+
+  /* Body */
+  body: { backgroundColor: Colors.pageBg, borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -24, paddingHorizontal: Spacing.md, paddingTop: Spacing.lg, gap: Spacing.md },
+
+  /* Latest Stress Card */
+  stressCard: { backgroundColor: '#FAE5DF', borderRadius: 22, padding: Spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  stressCardLeft: { flex: 1 },
+  stressCardLabel: { color: '#7C4A3A', fontSize: 13, fontWeight: '700' },
+  stressCardLevel: { color: Colors.textPrimary, fontSize: 28, fontWeight: '900', marginTop: 4 },
+  stressCardTrend: { color: '#E05C5C', fontSize: 13, marginTop: 4, fontWeight: '600' },
+  scoreCircle: { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center' },
+  scoreCircleNum: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
+  scoreCircleLabel: { color: Colors.textSecondary, fontSize: 10, fontWeight: '600' },
+
+  /* Section title */
+  sectionTitle: { color: Colors.textPrimary, ...Typography.h3, marginTop: 4 },
+
+  /* Quick actions */
+  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  quickActionCard: { width: '46.5%', borderRadius: Radius.md, padding: 16, alignItems: 'center', gap: 10 },
+  quickActionIconBox: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  quickActionIconText: { fontSize: 22 },
+  quickActionLabel: { fontSize: 13, fontWeight: '700' },
+
+  /* Daily Check Banner */
+  dailyCheckBanner: { backgroundColor: Colors.dashStressCheckBg, borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  dailyCheckIconWrap: { width: 44, height: 44, borderRadius: Radius.md, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
+  dailyCheckIcon: { fontSize: 22 },
+  dailyCheckText: { flex: 1 },
+  dailyCheckTitle: { color: Colors.white, fontSize: 15, fontWeight: '800' },
+  dailyCheckSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
+  dailyCheckArrow: { width: 32, height: 32, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
+  dailyCheckArrowText: { color: Colors.white, fontSize: 22, lineHeight: 28 },
+
+  /* Metrics */
+  metricsRow: { flexDirection: 'row', gap: 12 },
+  metricCard: { flex: 1, backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, gap: 4 },
+  metricLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metricEmoji: { fontSize: 16 },
+  metricLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  metricValueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  metricNum: { color: Colors.textPrimary, fontSize: 32, fontWeight: '900' },
+  metricUnit: { color: Colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  metricStatus: { fontSize: 12, fontWeight: '600' },
+
+  /* Sessions */
+  sessionsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  seeAll: { color: Colors.btnBlue, fontSize: 13, fontWeight: '700' },
+  sessionsList: { gap: 10 },
+  sessionRow: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  sessionScoreCircle: { width: 52, height: 52, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  sessionScoreText: { fontSize: 18, fontWeight: '900' },
+  sessionTextWrap: { flex: 1 },
+  sessionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  sessionDate: { color: Colors.textSecondary, fontSize: 12, marginTop: 2 },
+  sessionPill: { borderRadius: Radius.full, paddingVertical: 5, paddingHorizontal: 12 },
+  sessionPillText: { fontSize: 12, fontWeight: '700' },
 });
 
 const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalBox: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    ...Shadows.small,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  modalScore: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#5B9EF7',
-  },
-  modalDate: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  modalMeta: {
-    fontSize: 13,
-    color: '#334155',
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  notesBox: {
-    marginTop: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  notesLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  notesText: {
-    fontSize: 13,
-    color: '#1E293B',
-    marginTop: 4,
-  },
-  closeButton: {
-    marginTop: 16,
-    backgroundColor: '#5B9EF7',
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  notifItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingVertical: 8,
-  },
-  notifTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  notifBody: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 2,
-  },
-  notifTime: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 4,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
+  box: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.lg, width: '100%' },
+  title: { color: Colors.textPrimary, ...Typography.h3, marginBottom: 12 },
+  score: { color: Colors.textPrimary, ...Typography.body1 },
+  date: { color: Colors.textSecondary, ...Typography.body2, marginTop: 4 },
+  meta: { color: Colors.textPrimary, ...Typography.body2, marginTop: 8 },
+  notes: { backgroundColor: Colors.divider, borderRadius: Radius.sm, padding: Spacing.md, marginTop: 12 },
+  notesLabel: { color: Colors.textPrimary, fontWeight: '700', fontSize: 13, marginBottom: 4 },
+  notesText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 20 },
+  closeBtn: { marginTop: 20, height: 52, borderRadius: Radius.md, backgroundColor: Colors.btnBlue, alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { color: Colors.white, fontWeight: '800', fontSize: 16 },
+  notifItem: { borderBottomWidth: 1, borderBottomColor: Colors.divider, paddingVertical: 12 },
+  notifTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 14 },
+  notifBody: { color: Colors.textSecondary, fontSize: 13, marginTop: 2 },
+  notifTime: { color: Colors.textHint, fontSize: 11, marginTop: 4 },
 });

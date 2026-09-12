@@ -117,7 +117,9 @@ export const StressAnalysisLayout: React.FC<Props> = ({
       {onBack && <BackButton onPress={onBack} />}
       {/* ── Page header ── */}
       <View style={layout.header}>
-        <Text style={layout.title}>Stress Analysis</Text>
+        <View style={layout.titlePill}>
+          <Text style={layout.title}>Stress Analysis</Text>
+        </View>
         <Text style={layout.subtitle}>{subtitle}</Text>
       </View>
 
@@ -192,14 +194,21 @@ const layout = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
   },
+  titlePill: {
+    backgroundColor: '#EAF3FB',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
   title: {
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
+    color: '#1A2340',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
   },
@@ -222,14 +231,6 @@ const layout = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
     gap: Spacing.md,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.tabBarBg,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    justifyContent: 'space-around',
-    alignItems: 'center',
   },
 });
 
@@ -269,14 +270,14 @@ const secTab = StyleSheet.create({
     position: 'relative',
   },
   active: {
-    backgroundColor: Colors.tabHeartBg,
+    backgroundColor: Colors.primaryLight,
   },
   icon: {
     fontSize: 12,
     color: Colors.textSecondary,
   },
   iconActive: {
-    color: Colors.ctaRed,
+    color: Colors.primary,
   },
   label: {
     fontSize: 12,
@@ -284,7 +285,7 @@ const secTab = StyleSheet.create({
     color: Colors.textSecondary,
   },
   labelActive: {
-    color: Colors.ctaRed,
+    color: Colors.primary,
     fontWeight: '700',
   },
   badge: {

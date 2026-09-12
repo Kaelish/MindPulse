@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AppSpacing, Shadows } from '../../theme/tokens';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
-import { PlantProgressScreen } from './PlantProgressScreen';
+import { Colors } from '../../theme/colors';
+import { Radius, Spacing, Typography } from '../../theme/typography';
+import { supabase } from '../../supabase/client';
 import {
   PatientDashboardData,
   StressSessionItem,
@@ -26,1139 +28,505 @@ interface PatientProfileScreenProps {
   onOpenHealthSetup?: () => void;
 }
 
-/* Custom Styled Icons for Profile & Settings */
-const ChevronDownIcon = () => (
-  <View style={iconStyles.chevronDown} />
-);
+// ── MindPlant growth stages ──────────────────────────────────────────────────
+const PLANT_STAGES = [
+  { name: 'Bare Pot', stage: 0, emoji: '🪴' },
+  { name: 'Seedling', stage: 1, emoji: '🌱', current: true },
+  { name: 'Sprout', stage: 2, emoji: '🌿' },
+  { name: 'Young Plant', stage: 3, emoji: '🌵' },
+  { name: 'Mature Plant', stage: 4, emoji: '🌳' },
+  { name: 'Full Bloom', stage: 5, emoji: '🌸' },
+];
+const CURRENT_STAGE = 1; // Stage 1 – Seedling
 
-const ChevronUpIcon = () => (
-  <View style={iconStyles.chevronUp} />
-);
+// ── Stress level helpers ──────────────────────────────────────────────────────
+const levelProps = (status: string) => {
+  if (status === 'Low') return { bg: '#D6F5E3', color: '#27AE60', label: 'Low' };
+  if (status === 'Moderate') return { bg: '#FFF3CD', color: '#E08A00', label: 'Moderate' };
+  return { bg: '#FFD6D6', color: '#E05C5C', label: 'High' };
+};
 
-const ChevronRightIcon = () => (
-  <View style={iconStyles.chevronRight} />
-);
-
-const BellIconSmall = () => (
-  <View style={[iconStyles.iconCircle, { backgroundColor: '#EEEDFE' }]}>
-    <Text style={iconStyles.iconEmoji}>🔔</Text>
-  </View>
-);
-
-const ShieldIconSmall = () => (
-  <View style={[iconStyles.iconCircle, { backgroundColor: '#E6F0FA' }]}>
-    <Text style={iconStyles.iconEmoji}>🛡️</Text>
-  </View>
-);
-
-const InfoIconSmall = () => (
-  <View style={[iconStyles.iconCircle, { backgroundColor: '#E6F7F5' }]}>
-    <Text style={iconStyles.iconEmoji}>ℹ️</Text>
-  </View>
-);
-
-const BrainIconSmall = () => (
-  <View style={[iconStyles.iconCircle, { backgroundColor: '#EEEDFE' }]}>
-    <Text style={iconStyles.iconEmoji}>🧠</Text>
-  </View>
-);
-
-/* Simple SVG-Like Chart Components using React Native Views */
-const StressTrendChart = () => {
-  const points = [
-    { x: 'Mar 15', y: 50 },
-    { x: 'Mar 20', y: 22 },
-    { x: 'Mar 25', y: 85 },
-    { x: 'Mar 28', y: 42 },
-    { x: 'Apr 1', y: 68 },
-  ];
+// ── Simple sparkline chart (using View bars) ──────────────────────────────────
+const LineChart = ({
+  data, color, height = 80,
+}: { data: number[]; color: string; height?: number }) => {
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
 
   return (
-    <View style={chartStyles.chartContainer}>
-      <Text style={chartStyles.chartTitle}>Stress Score Trend</Text>
-
-      <View style={chartStyles.chartGrid}>
-        {/* Y Axis Labels */}
-        <View style={chartStyles.yAxis}>
-          <Text style={chartStyles.axisLabel}>100</Text>
-          <Text style={chartStyles.axisLabel}>75</Text>
-          <Text style={chartStyles.axisLabel}>50</Text>
-          <Text style={chartStyles.axisLabel}>25</Text>
-          <Text style={chartStyles.axisLabel}>0</Text>
-        </View>
-
-        {/* Graph Plot Area */}
-        <View style={chartStyles.plotArea}>
-          <View style={chartStyles.gridLineTop} />
-          <View style={chartStyles.gridLineMid} />
-          <View style={chartStyles.gridLineBot} />
-
-          {/* Connected Curved Line Simulation with Dots */}
-          <View style={chartStyles.dotsRow}>
-            {points.map((p, idx) => {
-              const bottomPercent = p.y;
-              return (
-                <View key={idx} style={chartStyles.dotCol}>
-                  <View
-                    style={[
-                      chartStyles.purpleDotPoint,
-                      { bottom: `${bottomPercent}%` },
-                    ]}
-                  >
-                    <View style={chartStyles.dotInner} />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-          <View style={chartStyles.purpleShadeOverlay} />
-        </View>
+    <View style={[lcStyles.wrap, { height }]}>
+      {/* Y-axis labels */}
+      <View style={lcStyles.yAxis}>
+        <Text style={lcStyles.axisLabel}>{max}</Text>
+        <Text style={lcStyles.axisLabel}>{Math.round((max + min) / 2)}</Text>
+        <Text style={lcStyles.axisLabel}>{min}</Text>
       </View>
-
-      {/* X Axis Labels */}
-      <View style={chartStyles.xAxis}>
-        {points.map((p, idx) => (
-          <Text key={idx} style={chartStyles.axisLabel}>
-            {p.x}
-          </Text>
-        ))}
+      {/* Bars */}
+      <View style={lcStyles.bars}>
+        {data.map((v, i) => {
+          const barH = ((v - min) / range) * (height - 20);
+          return (
+            <View key={i} style={lcStyles.barWrap}>
+              <View style={{ flex: 1 }} />
+              <View style={[lcStyles.bar, { height: barH, backgroundColor: color }]} />
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 };
 
-const HeartRateTrendChart = () => {
-  const points = [
-    { x: 'Mar 15', y: 76 },
-    { x: 'Mar 20', y: 64 },
-    { x: 'Mar 25', y: 94 },
-    { x: 'Mar 28', y: 72 },
-    { x: 'Apr 1', y: 88 },
-  ];
+const lcStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'stretch' },
+  yAxis: { width: 28, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 },
+  axisLabel: { fontSize: 9, color: '#B0B8C8' },
+  bars: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  barWrap: { flex: 1, flexDirection: 'column' },
+  bar: { borderRadius: 3 },
+});
 
+// ── Session row ───────────────────────────────────────────────────────────────
+const SessionRow = ({
+  session, expanded, onToggle,
+}: { session: StressSessionItem; expanded: boolean; onToggle: () => void }) => {
+  const lp = levelProps(session.status);
   return (
-    <View style={chartStyles.chartContainer}>
-      <Text style={chartStyles.chartTitle}>Heart Rate History (BPM)</Text>
-
-      <View style={chartStyles.chartGrid}>
-        {/* Y Axis Labels */}
-        <View style={chartStyles.yAxis}>
-          <Text style={chartStyles.axisLabel}>120</Text>
-          <Text style={chartStyles.axisLabel}>90</Text>
-          <Text style={chartStyles.axisLabel}>70</Text>
-          <Text style={chartStyles.axisLabel}>50</Text>
-        </View>
-
-        {/* Graph Plot Area */}
-        <View style={chartStyles.plotArea}>
-          <View style={chartStyles.gridLineTop} />
-          <View style={chartStyles.gridLineMid} />
-          <View style={chartStyles.gridLineBot} />
-
-          {/* Connected Curved Line Simulation with Dots */}
-          <View style={chartStyles.dotsRow}>
-            {points.map((p, idx) => {
-              // Scale Y value 50..120 to percentage 0..100
-              const bottomPercent = Math.max(0, Math.min(100, ((p.y - 50) / 70) * 100));
-              return (
-                <View key={idx} style={chartStyles.dotCol}>
-                  <View
-                    style={[
-                      chartStyles.redDotPoint,
-                      { bottom: `${bottomPercent}%` },
-                    ]}
-                  >
-                    <View style={chartStyles.dotInner} />
-                  </View>
-                </View>
-              );
-            })}
+    <TouchableOpacity style={sessionStyles.row} onPress={onToggle} activeOpacity={0.8}>
+      <View style={[sessionStyles.scorePill, { backgroundColor: lp.bg }]}>
+        <Text style={[sessionStyles.scoreText, { color: lp.color }]}>{session.score}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={sessionStyles.rowTop}>
+          <Text style={sessionStyles.title}>{session.title}</Text>
+          <View style={[sessionStyles.badge, { backgroundColor: lp.bg }]}>
+            <Text style={[sessionStyles.badgeText, { color: lp.color }]}>{lp.label}</Text>
           </View>
-          <View style={chartStyles.redShadeOverlay} />
         </View>
+        <Text style={sessionStyles.date}>{session.date}</Text>
       </View>
-
-      {/* X Axis Labels */}
-      <View style={chartStyles.xAxis}>
-        {points.map((p, idx) => (
-          <Text key={idx} style={chartStyles.axisLabel}>
-            {p.x}
-          </Text>
-        ))}
-      </View>
-    </View>
+      <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textHint} />
+    </TouchableOpacity>
   );
 };
 
+const sessionStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  scorePill: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  scoreText: { fontSize: 16, fontWeight: '800' },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+  date: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+});
+
+// ── Settings row ──────────────────────────────────────────────────────────────
+const SettingRow = ({
+  icon, bg, label, sub, onPress, accent = false,
+}: { icon: any; bg: string; label: string; sub?: string; onPress?: () => void; accent?: boolean }) => (
+  <TouchableOpacity style={settingStyles.row} onPress={onPress}>
+    <View style={[settingStyles.iconBox, { backgroundColor: bg }]}>
+      <Ionicons name={icon} size={16} color={accent ? '#E05C5C' : Colors.textPrimary} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={[settingStyles.label, accent && { color: '#E05C5C' }]}>{label}</Text>
+      {sub && <Text style={settingStyles.sub}>{sub}</Text>}
+    </View>
+    {!accent && <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />}
+  </TouchableOpacity>
+);
+
+const settingStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  iconBox: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  sub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+});
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
-  onNavigateTab,
-  onSignOut,
-  onOpenHealthSetup,
+  onNavigateHome, onNavigateTab, onSignOut, onOpenHealthSetup,
 }) => {
-  const [activeSegment, setActiveSegment] = useState<ProfileTabSegment>('history');
+  const [activeSegment, setActiveSegment] = useState<ProfileTabSegment>('profile');
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>('s-101');
-  const [infoModalTitle, setInfoModalTitle] = useState<string | null>(null);
-  const [infoModalMessage, setInfoModalMessage] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    const load = async () => {
-      setLoading(true);
-      const res = await fetchDashboardData();
-      if (isMounted) {
-        setData(res);
-        setLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      isMounted = false;
-    };
+    fetchDashboardData().then(res => { if (isMounted) { setData(res); setLoading(false); } });
+    return () => { isMounted = false; };
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    onSignOut?.();
+  };
 
   if (loading || !data) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5B8FD9" />
-        <Text style={styles.loadingText}>Loading Profile...</Text>
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loaderText}>Loading Profile...</Text>
       </View>
     );
   }
 
   const { userName, userEmail, userInitials, metrics, recentSessions } = data;
 
-  const toggleExpand = (id: string) => {
-    setExpandedSessionId((prev) => (prev === id ? null : id));
-  };
+  // ── Score trend data (last 5 sessions reversed) ──
+  const scoreTrend = [...recentSessions].reverse().map(s => s.score);
+  const hrTrend = [...recentSessions].reverse().map(s => s.heartRate ?? 75);
 
   return (
-    <View style={styles.screenRoot}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Top Header Card Container */}
-        <View style={styles.topHeaderCard}>
-          {/* User Info Row */}
-          <View style={styles.userRow}>
-            <View style={styles.avatarBox}>
-              <Text style={styles.avatarText}>{userInitials}</Text>
-            </View>
-
-            <View style={styles.userTextWrap}>
-              <Text style={styles.userNameText}>{userName}</Text>
-              <Text style={styles.userEmailText}>{userEmail}</Text>
-            </View>
+    <View style={styles.root}>
+      {/* ── Header ── */}
+      <SafeAreaView edges={['top']} style={styles.headerSafe}>
+        {/* Avatar + Name + Email */}
+        <View style={styles.headerRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{userInitials}</Text>
           </View>
-
-          {/* 3 Summary Statistics Cards Side-by-Side */}
-          <View style={styles.statsRow}>
-            {/* 1. Assessments */}
-            <View style={[styles.statCard, { backgroundColor: '#EEEDFE' }]}>
-              <Text style={[styles.statLabel, { color: '#5B6EF5' }]}>Assessments</Text>
-              <Text style={[styles.statValue, { color: '#5B6EF5' }]}>
-                {metrics.totalAssessments}
-              </Text>
-            </View>
-
-            {/* 2. Average Stress */}
-            <View style={[styles.statCard, { backgroundColor: '#F9F4E5' }]}>
-              <Text style={[styles.statLabel, { color: '#B08B28' }]}>Average Stress</Text>
-              <Text style={[styles.statValue, { color: '#B08B28' }]}>
-                {metrics.avgStressScore}/100
-              </Text>
-            </View>
-
-            {/* 3. Average HR */}
-            <View style={[styles.statCard, { backgroundColor: '#E6F7F5' }]}>
-              <Text style={[styles.statLabel, { color: '#2C7A7B' }]}>Average HR</Text>
-              <Text style={[styles.statValue, { color: '#2C7A7B' }]}>
-                {metrics.avgHeartRate} bpm
-              </Text>
-            </View>
-          </View>
-
-          {/* Tab Segment Switcher */}
-          <View style={styles.segmentContainer}>
-            <TouchableOpacity
-              style={[
-                styles.segmentItem,
-                activeSegment === 'profile' && styles.segmentItemActive,
-              ]}
-              onPress={() => setActiveSegment('profile')}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeSegment === 'profile' && styles.segmentTextActive,
-                ]}
-              >
-                My Profile
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.segmentItem,
-                activeSegment === 'history' && styles.segmentItemActive,
-              ]}
-              onPress={() => setActiveSegment('history')}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeSegment === 'history' && styles.segmentTextActive,
-                ]}
-              >
-                History
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.segmentItem,
-                activeSegment === 'settings' && styles.segmentItemActive,
-              ]}
-              onPress={() => setActiveSegment('settings')}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeSegment === 'settings' && styles.segmentTextActive,
-                ]}
-              >
-                Settings
-              </Text>
-            </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.userName}>{userName}</Text>
+            <Text style={styles.userEmail}>{userEmail}</Text>
           </View>
         </View>
 
-        {/* Tab Body View */}
-        {activeSegment === 'history' ? (
-          /* HISTORY TAB CONTENT */
-          <View style={styles.tabBody}>
-            {/* Stress Score Trend Chart */}
-            <StressTrendChart />
-
-            {/* Heart Rate History Chart */}
-            <HeartRateTrendChart />
-
-            {/* ALL SESSIONS Section */}
-            <Text style={styles.sectionHeaderTitle}>ALL SESSIONS</Text>
-
-            <View style={styles.sessionsList}>
-              {recentSessions.map((session) => {
-                const isExpanded = expandedSessionId === session.id;
-
-                const badgeBg =
-                  session.statusColor === 'pink'
-                    ? '#FCE5DE'
-                    : session.statusColor === 'yellow'
-                    ? '#FFF3CD'
-                    : '#D6F5E3';
-
-                const badgeTextColor =
-                  session.statusColor === 'pink'
-                    ? '#E05C5C'
-                    : session.statusColor === 'yellow'
-                    ? '#E08A00'
-                    : '#27AE60';
-
-                return (
-                  <View key={session.id} style={styles.sessionCardOuter}>
-                    {/* Collapsed Header Bar */}
-                    <TouchableOpacity
-                      style={styles.sessionHeaderRow}
-                      activeOpacity={0.85}
-                      onPress={() => toggleExpand(session.id)}
-                    >
-                      <View style={[styles.sessionScoreBadge, { backgroundColor: badgeBg }]}>
-                        <Text style={[styles.sessionScoreBadgeText, { color: badgeTextColor }]}>
-                          {session.score}
-                        </Text>
-                      </View>
-
-                      <View style={styles.sessionTitleWrap}>
-                        <View style={styles.sessionTitleRow}>
-                          <Text style={styles.sessionTitleText}>{session.title}</Text>
-                          <View style={[styles.sessionPill, { backgroundColor: badgeBg }]}>
-                            <Text style={[styles.sessionPillText, { color: badgeTextColor }]}>
-                              {session.status}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={styles.sessionDateText}>📅 {session.date}</Text>
-                      </View>
-
-                      <View style={styles.chevronWrap}>
-                        {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Expanded Session Detail Box (Matching Image 2) */}
-                    {isExpanded && (
-                      <View style={styles.expandedDetailBox}>
-                        {/* 4 Grid Sub-metrics */}
-                        <View style={styles.expandedGrid}>
-                          {/* 1. Survey Score */}
-                          <View style={styles.gridMetricCard}>
-                            <Text style={styles.gridMetricIcon}>🌐</Text>
-                            <View>
-                              <Text style={styles.gridMetricLabel}>Survey Score</Text>
-                              <Text style={[styles.gridMetricValue, { color: '#5B6EF5' }]}>
-                                {session.surveyScore ?? session.score}/100
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* 2. Heart Rate */}
-                          <View style={styles.gridMetricCard}>
-                            <Text style={styles.gridMetricIcon}>❤️</Text>
-                            <View>
-                              <Text style={styles.gridMetricLabel}>Heart Rate</Text>
-                              <Text style={[styles.gridMetricValue, { color: '#E05C5C' }]}>
-                                {session.heartRate ?? 88} bpm
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* 3. Emotion */}
-                          <View style={styles.gridMetricCard}>
-                            <Text style={styles.gridMetricIcon}>😃</Text>
-                            <View>
-                              <Text style={styles.gridMetricLabel}>Emotion</Text>
-                              <Text style={[styles.gridMetricValue, { color: '#3B82F6' }]}>
-                                {session.emotion ?? 'Anxious'}
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* 4. Reaction */}
-                          <View style={styles.gridMetricCard}>
-                            <Text style={styles.gridMetricIcon}>⚡</Text>
-                            <View>
-                              <Text style={styles.gridMetricLabel}>Reaction</Text>
-                              <Text style={[styles.gridMetricValue, { color: '#D97706' }]}>
-                                {session.reactionTimeMs ?? 430}ms
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-
-                        {/* Overall Score Track */}
-                        <View style={styles.overallTrackWrap}>
-                          <View style={styles.overallHeaderRow}>
-                            <Text style={styles.overallLabel}>Overall Score</Text>
-                            <Text style={styles.overallValue}>{session.score}/100</Text>
-                          </View>
-                          <View style={styles.overallTrackBg}>
-                            <View
-                              style={[
-                                styles.overallTrackFill,
-                                { width: `${session.score}%`, backgroundColor: badgeTextColor },
-                              ]}
-                            />
-                          </View>
-                        </View>
-
-                        {/* Face scan confidence */}
-                        <Text style={styles.confidenceText}>
-                          Face scan confidence: <Text style={styles.confidenceHighlight}>{session.faceConfidencePercent ?? 71}%</Text>
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+        {/* Stats pills */}
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Text style={styles.statVal}>{metrics.totalAssessments}</Text>
+            <Text style={styles.statLbl}>Assessments</Text>
           </View>
-        ) : activeSegment === 'settings' ? (
-          /* SETTINGS TAB CONTENT (Matching Image 1 Right) */
-          <View style={styles.tabBody}>
-            {/* APP Section */}
-            <Text style={styles.sectionHeaderTitle}>APP</Text>
-            <View style={styles.settingsGroupCard}>
-              {/* Notifications */}
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => {
-                  setInfoModalTitle('Notification Settings');
-                  setInfoModalMessage('Daily reminders are enabled. Notifications will trigger after 5:00 PM.');
-                }}
-              >
-                <BellIconSmall />
-                <View style={styles.settingTextWrap}>
-                  <Text style={styles.settingTitle}>Notifications</Text>
-                  <Text style={styles.settingSub}>Daily reminders</Text>
-                </View>
-                <ChevronRightIcon />
-              </TouchableOpacity>
+          <View style={[styles.statPill, { backgroundColor: '#FFF9E6' }]}>
+            <Text style={[styles.statVal, { color: '#B08B28' }]}>{metrics.avgStressScore}/100</Text>
+            <Text style={[styles.statLbl, { color: '#B08B28' }]}>Average Stress</Text>
+          </View>
+          <View style={[styles.statPill, { backgroundColor: '#E6F7F5' }]}>
+            <Text style={[styles.statVal, { color: '#2C7A7B' }]}>{metrics.avgHeartRate} bpm</Text>
+            <Text style={[styles.statLbl, { color: '#2C7A7B' }]}>Average HR</Text>
+          </View>
+        </View>
 
-              <View style={styles.settingDivider} />
-
-              {/* Privacy & Data */}
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => {
-                  setInfoModalTitle('Privacy & Data Policy');
-                  setInfoModalMessage('Your health biometric data is encrypted end-to-end and stored securely on Supabase servers.');
-                }}
-              >
-                <ShieldIconSmall />
-                <View style={styles.settingTextWrap}>
-                  <Text style={styles.settingTitle}>Privacy & Data</Text>
-                  <Text style={styles.settingSub}>View data policy</Text>
-                </View>
-                <ChevronRightIcon />
-              </TouchableOpacity>
-
-              <View style={styles.settingDivider} />
-
-              {/* About MindPulse */}
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => {
-                  setInfoModalTitle('About MindPulse');
-                  setInfoModalMessage('MindPulse AI v1.0.0 – Comprehensive mobile stress monitoring and clinical assessment suite.');
-                }}
-              >
-                <InfoIconSmall />
-                <View style={styles.settingTextWrap}>
-                  <Text style={styles.settingTitle}>About MindPulse</Text>
-                  <Text style={styles.settingSub}>Version 1.0.0</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* ACCOUNT Section */}
-            <Text style={[styles.sectionHeaderTitle, { marginTop: 16 }]}>ACCOUNT</Text>
-            <View style={styles.settingsGroupCard}>
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => {
-                  onOpenHealthSetup?.();
-                }}
-              >
-                <BrainIconSmall />
-                <View style={styles.settingTextWrap}>
-                  <Text style={styles.settingTitle}>Health Background</Text>
-                  <Text style={styles.settingSub}>Update your health profile</Text>
-                </View>
-                <ChevronRightIcon />
-              </TouchableOpacity>
-            </View>
-
-            {/* Sign Out Button */}
+        {/* Segment tabs */}
+        <View style={styles.tabRow}>
+          {(['profile', 'history', 'settings'] as ProfileTabSegment[]).map(seg => (
             <TouchableOpacity
-              style={styles.signOutButton}
-              activeOpacity={0.85}
-              onPress={onSignOut}
+              key={seg}
+              style={[styles.tabBtn, activeSegment === seg && styles.tabBtnActive]}
+              onPress={() => setActiveSegment(seg)}
             >
-              <Text style={styles.signOutText}>↳ Sign Out</Text>
+              <Text style={[styles.tabText, activeSegment === seg && styles.tabTextActive]}>
+                {seg === 'profile' ? 'My Profile' : seg.charAt(0).toUpperCase() + seg.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </SafeAreaView>
+
+      {/* ── Tab content ── */}
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ══════════ MY PROFILE TAB ══════════ */}
+        {activeSegment === 'profile' && (
+          <>
+            {/* Health Background */}
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle}>Health Background</Text>
+                <TouchableOpacity onPress={onOpenHealthSetup}>
+                  <Text style={styles.editLink}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.emptyText}>No health conditions flagged</Text>
+            </View>
+
+            {/* Academic Information */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Academic Information</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoKey}>Year Level</Text>
+                <Text style={styles.infoVal}>3rd Year</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoKey}>Living With</Text>
+                <Text style={styles.infoVal}>Off-campus — alone</Text>
+              </View>
+            </View>
+
+            {/* Activity stats grid */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Academic Information</Text>
+              <View style={styles.statsGrid}>
+                <View style={[styles.gridCell, { backgroundColor: '#EEEDFE' }]}>
+                  <Text style={[styles.gridVal, { color: '#5B6EF5' }]}>{metrics.totalAssessments}</Text>
+                  <Text style={[styles.gridLbl, { color: '#5B6EF5' }]}>Total Sessions</Text>
+                </View>
+                <View style={[styles.gridCell, { backgroundColor: '#FFF3CD' }]}>
+                  <Text style={[styles.gridVal, { color: '#E08A00' }]}>{metrics.avgStressScore}</Text>
+                  <Text style={[styles.gridLbl, { color: '#E08A00' }]}>Avg Stress</Text>
+                </View>
+                <View style={[styles.gridCell, { backgroundColor: '#FFD6D6' }]}>
+                  <Text style={[styles.gridVal, { color: '#E05C5C' }]}>{metrics.avgHeartRate} bpm</Text>
+                  <Text style={[styles.gridLbl, { color: '#E05C5C' }]}>Avg Heart Rate</Text>
+                </View>
+                <View style={[styles.gridCell, { backgroundColor: '#D6F5E3' }]}>
+                  <Text style={[styles.gridVal, { color: '#27AE60' }]}>{metrics.latestTrend}</Text>
+                  <Text style={[styles.gridLbl, { color: '#27AE60' }]}>Trend</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* MindPlant */}
+            <View style={[styles.card, { backgroundColor: '#F0FBF4' }]}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle}>🌱 My MindPlant</Text>
+                <Text style={styles.stageLabel}>Seedling</Text>
+              </View>
+              {/* Plant illustration */}
+              <View style={styles.plantIllustration}>
+                <Text style={styles.plantEmoji}>🌱</Text>
+              </View>
+              <Text style={styles.plantDesc}>
+                A tiny seedling sprouted! Your calm mind is starting to nurture new life.
+              </Text>
+              <Text style={styles.plantTip}>
+                <Ionicons name="trending-up" size={12} color="#27AE60" /> Keep your streak going — each low-stress session helps it grow!
+              </Text>
+              {/* Stage dots */}
+              <View style={styles.stageDots}>
+                {[0, 1, 2, 3, 4].map(i => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.stageDot,
+                      i === CURRENT_STAGE && styles.stageDotActive,
+                      i < CURRENT_STAGE && styles.stageDotDone,
+                    ]}
+                  />
+                ))}
+                <Text style={styles.stageNum}>Stage {CURRENT_STAGE}</Text>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* ══════════ HISTORY TAB ══════════ */}
+        {activeSegment === 'history' && (
+          <>
+            {/* Stress Score Trend chart */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Stress Score Trend</Text>
+              <LineChart data={scoreTrend} color="#5B6EF5" height={90} />
+              <View style={styles.xLabels}>
+                {recentSessions.slice().reverse().map((s, i) => (
+                  <Text key={i} style={styles.xLabel}>
+                    {s.date.split(',')[0].split(' ').slice(-1)[0]}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            {/* Heart Rate chart */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Heart Rate History (BPM)</Text>
+              <LineChart data={hrTrend} color="#E05C5C" height={90} />
+              <View style={styles.xLabels}>
+                {recentSessions.slice().reverse().map((s, i) => (
+                  <Text key={i} style={styles.xLabel}>
+                    {s.date.split(',')[0].split(' ').slice(-1)[0]}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            {/* All sessions list */}
+            <Text style={styles.sectionLabel}>ALL SESSIONS</Text>
+            {recentSessions.map(session => (
+              <SessionRow
+                key={session.id}
+                session={session}
+                expanded={expandedId === session.id}
+                onToggle={() => setExpandedId(id => id === session.id ? null : session.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* ══════════ SETTINGS TAB ══════════ */}
+        {activeSegment === 'settings' && (
+          <>
+            <Text style={styles.settingSectionLabel}>APP</Text>
+            <View style={styles.card}>
+              <SettingRow icon="notifications-outline" bg="#EEEDFE" label="Notifications" sub="Daily reminders" />
+              <SettingRow icon="shield-outline" bg="#E6F0FA" label="Privacy & Data" sub="View site policy" />
+              <SettingRow icon="information-circle-outline" bg="#E6F7F5" label="About MindPulse" sub={`Version 1.0.0`} />
+            </View>
+
+            <Text style={styles.settingSectionLabel}>ACCOUNT</Text>
+            <View style={styles.card}>
+              <SettingRow
+                icon="heart-outline"
+                bg="#E6F8ED"
+                label="Health Background"
+                sub="Update your health profile"
+                onPress={onOpenHealthSetup}
+              />
+            </View>
+
+            {/* Sign Out */}
+            <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+              <Ionicons name="log-out-outline" size={16} color="#E05C5C" />
+              <Text style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
 
-            {/* Disclaimer Footer */}
-            <Text style={styles.disclaimerText}>
-              MindPulse v1.0.0 · For educational purposes only. This app does not replace professional medical advice.
+            <Text style={styles.disclaimer}>
+              MindPulse v1.0.0 — For educational purposes only. This app does not replace professional medical advice.
             </Text>
-          </View>
-        ) : (
-          /* MY PROFILE TAB CONTENT */
-          <PlantProgressScreen onBack={() => setActiveSegment('history')} />
+          </>
         )}
       </ScrollView>
 
-      {/* Settings Info Modal */}
-      {infoModalTitle && (
-        <Modal
-          visible={Boolean(infoModalTitle)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setInfoModalTitle(null)}
-        >
-          <View style={modalStyles.overlay}>
-            <View style={modalStyles.modalBox}>
-              <Text style={modalStyles.modalTitle}>{infoModalTitle}</Text>
-              <Text style={modalStyles.modalBody}>{infoModalMessage}</Text>
-              <TouchableOpacity
-                style={modalStyles.closeButton}
-                onPress={() => setInfoModalTitle(null)}
-              >
-                <Text style={modalStyles.closeButtonText}>OK</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
+      {/* ── Bottom Tab ── */}
+      <BottomTabBar activeTab="profile" onNavigate={tab => onNavigateTab?.(tab)} />
     </View>
   );
 };
 
-const iconStyles = StyleSheet.create({
-  chevronDown: {
-    width: 8,
-    height: 8,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: '#94A3B8',
-    transform: [{ rotate: '45deg' }],
-  },
-  chevronUp: {
-    width: 8,
-    height: 8,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-    borderColor: '#94A3B8',
-    transform: [{ rotate: '45deg' }],
-    marginTop: 4,
-  },
-  chevronRight: {
-    width: 8,
-    height: 8,
-    borderRightWidth: 2,
-    borderTopWidth: 2,
-    borderColor: '#CBD5E1',
-    transform: [{ rotate: '45deg' }],
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconEmoji: {
-    fontSize: 16,
-  },
-});
-
-const chartStyles = StyleSheet.create({
-  chartContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: AppSpacing.md,
-    marginBottom: AppSpacing.md,
-    ...Shadows.small,
-  },
-  chartTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  chartGrid: {
-    flexDirection: 'row',
-    height: 140,
-  },
-  yAxis: {
-    width: 32,
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  axisLabel: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  plotArea: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  gridLineTop: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    width: '100%',
-  },
-  gridLineMid: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    width: '100%',
-  },
-  gridLineBot: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    width: '100%',
-  },
-  dotsRow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-  },
-  dotCol: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  purpleDotPoint: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#5B6EF5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  redDotPoint: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#E05C5C',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFFFFF',
-  },
-  purpleShadeOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: 'rgba(91, 110, 245, 0.08)',
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
-  redShadeOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: 'rgba(224, 92, 92, 0.08)',
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
-  xAxis: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginLeft: 32,
-    marginTop: 8,
-    paddingHorizontal: 10,
-  },
-});
-
 const styles = StyleSheet.create({
-  screenRoot: {
-    flex: 1,
-    backgroundColor: '#FAF8ED',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 85,
-  },
-  topHeaderCard: {
-    backgroundColor: '#FAF8ED',
-    paddingHorizontal: AppSpacing.md,
-    paddingTop: AppSpacing.xl,
-    paddingBottom: AppSpacing.sm,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    backgroundColor: '#EBB294',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  userTextWrap: {
-    marginLeft: 14,
-  },
-  userNameText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  userEmailText: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: AppSpacing.md,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  segmentContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 18,
-    padding: 4,
-    marginTop: AppSpacing.md,
-  },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentItemActive: {
-    backgroundColor: '#5B6EF5',
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  segmentTextActive: {
-    color: '#FFFFFF',
-  },
-  tabBody: {
-    paddingHorizontal: AppSpacing.md,
-    paddingTop: AppSpacing.sm,
-  },
-  sectionHeaderTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#64748B',
-    marginTop: 10,
-    marginBottom: 10,
-    letterSpacing: 0.5,
-  },
-  sessionsList: {
-    gap: 12,
-  },
-  sessionCardOuter: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    ...Shadows.small,
-  },
-  sessionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  sessionScoreBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sessionScoreBadgeText: {
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  sessionTitleWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  sessionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sessionTitleText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  sessionPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  sessionPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  sessionDateText: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  chevronWrap: {
-    paddingHorizontal: 8,
-  },
-  expandedDetailBox: {
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    padding: 14,
-    backgroundColor: '#FAFAFA',
-  },
-  expandedGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  gridMetricCard: {
-    width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  gridMetricIcon: {
-    fontSize: 18,
-  },
-  gridMetricLabel: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  gridMetricValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    marginTop: 1,
-  },
-  overallTrackWrap: {
-    marginTop: 14,
-  },
-  overallHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  overallLabel: {
-    fontSize: 11,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  overallValue: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#E05C5C',
-  },
-  overallTrackBg: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  overallTrackFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  confidenceText: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 10,
-    fontWeight: '500',
-  },
-  confidenceHighlight: {
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
-  settingsGroupCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 4,
-    ...Shadows.small,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  settingTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  settingTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  settingSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  settingDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginLeft: 62,
-  },
-  signOutButton: {
-    backgroundColor: '#FDECEF',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    borderRadius: 18,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  signOutText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#E05C5C',
-  },
-  disclaimerText: {
-    fontSize: 11,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    lineHeight: 16,
-  },
-  myProfileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: AppSpacing.lg,
-    ...Shadows.small,
-  },
-  myProfileTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 14,
-  },
-  profileField: {
-    marginBottom: 12,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  fieldValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 2,
-  },
-  editProfileButton: {
-    marginTop: 14,
-    backgroundColor: '#5B6EF5',
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  editProfileButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#5B9EF7',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabIconEmoji: {
-    fontSize: 18,
-    opacity: 0.8,
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  tabLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAF8ED',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#64748B',
-  },
-});
+  root: { flex: 1, backgroundColor: Colors.pageBg },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loaderText: { fontSize: 14, color: Colors.textSecondary },
 
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  /* Header */
+  headerSafe: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F5A623',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
-  modalBox: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    ...Shadows.small,
+  avatarText: { fontSize: 20, fontWeight: '800', color: '#FFF' },
+  userName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  userEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+
+  statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 14 },
+  statPill: {
+    flex: 1,
+    backgroundColor: '#EEEDFE',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8,
+  statVal: { fontSize: 14, fontWeight: '800', color: '#5B6EF5' },
+  statLbl: { fontSize: 9, fontWeight: '600', color: '#5B6EF5', marginTop: 1 },
+
+  /* Segment tabs */
+  tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 0 },
+  tabBtn: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
+  tabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  tabTextActive: { color: Colors.primary },
+
+  /* Body */
+  body: { flex: 1 },
+  bodyContent: { padding: 16, gap: 14, paddingBottom: 100 },
+
+  /* Cards */
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
   },
-  modalBody: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 18,
-    marginVertical: 10,
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  editLink: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  emptyText: { fontSize: 13, color: Colors.textHint, fontStyle: 'italic' },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  infoKey: { fontSize: 13, color: Colors.textSecondary },
+  infoVal: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+
+  /* Stats grid */
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  gridCell: {
+    width: '47%',
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
   },
-  closeButton: {
-    marginTop: 12,
-    backgroundColor: '#5B6EF5',
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
+  gridVal: { fontSize: 18, fontWeight: '800' },
+  gridLbl: { fontSize: 11, fontWeight: '600' },
+
+  /* MindPlant */
+  plantIllustration: { alignItems: 'center', paddingVertical: 12 },
+  plantEmoji: { fontSize: 64 },
+  plantDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  plantTip: { fontSize: 12, color: '#27AE60', fontStyle: 'italic' },
+  stageLabel: { fontSize: 12, fontWeight: '700', color: '#27AE60', backgroundColor: '#D6F5E3', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  stageDots: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  stageDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.border },
+  stageDotActive: { backgroundColor: '#27AE60', width: 12, height: 12, borderRadius: 6 },
+  stageDotDone: { backgroundColor: '#8CE072' },
+  stageNum: { fontSize: 11, color: Colors.textSecondary, marginLeft: 6 },
+
+  /* History */
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.5 },
+  xLabels: { flexDirection: 'row', paddingLeft: 32, gap: 4, marginTop: 4 },
+  xLabel: { flex: 1, fontSize: 9, color: Colors.textHint, textAlign: 'center' },
+
+  /* Settings */
+  settingSectionLabel: {
+    fontSize: 11,
     fontWeight: '700',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    letterSpacing: 0.8,
+    marginBottom: -4,
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#FFD6D6',
+  },
+  signOutText: { fontSize: 14, fontWeight: '800', color: '#E05C5C' },
+  disclaimer: {
+    fontSize: 11,
+    color: Colors.textHint,
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: 20,
   },
 });

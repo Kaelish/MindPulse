@@ -1,5 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Colors } from '../../theme/colors';
+
+import { Ionicons } from '@expo/vector-icons';
 
 export type BottomNavTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -8,118 +11,85 @@ interface BottomTabBarProps {
   onNavigate?: (screen: BottomNavTab) => void;
 }
 
-const HomeTabIcon = ({ active }: { active: boolean }) => (
-  <View style={iconStyles.navWrap}>
-    <Text style={{ fontSize: 18, color: '#FFFFFF', opacity: active ? 1 : 0.8 }}>⌂</Text>
-  </View>
-);
-
-const AnalysisTabIcon = () => (
-  <View style={iconStyles.navWrap}>
-    <Text style={{ fontSize: 18 }}>🧠</Text>
-  </View>
-);
-
-const ClinicsTabIcon = () => (
-  <View style={iconStyles.navWrap}>
-    <Text style={{ fontSize: 18 }}>🩺</Text>
-  </View>
-);
-
-const ProfileTabIcon = () => (
-  <View style={iconStyles.navWrap}>
-    <Text style={{ fontSize: 18 }}>👤</Text>
-  </View>
-);
+const ACTIVE_COLOR = '#FFFFFF';
+const INACTIVE_COLOR = 'rgba(255,255,255,0.45)';
 
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onNavigate }) => {
+  const tabs: { key: BottomNavTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: 'home', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
+    { key: 'analysis', label: 'Analysis', icon: 'pulse-outline', activeIcon: 'pulse' },
+    { key: 'clinics', label: 'Clinics', icon: 'medical-outline', activeIcon: 'medical' },
+    { key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
+  ];
+
   return (
     <View style={styles.bottomNav}>
-      <TouchableOpacity
-        style={styles.tabItem}
-        activeOpacity={0.8}
-        onPress={() => onNavigate?.('home')}
-      >
-        <HomeTabIcon active={activeTab === 'home'} />
-        <Text style={[styles.tabLabel, activeTab === 'home' && styles.tabLabelActive]}>
-          Home
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.tabItem}
-        activeOpacity={0.8}
-        onPress={() => onNavigate?.('analysis')}
-      >
-        <AnalysisTabIcon />
-        <Text style={[styles.tabLabel, activeTab === 'analysis' && styles.tabLabelActive]}>
-          Analysis
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.tabItem}
-        activeOpacity={0.8}
-        onPress={() => onNavigate?.('clinics')}
-      >
-        <ClinicsTabIcon />
-        <Text style={[styles.tabLabel, activeTab === 'clinics' && styles.tabLabelActive]}>
-          Clinics
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.tabItem}
-        activeOpacity={0.8}
-        onPress={() => onNavigate?.('profile')}
-      >
-        <ProfileTabIcon />
-        <Text style={[styles.tabLabel, activeTab === 'profile' && styles.tabLabelActive]}>
-          Profile
-        </Text>
-      </TouchableOpacity>
+      {tabs.map(({ key, label, icon, activeIcon }) => {
+        const active = activeTab === key;
+        return (
+          <TouchableOpacity
+            key={key}
+            style={styles.tabItem}
+            activeOpacity={0.75}
+            onPress={() => onNavigate?.(key)}
+          >
+            <View style={[styles.iconPill, active && styles.iconPillActive]}>
+              <Ionicons 
+                name={active ? activeIcon : icon} 
+                size={22} 
+                color={active ? ACTIVE_COLOR : INACTIVE_COLOR} 
+              />
+            </View>
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+              {label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
 
-const iconStyles = StyleSheet.create({
-  navWrap: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
 const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: 'row',
-    height: 64,
-    backgroundColor: '#5B8DEF',
+    height: 70,
+    backgroundColor: Colors.tabBarBg,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
-    borderTopWidth: 0,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: 4,
+    paddingBottom: 6,
+    ...Platform.select({
+      web: { boxShadow: '0px -2px 16px rgba(74,110,200,0.18)' },
+      default: { shadowColor: '#3060C0', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.2, shadowRadius: 12 },
+    }),
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    paddingVertical: 4,
+  },
+  iconPill: {
+    width: 44,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconPillActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
   tabLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 2,
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 12,
+    fontSize: 10.5,
   },
 });

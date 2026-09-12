@@ -2,60 +2,59 @@
  * MindPulse Design System – Color Tokens
  */
 export const Colors = {
-  // Page
-  pageBg: '#FAF8F4',        // warm cream background
-  surface: '#FFFFFF',
+  // Page Backgrounds
+  pageBg: '#FAF8F4',        // Warm cream
+  surface: '#FFFFFF',       // White cards
 
-  // Brand
-  primary: '#4A90D9',
+  // Main Brand Colors
+  primary: '#6096BA',       // Soft blue
   primaryLight: '#EAF3FB',
+  primaryDark: '#41769F',
 
-  // Step tab active state colours
-  tabSurveyDot: '#5B6EF5',   // purple-blue
-  tabFaceDot: '#4A90D9',     // blue
-  tabHeartDot: '#E05C5C',    // red
-  tabReactionDot: '#9B9B9B', // grey (inactive)
+  // Gradients
+  gradPurpleTop: '#8A7CEB',
+  gradPurpleBot: '#4A37D6',
+  gradMintTop: '#C1F0D4',
+  gradMintBot: '#66BCA4',
+  gradPeachTop: '#FCE0CE',
+  gradPeachBot: '#E39162',
+  gradGreenTop: '#C8F3B3',
+  gradGreenBot: '#8CE072',
 
-  // Active tab chip bg
-  tabHeartBg: '#FCEAEA',
-  tabFaceBg: '#EAF3FB',
+  // Buttons & CTAs
+  btnBlue: '#5C8FE6',
+  btnBlueInactive: '#D0E1F9',
+  btnOrange: '#DB8D62',
+  btnPurple: '#9E85F9',
+  btnPurpleDark: '#755CD6',
 
-  // Secondary tab row
-  secTabActiveBg: '#F0E8FB',
-  secTabActiveText: '#7C4DCC',
+  // Specific UI Elements
+  healthCardBorder: '#E6E4DF',
+  healthCardBg: '#FFFFFF',
 
-  // CTA button
-  ctaRed: '#C95C3A',         // terracotta / warm red
-  ctaRedLight: '#FCEAE4',
+  // Tag / Badge Colors
+  tagPurpleBg: '#F0EBFE',
+  tagPurpleText: '#7B61FF',
+  tagBlueBg: '#E9F5FF',
+  tagBlueText: '#4A90E2',
+  tagGreenBg: '#E6F8ED',
+  tagGreenText: '#27AE60',
+  tagRedBg: '#FDEAEB',
+  tagRedText: '#E74C3C',
+  tagYellowBg: '#FEF5E3',
+  tagYellowText: '#F39C12',
 
-  // Status badges (Screen 2 reference table)
-  badgeNormalBg: '#D6F5E3',
-  badgeNormalText: '#27AE60',
-  badgeElevatedBg: '#FFF3CD',
-  badgeElevatedText: '#E08A00',
-  badgeHighBg: '#FFD6D6',
-  badgeHighText: '#E05C5C',
-
-  // Result screen
-  resultCardBg: '#EEF0FA',   // soft lavender
-  resultHeartGrey: '#B0B8C8',
-  resultBpmGrey: '#B0B8C8',
-  resultPillBg: '#D8DCF0',
-
-  // Redo button
-  redoBg: '#FFF0F0',
-  redoText: '#E05C5C',
-  redoBorder: '#F5C6C6',
-
-  // Next button
-  nextBg: '#27AE60',
-  nextText: '#FFFFFF',
-
-  // Tip box
-  tipBg: '#FFF8E1',
-  tipBorder: '#FFE082',
-  tipText: '#B26A00',
-  tipHighlight: '#E07A00',
+  // Dashboard specific
+  dashSurveyBg: '#EDF1FE',
+  dashSurveyIcon: '#6C81F3',
+  dashFaceBg: '#FCF5E3',
+  dashFaceIcon: '#E2B852',
+  dashAnalysisBg: '#E1F6F4',
+  dashAnalysisIcon: '#32BCA2',
+  dashConsultBg: '#FCECEC',
+  dashConsultIcon: '#DD6B6B',
+  dashStressCheckBg: '#7BA4FF',
+  dashStressCheckText: '#FFFFFF',
 
   // Neutrals
   white: '#FFFFFF',
@@ -67,7 +66,38 @@ export const Colors = {
   textOnDark: '#FFFFFF',
 
   // Bottom tab bar
-  tabBarBg: '#5B8FD9',       // medium blue
+  tabBarBg: '#709DF1',
   tabBarActive: '#FFFFFF',
-  tabBarInactive: '#C2D6F5',
+  tabBarInactive: '#B5CDFA',
+
+  // ── Legacy tokens (backward compat with HeartRate & Survey screens) ──
+  ctaRed: '#C95C3A',
+  ctaRedLight: '#FCEAE4',
+  badgeNormalBg: '#D6F5E3',
+  badgeNormalText: '#27AE60',
+  badgeElevatedBg: '#FFF3CD',
+  badgeElevatedText: '#E08A00',
+  badgeHighBg: '#FFD6D6',
+  badgeHighText: '#E05C5C',
+  resultCardBg: '#EEF0FA',
+  resultHeartGrey: '#B0B8C8',
+  resultBpmGrey: '#B0B8C8',
+  resultPillBg: '#D8DCF0',
+  redoBg: '#FFF0F0',
+  redoText: '#E05C5C',
+  redoBorder: '#F5C6C6',
+  nextBg: '#27AE60',
+  nextText: '#FFFFFF',
+  tipBg: '#FFF8E1',
+  tipBorder: '#FFE082',
+  tipText: '#B26A00',
+  tipHighlight: '#E07A00',
+  secTabActiveBg: '#F0E8FB',
+  secTabActiveText: '#7C4DCC',
+  tabSurveyDot: '#5B6EF5',
+  tabFaceDot: '#4A90D9',
+  tabHeartDot: '#E05C5C',
+  tabReactionDot: '#9B9B9B',
+  tabHeartBg: '#FCEAEA',
+  tabFaceBg: '#EAF3FB',
 };
