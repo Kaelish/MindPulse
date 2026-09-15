@@ -162,8 +162,8 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
           {/* Quick Actions */}
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            <QuickAction icon="clipboard-list" isMaterial label="Survey" bg={Colors.dashSurveyBg} iconColor={Colors.dashSurveyIcon} onPress={onRunSurvey} />
-            <QuickAction icon="camera-outline" label="Face Scan" bg={Colors.dashFaceBg} iconColor={Colors.dashFaceIcon} onPress={onRunFaceScan} />
+            <QuickAction icon="clipboard-list" isMaterial label="Survey" bg={Colors.dashSurveyBg} iconColor={Colors.dashSurveyIcon} onPress={() => onNavigate?.('analysis')} />
+            <QuickAction icon="camera-outline" label="Face Scan" bg={Colors.dashFaceBg} iconColor={Colors.dashFaceIcon} onPress={() => onNavigate?.('analysis')} />
             <QuickAction icon="pulse-outline" label="Analysis" bg={Colors.dashAnalysisBg} iconColor={Colors.dashAnalysisIcon} onPress={() => onNavigate?.('analysis')} />
             <QuickAction icon="tv-outline" label="Consult" bg={Colors.dashConsultBg} iconColor={Colors.dashConsultIcon} onPress={() => onNavigate?.('clinics')} />
           </View>

@@ -14,7 +14,7 @@ import { AuthScreen } from './src/screens/auth/AuthScreen';
 import { HealthSetupScreen } from './src/screens/onboarding/HealthSetupScreen';
 import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
-import { HeartRateNavigator } from './src/screens/heartrate/HeartRateNavigator';
+import { AssessmentNavigator } from './src/screens/assessment/AssessmentNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
@@ -325,10 +325,8 @@ function App() {
                 />
               )}
               {currentTab === 'analysis' && (
-                <HeartRateNavigator
+                <AssessmentNavigator
                   onExit={() => setCurrentTab('profile')}
-                  onNavigateTab={handleTabNavigate}
-                  onModuleComplete={handleAnalysisComplete}
                 />
               )}
               {currentTab !== 'home' &&

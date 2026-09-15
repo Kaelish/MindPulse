@@ -5,13 +5,10 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 
-type Phase = 'instructions' | 'waiting' | 'go' | 'results';
+type Phase = 'idle' | 'waiting' | 'go' | 'results';
 
 export interface ReactionResult {
   average: number;
-  fastest: number;
-  slowest: number;
-  score: number;
 }
 
 interface Props {
@@ -19,13 +16,10 @@ interface Props {
   onComplete?: (result: ReactionResult) => void;
 }
 
-const rounds = 3;
-
 export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
-  const [phase, setPhase] = useState<Phase>('instructions');
+  const [phase, setPhase] = useState<Phase>('idle');
   const [round, setRound] = useState(1);
   const [attempts, setAttempts] = useState<number[]>([]);
-  const [mistakes, setMistakes] = useState(0);
   const startedAt = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,140 +32,184 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
     timer.current = setTimeout(() => {
       startedAt.current = performance.now();
       setPhase('go');
-    }, 1500 + Math.random() * 1800);
+    }, 1500 + Math.random() * 2000);
   };
 
   const handleTap = () => {
     if (phase === 'waiting') {
-      setMistakes(value => value + 1);
+      // tapped too early
+      clearTimeout(timer.current!);
+      setPhase('idle');
       return;
     }
-    if (phase !== 'go') return;
+    if (phase === 'go') {
+      const time = Math.round(performance.now() - startedAt.current);
+      const nextAttempts = [...attempts, time];
+      setAttempts(nextAttempts);
 
-    const nextAttempts = [...attempts, Math.round(performance.now() - startedAt.current)];
-    setAttempts(nextAttempts);
-    if (nextAttempts.length === rounds) {
-      setPhase('results');
-      const average = Math.round(nextAttempts.reduce((sum, value) => sum + value, 0) / rounds);
-      const score = Math.max(0, Math.min(100, Math.round(((600 - average) / 400) * 100) - mistakes * 5));
-      onComplete?.({
-        average,
-        fastest: Math.min(...nextAttempts),
-        slowest: Math.max(...nextAttempts),
-        score,
-      });
-      return;
+      if (nextAttempts.length >= 3) {
+        setPhase('results');
+      } else {
+        setRound(nextAttempts.length + 1);
+        setPhase('idle');
+      }
     }
-    setRound(value => value + 1);
-    setPhase('waiting');
-    timer.current = setTimeout(() => {
-      startedAt.current = performance.now();
-      setPhase('go');
-    }, 1000 + Math.random() * 1800);
   };
 
-  const reset = () => {
-    setAttempts([]);
-    setMistakes(0);
-    setRound(1);
-    setPhase('instructions');
-  };
+  const average = attempts.length > 0 ? Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length) : 0;
+  const isSlow = average > 400; // Arbitrary threshold
 
   return (
     <StressAnalysisLayout
       activeModule="reaction"
-      activeSection="reaction"
+      activeSection={phase === 'results' ? 'results' : 'reaction'}
       heartRateDone
       onBack={onBack}
     >
-      {phase === 'instructions' && (
-        <View style={styles.card}>
-          <Ionicons name="flash" size={48} color={Colors.primary} style={{marginBottom: 12, textAlign: 'center'}} />
-          <Text style={styles.title}>Reaction Time Test</Text>
-          <Text style={styles.body}>
-            Tap the panel as soon as it turns green. Complete three rounds to measure your reaction speed.
-          </Text>
-          <View style={styles.tip}>
-            <Text style={styles.tipText}>Wait for the green signal. Tapping early counts as a mistake.</Text>
-          </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={startRound} accessibilityRole="button">
-            <Text style={styles.primaryText}>Start Round 1</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {phase !== 'results' ? (
+        <>
+          {round === 1 && phase === 'idle' && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>How it works</Text>
+              <Text style={styles.infoBody}>
+                The screen will turn <Text style={{ color: '#E8A359', fontWeight: 'bold' }}>yellow</Text> (wait)... then change to <Text style={{ color: '#5DB75D', fontWeight: 'bold' }}>green</Text>. Tap as fast as you can when it turns green!
+              </Text>
+              <View style={styles.tipBox}>
+                <Ionicons name="warning" size={16} color="#B8860B" />
+                <Text style={styles.tipText}>
+                  Because sometimes stress slows reaction time — higher reaction time can indicate fatigue, cognitive stress, or reduced attention.
+                </Text>
+              </View>
+            </View>
+          )}
 
-      {(phase === 'waiting' || phase === 'go') && (
-        <View style={styles.gameArea}>
-          <View style={styles.roundRow}>
-            <Text style={styles.roundText}>Round {round} of {rounds}</Text>
-            <Text style={styles.mistakeText}>{mistakes} mistake{mistakes === 1 ? '' : 's'}</Text>
-          </View>
           <TouchableOpacity
-            style={[styles.trigger, phase === 'go' ? styles.triggerGo : styles.triggerWaiting]}
-            onPress={handleTap}
-            accessibilityRole="button"
-            accessibilityLabel={phase === 'go' ? 'Tap now' : 'Wait for green'}
+            style={[
+              styles.gameCard,
+              phase === 'idle' && styles.gameIdle,
+              phase === 'waiting' && styles.gameWaiting,
+              phase === 'go' && styles.gameGo,
+            ]}
+            onPress={phase === 'idle' ? startRound : handleTap}
+            activeOpacity={0.9}
           >
-            <Ionicons name="radio-button-on" size={64} color={phase === 'go' ? '#FFF' : 'rgba(255,255,255,0.8)'} />
-            <Text style={styles.triggerTitle}>{phase === 'go' ? 'TAP NOW!' : 'Wait...'}</Text>
-            <Text style={styles.triggerSubtitle}>{phase === 'go' ? 'Tap as fast as you can' : 'Do not tap yet'}</Text>
+            {phase === 'idle' && (
+              <>
+                <Ionicons name="flash" size={64} color="#FFF" />
+                <Text style={styles.gameTitle}>Round {round}/3</Text>
+                <Text style={styles.gameSubtitle}>Tap to begin</Text>
+              </>
+            )}
+            {phase === 'waiting' && (
+              <>
+                <Ionicons name="radio-button-on" size={64} color="#FFF" />
+                <Text style={styles.gameTitle}>Wait for green...</Text>
+                <Text style={styles.gameSubtitle}>(Tap if you see the green!)</Text>
+              </>
+            )}
+            {phase === 'go' && (
+              <>
+                <Text style={styles.gameTitleLarge}>TAP NOW!</Text>
+                <Text style={styles.gameSubtitle}>React as fast as possible</Text>
+              </>
+            )}
           </TouchableOpacity>
-        </View>
-      )}
 
-      {phase === 'results' && (
-        <View style={styles.card}>
-          <Ionicons name="checkmark-circle" size={48} color={Colors.primary} style={{marginBottom: 12, textAlign: 'center'}} />
-          <Text style={styles.title}>Reaction Test Complete</Text>
-          <Text style={styles.resultValue}>{Math.round(attempts.reduce((sum, value) => sum + value, 0) / attempts.length)}<Text style={styles.resultUnit}> ms</Text></Text>
-          <Text style={styles.resultLabel}>Average reaction time</Text>
-          <View style={styles.metrics}>
-            <Metric label="Fastest" value={`${Math.min(...attempts)} ms`} />
-            <Metric label="Slowest" value={`${Math.max(...attempts)} ms`} />
-            <Metric label="Mistakes" value={`${mistakes}`} />
+          {attempts.length > 0 && phase === 'idle' && (
+            <View style={styles.attemptsCard}>
+              <Text style={styles.attemptsTitle}>Reaction Times</Text>
+              <View style={styles.attemptsRow}>
+                {attempts.map((t, i) => (
+                  <View key={i} style={styles.attemptPill}>
+                    <Text style={styles.attemptLabel}>R{i + 1}</Text>
+                    <Text style={styles.attemptValue}>{t}ms</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          <View style={styles.resultHero}>
+            <Text style={styles.resultLabel}>Average Reaction Time</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text style={styles.resultValue}>{average}</Text>
+              <Text style={styles.resultUnit}>ms</Text>
+            </View>
+            <View style={styles.resultPill}>
+              <Text style={styles.resultPillText}>{isSlow ? 'Very Slow' : 'Normal'}</Text>
+            </View>
           </View>
-          <TouchableOpacity style={styles.secondaryButton} onPress={reset} accessibilityRole="button">
-            <Text style={styles.secondaryText}>Retry Test</Text>
+
+          <View style={styles.attemptsCardResult}>
+            <Text style={styles.attemptsTitle}>Reaction Times</Text>
+            <View style={styles.attemptsRowResult}>
+              {attempts.map((t, i) => (
+                <View key={i} style={styles.attemptPill}>
+                  <Text style={styles.attemptLabel}>R{i + 1}</Text>
+                  <Text style={styles.attemptValue}>{t}ms</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.summaryBox}>
+              <Ionicons name="flash" size={16} color="#D32F2F" />
+              <View style={{ marginLeft: 8 }}>
+                <Text style={styles.summaryTitle}>Average: {average}ms</Text>
+                <Text style={styles.summarySub}>{isSlow ? 'Slower than average - possible stress' : 'Normal reaction time'}</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.nextBtn}
+            onPress={() => onComplete?.({ average })}
+          >
+            <Text style={styles.nextBtnText}>Next: View Results</Text>
+            <Ionicons name="chevron-forward" size={20} color="#FFF" />
           </TouchableOpacity>
-        </View>
+        </>
       )}
     </StressAnalysisLayout>
   );
 };
 
-const Metric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View style={styles.metric}>
-    <Text style={styles.metricValue}>{value}</Text>
-    <Text style={styles.metricLabel}>{label}</Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
-  card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  emoji: { fontSize: 32, textAlign: 'center' },
-  title: { ...Typography.h2, color: Colors.textPrimary, textAlign: 'center' },
-  body: { ...Typography.body1, color: Colors.textSecondary, lineHeight: 22, textAlign: 'center' },
-  tip: { backgroundColor: Colors.tipBg, borderRadius: Radius.md, padding: Spacing.md },
-  tipText: { ...Typography.body2, color: Colors.tipText, textAlign: 'center' },
-  primaryButton: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
-  primaryText: { ...Typography.button, color: Colors.white },
-  secondaryButton: { backgroundColor: Colors.redoBg, borderColor: Colors.redoBorder, borderWidth: 1, borderRadius: Radius.lg, paddingVertical: 14, alignItems: 'center' },
-  secondaryText: { fontSize: 15, fontWeight: '700', color: Colors.redoText },
-  gameArea: { gap: Spacing.md },
-  roundRow: { backgroundColor: Colors.surface, borderColor: Colors.border, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', justifyContent: 'space-between' },
-  roundText: { ...Typography.label, color: Colors.textPrimary },
-  mistakeText: { ...Typography.caption, color: Colors.badgeHighText },
-  trigger: { height: 240, borderRadius: Radius.xl, borderWidth: 2, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  triggerWaiting: { backgroundColor: Colors.badgeElevatedBg, borderColor: Colors.badgeElevatedText },
-  triggerGo: { backgroundColor: Colors.badgeNormalBg, borderColor: Colors.badgeNormalText },
-  triggerIcon: { fontSize: 44 },
-  triggerTitle: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary },
-  triggerSubtitle: { ...Typography.body2, color: Colors.textSecondary },
-  resultValue: { fontSize: 64, fontWeight: '800', color: Colors.primary, textAlign: 'center' },
-  resultUnit: { fontSize: 20 },
-  resultLabel: { ...Typography.body2, color: Colors.textSecondary, textAlign: 'center' },
-  metrics: { flexDirection: 'row', gap: Spacing.sm },
-  metric: { flex: 1, backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: Spacing.sm, alignItems: 'center' },
-  metricValue: { fontWeight: '800', color: Colors.textPrimary },
-  metricLabel: { ...Typography.caption, color: Colors.textSecondary, marginTop: 4 },
+  infoCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#EEE' },
+  infoTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A', marginBottom: 12 },
+  infoBody: { fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 16 },
+  tipBox: { backgroundColor: '#FFF8E6', borderRadius: 8, padding: 12, flexDirection: 'row' },
+  tipText: { fontSize: 13, color: '#8C6200', flex: 1, marginLeft: 8, lineHeight: 18, fontWeight: '500' },
+  
+  gameCard: { height: 280, borderRadius: 20, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  gameIdle: { backgroundColor: '#6B79F2' },
+  gameWaiting: { backgroundColor: '#E09E6D' },
+  gameGo: { backgroundColor: '#5DB75D' },
+  gameTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', marginTop: 16, marginBottom: 8 },
+  gameTitleLarge: { fontSize: 36, fontWeight: '900', color: '#FFF', marginBottom: 12 },
+  gameSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+
+  attemptsCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginTop: 20, borderWidth: 1, borderColor: '#EEE' },
+  attemptsCardResult: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginTop: 20, borderWidth: 1, borderColor: '#EEE' },
+  attemptsTitle: { fontSize: 16, fontWeight: '600', color: '#666', marginBottom: 16 },
+  attemptsRow: { flexDirection: 'row', gap: 12 },
+  attemptsRowResult: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  attemptPill: { flex: 1, backgroundColor: '#FDECE6', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  attemptLabel: { fontSize: 12, color: '#888', fontWeight: '700', marginBottom: 4 },
+  attemptValue: { fontSize: 16, color: '#D32F2F', fontWeight: '800' },
+
+  resultHero: { backgroundColor: '#F4E5E3', borderRadius: 20, padding: 30, alignItems: 'center', justifyContent: 'center' },
+  resultLabel: { fontSize: 16, fontWeight: '600', color: '#777', marginBottom: 16 },
+  resultValue: { fontSize: 64, fontWeight: '900', color: '#D32F2F' },
+  resultUnit: { fontSize: 28, fontWeight: '800', color: '#D32F2F', marginLeft: 4 },
+  resultPill: { backgroundColor: '#F3C5C5', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
+  resultPillText: { color: '#B32D2D', fontWeight: '700', fontSize: 14 },
+
+  summaryBox: { backgroundColor: '#F8EEF0', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' },
+  summaryTitle: { fontSize: 15, fontWeight: '800', color: '#D32F2F', marginBottom: 2 },
+  summarySub: { fontSize: 11, color: '#999' },
+
+  nextBtn: { backgroundColor: '#6B79F2', borderRadius: 28, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24 },
+  nextBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginRight: 8 },
 });
