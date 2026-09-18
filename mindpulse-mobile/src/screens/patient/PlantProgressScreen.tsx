@@ -6,16 +6,26 @@ interface PlantProgressScreenProps {
   onBack?: () => void;
 }
 
-type Stage = { name: string; subtitle: string; emoji: string; unlocked: boolean };
+type Stage = { name: string; subtitle: string; emoji: string; requiredStreak: number };
 
+// Thresholds mirror the GROWTH_STAGE table (REQUIRED_SESSIONS) in Supabase
 const stages: Stage[] = [
-  { name: 'Bare Pot', subtitle: 'Stage 0', emoji: '🪴', unlocked: true },
-  { name: 'Seedling', subtitle: 'Stage 1', emoji: '🌱', unlocked: true },
-  { name: 'Sprout', subtitle: 'Stage 2', emoji: '🌿', unlocked: false },
-  { name: 'Young Plant', subtitle: 'Stage 3', emoji: '🌿', unlocked: false },
-  { name: 'Mature Plant', subtitle: 'Stage 4', emoji: '🌳', unlocked: false },
-  { name: 'Full Bloom', subtitle: 'Stage 5', emoji: '🌸', unlocked: false },
+  { name: 'Bare Pot', subtitle: 'Stage 0', emoji: '🪴', requiredStreak: 0 },
+  { name: 'Seedling', subtitle: 'Stage 1', emoji: '🌱', requiredStreak: 1 },
+  { name: 'Sprout', subtitle: 'Stage 2', emoji: '🌿', requiredStreak: 5 },
+  { name: 'Young Plant', subtitle: 'Stage 3', emoji: '🌵', requiredStreak: 10 },
+  { name: 'Mature Plant', subtitle: 'Stage 4', emoji: '🌳', requiredStreak: 15 },
+  { name: 'Full Bloom', subtitle: 'Stage 5', emoji: '🌸', requiredStreak: 25 },
 ];
+
+const STAGE_MESSAGES: Record<string, string> = {
+  'Bare Pot': 'Your journey is ready to begin. Complete a session to plant your seed!',
+  'Seedling': 'A tiny seedling sprouted! Your calm mind is starting to nurture new life.',
+  'Sprout': 'Your steady practice is helping it grow.',
+  'Young Plant': 'Your healthy rhythm is taking root.',
+  'Mature Plant': 'Your consistency is flourishing.',
+  'Full Bloom': 'A strong and sustained wellness practice. Simply blooming!',
+};
 
 export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack }) => {
   const [selectedStage, setSelectedStage] = useState(1);
@@ -30,6 +40,8 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
   }, []);
 
   const stage = stages[selectedStage];
+  const streak = progress?.currentStreak ?? 1;
+  const isUnlocked = (s: Stage) => streak >= s.requiredStreak;
 
   return (
     <View style={styles.root}>
@@ -41,21 +53,24 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
           </View>
           <Text style={styles.stageName}>{stage.name}</Text>
           <Text style={styles.stageCount}>Stage {selectedStage} of 5 · {progress?.currentStreak ?? 1} day streak</Text>
-          <View style={styles.plantScene}><Text style={styles.plantArt}>{selectedStage === 0 ? '🪴' : selectedStage === 1 ? '🌱' : '🌿'}</Text></View>
+          <View style={styles.plantScene}><Text style={styles.plantArt}>{stage.emoji}</Text></View>
         </View>
 
-        <View style={styles.messageBox}><Text style={styles.message}>A tiny seedling sprouted! Your calm mind is starting to nurture new life.</Text></View>
+        <View style={styles.messageBox}><Text style={styles.message}>{STAGE_MESSAGES[stage.name] ?? 'Keep going — your plant is growing!'}</Text></View>
         <View style={styles.tipBox}><Text style={styles.tipTitle}>💡 GROWTH TIP</Text><Text style={styles.tipText}>🌿 Keep your streak going — each low-stress session helps it grow!</Text><Text style={styles.pointsText}>{progress?.totalGrowthPoints ?? 10} growth points</Text></View>
 
         <Text style={styles.sectionTitle}>ALL GROWTH STAGES</Text>
         <View style={styles.stageList}>
-          {stages.map((item, index) => (
-            <Pressable key={item.name} disabled={!item.unlocked} onPress={() => setSelectedStage(index)} style={[styles.stageRow, selectedStage === index && styles.stageRowCurrent, !item.unlocked && styles.stageRowLocked]}>
-              <Text style={styles.stageEmoji}>{item.unlocked ? item.emoji : '🔒'}</Text>
-              <View style={styles.stageCopy}><Text style={[styles.stageRowName, !item.unlocked && styles.lockedText]}>{item.name}</Text><Text style={[styles.stageRowSubtitle, !item.unlocked && styles.lockedText]}>{item.subtitle}</Text></View>
-              {selectedStage === index && <Text style={styles.current}>Current</Text>}
-            </Pressable>
-          ))}
+          {stages.map((item, index) => {
+            const unlocked = isUnlocked(item);
+            return (
+              <Pressable key={item.name} disabled={!unlocked} onPress={() => setSelectedStage(index)} style={[styles.stageRow, selectedStage === index && styles.stageRowCurrent, !unlocked && styles.stageRowLocked]}>
+                <Text style={styles.stageEmoji}>{unlocked ? item.emoji : '🔒'}</Text>
+                <View style={styles.stageCopy}><Text style={[styles.stageRowName, !unlocked && styles.lockedText]}>{item.name}</Text><Text style={[styles.stageRowSubtitle, !unlocked && styles.lockedText]}>{unlocked ? item.subtitle : `Unlocks at ${item.requiredStreak}-day streak`}</Text></View>
+                {selectedStage === index && <Text style={styles.current}>Current</Text>}
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
     </View>

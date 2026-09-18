@@ -9,6 +9,8 @@ type Phase = 'idle' | 'waiting' | 'go' | 'results';
 
 export interface ReactionResult {
   average: number;
+  /** 0–100 stress contribution derived from average reaction time (slower = higher) */
+  score: number;
 }
 
 interface Props {
@@ -164,7 +166,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
 
           <TouchableOpacity
             style={styles.nextBtn}
-            onPress={() => onComplete?.({ average })}
+            onPress={() => onComplete?.({ average, score: Math.min(100, Math.max(0, Math.round((average - 150) / 4))) })}
           >
             <Text style={styles.nextBtnText}>Next: View Results</Text>
             <Ionicons name="chevron-forward" size={20} color="#FFF" />

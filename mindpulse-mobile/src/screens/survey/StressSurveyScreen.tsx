@@ -5,14 +5,23 @@ import { Typography, Radius, Spacing } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { loadAssessmentState, saveAssessmentState } from '../assessment/StressAssessmentHubScreen';
 
-const part1Questions = [
+type SurveyOption = { value: number; label: string };
+type SurveyQuestion = {
+  id: number;
+  pill: string;
+  text: string;
+  sub?: string;
+  options?: SurveyOption[];
+};
+
+const part1Questions: SurveyQuestion[] = [
   { id: 1, pill: 'Unexpected Event', text: 'How often have you been upset because of something that happened unexpectedly?' },
   { id: 2, pill: 'Control', text: 'How often have you felt unable to control important things in your life?' },
   ...Array.from({ length: 7 }).map((_, i) => ({ id: i + 3, pill: 'Stress Factor', text: `Mock question ${i + 3} for the PSS-10 survey?` })),
   { id: 10, pill: 'Overwhelm', text: 'How often have you felt difficulties piling up so high that you could not overcome them?' }
 ];
 
-const part2Questions = [
+const part2Questions: SurveyQuestion[] = [
   { id: 101, pill: 'Sleep Hours', text: 'How many hours did you sleep last night?', options: [
     { value: 0, label: 'Less than 4 hours' },
     { value: 1, label: '4-5 hours' },
@@ -154,7 +163,7 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
 
         {/* Options */}
         <View style={styles.optionsContainer}>
-          {(isPart2 ? currentQuestion.options : part1Options).map((opt) => {
+          {(isPart2 ? currentQuestion.options ?? part1Options : part1Options).map((opt) => {
             const isSelected = selectedValue === opt.value;
             return (
               <TouchableOpacity

@@ -14,6 +14,7 @@ import { AuthScreen } from './src/screens/auth/AuthScreen';
 import { HealthSetupScreen } from './src/screens/onboarding/HealthSetupScreen';
 import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
+import { PlantProgressScreen } from './src/screens/patient/PlantProgressScreen';
 import { AssessmentNavigator } from './src/screens/assessment/AssessmentNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
@@ -23,6 +24,7 @@ import { FaceScanNavigator } from './src/screens/facescan/FaceScanNavigator';
 import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
+import { recordPlantSession } from './src/services/plantProgress';
 import { Colors } from './src/theme/colors';
 
 type ScreenMode =
@@ -34,7 +36,8 @@ type ScreenMode =
   | 'faceScan'
   | 'reaction'
   | 'finalResults'
-  | 'call';
+  | 'call'
+  | 'plantProgress';
 
 /* ─────────── Splash Screen ─────────── */
 const SplashScreen = () => {
@@ -148,6 +151,11 @@ function App() {
       setCurrentTab('profile');
       return;
     }
+    if (screenMode === 'plantProgress') {
+      setScreenMode('main');
+      setCurrentTab('profile');
+      return;
+    }
     if (screenMode === 'call') {
       setScreenMode('main');
       setCurrentTab('home');
@@ -190,6 +198,8 @@ function App() {
       `Completed reaction time assessment (${reactionResult.average} ms average)`,
       heartRateBpm,
     );
+    // Grow the MindPlant — a completed low-stress session counts toward growth
+    await recordPlantSession().catch(() => {});
     setCurrentTab('profile');
     setScreenMode('main');
   };
@@ -299,6 +309,11 @@ function App() {
           />
         )}
 
+        {/* ── MIND PLANT PROGRESS ── */}
+        {screenMode === 'plantProgress' && (
+          <PlantProgressScreen onBack={handleBack} />
+        )}
+
         {/* ── MAIN PATIENT PORTAL ── */}
         {screenMode === 'main' && (
           <View style={styles.mainWrapper}>
@@ -322,6 +337,7 @@ function App() {
                     setScreenMode('auth');
                   }}
                   onOpenHealthSetup={() => setScreenMode('healthSetup')}
+                  onOpenPlantProgress={() => setScreenMode('plantProgress')}
                 />
               )}
               {currentTab === 'analysis' && (

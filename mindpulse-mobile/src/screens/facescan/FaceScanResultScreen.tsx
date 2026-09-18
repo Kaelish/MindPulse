@@ -98,7 +98,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ onRetry, onFinish }) => 
               <Text style={styles.barEmoji}>{item.emoji}</Text>
               <Text style={styles.barLabel}>{item.label}</Text>
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: item.percent, backgroundColor: item.color }]} />
+                <View style={[styles.barFill, { width: item.percent as `${number}%`, backgroundColor: item.color }]} />
               </View>
               <Text style={styles.barPercent}>{item.percent}</Text>
             </View>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 24,
   },
-  gridOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.15 },
+  gridOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15 },
   gridLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#6B79F2' },
   gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#6B79F2' },
   emojiDisplay: { fontSize: 80, zIndex: 10 },

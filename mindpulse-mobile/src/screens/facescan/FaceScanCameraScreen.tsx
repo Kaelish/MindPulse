@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 24,
   },
-  gridOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.15 },
+  gridOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15 },
   gridLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#6B79F2' },
   gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#6B79F2' },
 

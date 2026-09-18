@@ -18,6 +18,10 @@ import {
   StressSessionItem,
   fetchDashboardData,
 } from '../../services/dashboard';
+import {
+  PlantProgress,
+  fetchPlantProgress,
+} from '../../services/plantProgress';
 
 export type ProfileTabSegment = 'profile' | 'history' | 'settings';
 
@@ -26,18 +30,26 @@ interface PatientProfileScreenProps {
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
   onSignOut?: () => void;
   onOpenHealthSetup?: () => void;
+  onOpenPlantProgress?: () => void;
 }
 
 // ── MindPlant growth stages ──────────────────────────────────────────────────
 const PLANT_STAGES = [
   { name: 'Bare Pot', stage: 0, emoji: '🪴' },
-  { name: 'Seedling', stage: 1, emoji: '🌱', current: true },
+  { name: 'Seedling', stage: 1, emoji: '🌱' },
   { name: 'Sprout', stage: 2, emoji: '🌿' },
   { name: 'Young Plant', stage: 3, emoji: '🌵' },
   { name: 'Mature Plant', stage: 4, emoji: '🌳' },
   { name: 'Full Bloom', stage: 5, emoji: '🌸' },
 ];
-const CURRENT_STAGE = 1; // Stage 1 – Seedling
+const STAGE_DESCRIPTIONS: Record<string, string> = {
+  'Bare Pot': 'Your journey is ready to begin.',
+  'Seedling': 'A tiny seedling sprouted! Your calm mind is starting to nurture new life.',
+  'Sprout': 'Your steady practice is helping it grow.',
+  'Young Plant': 'Your healthy rhythm is taking root.',
+  'Mature Plant': 'Your consistency is flourishing.',
+  'Full Bloom': 'A strong and sustained wellness practice.',
+};
 
 // ── Stress level helpers ──────────────────────────────────────────────────────
 const levelProps = (status: string) => {
@@ -163,18 +175,27 @@ const settingStyles = StyleSheet.create({
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
-  onNavigateHome, onNavigateTab, onSignOut, onOpenHealthSetup,
+  onNavigateHome, onNavigateTab, onSignOut, onOpenHealthSetup, onOpenPlantProgress,
 }) => {
   const [activeSegment, setActiveSegment] = useState<ProfileTabSegment>('profile');
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [plant, setPlant] = useState<PlantProgress | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     fetchDashboardData().then(res => { if (isMounted) { setData(res); setLoading(false); } });
+    fetchPlantProgress().then(p => { if (isMounted) setPlant(p); });
     return () => { isMounted = false; };
   }, []);
+
+  // Derive current plant stage from live Supabase data (fallback: Seedling)
+  const currentStageIndex = Math.max(
+    0,
+    PLANT_STAGES.findIndex(s => s.name === (plant?.currentStage ?? 'Seedling')),
+  );
+  const currentStage = PLANT_STAGES[currentStageIndex];
 
   const handleSignOut = async () => {
     await supabase.auth.signOut().catch(() => {});
@@ -299,37 +320,44 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
               </View>
             </View>
 
-            {/* MindPlant */}
-            <View style={[styles.card, { backgroundColor: '#F0FBF4' }]}>
+            {/* MindPlant — tap to open full progress screen */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.card, { backgroundColor: '#F0FBF4' }]}
+              onPress={onOpenPlantProgress}
+            >
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.cardTitle}>🌱 My MindPlant</Text>
-                <Text style={styles.stageLabel}>Seedling</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.stageLabel}>{currentStage.name}</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#27AE60" />
+                </View>
               </View>
               {/* Plant illustration */}
               <View style={styles.plantIllustration}>
-                <Text style={styles.plantEmoji}>🌱</Text>
+                <Text style={styles.plantEmoji}>{currentStage.emoji}</Text>
               </View>
               <Text style={styles.plantDesc}>
-                A tiny seedling sprouted! Your calm mind is starting to nurture new life.
+                {STAGE_DESCRIPTIONS[currentStage.name] ?? 'Keep going — your plant is growing!'}
               </Text>
               <Text style={styles.plantTip}>
-                <Ionicons name="trending-up" size={12} color="#27AE60" /> Keep your streak going — each low-stress session helps it grow!
+                <Ionicons name="trending-up" size={12} color="#27AE60" /> {plant?.currentStreak ?? 1} day streak · {plant?.totalGrowthPoints ?? 10} growth points — each low-stress session helps it grow!
               </Text>
               {/* Stage dots */}
               <View style={styles.stageDots}>
-                {[0, 1, 2, 3, 4].map(i => (
+                {PLANT_STAGES.map(s => (
                   <View
-                    key={i}
+                    key={s.name}
                     style={[
                       styles.stageDot,
-                      i === CURRENT_STAGE && styles.stageDotActive,
-                      i < CURRENT_STAGE && styles.stageDotDone,
+                      s.stage === currentStageIndex && styles.stageDotActive,
+                      s.stage < currentStageIndex && styles.stageDotDone,
                     ]}
                   />
                 ))}
-                <Text style={styles.stageNum}>Stage {CURRENT_STAGE}</Text>
+                <Text style={styles.stageNum}>Stage {currentStageIndex}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </>
         )}
 
