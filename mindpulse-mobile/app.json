@@ -1,9 +1,6 @@
 {
   "expo": {
     "name": "MindPulseMobile",
-    "slug": "mindpulse-mobile",
-    "plugins": [
-      "expo-status-bar"
-    ]
+    "slug": "mindpulse-mobile"
   }
 }
