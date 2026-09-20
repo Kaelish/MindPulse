@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   Platform,
   StatusBar,
   StyleSheet,
@@ -26,6 +27,7 @@ import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { recordPlantSession } from './src/services/plantProgress';
 import { Colors } from './src/theme/colors';
+import { supabase } from './src/supabase/client';
 
 type ScreenMode =
   | 'splash'
@@ -41,13 +43,8 @@ type ScreenMode =
 
 /* ─────────── Splash Screen ─────────── */
 const SplashScreen = () => {
-  // Animate the loading dots
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
-  const dot4 = useRef(new Animated.Value(0)).current;
-  const dot5 = useRef(new Animated.Value(0)).current;
-  const dot6 = useRef(new Animated.Value(0)).current;
+  const dotCount = 8;
+  const dots = useRef(Array.from({ length: dotCount }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
     const animateDot = (dot: Animated.Value, delay: number) =>
@@ -58,65 +55,60 @@ const SplashScreen = () => {
             toValue: 1,
             duration: 400,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: Platform.OS !== 'web',
+            useNativeDriver: true,
           }),
           Animated.timing(dot, {
             toValue: 0,
             duration: 400,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: Platform.OS !== 'web',
+            useNativeDriver: true,
           }),
           Animated.delay(600),
         ]),
       );
 
-    const dots = [dot1, dot2, dot3, dot4, dot5, dot6];
     const anims = dots.map((d, i) => animateDot(d, i * 120));
     anims.forEach(a => a.start());
 
     return () => anims.forEach(a => a.stop());
-  }, [dot1, dot2, dot3, dot4, dot5, dot6]);
+  }, [dots]);
 
   const dotScale = (d: Animated.Value) =>
-    d.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
+    d.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.2] });
   const dotOpacity = (d: Animated.Value) =>
-    d.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
+    d.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
 
   return (
     <View style={splashStyles.container}>
-      {/* Logo mark: head silhouette with pulse line */}
-      <View style={splashStyles.logoMark}>
-        {/* Head outline */}
-        <View style={splashStyles.headOutline} />
-        {/* Pulse line inside the head */}
-        <View style={splashStyles.pulseWrap}>
-          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 12, width: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 20, width: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 8, width: 2 }]} />
-          <View style={[splashStyles.pulseSeg, { height: 2 }]} />
-        </View>
-      </View>
+      <Image 
+        source={require('./assets/images/logo.png')} 
+        style={splashStyles.logoImage}
+        resizeMode="contain"
+      />
 
       <RNText style={splashStyles.brandName}>MindPulse</RNText>
       <RNText style={splashStyles.tagline}>Your personal stress companion</RNText>
 
-      {/* Loading dots */}
-      <View style={splashStyles.dotsRow}>
-        {[dot1, dot2, dot3, dot4, dot5, dot6].map((d, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              splashStyles.dot,
-              {
-                transform: [{ scale: dotScale(d) }],
-                opacity: dotOpacity(d),
-              },
-            ]}
-          />
-        ))}
+      <View style={splashStyles.loaderContainer}>
+        {dots.map((d, i) => {
+          const angle = (i * 360) / dotCount;
+          return (
+            <Animated.View
+              key={i}
+              style={[
+                splashStyles.dot,
+                {
+                  transform: [
+                    { rotate: `${angle}deg` },
+                    { translateY: -22 },
+                    { scale: dotScale(d) }
+                  ],
+                  opacity: dotOpacity(d),
+                },
+              ]}
+            />
+          );
+        })}
       </View>
     </View>
   );
@@ -132,47 +124,67 @@ function App() {
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
   const [registeredUserName, setRegisteredUserName] = useState('John');
 
-  /* Splash → Onboarding after 2 s */
+  /* Splash → Onboarding after 3 s */
   useEffect(() => {
     if (screenMode !== 'splash') return;
-    const timer = setTimeout(() => setScreenMode('onboarding'), 2000);
+    const timer = setTimeout(() => changeScreen('onboarding'), 3000);
     return () => clearTimeout(timer);
   }, [screenMode]);
+
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const changeScreen = (nextMode: ScreenMode, callback?: () => void) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setScreenMode(nextMode);
+      callback?.();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   /* ── Navigation helpers ── */
   const handleTabNavigate = (tab: BottomNavTab) => {
     setCurrentTab(tab);
-    setScreenMode('main');
+    changeScreen('main');
   };
 
   const handleBack = () => {
     if (screenMode === 'healthSetup') {
-      setScreenMode('main');
+      changeScreen('main');
       setCurrentTab('profile');
       return;
     }
     if (screenMode === 'plantProgress') {
-      setScreenMode('main');
+      changeScreen('main');
       setCurrentTab('profile');
       return;
     }
     if (screenMode === 'call') {
-      setScreenMode('main');
+      changeScreen('main');
       setCurrentTab('home');
       return;
     }
     if (screenMode === 'faceScan') {
-      setScreenMode('main');
+      changeScreen('main');
       setCurrentTab('analysis');
       return;
     }
     if (screenMode === 'reaction') {
-      setScreenMode('main');
+      changeScreen('main');
       setCurrentTab('analysis');
       return;
     }
     if (screenMode === 'finalResults') {
-      setScreenMode('reaction');
+      changeScreen('reaction');
       return;
     }
     if (screenMode === 'main' && currentTab !== 'home') {
@@ -182,12 +194,12 @@ function App() {
 
   const handleReactionComplete = async (result: ReactionResult) => {
     setReactionResult(result);
-    setScreenMode('finalResults');
+    changeScreen('finalResults');
   };
 
   const handleAnalysisComplete = (bpm: number) => {
     setHeartRateBpm(bpm);
-    setScreenMode('reaction');
+    changeScreen('reaction');
   };
 
   const handleFinalResultsDone = async () => {
@@ -201,16 +213,35 @@ function App() {
     // Grow the MindPlant — a completed low-stress session counts toward growth
     await recordPlantSession().catch(() => {});
     setCurrentTab('profile');
-    setScreenMode('main');
+    changeScreen('main');
   };
 
   /* ── Auth success handler ── */
-  const handleAuthSuccess = (isNewUser: boolean) => {
+  const handleAuthSuccess = async (isNewUser: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.first_name) {
+        setRegisteredUserName(user.user_metadata.first_name);
+      } else {
+        // Try profiles table if not in metadata
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user?.id)
+          .single();
+        if (profile?.first_name) {
+          setRegisteredUserName(profile.first_name);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch user name', e);
+    }
+
     if (isNewUser) {
-      setScreenMode('healthSetup');
+      changeScreen('healthSetup');
     } else {
       setCurrentTab('home');
-      setScreenMode('main');
+      changeScreen('main');
     }
   };
 
@@ -219,6 +250,7 @@ function App() {
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor="#3D6FC7" />
       <View style={styles.root}>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
 
         {/* ── SPLASH ── */}
         {screenMode === 'splash' && <SplashScreen />}
@@ -228,11 +260,11 @@ function App() {
           <OnboardingNavigator
             onComplete={(tab) => {
               setAuthTab(tab ?? 'register');
-              setScreenMode('auth');
+              changeScreen('auth');
             }}
             onSignIn={() => {
               setAuthTab('login');
-              setScreenMode('auth');
+              changeScreen('auth');
             }}
           />
         )}
@@ -252,7 +284,7 @@ function App() {
               userName={registeredUserName}
               onContinue={() => {
                 setCurrentTab('home');
-                setScreenMode('main');
+                changeScreen('main');
               }}
             />
           </View>
@@ -267,7 +299,7 @@ function App() {
               doctorSpecialty="Clinical Psychologist"
               onEndCall={() => {
                 setCurrentTab('home');
-                setScreenMode('main');
+                changeScreen('main');
               }}
               onNavigateTab={handleTabNavigate}
             />
@@ -280,7 +312,7 @@ function App() {
             onBack={handleBack}
             onFinishScan={(result) => {
               setFaceScanResult(result);
-              setScreenMode('main');
+              changeScreen('main');
               setCurrentTab('analysis');
             }}
           />
@@ -322,9 +354,9 @@ function App() {
                 <PatientDashboardScreen
                   activeTab={currentTab}
                   onNavigate={handleTabNavigate}
-                  onStartVideoCall={() => setScreenMode('call')}
+                  onStartVideoCall={() => changeScreen('call')}
                   onRunSurvey={() => setCurrentTab('profile')}
-                  onRunFaceScan={() => setScreenMode('faceScan')}
+                  onRunFaceScan={() => changeScreen('faceScan')}
                   onRunDailyCheck={() => setCurrentTab('analysis')}
                 />
               )}
@@ -334,10 +366,10 @@ function App() {
                   onNavigateTab={handleTabNavigate}
                   onSignOut={() => {
                     setAuthTab('login');
-                    setScreenMode('auth');
+                    changeScreen('auth');
                   }}
-                  onOpenHealthSetup={() => setScreenMode('healthSetup')}
-                  onOpenPlantProgress={() => setScreenMode('plantProgress')}
+                  onOpenHealthSetup={() => changeScreen('healthSetup')}
+                  onOpenPlantProgress={() => changeScreen('plantProgress')}
                 />
               )}
               {currentTab === 'analysis' && (
@@ -351,7 +383,7 @@ function App() {
                   <View style={styles.subScreenWrap}>
                     <AppointmentBookingScreen
                       onNavigateTab={handleTabNavigate}
-                      onStartVideoCall={() => setScreenMode('call')}
+                      onStartVideoCall={() => changeScreen('call')}
                     />
                   </View>
                 )}
@@ -359,6 +391,7 @@ function App() {
             <BottomTabBar activeTab={currentTab} onNavigate={handleTabNavigate} />
           </View>
         )}
+        </Animated.View>
       </View>
     </SafeAreaProvider>
   );
@@ -377,72 +410,47 @@ const styles = StyleSheet.create({
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F3',
+    backgroundColor: '#F7F4EE',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  /* Logo mark */
-  logoMark: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'transparent',
-    borderWidth: 3,
-    borderColor: '#C87850',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-    overflow: 'hidden',
-  },
-  headOutline: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 2.5,
-    borderColor: '#C87850',
-    position: 'absolute',
-    top: 20,
-  },
-  pulseWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 24,
-    position: 'absolute',
-    top: 52,
-  },
-  pulseSeg: {
-    width: 4,
-    backgroundColor: '#C87850',
-    marginHorizontal: 1,
-    borderRadius: 1,
+  /* Logo image */
+  logoImage: {
+    width: 110,
+    height: 110,
+    marginBottom: 12,
   },
 
   brandName: {
-    color: '#C87850',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-    marginBottom: 8,
+    color: '#C4907A',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
   },
   tagline: {
-    color: '#9AA0A6',
+    color: '#A89C96',
     fontSize: 13,
-    marginBottom: 80,
+    fontWeight: '400',
+    letterSpacing: 0.1,
   },
 
-  /* Loading dots */
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 6,
+  /* Circular loading spinner */
+  loaderContainer: {
+    width: 64,
+    height: 64,
     position: 'absolute',
-    bottom: 110,
+    bottom: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#C87850',
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#C4907A',
+    position: 'absolute',
   },
 });
 

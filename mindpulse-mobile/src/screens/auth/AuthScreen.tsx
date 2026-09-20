@@ -52,9 +52,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
 
-  // ── Login: bypass Supabase, go straight to Dashboard ──
-  const handleLogin = () => {
-    onAuthSuccess(false);
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      Alert.alert('Error', 'Please enter email and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+      if (error) throw error;
+      onAuthSuccess(false);
+    } catch (err: any) {
+      Alert.alert('Login Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async () => {
@@ -74,8 +89,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       if (error) throw error;
       onAuthSuccess(true);
     } catch (err: any) {
-      // Bypass: even if Supabase fails, still proceed as new user
-      onAuthSuccess(true);
+      Alert.alert('Registration Failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -175,8 +189,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   </Pressable>
                 </View>
 
-                <Pressable style={styles.primaryBtn} onPress={handleLogin}>
-                  <Text style={styles.primaryBtnText}>Sign In</Text>
+                <Pressable 
+                  style={[styles.primaryBtn, loading && { opacity: 0.7 }]} 
+                  onPress={handleLogin}
+                  disabled={loading}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {loading ? 'Signing In...' : 'Sign In'}
+                  </Text>
                 </Pressable>
 
                 <View style={styles.switchRow}>

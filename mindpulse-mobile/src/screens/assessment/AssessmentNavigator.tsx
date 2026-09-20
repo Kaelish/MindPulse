@@ -23,6 +23,7 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
   const handleHeartRateComplete = async (bpm: number) => {
     const state = await loadAssessmentState();
     state.heartRate = 'completed';
+    state.heartRateBpm = bpm;
     state.reaction = 'unlocked';
     await saveAssessmentState(state);
     setScreen('hub');
@@ -31,6 +32,7 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
   const handleReactionComplete = async (result: ReactionResult) => {
     const state = await loadAssessmentState();
     state.reaction = 'completed';
+    state.reactionTimeMs = result.average;
     await saveAssessmentState(state);
     setScreen('results');
   };

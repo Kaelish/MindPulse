@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
+import { loadAssessmentState, saveAssessmentState, AssessmentState } from './StressAssessmentHubScreen';
+import { saveNewStressSession } from '../../services/dashboard';
 
 interface Props {
   onBack: () => void;
@@ -11,10 +13,38 @@ interface Props {
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   const [clinicsExpanded, setClinicsExpanded] = useState(false);
+  const [stateData, setStateData] = useState<AssessmentState | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Hardcode a score for now to demonstrate the logic. 
-  // Normally, this would be computed from the 4 assessment modules.
-  const finalScore = 63; 
+  useEffect(() => {
+    loadAssessmentState().then(setStateData);
+  }, []);
+
+  if (!stateData) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#6B79F2" />
+      </View>
+    );
+  }
+
+  // Fallbacks for data just in case they didn't complete everything
+  const surveyVal = stateData.surveyScore ?? 50;
+  const faceVal = 50; // Mock face emotion for now
+  
+  // Convert heart rate to stress score: (assuming 60-100 is normal. Higher means more stress)
+  const hrBpm = stateData.heartRateBpm ?? 75;
+  const hrVal = Math.min(100, Math.max(0, (hrBpm - 60) * 2)); 
+  
+  // Convert reaction time to stress score (assuming 250ms is good, >500ms is stressed)
+  const rxMs = stateData.reactionTimeMs ?? 350;
+  const rxVal = Math.min(100, Math.max(0, (rxMs - 250) / 3));
+
+  // Compute final score using weights: (50 / 20 / 20 / 10)
+  const finalScore = Math.round(
+    (surveyVal * 0.5) + (faceVal * 0.2) + (hrVal * 0.2) + (rxVal * 0.1)
+  );
+
   const isHighStress = finalScore > 60;
   const isModerateStress = finalScore > 30 && finalScore <= 60;
   const isLowStress = finalScore <= 30;
@@ -28,6 +58,33 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   };
 
   const theme = getTheme();
+
+  const handleSaveResult = async () => {
+    setIsSaving(true);
+    try {
+      await saveNewStressSession(
+        finalScore,
+        `Multi-modal assessment completed. HR: ${hrBpm}bpm, Reaction: ${rxMs}ms`,
+        hrBpm,
+        surveyVal,
+        rxMs,
+        faceVal
+      );
+      
+      // Reset the assessment state back to start
+      await saveAssessmentState({
+        survey: 'unlocked',
+        faceScan: 'locked',
+        heartRate: 'locked',
+        reaction: 'locked',
+      });
+
+      onBack();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+      setIsSaving(false);
+    }
+  };
 
   return (
     <StressAnalysisLayout
@@ -77,9 +134,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[styles.fusionBadge, { backgroundColor: '#E8EAF6' }]}><Text style={[styles.fusionBadgeText, { color: '#3F51B5' }]}>50%</Text></View>
           </View>
           <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: '50%', backgroundColor: '#5C6BC0' }]} />
+            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: '#5C6BC0' }]} />
           </View>
-          <Text style={[styles.fusionScore, { color: '#3F51B5' }]}>50</Text>
+          <Text style={[styles.fusionScore, { color: '#3F51B5' }]}>{Math.round(surveyVal)}</Text>
         </View>
 
         <View style={styles.fusionRow}>
@@ -88,9 +145,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[styles.fusionBadge, { backgroundColor: '#E1F5FE' }]}><Text style={[styles.fusionBadgeText, { color: '#03A9F4' }]}>20%</Text></View>
           </View>
           <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: '80%', backgroundColor: '#29B6F6' }]} />
+            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, faceVal))}%`, backgroundColor: '#29B6F6' }]} />
           </View>
-          <Text style={[styles.fusionScore, { color: '#03A9F4' }]}>80</Text>
+          <Text style={[styles.fusionScore, { color: '#03A9F4' }]}>{Math.round(faceVal)}</Text>
         </View>
 
         <View style={styles.fusionRow}>
@@ -99,9 +156,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[styles.fusionBadge, { backgroundColor: '#FFEBEE' }]}><Text style={[styles.fusionBadgeText, { color: '#F44336' }]}>20%</Text></View>
           </View>
           <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: '50%', backgroundColor: '#EF5350' }]} />
+            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: '#EF5350' }]} />
           </View>
-          <Text style={[styles.fusionScore, { color: '#F44336' }]}>50</Text>
+          <Text style={[styles.fusionScore, { color: '#F44336' }]}>{Math.round(hrVal)}</Text>
         </View>
 
         <View style={styles.fusionRow}>
@@ -110,9 +167,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[styles.fusionBadge, { backgroundColor: '#FFF8E1' }]}><Text style={[styles.fusionBadgeText, { color: '#FFB300' }]}>10%</Text></View>
           </View>
           <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: '85%', backgroundColor: '#FFA000' }]} />
+            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: '#FFA000' }]} />
           </View>
-          <Text style={[styles.fusionScore, { color: '#FFB300' }]}>85</Text>
+          <Text style={[styles.fusionScore, { color: '#FFB300' }]}>{Math.round(rxVal)}</Text>
         </View>
       </View>
 
@@ -292,8 +349,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
 
       {/* Bottom Action Buttons */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Save Result</Text>
+        <TouchableOpacity 
+          style={[styles.saveBtn, isSaving && { opacity: 0.7 }]} 
+          onPress={handleSaveResult}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save Result'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.helpBtn}>
           <Text style={styles.helpBtnText}>Get Help</Text>

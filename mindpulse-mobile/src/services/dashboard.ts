@@ -147,32 +147,52 @@ export const initialMockNotifications: NotificationItem[] = [
 ];
 
 export const fetchDashboardData = async (
-  userId: string = 'user-john-doe',
+  userId?: string,
 ): Promise<PatientDashboardData> => {
   let userName = 'John Doe';
   let userEmail = 'johndoe@gmail.com';
   let userInitials = 'JD';
   let sessions = [...initialMockSessions];
+  
+  let targetUserId = userId;
 
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, email')
-      .eq('id', userId)
-      .single();
-
-    if (profile?.full_name) {
-      userName = profile.full_name;
-      const parts = userName.split(' ');
-      userInitials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : userName.substring(0, 2).toUpperCase();
+    let metadata: any = null;
+    if (!targetUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        targetUserId = user.id;
+        userEmail = user.email || userEmail;
+        metadata = user.user_metadata;
+      }
     }
-    if (profile?.email) {
-      userEmail = profile.email;
+
+    if (targetUserId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, email')
+        .eq('id', targetUserId)
+        .single();
+
+      if (profile?.first_name || profile?.last_name) {
+        userName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        const parts = userName.split(' ');
+        userInitials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : userName.substring(0, 2).toUpperCase();
+      } else if (metadata?.first_name || metadata?.last_name) {
+        userName = `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim();
+        const parts = userName.split(' ');
+        userInitials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : userName.substring(0, 2).toUpperCase();
+      }
+      
+      if (profile?.email) {
+        userEmail = profile.email;
+      }
     }
 
     const { data: dbSessions, error } = await supabase
       .from('stress_sessions')
       .select('*')
+      .eq('user_id', targetUserId)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -231,6 +251,9 @@ export const saveNewStressSession = async (
   score: number,
   notes: string = 'User completed analysis session.',
   heartRate: number = 82,
+  surveyScore: number = score,
+  reactionTimeMs: number = 350,
+  faceConfidencePercent: number = 75,
 ): Promise<StressSessionItem> => {
   const status: 'Low' | 'Moderate' | 'High' =
     score > 60 ? 'High' : score > 35 ? 'Moderate' : 'Low';
@@ -249,15 +272,18 @@ export const saveNewStressSession = async (
     status,
     statusColor,
     heartRate,
-    surveyScore: score,
+    surveyScore,
     emotion: score > 60 ? 'Anxious' : score > 35 ? 'Neutral' : 'Calm',
-    reactionTimeMs: Math.round(350 + Math.random() * 100),
-    faceConfidencePercent: Math.round(70 + Math.random() * 20),
+    reactionTimeMs,
+    faceConfidencePercent,
     notes,
   };
 
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+
     await supabase.from('stress_sessions').insert({
+      user_id: user?.id,
       score,
       title,
       status,

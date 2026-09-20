@@ -12,6 +12,12 @@ export interface AssessmentState {
   faceScan: AssessmentStepStatus;
   heartRate: AssessmentStepStatus;
   reaction: AssessmentStepStatus;
+  
+  // Stored data from modules
+  surveyScore?: number;
+  faceScanData?: any;
+  heartRateBpm?: number;
+  reactionTimeMs?: number;
 }
 
 const DEFAULT_STATE: AssessmentState = {

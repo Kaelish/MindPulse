@@ -72,6 +72,14 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
         const state = await loadAssessmentState();
         state.survey = 'completed';
         state.faceScan = 'unlocked';
+        
+        // Calculate a score from 0-100 based on answers
+        const totalRaw = Object.values(answers).reduce((sum, val) => sum + val, 0);
+        const maxPossible = (part1Questions.length + part2Questions.length) * 4; // Assuming 0-4 scale per question
+        const scaledScore = Math.round((totalRaw / maxPossible) * 100);
+        
+        state.surveyScore = scaledScore;
+
         await saveAssessmentState(state);
         onBack();
       }

@@ -218,7 +218,7 @@ const Step2 = ({
 };
 
 /* ─────────── Step 3 — Review & Confirm ─────────── */
-const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked, lifestyleChecked, noneApply, onEdit, onSave }: any) => {
+const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked, lifestyleChecked, noneApply, onEdit, onSave, loading }: any) => {
   const flaggedConditions = [...mentalChecked, ...physicalChecked, ...lifestyleChecked];
   const noConditions = noneApply || flaggedConditions.length === 0;
 
@@ -270,14 +270,17 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
       </View>
 
       <View style={styles.reviewNavRow}>
-        <Pressable onPress={onEdit} style={styles.backBtn}><Text style={styles.backBtnText}>← Edit</Text></Pressable>
-        <Pressable onPress={onSave} style={[styles.continueBtn, styles.continueBtnActive, styles.continueBtnSmall]}>
-          <Text style={styles.continueBtnTextActive}>Save & Start Using MindPulse</Text>
+        <Pressable onPress={onEdit} style={styles.backBtn} disabled={loading}><Text style={styles.backBtnText}>← Edit</Text></Pressable>
+        <Pressable onPress={onSave} style={[styles.continueBtn, styles.continueBtnActive, styles.continueBtnSmall, loading && { opacity: 0.7 }]} disabled={loading}>
+          <Text style={styles.continueBtnTextActive}>{loading ? 'Saving...' : 'Save & Start Using MindPulse'}</Text>
         </Pressable>
       </View>
     </ScrollView>
   );
 };
+
+import { supabase } from '../../supabase/client';
+import { Alert } from 'react-native';
 
 /* ─────────── Main Screen ─────────── */
 export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'John', onContinue }) => {
@@ -289,6 +292,7 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
   const [physicalChecked, setPhysicalChecked] = useState<string[]>([]);
   const [lifestyleChecked, setLifestyleChecked] = useState<string[]>([]);
   const [noneApply, setNoneApply] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const toggle = (list: string[], setter: (v: string[]) => void, val: string) => {
     setNoneApply(false);
@@ -306,6 +310,38 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
     });
   };
 
+  const handleSaveToSupabase = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Not logged in');
+      }
+      
+      const { error } = await supabase.from('profiles').update({
+        year_level: year,
+        program,
+        living_situation: living,
+        mental_conditions: mentalChecked,
+        physical_conditions: physicalChecked,
+        lifestyle_habits: lifestyleChecked,
+        none_apply: noneApply,
+      }).eq('id', user.id);
+      
+      if (error) {
+        // Fallback: If table doesn't exist or error, just continue so they aren't blocked
+        console.warn('Failed to save to Supabase:', error);
+      }
+      onContinue();
+    } catch (err: any) {
+      console.warn('Error connecting to Supabase:', err.message);
+      // Fallback
+      onContinue();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -315,8 +351,8 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
       </View>
 
       {step === 1 && <Step1 year={year} setYear={setYear} program={program} setProgram={setProgram} living={living} setLiving={setLiving} onContinue={() => setStep(2)} />}
-      {step === 2 && <Step2 mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} toggleMental={v => toggle(mentalChecked, setMentalChecked, v)} togglePhysical={v => toggle(physicalChecked, setPhysicalChecked, v)} toggleLifestyle={v => toggle(lifestyleChecked, setLifestyleChecked, v)} toggleNone={toggleNone} onBack={() => setStep(1)} onContinue={() => setStep(3)} />}
-      {step === 3 && <Step3 userName={userName} year={year} program={program} living={living} mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} onEdit={() => setStep(1)} onSave={onContinue} />}
+      {step === 2 && <Step2 mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} toggleMental={(v: string) => toggle(mentalChecked, setMentalChecked, v)} togglePhysical={(v: string) => toggle(physicalChecked, setPhysicalChecked, v)} toggleLifestyle={(v: string) => toggle(lifestyleChecked, setLifestyleChecked, v)} toggleNone={toggleNone} onBack={() => setStep(1)} onContinue={() => setStep(3)} />}
+      {step === 3 && <Step3 userName={userName} year={year} program={program} living={living} mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} onEdit={() => setStep(1)} onSave={handleSaveToSupabase} loading={loading} />}
     </SafeAreaView>
   );
 };
