@@ -436,9 +436,6 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
           </>
         )}
       </ScrollView>
-
-      {/* ── Bottom Tab ── */}
-      <BottomTabBar activeTab="profile" onNavigate={tab => onNavigateTab?.(tab)} />
     </View>
   );
 };

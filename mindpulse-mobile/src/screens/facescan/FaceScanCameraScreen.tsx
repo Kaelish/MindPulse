@@ -95,8 +95,6 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
 
         <Text style={styles.statusText}>Scanning in progress...</Text>
       </View>
-
-      <BottomTabBar activeTab="analysis" />
     </SafeAreaView>
   );
 };

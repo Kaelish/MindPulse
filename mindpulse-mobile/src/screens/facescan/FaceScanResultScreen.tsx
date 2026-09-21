@@ -117,7 +117,6 @@ export const FaceScanResultScreen: React.FC<Props> = ({ onRetry, onFinish }) => 
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <BottomTabBar activeTab="analysis" />
     </SafeAreaView>
   );
 };

@@ -180,7 +180,7 @@ export const OnboardingNavigator: React.FC<Props> = ({ onComplete, onSignIn }) =
 
           {/* Tap to advance */}
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={() => navigateTo('analysis')}
           />
         </SafeAreaView>
@@ -234,7 +234,7 @@ export const OnboardingNavigator: React.FC<Props> = ({ onComplete, onSignIn }) =
 
           {/* Tap to advance */}
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={() => navigateTo('welcome')}
           />
         </SafeAreaView>

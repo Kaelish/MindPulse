@@ -308,14 +308,19 @@ function App() {
 
         {/* ── FACE SCAN ── */}
         {screenMode === 'faceScan' && (
-          <FaceScanNavigator
-            onBack={handleBack}
-            onFinishScan={(result) => {
-              setFaceScanResult(result);
-              changeScreen('main');
-              setCurrentTab('analysis');
-            }}
-          />
+          <View style={styles.mainWrapper}>
+            <View style={styles.tabViewArea}>
+              <FaceScanNavigator
+                onBack={handleBack}
+                onFinishScan={(result) => {
+                  setFaceScanResult(result);
+                  changeScreen('main');
+                  setCurrentTab('analysis');
+                }}
+              />
+            </View>
+            <BottomTabBar activeTab="analysis" onNavigate={handleTabNavigate} />
+          </View>
         )}
 
         {/* ── REACTION GAME ── */}

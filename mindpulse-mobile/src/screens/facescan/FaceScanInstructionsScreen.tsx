@@ -1,7 +1,7 @@
 /**
  * FaceScanInstructionsScreen
- * Matches the mockup: full-screen cream page with dark-navy camera preview box,
- * "Start Face Scan" button, and a two-step bottom-sheet flow:
+ * Full-screen page with dark-navy camera preview box, "Start Face Scan" button,
+ * and a 2-step modal bottom-sheet flow:
  *   Step 1 – Preparation Checklist
  *   Step 2 – Privacy Notice
  */
@@ -17,90 +17,92 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
-import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 
 interface Props {
   onBack?: () => void;
   onReady: () => void;
 }
 
-/* ─── Preparation Checklist Items ─── */
+/* ─── Preparation Checklist Items (Step 1) ─── */
 const CHECKLIST = [
   {
-    icon: '💡',
+    iconName: 'sunny-outline' as const,
+    iconColor: '#F59E0B',
     title: 'Good, even lighting',
     desc: 'Face a light source such as a window or lamp. Avoid strong backlighting or harsh shadows on your face.',
-    bg: '#FEF9E7',
-    border: '#F9E4A0',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
   },
   {
-    icon: '🧘',
+    iconName: 'body-outline' as const,
+    iconColor: '#06B6D4',
     title: 'Calm & relaxed environment',
     desc: 'Find a quiet, peaceful spot. Sit comfortably and take 2–3 slow, deep breaths before scanning.',
-    bg: '#EBF5FB',
-    border: '#AED6F1',
+    bg: '#ECFEFF',
+    border: '#A5F3FC',
   },
   {
-    icon: '📷',
+    iconName: 'camera-outline' as const,
+    iconColor: '#3B82F6',
     title: 'Camera at eye level',
     desc: 'Hold or prop your device at eye level so your full face is centred in the frame. Don\'t tilt the phone.',
-    bg: '#F4ECF7',
-    border: '#C39BD3',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
   },
   {
-    icon: '😌',
+    iconName: 'happy-outline' as const,
+    iconColor: '#10B981',
     title: 'Neutral, relaxed expression',
     desc: 'Relax your jaw and brow. Avoid forced smiling or frowning — let your natural resting expression show.',
-    bg: '#EAFAF1',
-    border: '#A9DFBF',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
   },
   {
-    icon: '🕶️',
+    iconName: 'glasses-outline' as const,
+    iconColor: '#8B5CF6',
     title: 'Remove accessories if possible',
-    desc: 'Glasses, hats or coverings over your face may reduce detection accuracy. Remove them if comfortable.',
-    bg: '#FDEBD0',
-    border: '#F0B27A',
+    desc: 'Glasses, face coverings, or hair over your face may reduce detection accuracy. Remove them if comfortable.',
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
   },
   {
-    icon: '🖼️',
+    iconName: 'eye-off-outline' as const,
+    iconColor: '#EF4444',
     title: 'Clear background preferred',
     desc: 'A plain, uncluttered background helps the system focus on your facial features without interference.',
-    bg: '#FDEDEC',
-    border: '#F1948A',
+    bg: '#FEF2F2',
+    border: '#FCA5A5',
   },
 ];
 
-/* ─── Privacy Notice Items ─── */
+/* ─── Privacy Notice Items (Step 2) ─── */
 const PRIVACY_ITEMS = [
   {
-    icon: '🚫',
-    title: 'No Images or Videos Stored',
-    desc: 'We would like to emphasise that no raw facial images or video recordings will be stored in the system. Only the processed results and extracted features necessary for stress assessment will be used.',
-    bg: '#EBF5FB',
-    border: '#AED6F1',
-  },
-  {
-    icon: '📱',
+    iconName: 'lock-closed-outline' as const,
+    iconColor: '#10B981',
     title: 'On-device processing only',
     desc: 'All facial feature extraction is processed locally and never transmitted to external servers.',
-    bg: '#EAFAF1',
-    border: '#A9DFBF',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
   },
   {
-    icon: '🔒',
+    iconName: 'eye-off-outline' as const,
+    iconColor: '#8B5CF6',
     title: 'No biometric data retained',
-    desc: 'Your face geometry and landmark data are discarded immediately after emotion classification.',
-    bg: '#F4ECF7',
-    border: '#C39BD3',
+    desc: 'Your face geometry and landmark data are discarded immediately after emotional classification.',
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
   },
   {
-    icon: '📊',
+    iconName: 'shield-outline' as const,
+    iconColor: '#F59E0B',
     title: 'Results only, not recordings',
     desc: 'Only your emotion label and confidence score are saved as part of your stress assessment record.',
-    bg: '#FEF9E7',
-    border: '#F9E4A0',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
   },
 ];
 
@@ -117,7 +119,7 @@ const CameraPreview = () => (
     <View style={styles.faceOval} />
     {/* Camera icon */}
     <View style={styles.cameraIconWrap}>
-      <Text style={styles.cameraIconText}>📷</Text>
+      <Ionicons name="camera-outline" size={28} color="#FFF" />
     </View>
     <Text style={styles.cameraHint}>Position your face in frame</Text>
   </View>
@@ -150,14 +152,11 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
         {/* Start Button */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.startBtn} onPress={handleStartPress} activeOpacity={0.88}>
-            <Text style={styles.startBtnIcon}>📷</Text>
+            <Ionicons name="camera-outline" size={22} color="#FFF" />
             <Text style={styles.startBtnText}>Start Face Scan</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-
-      {/* Bottom Tab Bar */}
-      <BottomTabBar activeTab="analysis" />
 
       {/* ── Sheet Step 1: Preparation Checklist ── */}
       <Modal visible={sheetStep === 1} transparent animationType="slide" onRequestClose={handleClose}>
@@ -169,27 +168,33 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
             {/* Header */}
             <View style={sheet.header}>
               <View style={sheet.headerLeft}>
-                <View style={sheet.headerIconWrap}>
-                  <Text style={sheet.headerIcon}>📋</Text>
+                <View style={[sheet.headerIconWrap, { backgroundColor: '#8353E2' }]}>
+                  <Ionicons name="happy" size={20} color="#FFF" />
                 </View>
                 <View>
                   <Text style={sheet.headerTitle}>Preparation Checklist</Text>
                   <Text style={sheet.headerStep}>Step 1 of 2 — Before you scan</Text>
                 </View>
               </View>
-              <Pressable onPress={handleClose} style={sheet.closeBtn}>
-                <Text style={sheet.closeBtnText}>✕</Text>
-              </Pressable>
-            </View>
 
-            {/* Step dots */}
-            <View style={sheet.dots}>
-              <View style={[sheet.dot, sheet.dotActive]} />
-              <View style={sheet.dot} />
+              <View style={sheet.headerRight}>
+                {/* Stepper pill */}
+                <View style={sheet.stepperPill}>
+                  <View style={sheet.stepActivePill} />
+                  <View style={sheet.stepDot} />
+                </View>
+
+                <Pressable onPress={handleClose} style={sheet.closeBtn}>
+                  <Ionicons name="close" size={16} color="#64748B" />
+                </Pressable>
+              </View>
             </View>
 
             {/* Info Banner */}
             <View style={sheet.infoBanner}>
+              <View style={sheet.infoYogaBadge}>
+                <Text style={{ fontSize: 16 }}>🧘</Text>
+              </View>
               <Text style={sheet.infoText}>
                 To get the most accurate emotional analysis, please make sure you are in the{' '}
                 <Text style={sheet.infoTextBold}>right environment and mental state</Text> before
@@ -201,8 +206,13 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
 
             <ScrollView style={sheet.scroll} showsVerticalScrollIndicator={false}>
               {CHECKLIST.map(item => (
-                <View key={item.title} style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}>
-                  <Text style={sheet.checkCardIcon}>{item.icon}</Text>
+                <View
+                  key={item.title}
+                  style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}
+                >
+                  <View style={sheet.cardIconBox}>
+                    <Ionicons name={item.iconName} size={20} color={item.iconColor} />
+                  </View>
                   <View style={sheet.checkCardText}>
                     <Text style={sheet.checkCardTitle}>{item.title}</Text>
                     <Text style={sheet.checkCardDesc}>{item.desc}</Text>
@@ -216,8 +226,8 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose}>
                 <Text style={sheet.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={sheet.primaryBtn} onPress={handleNext}>
-                <Text style={sheet.primaryBtnText}>I'm Ready — Next  ›</Text>
+              <TouchableOpacity style={[sheet.primaryBtn, { backgroundColor: '#8353E2' }]} onPress={handleNext}>
+                <Text style={sheet.primaryBtnText}>I'm Ready — Next ›</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -234,29 +244,54 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
             {/* Header */}
             <View style={sheet.header}>
               <View style={sheet.headerLeft}>
-                <View style={[sheet.headerIconWrap, { backgroundColor: '#EBF5FB' }]}>
-                  <Text style={sheet.headerIcon}>🔒</Text>
+                <View style={[sheet.headerIconWrap, { backgroundColor: '#0284C7' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#FFF" />
                 </View>
                 <View>
                   <Text style={sheet.headerTitle}>Privacy Notice</Text>
                   <Text style={sheet.headerStep}>Step 2 of 2 — Your data & privacy</Text>
                 </View>
               </View>
-              <Pressable onPress={handleClose} style={sheet.closeBtn}>
-                <Text style={sheet.closeBtnText}>✕</Text>
-              </Pressable>
-            </View>
 
-            {/* Step dots */}
-            <View style={sheet.dots}>
-              <View style={sheet.dot} />
-              <View style={[sheet.dot, sheet.dotActive]} />
+              <View style={sheet.headerRight}>
+                {/* Stepper pill */}
+                <View style={sheet.stepperPill}>
+                  <View style={sheet.stepDot} />
+                  <View style={sheet.stepActivePill} />
+                </View>
+
+                <Pressable onPress={handleClose} style={sheet.closeBtn}>
+                  <Ionicons name="close" size={16} color="#64748B" />
+                </Pressable>
+              </View>
             </View>
 
             <ScrollView style={sheet.scroll} showsVerticalScrollIndicator={false}>
+              {/* Callout Privacy Banner */}
+              <View style={sheet.privacyCallout}>
+                <View style={sheet.privacyEyeCircle}>
+                  <Ionicons name="eye-off" size={22} color="#FFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={sheet.privacyCalloutTitle}>No Images or Videos Stored</Text>
+                  <Text style={sheet.privacyCalloutText}>
+                    We would like to emphasize that{' '}
+                    <Text style={{ fontWeight: '800' }}>no raw facial images or video recordings</Text>{' '}
+                    will be stored in the system. Only the{' '}
+                    <Text style={{ fontWeight: '800' }}>processed results and extracted features</Text>{' '}
+                    necessary for stress assessment will be used.
+                  </Text>
+                </View>
+              </View>
+
               {PRIVACY_ITEMS.map(item => (
-                <View key={item.title} style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}>
-                  <Text style={sheet.checkCardIcon}>{item.icon}</Text>
+                <View
+                  key={item.title}
+                  style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}
+                >
+                  <View style={sheet.cardIconBox}>
+                    <Ionicons name={item.iconName} size={20} color={item.iconColor} />
+                  </View>
                   <View style={sheet.checkCardText}>
                     <Text style={sheet.checkCardTitle}>{item.title}</Text>
                     <Text style={sheet.checkCardDesc}>{item.desc}</Text>
@@ -267,7 +302,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               <Text style={sheet.consentText}>
                 By tapping{' '}
                 <Text style={sheet.consentBold}>"I Understand & Continue"</Text>, you consent to the
-                facial analysis policies as described above.
+                facial analysis process as described above.
               </Text>
             </ScrollView>
 
@@ -276,8 +311,12 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose}>
                 <Text style={sheet.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[sheet.primaryBtn, { backgroundColor: Colors.btnBlue }]} onPress={handleContinue}>
-                <Text style={sheet.primaryBtnText}>✓  I Understand & Continue</Text>
+              <TouchableOpacity
+                style={[sheet.primaryBtn, { backgroundColor: '#00A8E8' }]}
+                onPress={handleContinue}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={sheet.primaryBtnText}>I Understand & Continue</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -335,7 +374,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
-  cameraIconText: { fontSize: 28 },
   cameraHint: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
 
   /* Footer */
@@ -354,75 +392,118 @@ const styles = StyleSheet.create({
     }),
     elevation: 8,
   },
-  startBtnIcon: { fontSize: 22 },
   startBtnText: { color: Colors.white, ...Typography.button, fontSize: 17 },
 });
 
 /* ─── Bottom Sheet Styles ─── */
 const sheet = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   container: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 32,
-    maxHeight: '88%',
+    paddingBottom: 28,
+    maxHeight: '90%',
   },
-  handle: { width: 40, height: 4, backgroundColor: '#DDE1EA', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 12 },
 
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0E8FB', alignItems: 'center', justifyContent: 'center' },
-  headerIcon: { fontSize: 20 },
-  headerTitle: { color: Colors.textPrimary, fontSize: 16, fontWeight: '800' },
-  headerStep: { color: Colors.textSecondary, fontSize: 11, marginTop: 2 },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.divider, alignItems: 'center', justifyContent: 'center' },
-  closeBtnText: { color: Colors.textSecondary, fontSize: 14, fontWeight: '700' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerIconWrap: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: '#1E293B', fontSize: 16, fontWeight: '800' },
+  headerStep: { color: '#64748B', fontSize: 11, marginTop: 2 },
+  
+  /* Stepper indicator pill */
+  stepperPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
+  stepActivePill: { width: 22, height: 6, borderRadius: 3, backgroundColor: '#8353E2' },
+  stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#CBD5E1' },
 
-  dots: { flexDirection: 'row', gap: 6, marginBottom: 14 },
-  dot: { width: 20, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' },
-  dotActive: { backgroundColor: Colors.btnPurple },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
 
-  infoBanner: { backgroundColor: '#FEF9E7', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#F9E4A0' },
-  infoText: { color: '#7D5A00', fontSize: 13, lineHeight: 20 },
+  /* Info Banner */
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F3E8FF',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+  },
+  infoYogaBadge: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
+  infoText: { flex: 1, color: '#5B21B6', fontSize: 12.5, lineHeight: 18 },
   infoTextBold: { fontWeight: '800' },
 
-  sectionLabel: { color: '#A0B0C8', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10 },
+  sectionLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10 },
 
-  scroll: { flex: 1, marginBottom: 16 },
+  scroll: { maxHeight: 420, marginBottom: 14 },
   checkCard: {
     flexDirection: 'row',
     gap: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     padding: 12,
     marginBottom: 10,
     alignItems: 'flex-start',
   },
-  checkCardIcon: { fontSize: 20, marginTop: 2 },
+  cardIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
   checkCardText: { flex: 1 },
-  checkCardTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: '800', marginBottom: 4 },
-  checkCardDesc: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18 },
+  checkCardTitle: { color: '#1E293B', fontSize: 13, fontWeight: '800', marginBottom: 3 },
+  checkCardDesc: { color: '#64748B', fontSize: 11.5, lineHeight: 17 },
 
-  consentText: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 12, marginBottom: 4, paddingHorizontal: 8 },
-  consentBold: { color: Colors.textPrimary, fontWeight: '800' },
+  /* Privacy Notice Callout */
+  privacyCallout: {
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: '#E0F2FE',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#38BDF8',
+    padding: 14,
+    marginBottom: 12,
+  },
+  privacyEyeCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#0284C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyCalloutTitle: { fontSize: 14, fontWeight: '800', color: '#0369A1', marginBottom: 4 },
+  privacyCalloutText: { fontSize: 11.5, color: '#0284C7', lineHeight: 17 },
 
-  actions: { flexDirection: 'row', gap: 12 },
-  cancelBtn: { height: 52, flex: 0.85, borderRadius: Radius.md, backgroundColor: Colors.divider, alignItems: 'center', justifyContent: 'center' },
-  cancelBtnText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 15 },
+  consentText: { color: '#64748B', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: 8 },
+  consentBold: { color: '#0369A1', fontWeight: '800' },
+
+  actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },
+  cancelBtn: { height: 48, flex: 1, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { color: '#64748B', fontWeight: '700', fontSize: 14 },
   primaryBtn: {
-    height: 52,
-    flex: 1.5,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.btnPurpleDark,
+    height: 48,
+    flex: 1.8,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
-      web: { boxShadow: '0px 4px 14px rgba(117,92,214,0.4)' },
-      default: { shadowColor: Colors.btnPurpleDark, shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
+      web: { boxShadow: '0px 4px 14px rgba(131,83,226,0.35)' },
+      default: { shadowColor: '#8353E2', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
     }),
-    elevation: 6,
+    elevation: 4,
   },
-  primaryBtnText: { color: Colors.white, fontWeight: '800', fontSize: 14 },
+  primaryBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13.5 },
 });

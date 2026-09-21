@@ -396,9 +396,6 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           </View>
         </View>
       </Modal>
-
-      {/* ── Bottom Tab ── */}
-      <BottomTabBar activeTab="clinics" onNavigate={tab => onNavigateTab?.(tab)} />
     </View>
   );
 };
