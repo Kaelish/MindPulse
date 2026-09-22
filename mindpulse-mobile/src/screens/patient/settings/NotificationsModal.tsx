@@ -1,0 +1,275 @@
+import React, { useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../../theme/colors';
+
+interface NotificationsModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible, onClose }) => {
+  // Category Toggles
+  const [dailyReminders, setDailyReminders] = useState(true);
+  const [reminderTime, setReminderTime] = useState('8:00 PM');
+  const [analysisResults, setAnalysisResults] = useState(true);
+  const [wellnessRecommendations, setWellnessRecommendations] = useState(true);
+  const [appointmentReminders, setAppointmentReminders] = useState(true);
+  const [consultationUpdates, setConsultationUpdates] = useState(true);
+  const [systemAnnouncements, setSystemAnnouncements] = useState(true);
+
+  // Sound & Vibration
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
+  // Toast alert
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const handleToggle = (setter: React.Dispatch<React.SetStateAction<boolean>>, val: boolean, label: string) => {
+    setter(val);
+    showToast(`${label} ${val ? 'enabled' : 'disabled'}`);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.sheetContainer}>
+          <View style={styles.handle} />
+
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIconBox}>
+                <Ionicons name="notifications-outline" size={20} color="#5B6EF5" />
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>Notifications</Text>
+                <Text style={styles.headerSub}>Manage reminders & alert preferences</Text>
+              </View>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeBtn}>
+              <Ionicons name="close" size={18} color="#64748B" />
+            </Pressable>
+          </View>
+
+          {/* Toast Alert */}
+          {toastMsg && (
+            <View style={styles.toast}>
+              <Ionicons name="information-circle" size={18} color="#5B6EF5" />
+              <Text style={styles.toastText}>{toastMsg}</Text>
+            </View>
+          )}
+
+          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+            {/* ── DAILY CHECK-IN REMINDERS ── */}
+            <Text style={styles.sectionLabel}>ASSESSMENT REMINDERS</Text>
+            <View style={styles.card}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Daily Stress Assessment</Text>
+                  <Text style={styles.toggleSub}>Receive daily notification to check in your stress level</Text>
+                </View>
+                <Switch
+                  value={dailyReminders}
+                  onValueChange={v => handleToggle(setDailyReminders, v, 'Daily assessment reminder')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              {dailyReminders && (
+                <View style={styles.scheduleBox}>
+                  <Text style={styles.scheduleLabel}>Reminder Schedule Time</Text>
+                  <View style={styles.timeChips}>
+                    {['7:00 AM', '12:00 PM', '6:00 PM', '8:00 PM', '10:00 PM'].map(t => (
+                      <TouchableOpacity
+                        key={t}
+                        style={[styles.timeChip, reminderTime === t && styles.timeChipActive]}
+                        onPress={() => {
+                          setReminderTime(t);
+                          showToast(`Reminder set for ${t}`);
+                        }}
+                      >
+                        <Text style={[styles.timeChipText, reminderTime === t && styles.timeChipTextActive]}>{t}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* ── ACTIVITY & RESULTS ── */}
+            <Text style={styles.sectionLabel}>REPORTS & INSIGHTS</Text>
+            <View style={styles.card}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Analysis Results</Text>
+                  <Text style={styles.toggleSub}>Notify when new stress assessment summaries are ready</Text>
+                </View>
+                <Switch
+                  value={analysisResults}
+                  onValueChange={v => handleToggle(setAnalysisResults, v, 'Analysis results')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Health & Wellness Tips</Text>
+                  <Text style={styles.toggleSub}>Receive personalized recommendations and MindPlant growth alerts</Text>
+                </View>
+                <Switch
+                  value={wellnessRecommendations}
+                  onValueChange={v => handleToggle(setWellnessRecommendations, v, 'Wellness tips')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+            </View>
+
+            {/* ── CARE & APPOINTMENTS ── */}
+            <Text style={styles.sectionLabel}>CARE & APPOINTMENTS</Text>
+            <View style={styles.card}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Teleconsultation Reminders</Text>
+                  <Text style={styles.toggleSub}>Remind 15 minutes before scheduled appointments</Text>
+                </View>
+                <Switch
+                  value={appointmentReminders}
+                  onValueChange={v => handleToggle(setAppointmentReminders, v, 'Appointment reminders')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Clinician Messages</Text>
+                  <Text style={styles.toggleSub}>Alert when a clinician replies to your consultation message</Text>
+                </View>
+                <Switch
+                  value={consultationUpdates}
+                  onValueChange={v => handleToggle(setConsultationUpdates, v, 'Clinician messages')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>System Announcements</Text>
+                  <Text style={styles.toggleSub}>Important updates regarding MindPulse service & features</Text>
+                </View>
+                <Switch
+                  value={systemAnnouncements}
+                  onValueChange={v => handleToggle(setSystemAnnouncements, v, 'System announcements')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+            </View>
+
+            {/* ── AUDIO & HAPTICS ── */}
+            <Text style={styles.sectionLabel}>SOUND & VIBRATION</Text>
+            <View style={styles.card}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Notification Sound</Text>
+                  <Text style={styles.toggleSub}>Play gentle tone for reminders</Text>
+                </View>
+                <Switch
+                  value={soundEnabled}
+                  onValueChange={v => handleToggle(setSoundEnabled, v, 'Sound')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleTitle}>Haptic Vibration</Text>
+                  <Text style={styles.toggleSub}>Vibrate device on incoming alerts</Text>
+                </View>
+                <Switch
+                  value={vibrationEnabled}
+                  onValueChange={v => handleToggle(setVibrationEnabled, v, 'Vibration')}
+                  trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+            </View>
+
+            <View style={{ height: 24 }} />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheetContainer: {
+    backgroundColor: '#FAF8F3',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    maxHeight: '90%',
+  },
+  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
+  headerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEEDFE',
+    borderColor: '#5B6EF5',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+  },
+  toastText: { fontSize: 12, fontWeight: '700', color: '#5B6EF5' },
+
+  scroll: { maxHeight: 520 },
+
+  sectionLabel: { fontSize: 11, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 0.8, marginTop: 10, marginBottom: 8 },
+
+  card: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border, gap: 14 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  toggleInfo: { flex: 1, gap: 2 },
+  toggleTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  toggleSub: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+
+  scheduleBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
+  scheduleLabel: { fontSize: 11, fontWeight: '700', color: '#64748B' },
+  timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  timeChip: { backgroundColor: Colors.surface, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 10, paddingVertical: 6 },
+  timeChipActive: { backgroundColor: '#8353E2', borderColor: '#8353E2' },
+  timeChipText: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary },
+  timeChipTextActive: { color: '#FFF', fontWeight: '800' },
+});

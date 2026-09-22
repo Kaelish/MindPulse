@@ -22,6 +22,10 @@ import {
   PlantProgress,
   fetchPlantProgress,
 } from '../../services/plantProgress';
+import { AccountInfoModal } from './settings/AccountInfoModal';
+import { NotificationsModal } from './settings/NotificationsModal';
+import { PrivacyDataModal } from './settings/PrivacyDataModal';
+import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
 
 export type ProfileTabSegment = 'profile' | 'history' | 'settings';
 
@@ -182,6 +186,12 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [plant, setPlant] = useState<PlantProgress | null>(null);
+
+  // Settings Modal states
+  const [showAccountInfo, setShowAccountInfo] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showPrivacyData, setShowPrivacyData] = useState(false);
+  const [showAboutMindPulse, setShowAboutMindPulse] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -406,21 +416,46 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         {/* ══════════ SETTINGS TAB ══════════ */}
         {activeSegment === 'settings' && (
           <>
-            <Text style={styles.settingSectionLabel}>APP</Text>
-            <View style={styles.card}>
-              <SettingRow icon="notifications-outline" bg="#EEEDFE" label="Notifications" sub="Daily reminders" />
-              <SettingRow icon="shield-outline" bg="#E6F0FA" label="Privacy & Data" sub="View site policy" />
-              <SettingRow icon="information-circle-outline" bg="#E6F7F5" label="About MindPulse" sub={`Version 1.0.0`} />
-            </View>
-
             <Text style={styles.settingSectionLabel}>ACCOUNT</Text>
             <View style={styles.card}>
+              <SettingRow
+                icon="person-outline"
+                bg="#EEEDFE"
+                label="Account Information"
+                sub="Name, email, student profile & password"
+                onPress={() => setShowAccountInfo(true)}
+              />
               <SettingRow
                 icon="heart-outline"
                 bg="#E6F8ED"
                 label="Health Background"
                 sub="Update your health profile"
                 onPress={onOpenHealthSetup}
+              />
+            </View>
+
+            <Text style={styles.settingSectionLabel}>APP</Text>
+            <View style={styles.card}>
+              <SettingRow
+                icon="notifications-outline"
+                bg="#EEEDFE"
+                label="Notifications"
+                sub="Daily reminders & alert preferences"
+                onPress={() => setShowNotifications(true)}
+              />
+              <SettingRow
+                icon="shield-outline"
+                bg="#E6F0FA"
+                label="Privacy & Data"
+                sub="Data policy, facial safeguards & export"
+                onPress={() => setShowPrivacyData(true)}
+              />
+              <SettingRow
+                icon="information-circle-outline"
+                bg="#E6F7F5"
+                label="About MindPulse"
+                sub="App info, capstone disclaimer & support"
+                onPress={() => setShowAboutMindPulse(true)}
               />
             </View>
 
@@ -436,6 +471,29 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
           </>
         )}
       </ScrollView>
+
+      {/* ── Settings Modals ── */}
+      <AccountInfoModal
+        visible={showAccountInfo}
+        onClose={() => setShowAccountInfo(false)}
+        currentName={userName}
+        currentEmail={userEmail}
+        onProfileUpdated={() => {
+          fetchDashboardData().then(res => setData(res));
+        }}
+      />
+      <NotificationsModal
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+      <PrivacyDataModal
+        visible={showPrivacyData}
+        onClose={() => setShowPrivacyData(false)}
+      />
+      <AboutMindPulseModal
+        visible={showAboutMindPulse}
+        onClose={() => setShowAboutMindPulse(false)}
+      />
     </View>
   );
 };
