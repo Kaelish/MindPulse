@@ -38,7 +38,7 @@ Create a local `.env` file in `mindpulse-backend/`:
 
 ```env
 SUPABASE_URL=https://whihfwcygbqpjtrpnlck.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_LCvW79yXx3Y5pAqWXAnWww_i6t58Sn-
+SUPABASE_SERVICE_ROLE_KEY=<SUPABASE_SERVICE_ROLE_KEY>
 ```
 
 Important:
