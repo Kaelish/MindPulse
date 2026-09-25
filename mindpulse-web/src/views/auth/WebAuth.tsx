@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabase/client';
 
-export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm';
+export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm' | 'pending';
 
 interface WebAuthProps {
   screen: AuthScreen;
@@ -12,7 +12,12 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [licenseNo, setLicenseNo] = useState('');
+  const [specialization, setSpecialization] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [bio, setBio] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,8 +27,17 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
     setErrorMessage('');
     setInfoMessage('');
 
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
-      setErrorMessage('Please complete all fields to create your account.');
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()
+      || !licenseNo.trim() || !specialization.trim() || !contactNumber.trim()) {
+      setErrorMessage('Please complete all required fields to create your doctor account.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage('Please choose a password with at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('The two passwords do not match.');
       return;
     }
 
@@ -35,10 +49,22 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
     setIsSubmitting(true);
 
     try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: fullName.trim() } },
+        options: {
+          data: {
+            role: 'doctor',
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            full_name: fullName,
+            license_no: licenseNo.trim(),
+            specialization: specialization.trim(),
+            contact_number: contactNumber.trim(),
+            bio: bio.trim(),
+          },
+        },
       });
 
       if (error) {
@@ -47,10 +73,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
       }
 
       if (data.session) {
-        // Signed in immediately — App routes by profile role.
+        // Signed in immediately — App's listener routes to the pending portal.
         return;
       }
-      setScreen('confirm');
+      setScreen('pending');
     } catch {
       setErrorMessage('Unable to create your account right now. Please try again.');
     } finally {
@@ -288,6 +314,50 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
     );
   }
 
+  if (screen === 'pending') {
+    return (
+      <div className="auth-shell auth-shell-compact">
+        <div className="auth-card auth-card-split">
+          <aside className="auth-side-panel auth-side-panel-soft">
+            <div className="brand-chip">
+              <span className="brand-icon">M</span>
+              <span>MindPulse</span>
+            </div>
+            <h2>Almost there</h2>
+            <p>Doctor accounts are activated after an administrator reviews them.</p>
+            <ul className="auth-bullets">
+              <li>Confirm your email</li>
+              <li>Administrator approval</li>
+              <li>Portal access</li>
+            </ul>
+          </aside>
+
+          <div className="auth-form-panel">
+            <h1>Registration received</h1>
+            <p>
+              {email.trim()
+                ? `We sent a confirmation link to ${email.trim()}.`
+                : 'We sent a confirmation link to your email address.'}{' '}
+              Confirm your email, then sign in — the portal unlocks once the administrator
+              approves your registration.
+            </p>
+            {errorMessage && <p className="auth-error">{errorMessage}</p>}
+            {infoMessage && <p className="auth-error">{infoMessage}</p>}
+            <button className="primary-button" type="button" onClick={() => setScreen('login')}>
+              Go to sign in
+            </button>
+            <p className="auth-switch">
+              Link not there?{' '}
+              <button type="button" onClick={handleResendConfirmation}>
+                Resend confirmation email
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === 'register') {
     return (
       <div className="auth-shell">
@@ -297,30 +367,54 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
               <span className="brand-icon">M</span>
               <span>MindPulse</span>
             </div>
-            <h2>Start Your Journey with MindPulse</h2>
-            <p>Join leading organizations in transforming mental health monitoring through AI-powered facial analysis.</p>
+            <h2>Doctor registration</h2>
+            <p>Create your professional account to join the MindPulse care team.</p>
             <ul className="auth-bullets">
-              <li>Real-time stress detection</li>
-              <li>Comprehensive analytics</li>
+              <li>Professional details reviewed</li>
+              <li>Administrator approval required</li>
               <li>Privacy first</li>
             </ul>
           </aside>
 
           <div className="auth-form-panel">
-            <h1>Create your account</h1>
-            <p>Start a calmer, more connected care experience.</p>
+            <h1>Create your doctor account</h1>
+            <p>Students register through the MindPulse mobile app.</p>
             <form className="auth-form" onSubmit={handleRegister}>
               <label>
-                <span>Full name</span>
-                <input placeholder="Your full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <span>First name</span>
+                <input placeholder="Your first name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </label>
+              <label>
+                <span>Last name</span>
+                <input placeholder="Your last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </label>
               <label>
                 <span>Email address</span>
                 <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </label>
               <label>
+                <span>License number</span>
+                <input placeholder="PRC-0012345" value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} />
+              </label>
+              <label>
+                <span>Specialization</span>
+                <input placeholder="e.g. Clinical Psychologist" value={specialization} onChange={(e) => setSpecialization(e.target.value)} />
+              </label>
+              <label>
+                <span>Contact number</span>
+                <input placeholder="09XXXXXXXXX" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+              </label>
+              <label>
+                <span>Short bio</span>
+                <textarea placeholder="A short professional introduction (optional)" value={bio} onChange={(e) => setBio(e.target.value)} />
+              </label>
+              <label>
                 <span>Password</span>
                 <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </label>
+              <label>
+                <span>Confirm password</span>
+                <input type="password" placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
               </label>
               {errorMessage && <p className="auth-error">{errorMessage}</p>}
               {infoMessage && <p className="auth-error">{infoMessage}</p>}
@@ -376,9 +470,9 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
             </button>
           </form>
           <p className="auth-switch auth-switch-inline">
-            New to MindPulse?{' '}
+            New doctor?{' '}
             <button type="button" onClick={() => setScreen('register')}>
-              Create account
+              Register as a doctor
             </button>
           </p>
           <p className="auth-switch auth-switch-inline auth-switch-muted">

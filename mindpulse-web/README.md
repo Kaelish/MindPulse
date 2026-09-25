@@ -12,9 +12,12 @@ npm start
 
 Open `http://localhost:3000`.
 
-The starting sequence is `WEB - REGISTER` -> `WEB - LOGIN` -> workspace
-selection -> Admin Dashboard or Doctor Dashboard. Forgot Password and Reset
-Password are available from the login screen.
+The app starts on the login screen; **Register as a doctor** opens the
+professional sign-up form. The destination after sign-in comes from Supabase:
+approved doctors get the Doctor Dashboard, administrators get the Admin
+Dashboard, and unverified doctors see a pending-approval screen until the
+administrator approves them (Manage Users → Doctors). Forgot Password and
+Reset Password are available from the login screen.
 
 ## Environment
 

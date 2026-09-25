@@ -74,6 +74,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
           </div>
         </header>
 
+        {!isLoading && !loadError && stats && stats.pendingApprovals > 0 && (
+          <div
+            style={{
+              background: '#fff7ec',
+              border: '1px solid #ffcf8f',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '18px',
+            }}
+          >
+            <span style={{ color: '#8a5a00', fontWeight: 700 }}>
+              {stats.pendingApprovals} doctor registration{stats.pendingApprovals === 1 ? '' : 's'} waiting
+              for approval.
+            </span>
+            <button type="button" className="view-details-button" onClick={() => setActiveView('users')}>
+              Review
+            </button>
+          </div>
+        )}
+
         {isLoading && <div className="loading-state"><span className="spinner" /></div>}
         {!isLoading && loadError && (
           <div className="error-state">

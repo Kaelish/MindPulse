@@ -13,7 +13,7 @@ import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth, AuthScreen } from './views/auth/WebAuth';
 import './App.css';
 
-type Portal = 'doctor' | 'admin' | 'unauthorized';
+type Portal = 'doctor' | 'admin' | 'pending' | 'unauthorized';
 
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>('consultations');
@@ -80,8 +80,47 @@ function UnauthorizedView({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
+function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; onRecheck: () => Promise<void> }) {
+  const [isChecking, setIsChecking] = useState(false);
+
+  const recheck = async () => {
+    setIsChecking(true);
+    await onRecheck();
+    setIsChecking(false);
+  };
+
+  return (
+    <div className="auth-shell">
+      <div className="auth-card auth-card-split">
+        <aside className="auth-side-panel auth-side-panel-soft">
+          <div className="brand-chip">
+            <span className="brand-icon">M</span>
+            <span>MindPulse</span>
+          </div>
+          <h2>Awaiting approval</h2>
+          <p>New doctor accounts are reviewed by the clinic administrator before the portal opens.</p>
+        </aside>
+        <div className="auth-form-panel">
+          <h1>Your registration is pending</h1>
+          <p>
+            Your doctor account was created successfully. The administrator still needs to
+            approve your registration — you will get full portal access as soon as that
+            happens. If you were approved just now, continue below.
+          </p>
+          <button className="primary-button" type="button" onClick={recheck} disabled={isChecking}>
+            {isChecking ? 'Checking…' : 'Continue'}
+          </button>
+          <button className="primary-button" type="button" onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('register');
+  const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
   const [portal, setPortal] = useState<Portal | null>(null);
   const [checkingSession, setCheckingSession] = useState(
     () => Boolean(supabase && typeof supabase.auth.getSession === 'function'),
@@ -89,7 +128,12 @@ function App() {
 
   const routeToPortal = async () => {
     const role = await getCurrentUserRole();
-    setPortal(role === 'doctor' ? 'doctor' : role === 'admin' ? 'admin' : 'unauthorized');
+    setPortal(
+      role === 'doctor' ? 'doctor'
+      : role === 'admin' ? 'admin'
+      : role === 'pending' ? 'pending'
+      : 'unauthorized',
+    );
   };
 
   useEffect(() => {
@@ -148,6 +192,7 @@ function App() {
 
   if (portal === 'doctor') return <DoctorPortal onSignOut={signOut} />;
   if (portal === 'admin') return <AdminDashboardView onSignOut={signOut} />;
+  if (portal === 'pending') return <PendingApprovalView onSignOut={signOut} onRecheck={routeToPortal} />;
   if (portal === 'unauthorized') return <UnauthorizedView onSignOut={signOut} />;
 
   if (checkingSession) {

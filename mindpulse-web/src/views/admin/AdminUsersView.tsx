@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
-import { AdminAccountRow, fetchAdminAccounts, setAccountRole, setDoctorVerified } from '../../services/admin';
+import { AdminAccountRow, approveDoctor, denyDoctor, fetchAdminAccounts, setAccountRole, setDoctorVerified } from '../../services/admin';
 import { requireUserId } from '../../services/session';
 import type { AppRole } from '../../types/supabase';
 import './AdminUsersView.css';
@@ -85,6 +85,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
   const toggleVerified = (row: AdminAccountRow) =>
     runAction(row, () => setDoctorVerified(row.id, !row.isVerified));
 
+  const approveRegistration = (row: AdminAccountRow) =>
+    runAction(row, () => approveDoctor(row.id));
+
+  const denyRegistration = (row: AdminAccountRow) => {
+    const verb = row.isVerified ? 'Remove' : 'Deny';
+    if (!window.confirm(`${verb} ${row.name}'s account? This cannot be undone.`)) return;
+    runAction(row, () => denyDoctor(row.id));
+  };
+
   const changeRole = (row: AdminAccountRow, role: AppRole) => {
     const label = role === 'doctor' ? 'doctor' : role === 'student' ? 'student' : 'admin';
     if (!window.confirm(`Change ${row.name} to ${label}?`)) return;
@@ -142,7 +151,14 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                     return (
                       <tr key={account.id}>
                         <td><div className="account-name-cell"><span className="account-avatar">{account.initials}</span><strong>{account.name}</strong></div></td>
-                        <td><span className="contact-cell">✉ {account.email}</span></td>
+                        <td>
+                          <span className="contact-cell">✉ {account.email}</span>
+                          {activeRole === 'Doctors' && account.licenseNo && (
+                            <span className="contact-cell" style={{ display: 'block', color: '#718096' }}>
+                              🪪 {account.licenseNo}
+                            </span>
+                          )}
+                        </td>
                         <td>{account.program}</td>
                         {activeRole === 'Students' && <td>{account.year}</td>}
                         {activeRole === 'Students' && (
@@ -156,19 +172,31 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                         <td><span className={`status-pill status-${status.toLowerCase()}`}>{status}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {activeRole === 'Doctors' && (
-                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => toggleVerified(account)}>
-                                {account.isVerified ? 'Unverify' : 'Verify'}
+                            {activeRole === 'Doctors' && !account.isVerified && (
+                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => approveRegistration(account)}>
+                                {busy ? 'Working…' : 'Approve'}
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="table-action"
-                              disabled={isSelf || busy}
-                              onClick={() => changeRole(account, activeRole === 'Doctors' ? 'student' : 'doctor')}
-                            >
-                              {activeRole === 'Doctors' ? 'Make student' : 'Make doctor'}
-                            </button>
+                            {activeRole === 'Doctors' && (
+                              <button type="button" className="table-action" disabled={isSelf || busy} onClick={() => denyRegistration(account)}>
+                                {account.isVerified ? 'Remove' : 'Deny'}
+                              </button>
+                            )}
+                            {activeRole === 'Doctors' && account.isVerified && (
+                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => toggleVerified(account)}>
+                                Unverify
+                              </button>
+                            )}
+                            {activeRole === 'Students' && (
+                              <button
+                                type="button"
+                                className="table-action"
+                                disabled={isSelf || busy}
+                                onClick={() => changeRole(account, 'doctor')}
+                              >
+                                Make doctor
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

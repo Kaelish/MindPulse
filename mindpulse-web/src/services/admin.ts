@@ -19,6 +19,7 @@ export interface AdminOverviewStats {
   moderate: number;
   high: number;
   assessed: number;
+  pendingApprovals: number;
 }
 
 interface ProfileRow {
@@ -62,6 +63,12 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
     .select('id', { count: 'exact', head: true });
   if (appointmentsError) throw new Error(appointmentsError.message);
 
+  const { count: pendingCount, error: pendingError } = await supabase
+    .from('doctor_profiles')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('is_verified', false);
+  if (pendingError) throw new Error(pendingError.message);
+
   const latest = latestSessionsByUser(sessionRows);
   let low = 0;
   let moderate = 0;
@@ -86,6 +93,7 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
     moderate,
     high,
     assessed,
+    pendingApprovals: pendingCount ?? 0,
   };
 };
 
@@ -102,6 +110,8 @@ export interface AdminAccountRow {
   createdAt: string;
   latestScore: number | null;
   latestLevel: StressLevel | null;
+  licenseNo: string | null;
+  contactNumber: string | null;
 }
 
 interface AccountProfileRow {
@@ -164,16 +174,25 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
   }
 
   let verifiedByUser = new Map<string, boolean>();
+  let professionalByUser = new Map<string, { specialization: string | null; license_no: string | null; contact_number: string | null }>();
   if (role === 'doctor') {
     const { data: doctorProfiles, error: doctorProfilesError } = await supabase
       .from('doctor_profiles')
-      .select('user_id, is_verified')
+      .select('user_id, is_verified, specialization, license_no, contact_number')
       .in('user_id', ids);
     if (doctorProfilesError) throw new Error(doctorProfilesError.message);
-    verifiedByUser = new Map(
-      ((doctorProfiles ?? []) as { user_id: string; is_verified: boolean }[]).map((row) => [
+    const doctorRows = (doctorProfiles ?? []) as {
+      user_id: string;
+      is_verified: boolean;
+      specialization: string | null;
+      license_no: string | null;
+      contact_number: string | null;
+    }[];
+    verifiedByUser = new Map(doctorRows.map((row) => [row.user_id, row.is_verified]));
+    professionalByUser = new Map(
+      doctorRows.map((row) => [
         row.user_id,
-        row.is_verified,
+        { specialization: row.specialization, license_no: row.license_no, contact_number: row.contact_number },
       ]),
     );
   }
@@ -182,12 +201,13 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
     const name =
       `${row.first_name || ''} ${row.last_name || ''}`.trim() || row.email || 'Unknown';
     const latestSession = latest.get(row.id);
+    const professional = professionalByUser.get(row.id);
     return {
       id: row.id,
       name,
       initials: initialsOf(name, row.email || ''),
       email: row.email || 'No email',
-      program: row.program || '—',
+      program: role === 'doctor' ? professional?.specialization || '—' : row.program || '—',
       year: row.year_level || '—',
       patients: role === 'doctor' ? appointmentCounts.get(row.id) ?? 0 : sessionCounts.get(row.id) ?? 0,
       isVerified: verifiedByUser.get(row.id) ?? false,
@@ -195,6 +215,8 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       createdAt: row.created_at,
       latestScore: latestSession?.score ?? null,
       latestLevel: (latestSession?.stress_level as StressLevel | null) ?? null,
+      licenseNo: professional?.license_no ?? null,
+      contactNumber: professional?.contact_number ?? null,
     };
   });
 };
@@ -231,6 +253,27 @@ export const setDoctorVerified = async (userId: string, verified: boolean): Prom
     .from('doctor_profiles')
     .update({ is_verified: verified })
     .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * Approves a pending doctor registration (DB-side SECURITY DEFINER RPC):
+ * sets doctor_profiles.is_verified = true and confirms the account's e-mail
+ * so they can sign in. Admin-only — non-admin callers get a policy error.
+ */
+export const approveDoctor = async (userId: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const { error } = await supabase.rpc('approve_doctor', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * Denies a pending registration: removes the account entirely
+ * (profiles + doctor_profiles + auth user). Admin-only RPC.
+ */
+export const denyDoctor = async (userId: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const { error } = await supabase.rpc('delete_app_user', { p_user_id: userId });
   if (error) throw new Error(error.message);
 };
 

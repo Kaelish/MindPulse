@@ -73,12 +73,34 @@ one transaction, so a failure rolls everything back):
 ### Roles
 
 `profiles.role` is `student` (default), `doctor` or `admin`. It can only be
-changed by an administrator — from the web Admin Dashboard (Manage Users) or
-with SQL for the first admin:
+changed by an administrator — from the web Admin Dashboard (Manage Users) —
+except for the very first administrator, which you create once with SQL in the
+Supabase dashboard (**SQL Editor → New query**):
 
 ```sql
 update public.profiles set role = 'admin' where email = 'you@school.edu';
 ```
+
+Exactly one administrator account is allowed: the database rejects promoting
+anyone else to `admin` and rejects demoting the administrator.
+
+### Doctor registration and approval
+
+The web app's **Register as a doctor** form creates a `doctor` account with the
+professional details (license number, specialization, contact number, bio)
+stored in `doctor_profiles`. The account starts **unverified**:
+
+1. The doctor confirms their e-mail, then signs in and sees a *pending
+   approval* screen — the portal stays locked.
+2. The administrator reviews the request under **Manage Users → Doctors** and
+   clicks **Approve** (sets `is_verified` and confirms the account) or **Deny**
+   (removes the account).
+3. Only after approval does the Doctor Dashboard open.
+
+Approval runs through the `approve_doctor` database function, which only the
+administrator can call; doctors cannot set their own verification status.
+Students register through the mobile app — signup metadata `role` is only ever
+honored for `doctor`, never for `admin`.
 
 ## Team access
 
@@ -133,11 +155,12 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The web app starts on register/login. After signing in, the destination is
-chosen from `profiles.role` in Supabase: doctors open the Doctor Dashboard,
-administrators open the Admin Dashboard, and student accounts are told to use
-the mobile app (there is no manual workspace picker and no role selector on
-signup).
+The web app starts on the sign-in screen. After signing in, the destination is
+chosen from `profiles.role` (plus doctor approval) in Supabase: approved
+doctors open the Doctor Dashboard, administrators open the Admin Dashboard,
+unverified doctors see a *pending approval* screen, and student accounts are
+told to use the mobile app (there is no manual workspace picker and no role
+selector on signup — the register form creates doctor accounts only).
 
 Build for production:
 
