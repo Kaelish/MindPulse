@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fetchPlantProgress, PlantProgress } from '../../services/plantProgress';
 
 interface PlantProgressScreenProps {
@@ -30,17 +30,52 @@ const STAGE_MESSAGES: Record<string, string> = {
 export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack }) => {
   const [selectedStage, setSelectedStage] = useState(1);
   const [progress, setProgress] = useState<PlantProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchPlantProgress().then((savedProgress) => {
+  const load = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const savedProgress = await fetchPlantProgress();
       setProgress(savedProgress);
       const savedIndex = stages.findIndex((item) => item.name === savedProgress.currentStage);
       if (savedIndex >= 0) setSelectedStage(savedIndex);
-    });
+    } catch (e: any) {
+      setLoadError(e?.message || 'Could not load plant progress.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (loading) {
+    return (
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
+        <ActivityIndicator size="large" color="#1AA956" />
+        <Text style={{ color: '#8A9B91', fontSize: 12 }}>Loading plant progress…</Text>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 32 }]}>
+        <Text style={{ color: '#E05C5C', fontSize: 13, textAlign: 'center' }}>{loadError}</Text>
+        <TouchableOpacity onPress={() => void load()} style={{ backgroundColor: '#1AA956', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10 }}>
+          <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Retry</Text>
+        </TouchableOpacity>
+        <Pressable onPress={onBack} hitSlop={10}><Text style={styles.back}>‹ Back</Text></Pressable>
+      </View>
+    );
+  }
+
   const stage = stages[selectedStage];
-  const streak = progress?.currentStreak ?? 1;
+  const streak = progress?.currentStreak ?? 0;
   const isUnlocked = (s: Stage) => streak >= s.requiredStreak;
 
   return (
@@ -52,12 +87,12 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
             <Text style={styles.leaf}>🌱</Text>
           </View>
           <Text style={styles.stageName}>{stage.name}</Text>
-          <Text style={styles.stageCount}>Stage {selectedStage} of 5 · {progress?.currentStreak ?? 1} day streak</Text>
+          <Text style={styles.stageCount}>Stage {selectedStage} of 5 · {progress?.currentStreak ?? 0} day streak</Text>
           <View style={styles.plantScene}><Text style={styles.plantArt}>{stage.emoji}</Text></View>
         </View>
 
         <View style={styles.messageBox}><Text style={styles.message}>{STAGE_MESSAGES[stage.name] ?? 'Keep going — your plant is growing!'}</Text></View>
-        <View style={styles.tipBox}><Text style={styles.tipTitle}>💡 GROWTH TIP</Text><Text style={styles.tipText}>🌿 Keep your streak going — each low-stress session helps it grow!</Text><Text style={styles.pointsText}>{progress?.totalGrowthPoints ?? 10} growth points</Text></View>
+        <View style={styles.tipBox}><Text style={styles.tipTitle}>💡 GROWTH TIP</Text><Text style={styles.tipText}>🌿 Keep your streak going — each low-stress session helps it grow!</Text><Text style={styles.pointsText}>{progress?.totalGrowthPoints ?? 0} growth points</Text></View>
 
         <Text style={styles.sectionTitle}>ALL GROWTH STAGES</Text>
         <View style={styles.stageList}>

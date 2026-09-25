@@ -12,14 +12,27 @@ interface Props {
   onFinish: () => void;
 }
 
-export const FaceScanResultScreen: React.FC<Props> = ({ onRetry, onFinish }) => {
+const EXPR_EMOJI: Record<string, string> = {
+  stressed: '😰',
+  anxious: '😟',
+  sad: '😢',
+  neutral: '😐',
+  calm: '😌',
+  happy: '😄',
+};
+
+export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRetry, onFinish }) => {
+  const confidencePercent = Math.round(Math.min(1, Math.max(0, score)) * 100);
+  const emoji = EXPR_EMOJI[expression] ?? '😐';
+  const expressionLabel = expression.charAt(0).toUpperCase() + expression.slice(1);
+
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Real-time face emotion detection</Text>
+          <Text style={styles.pageSubtitle}>Demo result — not saved to your stress score</Text>
         </View>
 
         {/* Emotion Display Card */}
@@ -33,10 +46,10 @@ export const FaceScanResultScreen: React.FC<Props> = ({ onRetry, onFinish }) => 
             ))}
           </View>
           
-          <Text style={styles.emojiDisplay}>😰</Text>
+          <Text style={styles.emojiDisplay}>{emoji}</Text>
           
           <View style={styles.resultPill}>
-            <Text style={styles.resultPillText}>Stress Detected • 74% confidence</Text>
+            <Text style={styles.resultPillText}>Sample · {expressionLabel} · {confidencePercent}%</Text>
           </View>
         </View>
 
@@ -45,64 +58,60 @@ export const FaceScanResultScreen: React.FC<Props> = ({ onRetry, onFinish }) => 
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <Ionicons name="information-circle-outline" size={20} color="#2C3473" />
-              <Text style={styles.cardTitle}>Facial Analysis Output</Text>
+              <Text style={styles.cardTitle}>Demo Scan Output</Text>
             </View>
             <View style={styles.analyzedBadge}>
-              <Ionicons name="checkmark-circle-outline" size={14} color="#34C759" />
-              <Text style={styles.analyzedText}>Analyzed</Text>
+              <Ionicons name="information-circle-outline" size={14} color="#E08A00" />
+              <Text style={styles.analyzedText}>Demo</Text>
             </View>
           </View>
 
           <View style={styles.blueBox}>
-            <Text style={styles.blueBoxTitle}>Facial indicators detected:</Text>
-            <Text style={styles.blueBoxHighlight}>Possible signs of fatigue or tension</Text>
+            <Text style={styles.blueBoxTitle}>Sample result:</Text>
+            <Text style={styles.blueBoxHighlight}>No camera analysis was performed</Text>
             
             <View style={styles.blueBoxRow}>
-              <Text style={styles.blueBoxLabel}>Confidence level:</Text>
-              <Text style={styles.blueBoxValue}>74%</Text>
+              <Text style={styles.blueBoxLabel}>Expression:</Text>
+              <Text style={styles.blueBoxValueOrange}>{expressionLabel}</Text>
             </View>
             <View style={styles.blueBoxRow}>
-              <Text style={styles.blueBoxLabel}>Stress signal:</Text>
-              <Text style={styles.blueBoxValueOrange}>Moderate - High</Text>
+              <Text style={styles.blueBoxLabel}>Confidence level:</Text>
+              <Text style={styles.blueBoxValue}>{confidencePercent}%</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>DETECTED FACIAL CUES</Text>
+          <Text style={styles.sectionLabel}>ABOUT THIS RESULT</Text>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Possible signs of fatigue or tension</Text>
+            <Text style={styles.bulletText}>Sample output for demonstration only</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Furrowed brow detected</Text>
+            <Text style={styles.bulletText}>Excluded from your saved stress score</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Jaw muscle activation noted</Text>
+            <Text style={styles.bulletText}>Real camera analysis can be enabled in a future release</Text>
           </View>
-        </View>
 
-        {/* Emotion Classification Results */}
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Emotion Classification Results</Text>
-          
-          {[
-            { label: 'Stressed', emoji: '😰', percent: '49%', color: '#FF5A5F' },
-            { label: 'Happy', emoji: '😄', percent: '21%', color: '#34C759' },
-            { label: 'Sad', emoji: '😢', percent: '16%', color: '#8E54E9' },
-            { label: 'Calm', emoji: '😌', percent: '7%', color: '#5AC8FA' },
-            { label: 'Neutral', emoji: '😐', percent: '5%', color: '#E8A359' },
-            { label: 'Anxious', emoji: '😟', percent: '2%', color: '#8E8E93' },
-          ].map((item, idx) => (
-            <View key={idx} style={styles.barRow}>
-              <Text style={styles.barEmoji}>{item.emoji}</Text>
-              <Text style={styles.barLabel}>{item.label}</Text>
+          {/* Emotion Confidence (demo) */}
+          <View style={styles.infoCard}>
+            <Text style={styles.cardTitle}>Emotion Confidence (demo)</Text>
+
+            <View style={styles.barRow}>
+              <Text style={styles.barEmoji}>{emoji}</Text>
+              <Text style={styles.barLabel}>{expressionLabel}</Text>
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: item.percent as `${number}%`, backgroundColor: item.color }]} />
+                <View
+                  style={[
+                    styles.barFill,
+                    { width: `${confidencePercent}%` as `${number}%`, backgroundColor: '#E87522' },
+                  ]}
+                />
               </View>
-              <Text style={styles.barPercent}>{item.percent}</Text>
+              <Text style={styles.barPercent}>{confidencePercent}%</Text>
             </View>
-          ))}
+          </View>
         </View>
 
         {/* Actions */}
@@ -165,8 +174,8 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A1A', marginLeft: 8 },
-  analyzedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full },
-  analyzedText: { color: '#34C759', fontSize: 11, fontWeight: '800', marginLeft: 4 },
+  analyzedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF3E0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full },
+  analyzedText: { color: '#E08A00', fontSize: 11, fontWeight: '800', marginLeft: 4 },
 
   blueBox: {
     backgroundColor: '#F3F8FF',

@@ -83,24 +83,24 @@ const PRIVACY_ITEMS = [
   {
     iconName: 'lock-closed-outline' as const,
     iconColor: '#10B981',
-    title: 'On-device processing only',
-    desc: 'All facial feature extraction is processed locally and never transmitted to external servers.',
+    title: 'Nothing leaves your device',
+    desc: 'The demo scan does not capture or upload any camera data — it only shows a sample result.',
     bg: '#ECFDF5',
     border: '#A7F3D0',
   },
   {
     iconName: 'eye-off-outline' as const,
     iconColor: '#8B5CF6',
-    title: 'No biometric data retained',
-    desc: 'Your face geometry and landmark data are discarded immediately after emotional classification.',
+    title: 'No biometric data collected',
+    desc: 'No camera feed is recorded and no face geometry is computed during the demo scan.',
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
   {
     iconName: 'shield-outline' as const,
     iconColor: '#F59E0B',
-    title: 'Results only, not recordings',
-    desc: 'Only your emotion label and confidence score are saved as part of your stress assessment record.',
+    title: 'Demo result is not saved',
+    desc: 'The sample emotion result stays on this screen and is excluded from your saved stress score.',
     bg: '#FFFBEB',
     border: '#FDE68A',
   },
@@ -143,7 +143,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
         {/* Page Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Real-time face emotion detection</Text>
+          <Text style={styles.pageSubtitle}>Demo scan — camera analysis is not enabled yet</Text>
         </View>
 
         {/* Camera Preview Box */}

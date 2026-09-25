@@ -17,58 +17,56 @@ export interface CallSessionPayload {
  * Daily.co is a good fit for peer-to-peer healthcare consultations because it is
  * lightweight, browser/mobile friendly, and can support one-to-one patient/doctor
  * calls with minimal complexity for an MVP.
+ *
+ * Requires EXPO_PUBLIC_DAILY_BASE_URL and EXPO_PUBLIC_DAILY_TOKEN in the app env.
+ * No demo credentials are used — without configuration this throws instead of
+ * persisting a fake session.
  */
 export const createDailyVideoSession = async (
   doctorId: string,
   patientId: string,
 ): Promise<CallSessionPayload> => {
-  const roomName = `mindpulse-${doctorId}-${patientId}-${Date.now()}`;
-
   const env = (globalThis as typeof globalThis & {
     process?: { env?: Record<string, string | undefined> };
   }).process?.env;
 
-  const fallbackUrl = `${env?.EXPO_PUBLIC_DAILY_BASE_URL ?? 'https://mindpulse.daily.co'}/${roomName}`;
-  const fallbackToken = env?.EXPO_PUBLIC_DAILY_TOKEN ?? 'demo-token';
-
-  const payload: CallSessionPayload = {
-    roomName,
-    meetingUrl: fallbackUrl,
-    token: fallbackToken,
-    status: 'connecting',
-    doctorId,
-    patientId,
-  };
-
-  try {
-    const { data, error } = await supabase
-      .from('video_sessions')
-      .insert({
-        room_name: payload.roomName,
-        meeting_url: payload.meetingUrl,
-        token: payload.token,
-        status: payload.status,
-        patient_id: payload.patientId,
-        doctor_id: payload.doctorId,
-      })
-      .select()
-      .single();
-
-    if (!error && data) {
-      return {
-        roomName: data.room_name ?? payload.roomName,
-        meetingUrl: data.meeting_url ?? payload.meetingUrl,
-        token: data.token ?? payload.token,
-        status: (data.status ?? payload.status) as CallStatus,
-        doctorId: data.doctor_id ?? payload.doctorId,
-        patientId: data.patient_id ?? payload.patientId,
-      };
-    }
-  } catch {
-    // Graceful fallback for local previews when Supabase tables are not ready.
+  const baseUrl = env?.EXPO_PUBLIC_DAILY_BASE_URL;
+  const token = env?.EXPO_PUBLIC_DAILY_TOKEN;
+  if (!baseUrl || !token) {
+    throw new Error(
+      'Video calling is not configured. Set EXPO_PUBLIC_DAILY_BASE_URL and EXPO_PUBLIC_DAILY_TOKEN.',
+    );
   }
 
-  return payload;
+  const roomName = `mindpulse-${doctorId}-${patientId}-${Date.now()}`;
+  const meetingUrl = `${baseUrl.replace(/\/$/, '')}/${roomName}`;
+
+  const { data, error } = await supabase
+    .from('video_sessions')
+    .insert({
+      room_name: roomName,
+      meeting_url: meetingUrl,
+      token,
+      status: 'connecting',
+      patient_id: patientId,
+      doctor_id: doctorId,
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Could not start the video session.');
+  }
+
+  const row: any = data;
+  return {
+    roomName: row.room_name ?? roomName,
+    meetingUrl: row.meeting_url ?? meetingUrl,
+    token: row.token ?? token,
+    status: (row.status ?? 'connecting') as CallStatus,
+    doctorId: row.doctor_id ?? doctorId,
+    patientId: row.patient_id ?? patientId,
+  };
 };
 
 export const launchDoctorVideoCall = async (

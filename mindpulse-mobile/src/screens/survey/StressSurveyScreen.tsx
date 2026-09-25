@@ -14,19 +14,30 @@ type SurveyQuestion = {
   options?: SurveyOption[];
 };
 
+/* PSS-10 (Cohen et al., 1983) — public-domain Perceived Stress Scale.
+ * Items 4, 5, 7, 8 are reverse-scored (score = 4 - raw). */
+const PSS_REVERSE_IDS = new Set([4, 5, 7, 8]);
+
 const part1Questions: SurveyQuestion[] = [
-  { id: 1, pill: 'Unexpected Event', text: 'How often have you been upset because of something that happened unexpectedly?' },
-  { id: 2, pill: 'Control', text: 'How often have you felt unable to control important things in your life?' },
-  ...Array.from({ length: 7 }).map((_, i) => ({ id: i + 3, pill: 'Stress Factor', text: `Mock question ${i + 3} for the PSS-10 survey?` })),
-  { id: 10, pill: 'Overwhelm', text: 'How often have you felt difficulties piling up so high that you could not overcome them?' }
+  { id: 1, pill: 'Unexpected Event', text: 'In the last month, how often have you been upset because of something that happened unexpectedly?' },
+  { id: 2, pill: 'Control', text: 'In the last month, how often have you felt that you were unable to control the important things in your life?' },
+  { id: 3, pill: 'Nervous & Stressed', text: 'In the last month, how often have you felt nervous and stressed?' },
+  { id: 4, pill: 'Confidence', text: 'In the last month, how often have you felt confident about your ability to handle your personal problems?' },
+  { id: 5, pill: 'Going Your Way', text: 'In the last month, how often have you felt that things were going your way?' },
+  { id: 6, pill: 'Overloaded', text: 'In the last month, how often have you found that you could not cope with all the things that you had to do?' },
+  { id: 7, pill: 'Irritations', text: 'In the last month, how often have you been able to control irritations in your life?' },
+  { id: 8, pill: 'On Top of Things', text: 'In the last month, how often have you felt that you were on top of things?' },
+  { id: 9, pill: 'Anger', text: 'In the last month, how often have you been angered because of things that were outside of your control?' },
+  { id: 10, pill: 'Overwhelm', text: 'In the last month, how often have you felt difficulties were piling up so high that you could not overcome them?' },
 ];
 
+/* Part 2 — 8 body/lifestyle indicators, 0-3 scale, higher = more stress. */
 const part2Questions: SurveyQuestion[] = [
   { id: 101, pill: 'Sleep Hours', text: 'How many hours did you sleep last night?', options: [
-    { value: 0, label: 'Less than 4 hours' },
-    { value: 1, label: '4-5 hours' },
-    { value: 2, label: '6-7 hours' },
-    { value: 3, label: '8+ hours' },
+    { value: 0, label: '8+ hours' },
+    { value: 1, label: '6-7 hours' },
+    { value: 2, label: '4-5 hours' },
+    { value: 3, label: 'Less than 4 hours' },
   ]},
   { id: 102, pill: 'Breathing Pattern', text: 'How is your breathing right now?', sub: 'Are you breathing fast, or feeling shortness of breath?', options: [
     { value: 0, label: 'Not at all' },
@@ -34,11 +45,42 @@ const part2Questions: SurveyQuestion[] = [
     { value: 2, label: 'Sometimes' },
     { value: 3, label: 'Often' },
   ]},
-  ...Array.from({ length: 6 }).map((_, i) => ({
-    id: 103 + i, pill: 'Psychological Check', text: `Part 2 Mock Question ${i + 3}`, options: [
-      { value: 0, label: 'Option A' }, { value: 1, label: 'Option B' }, { value: 2, label: 'Option C' }, { value: 3, label: 'Option D' }
-    ]
-  }))
+  { id: 103, pill: 'Mood Check', text: 'How has your mood been today?', options: [
+    { value: 0, label: 'Good and stable' },
+    { value: 1, label: 'Mostly okay' },
+    { value: 2, label: 'Low or irritable' },
+    { value: 3, label: 'Very low or overwhelmed' },
+  ]},
+  { id: 104, pill: 'Eye Fatigue', text: 'How tired are your eyes right now?', options: [
+    { value: 0, label: 'Not tired' },
+    { value: 1, label: 'Mildly tired' },
+    { value: 2, label: 'Quite tired' },
+    { value: 3, label: 'Very tired or sore' },
+  ]},
+  { id: 105, pill: 'Stressors', text: 'How many sources of stress (school, work, relationships, money) are affecting you right now?', options: [
+    { value: 0, label: 'None' },
+    { value: 1, label: 'One or two' },
+    { value: 2, label: 'Three or four' },
+    { value: 3, label: 'Five or more' },
+  ]},
+  { id: 106, pill: 'Physical Symptoms', text: 'Have you noticed physical signs of stress (headache, tense muscles, stomach trouble)?', options: [
+    { value: 0, label: 'None' },
+    { value: 1, label: 'Rarely' },
+    { value: 2, label: 'Sometimes' },
+    { value: 3, label: 'Often' },
+  ]},
+  { id: 107, pill: 'Device Use', text: 'How many hours a day do you spend on screens beyond work or school?', options: [
+    { value: 0, label: 'Less than 1 hour' },
+    { value: 1, label: '1-2 hours' },
+    { value: 2, label: '3-4 hours' },
+    { value: 3, label: '5+ hours' },
+  ]},
+  { id: 108, pill: 'Energy Level', text: 'How would you rate your energy level today?', options: [
+    { value: 0, label: 'Very energetic' },
+    { value: 1, label: 'Fairly energetic' },
+    { value: 2, label: 'Low energy' },
+    { value: 3, label: 'Exhausted' },
+  ]},
 ];
 
 const part1Options = [
@@ -73,10 +115,15 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
         state.survey = 'completed';
         state.faceScan = 'unlocked';
         
-        // Calculate a score from 0-100 based on answers
-        const totalRaw = Object.values(answers).reduce((sum, val) => sum + val, 0);
-        const maxPossible = (part1Questions.length + part2Questions.length) * 4; // Assuming 0-4 scale per question
-        const scaledScore = Math.round((totalRaw / maxPossible) * 100);
+        // Score 0-100 (higher = more stress): PSS-10 with reverse-keyed items
+        // (4,5,7,8) on a 0-40 scale + Part 2 on a 0-24 scale → max 64.
+        const pssSum = part1Questions.reduce((sum, q) => {
+          const raw = answers[q.id] ?? 0;
+          return sum + (PSS_REVERSE_IDS.has(q.id) ? 4 - raw : raw);
+        }, 0);
+        const part2Sum = part2Questions.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
+        const maxPossible = part1Questions.length * 4 + part2Questions.length * 3;
+        const scaledScore = Math.round(((pssSum + part2Sum) / maxPossible) * 100);
         
         state.surveyScore = scaledScore;
 

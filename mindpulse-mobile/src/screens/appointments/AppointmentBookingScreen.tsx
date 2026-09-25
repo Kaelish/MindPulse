@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
+  ActivityIndicator,
+  Alert,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,55 +12,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { Colors } from '../../theme/colors';
-import { Radius, Spacing, Typography } from '../../theme/typography';
+import { Spacing } from '../../theme/typography';
 import {
+  BookedAppointment,
+  ChatMessage,
   TelehealthClinician,
+  fetchBookedSlotKeys,
+  fetchChatMessages,
+  fetchClinicians,
+  fetchConversationClinician,
   generateRealLifeDates,
-  initialClinicians,
+  saveBookedAppointment,
+  sendChatMessage,
 } from '../../services/appointments';
-
-const { width: SW } = Dimensions.get('window');
 
 interface AppointmentBookingScreenProps {
   onStartVideoCall?: (doctorId?: string) => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
-
-// ─── Extended clinicians list (reference has 3) ───────────────────────────────
-const CLINICIANS: TelehealthClinician[] = [
-  {
-    id: '1',
-    name: 'Dr. Sarah Chen',
-    specialty: 'Clinical Psychologist',
-    avatar: 'SC',
-    status: 'Available',
-    bio: 'Specializing in cognitive behavioral therapy for student stress, burnout, and anxiety disorders.',
-    tags: ['CBT', 'Stress', 'Anxiety'],
-    email: 'sarah.chen@mindpulse.org',
-  },
-  {
-    id: '2',
-    name: 'Dr. James Delos',
-    specialty: 'Behavioral Therapist',
-    avatar: 'JD',
-    status: 'Available',
-    bio: 'Expert in behavioral interventions and emotional regulation management.',
-    tags: ['Behavioral', 'Trauma', 'Depression'],
-    email: 'james.delos@mindpulse.org',
-  },
-  {
-    id: '3',
-    name: 'Dr. Taylor Swift',
-    specialty: 'Mindfulness Coach',
-    avatar: 'TS',
-    status: 'Offline',
-    bio: 'Certified mindfulness coach specializing in stress reduction and relaxation techniques.',
-    tags: ['Mindfulness', 'Meditation', 'Stress'],
-    email: 'taylor.swift@mindpulse.org',
-  },
-];
 
 const TIME_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM',
@@ -127,7 +96,6 @@ const ChatBubble = ({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
   onStartVideoCall,
-  onNavigateTab,
 }) => {
   const [activeTab, setActiveTab] = useState<'clinicians' | 'messages'>('clinicians');
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,39 +104,123 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const [lastBooking, setLastBooking] = useState<BookedAppointment | null>(null);
   const [chatInput, setChatInput] = useState('');
-  const [msgFilter, setMsgFilter] = useState<'all' | 'providers' | 'support'>('all');
-  const [chatMessages, setChatMessages] = useState([
-    { id: '1', sender: 'doctor', text: 'Hello! How are you feeling today?', time: '9:41 AM' },
-    { id: '2', sender: 'patient', text: 'I\'ve been feeling a bit anxious lately.', time: '9:42 AM' },
-    { id: '3', sender: 'doctor', text: 'That\'s understandable. Let\'s schedule a session to talk through it.', time: '9:43 AM' },
-  ]);
+
+  const [clinicians, setClinicians] = useState<TelehealthClinician[]>([]);
+  const [loadingClinicians, setLoadingClinicians] = useState(true);
+  const [cliniciansError, setCliniciansError] = useState<string | null>(null);
+  const [bookedKeys, setBookedKeys] = useState<Set<string>>(new Set());
+
+  const [conversation, setConversation] = useState<TelehealthClinician | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(true);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const dates = generateRealLifeDates();
 
-  const filtered = CLINICIANS.filter(c =>
+  const loadClinicians = async () => {
+    setLoadingClinicians(true);
+    setCliniciansError(null);
+    try {
+      const list = await fetchClinicians();
+      setClinicians(list);
+    } catch (e: any) {
+      setCliniciansError(e?.message || 'Could not load clinicians. Please try again.');
+    } finally {
+      setLoadingClinicians(false);
+    }
+  };
+
+  const refreshConversation = async () => {
+    try {
+      const clinician = await fetchConversationClinician();
+      setConversation(clinician);
+      if (clinician) {
+        const messages = await fetchChatMessages(clinician.id);
+        setChatMessages(messages);
+      } else {
+        setChatMessages([]);
+      }
+      setChatError(null);
+    } catch (e: any) {
+      setChatError(e?.message || 'Could not load messages. Please try again.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadClinicians();
+    void refreshConversation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filtered = clinicians.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.specialty.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleConnect = (c: TelehealthClinician) => {
+  const handleConnect = async (c: TelehealthClinician) => {
     setSelectedClinician(c);
-    setShowBookingModal(true);
+    setSelectedDateIdx(0);
+    setSelectedTime(null);
+    try {
+      // Availability must be fresh before offering times.
+      setBookedKeys(await fetchBookedSlotKeys());
+      setShowBookingModal(true);
+    } catch (e: any) {
+      Alert.alert('Could not load availability', e?.message || 'Please try again.');
+    }
   };
 
-  const handleConfirm = () => {
-    setShowBookingModal(false);
-    setShowSuccessModal(true);
+  const handleConfirm = async () => {
+    if (!selectedClinician || !selectedTime || bookingSaving) return;
+    const date = dates[selectedDateIdx];
+
+    setBookingSaving(true);
+    try {
+      const booked = await saveBookedAppointment({
+        clinicianId: selectedClinician.id,
+        clinicianName: selectedClinician.name,
+        specialty: selectedClinician.specialty,
+        selectedDate: date.dateStr,
+        selectedTime,
+      });
+      setLastBooking(booked);
+      setShowBookingModal(false);
+      setShowSuccessModal(true);
+      setSelectedTime(null);
+
+      // Background refresh of availability and the Messages conversation.
+      fetchBookedSlotKeys().then(setBookedKeys).catch(() => { /* refreshed on next open */ });
+      void refreshConversation();
+    } catch (e: any) {
+      Alert.alert('Booking failed', e?.message || 'Could not book the appointment. Please try again.');
+    } finally {
+      setBookingSaving(false);
+    }
   };
 
-  const sendMessage = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [
-      ...prev,
-      { id: Date.now().toString(), sender: 'patient', text: chatInput.trim(), time: 'now' },
-    ]);
-    setChatInput('');
+  const sendMessage = async () => {
+    const text = chatInput.trim();
+    if (!text || !conversation || sendingMessage) return;
+
+    setSendingMessage(true);
+    try {
+      const sent = await sendChatMessage(conversation.id, text);
+      setChatMessages(prev => [...prev, sent]);
+      setChatInput('');
+    } catch (e: any) {
+      Alert.alert('Message not sent', e?.message || 'Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
   };
+
+  const lastMessage = chatMessages.length > 0 ? chatMessages[chatMessages.length - 1] : null;
 
   return (
     <View style={styles.root}>
@@ -235,8 +287,35 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
           <Text style={styles.sectionLabel}>Available Clinicians</Text>
 
-          {filtered.map(c => (
-            <ClinicianCard key={c.id} clinician={c} onConnect={() => handleConnect(c)} />
+          {loadingClinicians && (
+            <View style={styles.stateBox}>
+              <ActivityIndicator size="small" color={Colors.btnBlue} />
+              <Text style={styles.stateText}>Loading clinicians…</Text>
+            </View>
+          )}
+
+          {!loadingClinicians && cliniciansError && (
+            <View style={styles.stateBox}>
+              <Text style={styles.stateError}>{cliniciansError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => void loadClinicians()}>
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!loadingClinicians && !cliniciansError && filtered.length === 0 && (
+            <View style={styles.stateBox}>
+              <Ionicons name="people-outline" size={28} color={Colors.textHint} />
+              <Text style={styles.stateText}>
+                {clinicians.length === 0
+                  ? 'No clinicians are available yet. Please check back soon.'
+                  : 'No clinicians match your search.'}
+              </Text>
+            </View>
+          )}
+
+          {!loadingClinicians && !cliniciansError && filtered.map(c => (
+            <ClinicianCard key={c.id} clinician={c} onConnect={() => void handleConnect(c)} />
           ))}
         </ScrollView>
       )}
@@ -244,66 +323,90 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       {/* ── Messages Tab ── */}
       {activeTab === 'messages' && (
         <View style={styles.body}>
-          {/* Filter pills */}
-          <View style={styles.msgFilterRow}>
-            {(['all', 'providers', 'support'] as const).map(f => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterPill, msgFilter === f && styles.filterPillActive]}
-                onPress={() => setMsgFilter(f)}
-              >
-                <Text style={[styles.filterText, msgFilter === f && styles.filterTextActive]}>
-                  {f === 'all' ? 'All Messages' : f.charAt(0).toUpperCase() + f.slice(1)}
-                </Text>
+          {chatLoading && (
+            <View style={styles.stateBox}>
+              <ActivityIndicator size="small" color={Colors.btnBlue} />
+              <Text style={styles.stateText}>Loading messages…</Text>
+            </View>
+          )}
+
+          {!chatLoading && chatError && (
+            <View style={styles.stateBox}>
+              <Text style={styles.stateError}>{chatError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => { setChatLoading(true); void refreshConversation(); }}>
+                <Text style={styles.retryText}>Retry</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Conversation preview */}
-          <TouchableOpacity style={styles.convoRow}>
-            <View style={styles.convoAvatar}>
-              <Text style={styles.convoAvatarText}>SC</Text>
             </View>
-            <View style={styles.convoInfo}>
-              <Text style={styles.convoName}>Dr. Sarah Chen</Text>
-              <Text style={styles.convoPreview} numberOfLines={1}>
-                Let's schedule a session to talk through it.
+          )}
+
+          {!chatLoading && !chatError && !conversation && (
+            <View style={styles.stateBox}>
+              <Ionicons name="chatbubbles-outline" size={28} color={Colors.textHint} />
+              <Text style={styles.stateText}>
+                No conversations yet. Book a session with a clinician to start chatting.
               </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => setActiveTab('clinicians')}>
+                <Text style={styles.retryText}>Browse clinicians</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.convoMeta}>
-              <Text style={styles.convoTime}>Today</Text>
-            </View>
-          </TouchableOpacity>
+          )}
 
-          {/* Chat thread */}
-          <ScrollView style={styles.chatScroll} contentContainerStyle={{ padding: Spacing.md, gap: 12 }}>
-            {chatMessages.map(m => (
-              <ChatBubble
-                key={m.id}
-                text={m.text}
-                isMe={m.sender === 'patient'}
-                time={m.time}
-              />
-            ))}
-          </ScrollView>
+          {!chatLoading && !chatError && conversation && (
+            <>
+              {/* Conversation preview */}
+              <View style={styles.convoRow}>
+                <View style={styles.convoAvatar}>
+                  <Text style={styles.convoAvatarText}>{conversation.avatar}</Text>
+                </View>
+                <View style={styles.convoInfo}>
+                  <Text style={styles.convoName}>{conversation.name}</Text>
+                  <Text style={styles.convoPreview} numberOfLines={1}>
+                    {lastMessage ? lastMessage.text : 'No messages yet — say hello.'}
+                  </Text>
+                </View>
+                <View style={styles.convoMeta}>
+                  <Text style={styles.convoTime}>{lastMessage ? lastMessage.timestamp : ''}</Text>
+                </View>
+              </View>
 
-          {/* Input row */}
-          <View style={styles.inputRow}>
-            <TouchableOpacity style={styles.attachBtn}>
-              <Ionicons name="attach" size={20} color={Colors.textSecondary} />
-            </TouchableOpacity>
-            <TextInput
-              style={styles.msgInput}
-              placeholder="Type your message here..."
-              placeholderTextColor={Colors.textHint}
-              value={chatInput}
-              onChangeText={setChatInput}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
-              <Ionicons name="send" size={18} color="#FFF" />
-            </TouchableOpacity>
-          </View>
+              {/* Chat thread */}
+              <ScrollView style={styles.chatScroll} contentContainerStyle={{ padding: Spacing.md, gap: 12 }}>
+                {chatMessages.length === 0 && (
+                  <Text style={styles.emptyThreadText}>
+                    This is the start of your conversation with {conversation.name}.
+                  </Text>
+                )}
+                {chatMessages.map(m => (
+                  <ChatBubble
+                    key={m.id}
+                    text={m.text}
+                    isMe={m.sender === 'patient'}
+                    time={m.timestamp}
+                  />
+                ))}
+              </ScrollView>
+
+              {/* Input row */}
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.msgInput}
+                  placeholder="Type your message here..."
+                  placeholderTextColor={Colors.textHint}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  editable={!sendingMessage}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.sendBtn, sendingMessage && { opacity: 0.6 }]}
+                  onPress={() => void sendMessage()}
+                  disabled={sendingMessage}
+                >
+                  <Ionicons name="send" size={18} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       )}
 
@@ -330,7 +433,10 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   <TouchableOpacity
                     key={i}
                     style={[styles.dateChip, selectedDateIdx === i && styles.dateChipActive]}
-                    onPress={() => setSelectedDateIdx(i)}
+                    onPress={() => {
+                      setSelectedDateIdx(i);
+                      setSelectedTime(null);
+                    }}
                   >
                     <Text style={[styles.dateChipDay, selectedDateIdx === i && { color: '#FFF' }]}>
                       {d.label}
@@ -345,25 +451,42 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
             <Text style={styles.modalSectionLabel}>Select Time</Text>
             <View style={styles.timeGrid}>
-              {TIME_SLOTS.map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.timeSlot, selectedTime === t && styles.timeSlotActive]}
-                  onPress={() => setSelectedTime(t)}
-                >
-                  <Text style={[styles.timeSlotText, selectedTime === t && { color: '#FFF' }]}>
-                    {t}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {TIME_SLOTS.map(t => {
+                const slotKey = `${dates[selectedDateIdx].dateStr}_${t}`;
+                const isBooked = bookedKeys.has(slotKey);
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.timeSlot,
+                      selectedTime === t && styles.timeSlotActive,
+                      isBooked && styles.timeSlotBooked,
+                    ]}
+                    onPress={() => !isBooked && setSelectedTime(t)}
+                    disabled={isBooked}
+                  >
+                    <Text
+                      style={[
+                        styles.timeSlotText,
+                        selectedTime === t && { color: '#FFF' },
+                        isBooked && styles.timeSlotBookedText,
+                      ]}
+                    >
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <TouchableOpacity
-              style={[styles.confirmBtn, !selectedTime && styles.confirmBtnDisabled]}
-              onPress={handleConfirm}
-              disabled={!selectedTime}
+              style={[styles.confirmBtn, (!selectedTime || bookingSaving) && styles.confirmBtnDisabled]}
+              onPress={() => void handleConfirm()}
+              disabled={!selectedTime || bookingSaving}
             >
-              <Text style={styles.confirmBtnText}>Confirm Appointment</Text>
+              <Text style={styles.confirmBtnText}>
+                {bookingSaving ? 'Booking…' : 'Confirm Appointment'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -378,8 +501,11 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </View>
             <Text style={styles.successTitle}>Appointment Booked!</Text>
             <Text style={styles.successBody}>
-              Your session with {selectedClinician?.name} has been confirmed.{'\n'}
-              Check the Terms and Conditions.
+              Your session with {lastBooking?.clinicianName || selectedClinician?.name}{' '}
+              {lastBooking
+                ? `on ${lastBooking.selectedDate} at ${lastBooking.selectedTime}`
+                : ''}{' '}
+              has been requested. The clinic will confirm shortly.
             </Text>
             <TouchableOpacity
               style={styles.successBtn}
@@ -466,6 +592,21 @@ const styles = StyleSheet.create({
 
   sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: -4 },
 
+  /* Loading / empty / error states */
+  stateBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  stateText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
+  stateError: { fontSize: 13, color: '#E05C5C', textAlign: 'center', lineHeight: 19 },
+  retryBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, backgroundColor: ACCENT },
+  retryText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+
   /* Clinician card */
   clinicianCard: {
     backgroundColor: Colors.surface,
@@ -506,11 +647,6 @@ const styles = StyleSheet.create({
   connectBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
 
   /* Messages */
-  msgFilterRow: { flexDirection: 'row', padding: 12, gap: 8 },
-  filterPill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: Colors.divider },
-  filterPillActive: { backgroundColor: ACCENT },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  filterTextActive: { color: '#FFF' },
   convoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -529,6 +665,7 @@ const styles = StyleSheet.create({
   convoMeta: { alignItems: 'flex-end' },
   convoTime: { fontSize: 11, color: Colors.textHint },
   chatScroll: { flex: 1 },
+  emptyThreadText: { fontSize: 12, color: Colors.textHint, textAlign: 'center', marginVertical: 8 },
   bubbleWrap: { alignItems: 'flex-start', marginBottom: 6 },
   bubbleWrapMe: { alignItems: 'flex-end' },
   bubble: { maxWidth: '75%', borderRadius: 16, padding: 12 },
@@ -545,7 +682,6 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  attachBtn: { padding: 6 },
   msgInput: {
     flex: 1,
     backgroundColor: Colors.divider,
@@ -601,6 +737,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   timeSlotActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  timeSlotBooked: { backgroundColor: Colors.divider, opacity: 0.5 },
+  timeSlotBookedText: { color: Colors.textHint, textDecorationLine: 'line-through' },
   timeSlotText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
 
   confirmBtn: {

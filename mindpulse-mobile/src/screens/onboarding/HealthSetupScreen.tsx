@@ -265,7 +265,7 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
       
       <View style={styles.privacyNote}>
         <Text style={styles.privacyNoteText}>
-          ⓘ Your health profile is stored locally on this device only. It will be used solely to provide more contextualised stress analysis — never shared or used for medical decisions.
+          ⓘ Your health profile is saved to your private MindPulse account. It is used solely to provide more contextualised stress analysis — never shared or used for medical decisions.
         </Text>
       </View>
 
@@ -283,7 +283,7 @@ import { supabase } from '../../supabase/client';
 import { Alert } from 'react-native';
 
 /* ─────────── Main Screen ─────────── */
-export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'John', onContinue }) => {
+export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'friend', onContinue }) => {
   const [step, setStep] = useState(1);
   const [year, setYear] = useState('');
   const [program, setProgram] = useState('');
@@ -313,30 +313,33 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
   const handleSaveToSupabase = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+      if (sessionError) throw sessionError;
       if (!user) {
-        throw new Error('Not logged in');
+        throw new Error('Your session has expired. Please sign in again.');
       }
-      
-      const { error } = await supabase.from('profiles').update({
-        year_level: year,
-        program,
-        living_situation: living,
+
+      const { error } = await supabase.from('profiles').upsert({
+        id: user.id,
+        year_level: year || null,
+        program: program || null,
+        living_situation: living || null,
         mental_conditions: mentalChecked,
         physical_conditions: physicalChecked,
         lifestyle_habits: lifestyleChecked,
         none_apply: noneApply,
-      }).eq('id', user.id);
-      
+        onboarding_complete: true,
+      }, { onConflict: 'id' });
+
       if (error) {
-        // Fallback: If table doesn't exist or error, just continue so they aren't blocked
-        console.warn('Failed to save to Supabase:', error);
+        throw new Error(error.message);
       }
       onContinue();
     } catch (err: any) {
-      console.warn('Error connecting to Supabase:', err.message);
-      // Fallback
-      onContinue();
+      Alert.alert(
+        'Could not save your profile',
+        err?.message || 'Please check your connection and try again.',
+      );
     } finally {
       setLoading(false);
     }

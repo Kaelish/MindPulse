@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 
@@ -17,19 +18,49 @@ interface NotificationsModalProps {
   onClose: () => void;
 }
 
-export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible, onClose }) => {
-  // Category Toggles
-  const [dailyReminders, setDailyReminders] = useState(true);
-  const [reminderTime, setReminderTime] = useState('8:00 PM');
-  const [analysisResults, setAnalysisResults] = useState(true);
-  const [wellnessRecommendations, setWellnessRecommendations] = useState(true);
-  const [appointmentReminders, setAppointmentReminders] = useState(true);
-  const [consultationUpdates, setConsultationUpdates] = useState(true);
-  const [systemAnnouncements, setSystemAnnouncements] = useState(true);
+const STORAGE_KEY = 'mindpulse.notificationPrefs';
 
-  // Sound & Vibration
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+interface NotificationPrefs {
+  dailyReminders: boolean;
+  reminderTime: string;
+  analysisResults: boolean;
+  wellnessRecommendations: boolean;
+  appointmentReminders: boolean;
+  consultationUpdates: boolean;
+  systemAnnouncements: boolean;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+}
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  dailyReminders: true,
+  reminderTime: '8:00 PM',
+  analysisResults: true,
+  wellnessRecommendations: true,
+  appointmentReminders: true,
+  consultationUpdates: true,
+  systemAnnouncements: true,
+  soundEnabled: true,
+  vibrationEnabled: true,
+};
+
+export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible, onClose }) => {
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
+  const {
+    dailyReminders, reminderTime, analysisResults, wellnessRecommendations,
+    appointmentReminders, consultationUpdates, systemAnnouncements,
+    soundEnabled, vibrationEnabled,
+  } = prefs;
+
+  // Load saved preferences each time the modal opens
+  useEffect(() => {
+    if (!visible) return;
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+      })
+      .catch(() => {});
+  }, [visible]);
 
   // Toast alert
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -39,8 +70,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const handleToggle = (setter: React.Dispatch<React.SetStateAction<boolean>>, val: boolean, label: string) => {
-    setter(val);
+  const setField = <K extends keyof NotificationPrefs>(key: K, value: NotificationPrefs[K]) => {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+  };
+
+  const handleToggle = (key: keyof NotificationPrefs, val: boolean, label: string) => {
+    setField(key, val);
     showToast(`${label} ${val ? 'enabled' : 'disabled'}`);
   };
 
@@ -58,7 +95,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
               </View>
               <View>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <Text style={styles.headerSub}>Manage reminders & alert preferences</Text>
+                <Text style={styles.headerSub}>Preferences are saved on this device</Text>
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -85,7 +122,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={dailyReminders}
-                  onValueChange={v => handleToggle(setDailyReminders, v, 'Daily assessment reminder')}
+                  onValueChange={v => handleToggle('dailyReminders', v, 'Daily assessment reminder')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -100,7 +137,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                         key={t}
                         style={[styles.timeChip, reminderTime === t && styles.timeChipActive]}
                         onPress={() => {
-                          setReminderTime(t);
+                          setField('reminderTime', t);
                           showToast(`Reminder set for ${t}`);
                         }}
                       >
@@ -122,7 +159,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={analysisResults}
-                  onValueChange={v => handleToggle(setAnalysisResults, v, 'Analysis results')}
+                  onValueChange={v => handleToggle('analysisResults', v, 'Analysis results')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -135,7 +172,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={wellnessRecommendations}
-                  onValueChange={v => handleToggle(setWellnessRecommendations, v, 'Wellness tips')}
+                  onValueChange={v => handleToggle('wellnessRecommendations', v, 'Wellness tips')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -152,7 +189,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={appointmentReminders}
-                  onValueChange={v => handleToggle(setAppointmentReminders, v, 'Appointment reminders')}
+                  onValueChange={v => handleToggle('appointmentReminders', v, 'Appointment reminders')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -165,7 +202,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={consultationUpdates}
-                  onValueChange={v => handleToggle(setConsultationUpdates, v, 'Clinician messages')}
+                  onValueChange={v => handleToggle('consultationUpdates', v, 'Clinician messages')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -178,7 +215,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={systemAnnouncements}
-                  onValueChange={v => handleToggle(setSystemAnnouncements, v, 'System announcements')}
+                  onValueChange={v => handleToggle('systemAnnouncements', v, 'System announcements')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -195,7 +232,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={soundEnabled}
-                  onValueChange={v => handleToggle(setSoundEnabled, v, 'Sound')}
+                  onValueChange={v => handleToggle('soundEnabled', v, 'Sound')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />
@@ -208,7 +245,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
                 </View>
                 <Switch
                   value={vibrationEnabled}
-                  onValueChange={v => handleToggle(setVibrationEnabled, v, 'Vibration')}
+                  onValueChange={v => handleToggle('vibrationEnabled', v, 'Vibration')}
                   trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
                   thumbColor="#FFF"
                 />

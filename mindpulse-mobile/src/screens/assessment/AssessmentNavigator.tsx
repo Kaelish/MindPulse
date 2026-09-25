@@ -16,6 +16,8 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
     const state = await loadAssessmentState();
     state.faceScan = 'completed';
     state.heartRate = 'unlocked';
+    // Demo scan result (data) is intentionally not persisted — it is excluded from scoring
+    void data;
     await saveAssessmentState(state);
     setScreen('hub');
   };

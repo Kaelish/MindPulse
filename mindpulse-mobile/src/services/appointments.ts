@@ -16,7 +16,7 @@ export interface BookedAppointment {
   clinicianId: string;
   clinicianName: string;
   specialty: string;
-  selectedDate: string; // e.g. "Today (Aug 31)" or "Sep 1, 2026"
+  selectedDate: string; // e.g. "Aug 31, 2026"
   selectedTime: string; // e.g. "3:30 PM"
   createdAt: string;
 }
@@ -26,27 +26,19 @@ export interface ChatMessage {
   sender: 'doctor' | 'patient';
   text: string;
   timestamp: string;
-  status?: 'sent' | 'delivered' | 'read';
 }
 
-export const memoryBookedSlotKeys: Set<string> = new Set(['Today (Aug 31)_3:30 PM', 'Today (Aug 31)_9:00 AM']);
-
-export const initialClinicians: TelehealthClinician[] = [
-  {
-    id: '1b64dd8f-48f1-4298-ac06-61377665e',
-    name: 'Dr. Monroe Leclair',
-    specialty: 'Clinical Psychologist',
-    avatar: '👩‍⚕️',
-    status: 'Available',
-    bio: 'Specializing in cognitive behavioral therapy for student stress, burnout, and anxiety disorders.',
-    tags: ['Stress', 'Anxiety', 'Mindfulness'],
-    email: 'doctor.test@mindpulse.org',
-  },
-];
+const requireUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+  return user;
+};
 
 export const generateRealLifeDates = (): { label: string; dateStr: string }[] => {
   const dates: { label: string; dateStr: string }[] = [];
-  const today = new Date(); // 2026-08-31
+  const today = new Date();
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -56,165 +48,213 @@ export const generateRealLifeDates = (): { label: string; dateStr: string }[] =>
     d.setDate(today.getDate() + i);
 
     const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : daysOfWeek[d.getDay()];
-    const monthName = months[d.getMonth()];
-    const dayNum = d.getDate();
-
     dates.push({
       label: dayName,
-      dateStr: `${monthName} ${dayNum}, ${d.getFullYear()}`,
+      dateStr: `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
     });
   }
 
   return dates;
 };
 
-export const fetchBookedSlotKeys = async (): Promise<Set<string>> => {
-  const slotSet = new Set<string>(memoryBookedSlotKeys);
+const CLINICIAN_SELECT =
+  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags )';
 
-  try {
-    if (supabase) {
-      const { data, error } = await supabase.from('appointments').select('*');
-      if (!error && data) {
-        data.forEach((row: any) => {
-          if (row.scheduled_for) {
-            const raw = String(row.scheduled_for).replace(' at ', ' ');
-            const parts = raw.split(' ');
-            if (parts.length >= 3) {
-              const timeStr = `${parts[parts.length - 2]} ${parts[parts.length - 1]}`;
-              const dateStr = parts.slice(0, parts.length - 2).join(' ');
-              slotSet.add(`${dateStr}_${timeStr}`);
-            }
-          }
-        });
-      }
-    }
-  } catch (e) {
-    // Offline fallback
-  }
+const toClinician = (row: any): TelehealthClinician => {
+  const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
+  const baseName =
+    `${row.full_name || ''}`.trim() ||
+    `${row.first_name || ''} ${row.last_name || ''}`.trim() ||
+    row.email ||
+    'Clinician';
+  const displayName = /^dr\.?\s/i.test(baseName) ? baseName : `Dr. ${baseName}`;
+  const nameParts = displayName.split(/\s+/);
+  const avatar =
+    nameParts.length > 1
+      ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+      : displayName.substring(0, 2).toUpperCase();
 
-  return slotSet;
+  return {
+    id: String(row.id),
+    name: displayName,
+    specialty: embedded?.specialization || 'Mental Health Professional',
+    avatar,
+    status: 'Available',
+    bio: embedded?.bio || 'No bio provided yet.',
+    tags: Array.isArray(embedded?.tags) ? embedded.tags : [],
+    email: row.email || '',
+  };
 };
 
-export const initialChatMessages: ChatMessage[] = [
-  {
-    id: 'm-1',
-    sender: 'doctor',
-    text: 'Hello John! I am Dr. Monroe. I reviewed your recent stress check score (68). How are you feeling today?',
-    timestamp: '9:00 AM',
-    status: 'read',
-  },
-  {
-    id: 'm-2',
-    sender: 'patient',
-    text: "Hi Dr. Monroe, I've been feeling quite stressed from work and class deadlines recently.",
-    timestamp: '9:02 AM',
-    status: 'read',
-  },
-  {
-    id: 'm-3',
-    sender: 'doctor',
-    text: "I see. Let's start with a guided breathing exercise during our scheduled consultation.",
-    timestamp: '9:05 AM',
-    status: 'read',
-  },
-];
+export const fetchClinicians = async (): Promise<TelehealthClinician[]> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(CLINICIAN_SELECT)
+    .eq('role', 'doctor')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data ?? []).map(toClinician);
+};
+
+export const fetchClinicianById = async (id: string): Promise<TelehealthClinician | null> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(CLINICIAN_SELECT)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data ? toClinician(data) : null;
+};
+
+// The Messages tab talks to the doctor of the patient's most recent appointment.
+export const fetchConversationClinician = async (): Promise<TelehealthClinician | null> => {
+  const user = await requireUser();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('doctor_id, created_at')
+    .eq('patient_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data || data.length === 0) {
+    return null;
+  }
+  return fetchClinicianById(data[0].doctor_id);
+};
+
+export const fetchBookedSlotKeys = async (): Promise<Set<string>> => {
+  const user = await requireUser();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('scheduled_for')
+    .eq('patient_id', user.id)
+    .in('status', ['scheduled', 'confirmed']);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  // Rows are written by saveBookedAppointment as "<date> at <time>".
+  const slotSet = new Set<string>();
+  (data ?? []).forEach((row: any) => {
+    const parts = String(row.scheduled_for || '').split(' at ');
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      slotSet.add(`${parts[0]}_${parts[1]}`);
+    }
+  });
+  return slotSet;
+};
 
 export const saveBookedAppointment = async (
   appointment: Omit<BookedAppointment, 'id' | 'createdAt'>,
 ): Promise<BookedAppointment> => {
-  const slotKey = `${appointment.selectedDate}_${appointment.selectedTime}`;
-  memoryBookedSlotKeys.add(slotKey);
+  const user = await requireUser();
 
-  const newAppt: BookedAppointment = {
-    id: `appt-${Date.now()}`,
-    ...appointment,
-    createdAt: new Date().toISOString(),
-  };
-
-  try {
-    await supabase.from('appointments').insert({
-      patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
-      doctor_id: '1b64dd8f-48f1-4298-ac06-61377665e',
+  const { data: inserted, error } = await supabase
+    .from('appointments')
+    .insert({
+      patient_id: user.id,
+      doctor_id: appointment.clinicianId,
       scheduled_for: `${appointment.selectedDate} at ${appointment.selectedTime}`,
-      status: 'confirmed',
+      status: 'scheduled',
       notes: `Booked session with ${appointment.clinicianName}`,
-    });
-  } catch (e) {
-    // Fallback for offline mode
+    })
+    .select()
+    .single();
+
+  if (error || !inserted) {
+    throw new Error(error?.message || 'Could not book the appointment. Please try again.');
   }
 
-  return newAppt;
+  // Non-critical: a notification failure must not undo a booked appointment.
+  const { error: patientNoticeError } = await supabase.from('notifications').insert({
+    user_id: user.id,
+    title: 'Appointment Booked',
+    message: `Your session with ${appointment.clinicianName} is set for ${appointment.selectedDate} at ${appointment.selectedTime}.`,
+    type: 'appointment',
+  });
+  void patientNoticeError;
+
+  const { error: doctorNoticeError } = await supabase.from('notifications').insert({
+    user_id: appointment.clinicianId,
+    title: 'New Appointment Request',
+    message: `A student requested a session on ${appointment.selectedDate} at ${appointment.selectedTime}.`,
+    type: 'appointment',
+  });
+  void doctorNoticeError;
+
+  const row: any = inserted;
+  return {
+    id: String(row.id),
+    ...appointment,
+    createdAt: row.created_at ?? new Date().toISOString(),
+  };
 };
 
-export const fetchChatMessages = async (clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e'): Promise<ChatMessage[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .order('created_at', { ascending: true });
+export const fetchChatMessages = async (clinicianId: string): Promise<ChatMessage[]> => {
+  const user = await requireUser();
 
-    if (!error && data && data.length > 0) {
-      return data.map((row: any) => ({
-        id: String(row.id),
-        sender: row.sender as 'doctor' | 'patient',
-        text: row.text,
-        timestamp: row.created_at ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-        status: 'read',
-      }));
-    }
-  } catch (e) {
-    // Fallback
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('patient_id', user.id)
+    .eq('clinician_id', clinicianId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return initialChatMessages;
+  return (data ?? []).map((row: any) => ({
+    id: String(row.id),
+    sender: row.sender === 'doctor' ? 'doctor' : 'patient',
+    text: row.text,
+    timestamp: row.created_at
+      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Just now',
+  }));
 };
 
+// The mobile app is the patient app: messages are always sent as the patient.
 export const sendChatMessage = async (
-  clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e',
-  sender: 'doctor' | 'patient',
+  clinicianId: string,
   text: string,
 ): Promise<ChatMessage> => {
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const newMsg: ChatMessage = {
-    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    sender,
-    text,
-    timestamp,
-    status: 'delivered',
-  };
+  const user = await requireUser();
 
-  try {
-    await supabase.from('chat_messages').insert({
-      clinician_id: '1b64dd8f-48f1-4298-ac06-61377665e',
-      patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
-      sender,
+  const { data: inserted, error } = await supabase
+    .from('chat_messages')
+    .insert({
+      patient_id: user.id,
+      clinician_id: clinicianId,
+      sender: 'patient',
       text,
-    });
-  } catch (e) {
-    // Graceful offline save
+    })
+    .select()
+    .single();
+
+  if (error || !inserted) {
+    throw new Error(error?.message || 'Could not send the message. Please try again.');
   }
 
-  return newMsg;
-};
-
-export const generateDoctorReplyText = (patientText: string, clinicianName: string): string => {
-  const lower = patientText.toLowerCase();
-
-  if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-    return `Hello John! This is Dr. Monroe. How can I assist you with your mental health wellness today?`;
-  }
-  if (lower.includes('stress') || lower.includes('anxious') || lower.includes('anxiety')) {
-    return `I understand. High stress levels can affect sleep and heart rate. Let's try 4-7-8 breathing exercises and discuss coping strategies.`;
-  }
-  if (lower.includes('appointment') || lower.includes('time') || lower.includes('schedule')) {
-    return `Your appointment is confirmed on my calendar. I have reviewed your biometrics and look forward to our session!`;
-  }
-  if (lower.includes('sleep') || lower.includes('tired') || lower.includes('insomnia')) {
-    return `Sleep quality directly impacts stress resilience. I recommend limiting screen time 1 hour before bed and keeping a consistent sleep schedule.`;
-  }
-  if (lower.includes('thank') || lower.includes('thanks') || lower.includes('ok')) {
-    return `You're very welcome! Feel free to reach out anytime before our scheduled call.`;
-  }
-
-  return `Thank you for sharing that with me. I've logged your notes in your MindPulse care chart. See you at our video consultation!`;
+  const row: any = inserted;
+  return {
+    id: String(row.id),
+    sender: 'patient',
+    text: row.text,
+    timestamp: row.created_at
+      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Just now',
+  };
 };

@@ -14,11 +14,12 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Simulate scan progress
+    // Demo mode: simulate scan progress (no camera is opened, no model runs)
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
+          // Fixed sample result for the demo — never persisted to the assessment record
           onComplete('stressed', 0.74);
           return 100;
         }
@@ -34,7 +35,7 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
       {/* Header */}
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-        <Text style={styles.pageSubtitle}>Real-time face emotion detection</Text>
+        <Text style={styles.pageSubtitle}>Demo scan — camera analysis is not enabled yet</Text>
       </View>
 
       <View style={styles.content}>
@@ -54,11 +55,11 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
           <View style={styles.badgesRow}>
             <View style={styles.liveBadge}>
               <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
+              <Text style={styles.liveText}>DEMO</Text>
             </View>
             <View style={styles.aiBadge}>
               <Ionicons name="flash" size={12} color="#FFF" />
-              <Text style={styles.aiText}>AI SCAN</Text>
+              <Text style={styles.aiText}>SAMPLE</Text>
             </View>
           </View>
 
@@ -88,12 +89,12 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
         <View style={styles.processingCard}>
           <MaterialCommunityIcons name="line-scan" size={24} color="#6B79F2" />
           <View style={styles.processingTextWrap}>
-            <Text style={styles.processingTitle}>Analyzing muscle tension...</Text>
+            <Text style={styles.processingTitle}>Running demo scan...</Text>
             <Text style={styles.processingSub}>{progress}% processed</Text>
           </View>
         </View>
 
-        <Text style={styles.statusText}>Scanning in progress...</Text>
+        <Text style={styles.statusText}>Demo in progress — no camera is used</Text>
       </View>
     </SafeAreaView>
   );
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#6B79F2' },
 
   badgesRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, zIndex: 10 },
-  liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E05C5C', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
+  liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E08A00', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFF', marginRight: 4 },
   liveText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
   aiBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#9B90FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },

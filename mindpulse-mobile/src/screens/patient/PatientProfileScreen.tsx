@@ -184,8 +184,10 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [activeSegment, setActiveSegment] = useState<ProfileTabSegment>('profile');
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [plant, setPlant] = useState<PlantProgress | null>(null);
+  const [plantError, setPlantError] = useState<string | null>(null);
 
   // Settings Modal states
   const [showAccountInfo, setShowAccountInfo] = useState(false);
@@ -193,17 +195,31 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [showPrivacyData, setShowPrivacyData] = useState(false);
   const [showAboutMindPulse, setShowAboutMindPulse] = useState(false);
 
+  const loadAll = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetchDashboardData();
+      setData(res);
+    } catch (e: any) {
+      setLoadError(e?.message || 'Could not load your profile.');
+    } finally {
+      setLoading(false);
+    }
+    fetchPlantProgress()
+      .then(p => { setPlant(p); setPlantError(null); })
+      .catch((e: any) => setPlantError(e?.message || 'Could not load plant progress.'));
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    fetchDashboardData().then(res => { if (isMounted) { setData(res); setLoading(false); } });
-    fetchPlantProgress().then(p => { if (isMounted) setPlant(p); });
-    return () => { isMounted = false; };
+    void loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Derive current plant stage from live Supabase data (fallback: Seedling)
+  // Derive current plant stage from live Supabase data (new-user default: Bare Pot)
   const currentStageIndex = Math.max(
     0,
-    PLANT_STAGES.findIndex(s => s.name === (plant?.currentStage ?? 'Seedling')),
+    PLANT_STAGES.findIndex(s => s.name === (plant?.currentStage ?? 'Bare Pot')),
   );
   const currentStage = PLANT_STAGES[currentStageIndex];
 
@@ -211,6 +227,18 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
     await supabase.auth.signOut().catch(() => {});
     onSignOut?.();
   };
+
+  if (loadError) {
+    return (
+      <View style={styles.loader}>
+        <Ionicons name="cloud-offline-outline" size={40} color={Colors.textHint} />
+        <Text style={styles.loaderText}>{loadError}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => void loadAll()}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading || !data) {
     return (
@@ -223,9 +251,11 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
 
   const { userName, userEmail, userInitials, metrics, recentSessions } = data;
 
-  // ── Score trend data (last 5 sessions reversed) ──
+  // ── Score trend data (last 5 sessions reversed); HR chart only plots
+  //    sessions that actually recorded a heart rate ──
   const scoreTrend = [...recentSessions].reverse().map(s => s.score);
-  const hrTrend = [...recentSessions].reverse().map(s => s.heartRate ?? 75);
+  const hrSessions = recentSessions.filter(s => typeof s.heartRate === 'number');
+  const hrTrend = [...hrSessions].reverse().map(s => s.heartRate as number);
 
   return (
     <View style={styles.root}>
@@ -249,11 +279,15 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             <Text style={styles.statLbl}>Assessments</Text>
           </View>
           <View style={[styles.statPill, { backgroundColor: '#FFF9E6' }]}>
-            <Text style={[styles.statVal, { color: '#B08B28' }]}>{metrics.avgStressScore}/100</Text>
+            <Text style={[styles.statVal, { color: '#B08B28' }]}>
+              {metrics.avgStressScore !== null ? `${metrics.avgStressScore}/100` : '—'}
+            </Text>
             <Text style={[styles.statLbl, { color: '#B08B28' }]}>Average Stress</Text>
           </View>
           <View style={[styles.statPill, { backgroundColor: '#E6F7F5' }]}>
-            <Text style={[styles.statVal, { color: '#2C7A7B' }]}>{metrics.avgHeartRate} bpm</Text>
+            <Text style={[styles.statVal, { color: '#2C7A7B' }]}>
+              {metrics.avgHeartRate !== null ? `${metrics.avgHeartRate} bpm` : '—'}
+            </Text>
             <Text style={[styles.statLbl, { color: '#2C7A7B' }]}>Average HR</Text>
           </View>
         </View>
@@ -291,7 +325,11 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                   <Text style={styles.editLink}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.emptyText}>No health conditions flagged</Text>
+              <Text style={styles.emptyText}>
+                {data.healthConditions.length > 0
+                  ? data.healthConditions.join(', ')
+                  : 'No health conditions flagged'}
+              </Text>
             </View>
 
             {/* Academic Information */}
@@ -299,32 +337,34 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
               <Text style={styles.cardTitle}>Academic Information</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.infoKey}>Year Level</Text>
-                <Text style={styles.infoVal}>3rd Year</Text>
+                <Text style={styles.infoVal}>{data.yearLevel ?? 'Not set'}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoKey}>Living With</Text>
-                <Text style={styles.infoVal}>Off-campus — alone</Text>
+                <Text style={styles.infoVal}>{data.livingSituation ?? 'Not set'}</Text>
               </View>
             </View>
 
-            {/* Activity stats grid */}
+            {/* Assessment stats grid */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Academic Information</Text>
+              <Text style={styles.cardTitle}>Assessment Overview</Text>
               <View style={styles.statsGrid}>
                 <View style={[styles.gridCell, { backgroundColor: '#EEEDFE' }]}>
                   <Text style={[styles.gridVal, { color: '#5B6EF5' }]}>{metrics.totalAssessments}</Text>
                   <Text style={[styles.gridLbl, { color: '#5B6EF5' }]}>Total Sessions</Text>
                 </View>
                 <View style={[styles.gridCell, { backgroundColor: '#FFF3CD' }]}>
-                  <Text style={[styles.gridVal, { color: '#E08A00' }]}>{metrics.avgStressScore}</Text>
+                  <Text style={[styles.gridVal, { color: '#E08A00' }]}>{metrics.avgStressScore ?? '—'}</Text>
                   <Text style={[styles.gridLbl, { color: '#E08A00' }]}>Avg Stress</Text>
                 </View>
                 <View style={[styles.gridCell, { backgroundColor: '#FFD6D6' }]}>
-                  <Text style={[styles.gridVal, { color: '#E05C5C' }]}>{metrics.avgHeartRate} bpm</Text>
+                  <Text style={[styles.gridVal, { color: '#E05C5C' }]}>
+                    {metrics.avgHeartRate !== null ? `${metrics.avgHeartRate} bpm` : '—'}
+                  </Text>
                   <Text style={[styles.gridLbl, { color: '#E05C5C' }]}>Avg Heart Rate</Text>
                 </View>
                 <View style={[styles.gridCell, { backgroundColor: '#D6F5E3' }]}>
-                  <Text style={[styles.gridVal, { color: '#27AE60' }]}>{metrics.latestTrend}</Text>
+                  <Text style={[styles.gridVal, { color: '#27AE60' }]}>{metrics.latestTrend ?? '—'}</Text>
                   <Text style={[styles.gridLbl, { color: '#27AE60' }]}>Trend</Text>
                 </View>
               </View>
@@ -351,7 +391,9 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 {STAGE_DESCRIPTIONS[currentStage.name] ?? 'Keep going — your plant is growing!'}
               </Text>
               <Text style={styles.plantTip}>
-                <Ionicons name="trending-up" size={12} color="#27AE60" /> {plant?.currentStreak ?? 1} day streak · {plant?.totalGrowthPoints ?? 10} growth points — each low-stress session helps it grow!
+                {plantError
+                  ? plantError
+                  : <>🌱 {plant?.currentStreak ?? 0} day streak · {plant?.totalGrowthPoints ?? 0} growth points — each low-stress session helps it grow!</>}
               </Text>
               {/* Stage dots */}
               <View style={styles.stageDots}>
@@ -377,31 +419,46 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             {/* Stress Score Trend chart */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Stress Score Trend</Text>
-              <LineChart data={scoreTrend} color="#5B6EF5" height={90} />
-              <View style={styles.xLabels}>
-                {recentSessions.slice().reverse().map((s, i) => (
-                  <Text key={i} style={styles.xLabel}>
-                    {s.date.split(',')[0].split(' ').slice(-1)[0]}
-                  </Text>
-                ))}
-              </View>
+              {scoreTrend.length === 0 ? (
+                <Text style={styles.emptyText}>No sessions yet — complete an assessment to see your trend.</Text>
+              ) : (
+                <>
+                  <LineChart data={scoreTrend} color="#5B6EF5" height={90} />
+                  <View style={styles.xLabels}>
+                    {recentSessions.slice().reverse().map((s, i) => (
+                      <Text key={i} style={styles.xLabel}>
+                        {s.date.split(',')[0].split(' ').slice(-1)[0]}
+                      </Text>
+                    ))}
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Heart Rate chart */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Heart Rate History (BPM)</Text>
-              <LineChart data={hrTrend} color="#E05C5C" height={90} />
-              <View style={styles.xLabels}>
-                {recentSessions.slice().reverse().map((s, i) => (
-                  <Text key={i} style={styles.xLabel}>
-                    {s.date.split(',')[0].split(' ').slice(-1)[0]}
-                  </Text>
-                ))}
-              </View>
+              {hrTrend.length === 0 ? (
+                <Text style={styles.emptyText}>No heart rate readings recorded yet.</Text>
+              ) : (
+                <>
+                  <LineChart data={hrTrend} color="#E05C5C" height={90} />
+                  <View style={styles.xLabels}>
+                    {hrSessions.slice().reverse().map((s, i) => (
+                      <Text key={i} style={styles.xLabel}>
+                        {s.date.split(',')[0].split(' ').slice(-1)[0]}
+                      </Text>
+                    ))}
+                  </View>
+                </>
+              )}
             </View>
 
             {/* All sessions list */}
             <Text style={styles.sectionLabel}>ALL SESSIONS</Text>
+            {recentSessions.length === 0 && (
+              <Text style={styles.emptyText}>No sessions recorded yet.</Text>
+            )}
             {recentSessions.map(session => (
               <SessionRow
                 key={session.id}
@@ -479,7 +536,8 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         currentName={userName}
         currentEmail={userEmail}
         onProfileUpdated={() => {
-          fetchDashboardData().then(res => setData(res));
+          // The update already succeeded; keep current data if the refresh fails.
+          fetchDashboardData().then(res => setData(res)).catch(() => {});
         }}
       />
       <NotificationsModal
@@ -489,6 +547,8 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
       <PrivacyDataModal
         visible={showPrivacyData}
         onClose={() => setShowPrivacyData(false)}
+        onDataChanged={() => { void loadAll(); }}
+        onAccountDeleted={() => { void handleSignOut(); }}
       />
       <AboutMindPulseModal
         visible={showAboutMindPulse}
@@ -500,8 +560,10 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loaderText: { fontSize: 14, color: Colors.textSecondary },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
+  loaderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: Colors.primary },
+  retryText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
 
   /* Header */
   headerSafe: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },

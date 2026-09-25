@@ -63,7 +63,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         email: loginEmail.trim(),
         password: loginPassword,
       });
-      if (error) throw error;
+      if (error) {
+        if (/email not confirmed/i.test(error.message)) {
+          Alert.alert(
+            'Confirm Your Email',
+            'Open the confirmation link we e-mailed you, then sign in. If it expired, ask your administrator to confirm the account.',
+          );
+          return;
+        }
+        throw error;
+      }
       onAuthSuccess(false);
     } catch (err: any) {
       Alert.alert('Login Failed', err.message);
@@ -79,7 +88,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: regEmail.trim(),
         password: regPassword,
         options: {
@@ -87,7 +96,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         },
       });
       if (error) throw error;
-      onAuthSuccess(true);
+
+      if (data.session) {
+        // Email confirmation is disabled – the profile row was created by the
+        // database trigger, so the user can start onboarding right away.
+        onAuthSuccess(true);
+        return;
+      }
+
+      // Email confirmation is enabled: the account exists but cannot be used
+      // until the link in the e-mail is clicked.
+      Alert.alert(
+        'Check Your E-mail',
+        `We sent a confirmation link to ${regEmail.trim()}. Confirm your address, then sign in.`,
+        [{ text: 'OK', onPress: () => setActiveTab('login') }],
+      );
     } catch (err: any) {
       Alert.alert('Registration Failed', err.message);
     } finally {

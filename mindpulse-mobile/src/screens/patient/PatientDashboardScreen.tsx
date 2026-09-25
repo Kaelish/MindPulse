@@ -26,7 +26,7 @@ export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
 interface PatientDashboardScreenProps {
   activeTab?: DashboardTab;
   onNavigate?: (tab: DashboardTab) => void;
-  onStartVideoCall?: () => void;
+  onStartVideoCall?: (doctorId?: string) => void;
   onRunSurvey?: () => void;
   onRunFaceScan?: () => void;
   onRunDailyCheck?: () => void;
@@ -84,20 +84,40 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 }) => {
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<StressSessionItem | null>(null);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
       const res = await fetchDashboardData();
-      if (isMounted) { setData(res); setLoading(false); }
-    };
+      setData(res);
+    } catch (e: any) {
+      setLoadError(e?.message || 'Could not load your dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     void loadData();
-    return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (loadError) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={40} color={Colors.textHint} />
+        <Text style={styles.loadingText}>{loadError}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => void loadData()}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading || !data) {
     return (
@@ -111,6 +131,8 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const { userName, greetingDate, metrics, recentSessions, notifications } = data;
   const unreadCount = notifications.filter(n => !n.read).length;
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
   return (
     <View style={styles.root}>
@@ -124,7 +146,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
           <SafeAreaView>
             <View style={styles.headerTopRow}>
               <View>
-                <Text style={styles.greetingEyebrow}>Good Morning,</Text>
+                <Text style={styles.greetingEyebrow}>{greeting},</Text>
                 <View style={styles.nameRow}>
                   <Text style={styles.greetingName}>{userName}</Text>
                   <MaterialCommunityIcons name="hand-wave" size={20} color="#E2B852" />
@@ -147,14 +169,16 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
             onPress={() => recentSessions.length > 0 && setSelectedSession(recentSessions[0])}>
             <View style={styles.stressCardLeft}>
               <Text style={styles.stressCardLabel}>Latest Stress Level</Text>
-              <Text style={styles.stressCardLevel}>{metrics.latestLevel}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
-                <Text style={styles.stressCardTrend}>{metrics.latestTrend}</Text>
-              </View>
+              <Text style={styles.stressCardLevel}>{metrics.latestLevel ?? 'No data yet'}</Text>
+              {metrics.latestTrend !== null && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.stressCardTrend}>{metrics.latestTrend}</Text>
+                </View>
+              )}
             </View>
             <View style={styles.scoreCircle}>
-              <Text style={styles.scoreCircleNum}>{metrics.latestScore}</Text>
+              <Text style={styles.scoreCircleNum}>{metrics.latestScore ?? '—'}</Text>
               <Text style={styles.scoreCircleLabel}>Score</Text>
             </View>
           </TouchableOpacity>
@@ -191,8 +215,8 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                 <Text style={styles.metricLabel}>Avg Heart Rate</Text>
               </View>
               <View style={styles.metricValueRow}>
-                <Text style={styles.metricNum}>{metrics.avgHeartRate}</Text>
-                <Text style={styles.metricUnit}>bpm</Text>
+                <Text style={styles.metricNum}>{metrics.avgHeartRate ?? '—'}</Text>
+                {metrics.avgHeartRate !== null && <Text style={styles.metricUnit}>bpm</Text>}
               </View>
               <Text style={[styles.metricStatus, { color: '#E05C5C' }]}>{metrics.avgHeartRateStatus}</Text>
             </TouchableOpacity>
@@ -203,8 +227,8 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                 <Text style={styles.metricLabel}>Avg Stress</Text>
               </View>
               <View style={styles.metricValueRow}>
-                <Text style={styles.metricNum}>{metrics.avgStressScore}</Text>
-                <Text style={styles.metricUnit}>/100</Text>
+                <Text style={styles.metricNum}>{metrics.avgStressScore ?? '—'}</Text>
+                {metrics.avgStressScore !== null && <Text style={styles.metricUnit}>/100</Text>}
               </View>
               <Text style={[styles.metricStatus, { color: '#E08A00' }]}>{metrics.avgStressStatus}</Text>
             </TouchableOpacity>
@@ -218,6 +242,11 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
             </Pressable>
           </View>
           <View style={styles.sessionsList}>
+            {recentSessions.length === 0 && (
+              <Text style={styles.sessionsEmpty}>
+                No sessions yet — complete an assessment to see it here.
+              </Text>
+            )}
             {displaySessions.map(session => (
               <SessionRow key={session.id} session={session} onPress={() => setSelectedSession(session)} />
             ))}
@@ -255,6 +284,9 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
             <View style={modalStyles.box}>
               <Text style={modalStyles.title}>Notifications</Text>
               <ScrollView style={{ maxHeight: 260, marginVertical: 12 }}>
+                {notifications.length === 0 && (
+                  <Text style={styles.notifEmpty}>No notifications yet.</Text>
+                )}
                 {notifications.map(n => (
                   <View key={n.id} style={modalStyles.notifItem}>
                     <Text style={modalStyles.notifTitle}>{n.title}</Text>
@@ -277,8 +309,12 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 /* ─── Styles ─── */
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
-  loadingText: { color: Colors.textSecondary, ...Typography.body2 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 },
+  loadingText: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: Colors.btnBlue },
+  retryText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
+  notifEmpty: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 16 },
+  sessionsEmpty: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 14, fontStyle: 'italic' },
 
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 90 },

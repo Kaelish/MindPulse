@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,26 +28,31 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
     );
   }
 
-  // Fallbacks for data just in case they didn't complete everything
-  const surveyVal = stateData.surveyScore ?? 50;
-  const faceVal = 50; // Mock face emotion for now
-  
-  // Convert heart rate to stress score: (assuming 60-100 is normal. Higher means more stress)
-  const hrBpm = stateData.heartRateBpm ?? 75;
-  const hrVal = Math.min(100, Math.max(0, (hrBpm - 60) * 2)); 
-  
-  // Convert reaction time to stress score (assuming 250ms is good, >500ms is stressed)
-  const rxMs = stateData.reactionTimeMs ?? 350;
-  const rxVal = Math.min(100, Math.max(0, (rxMs - 250) / 3));
+  // Real inputs only — the face scan is a demo and is excluded from scoring.
+  // Weights are renormalized across the components that are actually present.
+  const surveyVal = stateData.surveyScore;
+  const hrBpm = stateData.heartRateBpm;
+  const rxMs = stateData.reactionTimeMs;
 
-  // Compute final score using weights: (50 / 20 / 20 / 10)
-  const finalScore = Math.round(
-    (surveyVal * 0.5) + (faceVal * 0.2) + (hrVal * 0.2) + (rxVal * 0.1)
-  );
+  // Heart rate → stress (60 bpm baseline; higher bpm = more stress)
+  const hrVal = hrBpm != null ? Math.min(100, Math.max(0, (hrBpm - 60) * 2)) : null;
+  // Reaction time → stress (250ms baseline; slower reactions = more stress)
+  const rxVal = rxMs != null ? Math.min(100, Math.max(0, (rxMs - 250) / 3)) : null;
 
+  const components: { value: number; weight: number }[] = [];
+  if (surveyVal != null) components.push({ value: surveyVal, weight: 0.625 });
+  if (hrVal != null) components.push({ value: hrVal, weight: 0.25 });
+  if (rxVal != null) components.push({ value: rxVal, weight: 0.125 });
+  const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
+  const finalScore =
+    totalWeight > 0
+      ? Math.round(components.reduce((sum, c) => sum + c.value * c.weight, 0) / totalWeight)
+      : 0;
+
+  // Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35)
   const isHighStress = finalScore > 60;
-  const isModerateStress = finalScore > 30 && finalScore <= 60;
-  const isLowStress = finalScore <= 30;
+  const isModerateStress = finalScore > 35 && finalScore <= 60;
+  const isLowStress = finalScore <= 35;
 
   const showHelpResources = isHighStress || isModerateStress;
 
@@ -64,11 +69,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
     try {
       await saveNewStressSession(
         finalScore,
-        `Multi-modal assessment completed. HR: ${hrBpm}bpm, Reaction: ${rxMs}ms`,
+        `Multi-modal assessment completed. HR: ${hrBpm ?? 'n/a'}bpm, Reaction: ${rxMs ?? 'n/a'}ms`,
         hrBpm,
         surveyVal,
         rxMs,
-        faceVal
       );
       
       // Reset the assessment state back to start
@@ -110,11 +114,11 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-              <Text style={styles.legendText}>Low (0-30)</Text>
+              <Text style={styles.legendText}>Low (0-35)</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
-              <Text style={styles.legendText}>Moderate (31-60)</Text>
+              <Text style={styles.legendText}>Moderate (36-60)</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
@@ -126,51 +130,56 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
 
       {/* Multi-Modal Fusion Card */}
       <View style={styles.fusionCard}>
-        <Text style={styles.fusionTitle}>Multi-Modal Fusion (50 / 20 / 20 / 10)</Text>
-        
-        <View style={styles.fusionRow}>
-          <View style={styles.fusionLabelRow}>
-            <Text style={styles.fusionLabel}>Survey (PSS + Physio)</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: '#E8EAF6' }]}><Text style={[styles.fusionBadgeText, { color: '#3F51B5' }]}>50%</Text></View>
-          </View>
-          <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: '#5C6BC0' }]} />
-          </View>
-          <Text style={[styles.fusionScore, { color: '#3F51B5' }]}>{Math.round(surveyVal)}</Text>
-        </View>
+        <Text style={styles.fusionTitle}>Multi-Modal Fusion (Survey 62.5% · Heart Rate 25% · Reaction 12.5%)</Text>
 
+        {surveyVal != null && (
+          <View style={styles.fusionRow}>
+            <View style={styles.fusionLabelRow}>
+              <Text style={styles.fusionLabel}>Survey (PSS + Physio)</Text>
+              <View style={[styles.fusionBadge, { backgroundColor: '#E8EAF6' }]}><Text style={[styles.fusionBadgeText, { color: '#3F51B5' }]}>62.5%</Text></View>
+            </View>
+            <View style={styles.fusionTrack}>
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: '#5C6BC0' }]} />
+            </View>
+            <Text style={[styles.fusionScore, { color: '#3F51B5' }]}>{Math.round(surveyVal)}</Text>
+          </View>
+        )}
+
+        {/* Face scan is a demo — shown for transparency, excluded from the score */}
         <View style={styles.fusionRow}>
           <View style={styles.fusionLabelRow}>
             <Text style={styles.fusionLabel}>Facial Emotion</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: '#E1F5FE' }]}><Text style={[styles.fusionBadgeText, { color: '#03A9F4' }]}>20%</Text></View>
+            <View style={[styles.fusionBadge, { backgroundColor: '#FFF3E0' }]}><Text style={[styles.fusionBadgeText, { color: '#E08A00' }]}>Demo</Text></View>
           </View>
-          <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, faceVal))}%`, backgroundColor: '#29B6F6' }]} />
-          </View>
-          <Text style={[styles.fusionScore, { color: '#03A9F4' }]}>{Math.round(faceVal)}</Text>
+          <View style={styles.fusionTrack} />
+          <Text style={[styles.fusionScore, { color: '#999' }]}>—</Text>
         </View>
 
-        <View style={styles.fusionRow}>
-          <View style={styles.fusionLabelRow}>
-            <Text style={styles.fusionLabel}>Heart Rate</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: '#FFEBEE' }]}><Text style={[styles.fusionBadgeText, { color: '#F44336' }]}>20%</Text></View>
+        {hrVal != null && (
+          <View style={styles.fusionRow}>
+            <View style={styles.fusionLabelRow}>
+              <Text style={styles.fusionLabel}>Heart Rate</Text>
+              <View style={[styles.fusionBadge, { backgroundColor: '#FFEBEE' }]}><Text style={[styles.fusionBadgeText, { color: '#F44336' }]}>25%</Text></View>
+            </View>
+            <View style={styles.fusionTrack}>
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: '#EF5350' }]} />
+            </View>
+            <Text style={[styles.fusionScore, { color: '#F44336' }]}>{Math.round(hrVal)}</Text>
           </View>
-          <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: '#EF5350' }]} />
-          </View>
-          <Text style={[styles.fusionScore, { color: '#F44336' }]}>{Math.round(hrVal)}</Text>
-        </View>
+        )}
 
-        <View style={styles.fusionRow}>
-          <View style={styles.fusionLabelRow}>
-            <Text style={styles.fusionLabel}>Reaction Time</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: '#FFF8E1' }]}><Text style={[styles.fusionBadgeText, { color: '#FFB300' }]}>10%</Text></View>
+        {rxVal != null && (
+          <View style={styles.fusionRow}>
+            <View style={styles.fusionLabelRow}>
+              <Text style={styles.fusionLabel}>Reaction Time</Text>
+              <View style={[styles.fusionBadge, { backgroundColor: '#FFF8E1' }]}><Text style={[styles.fusionBadgeText, { color: '#FFB300' }]}>12.5%</Text></View>
+            </View>
+            <View style={styles.fusionTrack}>
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: '#FFA000' }]} />
+            </View>
+            <Text style={[styles.fusionScore, { color: '#FFB300' }]}>{Math.round(rxVal)}</Text>
           </View>
-          <View style={styles.fusionTrack}>
-            <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: '#FFA000' }]} />
-          </View>
-          <Text style={[styles.fusionScore, { color: '#FFB300' }]}>{Math.round(rxVal)}</Text>
-        </View>
+        )}
       </View>
 
       {/* Advisory Card */}
@@ -245,56 +254,16 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
 
             {clinicsExpanded && (
               <View style={styles.clinicsContent}>
-                {/* Mock Map Placeholder */}
+                {/* Guidance placeholder — no fabricated locations or distances */}
                 <View style={styles.mapPlaceholder}>
-                  <Ionicons name="location" size={32} color="#D32F2F" style={{ position: 'absolute', top: 20, left: '30%' }} />
-                  <Ionicons name="location" size={32} color="#D32F2F" style={{ position: 'absolute', top: 60, right: '20%' }} />
-                  <Ionicons name="location" size={32} color="#D32F2F" style={{ position: 'absolute', bottom: 30, left: '50%' }} />
-                </View>
-
-                {/* Clinic List */}
-                <View style={styles.clinicItem}>
-                  <View style={styles.clinicInfo}>
-                    <Text style={styles.clinicName}>University Wellness Center</Text>
-                    <Text style={styles.clinicHours}>Mon-Fri, 8AM-5PM</Text>
-                    <View style={styles.clinicTag}><Text style={styles.clinicTagText}>On-campus</Text></View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <TouchableOpacity style={styles.callBtn}>
-                      <Ionicons name="call" size={14} color="#FFF" />
-                      <Text style={styles.callBtnText}>Call</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.clinicDist}>0.3 km</Text>
-                  </View>
+                  <Ionicons name="people-outline" size={32} color="#D32F2F" style={{ position: 'absolute', top: 44, alignSelf: 'center' }} />
                 </View>
 
                 <View style={styles.clinicItem}>
                   <View style={styles.clinicInfo}>
-                    <Text style={styles.clinicName}>MindBridge Psych Clinic</Text>
-                    <Text style={styles.clinicHours}>Mon-Fri, 8AM-5PM</Text>
-                    <View style={styles.clinicTag}><Text style={styles.clinicTagText}>Private</Text></View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <TouchableOpacity style={styles.callBtn}>
-                      <Ionicons name="call" size={14} color="#FFF" />
-                      <Text style={styles.callBtnText}>Call</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.clinicDist}>1.2 km</Text>
-                  </View>
-                </View>
-
-                <View style={styles.clinicItem}>
-                  <View style={styles.clinicInfo}>
-                    <Text style={styles.clinicName}>National Center for Mental Health</Text>
-                    <Text style={styles.clinicHours}>Mon-Fri, 8AM-5PM</Text>
-                    <View style={styles.clinicTag}><Text style={styles.clinicTagText}>Government</Text></View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <TouchableOpacity style={styles.callBtn}>
-                      <Ionicons name="call" size={14} color="#FFF" />
-                      <Text style={styles.callBtnText}>Call</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.clinicDist}>3.5 km</Text>
+                    <Text style={styles.clinicName}>Verified telehealth professionals</Text>
+                    <Text style={styles.clinicHours}>Open the Clinics tab to browse real clinicians and book a session.</Text>
+                    <View style={styles.clinicTag}><Text style={styles.clinicTagText}>In-app directory</Text></View>
                   </View>
                 </View>
               </View>
@@ -304,7 +273,11 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
           <View style={styles.hotlinesCard}>
             <Text style={styles.hotlinesTitle}>Emergency Mental Health Hotlines</Text>
             
-            <View style={styles.hotlineItem}>
+            <TouchableOpacity
+              style={styles.hotlineItem}
+              onPress={() => Linking.openURL('tel:988').catch(() => {})}
+              activeOpacity={0.7}
+            >
               <View style={[styles.hotlineIconWrap, { backgroundColor: '#F44336' }]}>
                 <Ionicons name="call" size={18} color="#FFF" />
               </View>
@@ -312,9 +285,13 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={styles.hotlineName}>National Crisis Hotline</Text>
                 <Text style={styles.hotlineDesc}>988 • 24/7 free & confidential</Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.hotlineItem}>
+            <TouchableOpacity
+              style={styles.hotlineItem}
+              onPress={() => Linking.openURL('tel:09178001123').catch(() => {})}
+              activeOpacity={0.7}
+            >
               <View style={[styles.hotlineIconWrap, { backgroundColor: '#FF9800' }]}>
                 <Ionicons name="call" size={18} color="#FFF" />
               </View>
@@ -322,9 +299,13 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={styles.hotlineName}>In Touch Crisis Line (PH)</Text>
                 <Text style={styles.hotlineDesc}>0917-800-1123 • 24/7 support</Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.hotlineItem}>
+            <TouchableOpacity
+              style={styles.hotlineItem}
+              onPress={() => Linking.openURL('tel:1553').catch(() => {})}
+              activeOpacity={0.7}
+            >
               <View style={[styles.hotlineIconWrap, { backgroundColor: '#9C27B0' }]}>
                 <Ionicons name="call" size={18} color="#FFF" />
               </View>
@@ -332,9 +313,13 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={styles.hotlineName}>NCMH Crisis Hotline</Text>
                 <Text style={styles.hotlineDesc}>1553 • Free, Mon-Fri 8AM - 5PM</Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.hotlineItem}>
+            <TouchableOpacity
+              style={styles.hotlineItem}
+              onPress={() => Linking.openURL('sms:741741').catch(() => {})}
+              activeOpacity={0.7}
+            >
               <View style={[styles.hotlineIconWrap, { backgroundColor: '#03A9F4' }]}>
                 <Ionicons name="call" size={18} color="#FFF" />
               </View>
@@ -342,7 +327,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={styles.hotlineName}>Crisis Text Line</Text>
                 <Text style={styles.hotlineDesc}>Text HOME to 741741 • Text-based support</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </>
       )}

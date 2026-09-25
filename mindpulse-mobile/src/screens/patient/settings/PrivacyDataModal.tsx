@@ -12,14 +12,22 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
+import { supabase } from '../../../supabase/client';
 import { fetchDashboardData, StressSessionItem } from '../../../services/dashboard';
 
 interface PrivacyDataModalProps {
   visible: boolean;
   onClose: () => void;
+  onDataChanged?: () => void;
+  onAccountDeleted?: () => void;
 }
 
-export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({ visible, onClose }) => {
+export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
+  visible,
+  onClose,
+  onDataChanged,
+  onAccountDeleted,
+}) => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportDataJson, setExportDataJson] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -71,8 +79,20 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({ visible, onC
         {
           text: 'Delete History',
           style: 'destructive',
-          onPress: () => {
-            showToast('Assessment history deleted.');
+          onPress: async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) throw new Error('Your session has expired. Please sign in again.');
+              const { error } = await supabase
+                .from('stress_sessions')
+                .delete()
+                .eq('user_id', user.id);
+              if (error) throw new Error(error.message);
+              showToast('Assessment history deleted.');
+              onDataChanged?.();
+            } catch (e: any) {
+              Alert.alert('Delete Failed', e?.message || 'Could not delete your history.');
+            }
           },
         },
       ]
@@ -82,14 +102,22 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({ visible, onC
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'Deleting your MindPulse account will permanently erase your profile, MindPlant progress, and health records.',
+      'Deleting your MindPulse account will permanently erase your profile, MindPlant progress, and health records. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete Account',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Account Deletion Requested', 'A confirmation email has been sent to verify account closure.');
+          onPress: async () => {
+            try {
+              const { error } = await supabase.rpc('delete_my_account');
+              if (error) throw new Error(error.message);
+              // The auth row is gone; clear this device's session as well.
+              await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+              onAccountDeleted?.();
+            } catch (e: any) {
+              Alert.alert('Deletion Failed', e?.message || 'Could not delete your account.');
+            }
           },
         },
       ]

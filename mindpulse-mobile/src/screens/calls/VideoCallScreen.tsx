@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Platform,
   StyleSheet,
@@ -9,12 +10,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import {
+  TelehealthClinician,
+  fetchClinicianById,
+} from '../../services/appointments';
 
 interface VideoCallScreenProps {
   doctorId?: string;
-  patientId?: string;
-  doctorName?: string;
-  doctorSpecialty?: string;
   onEndCall?: () => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
@@ -60,8 +62,7 @@ const DoctorAvatar = ({ name }: { name: string }) => {
 };
 
 export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
-  doctorName = 'Dr. Sarah Chen',
-  doctorSpecialty = 'Clinical Psychologist',
+  doctorId,
   onEndCall,
   onNavigateTab,
 }) => {
@@ -69,6 +70,39 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   const [cameraOff, setCameraOff] = useState(false);
   const [inChat, setInChat] = useState(false);
   const [activeTab] = useState<'home' | 'analysis' | 'clinics' | 'profile'>('clinics');
+
+  const [clinician, setClinician] = useState<TelehealthClinician | null>(null);
+  const [clinicianLoading, setClinicianLoading] = useState(true);
+  const [clinicianError, setClinicianError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      if (!doctorId) {
+        if (isMounted) {
+          setClinicianError('No clinician selected for this call.');
+          setClinicianLoading(false);
+        }
+        return;
+      }
+      try {
+        const found = await fetchClinicianById(doctorId);
+        if (isMounted) {
+          if (found) setClinician(found);
+          else setClinicianError('Clinician not found.');
+        }
+      } catch (e: any) {
+        if (isMounted) setClinicianError(e?.message || 'Could not load clinician details.');
+      } finally {
+        if (isMounted) setClinicianLoading(false);
+      }
+    };
+    void load();
+    return () => { isMounted = false; };
+  }, [doctorId]);
+
+  const doctorName = clinician?.name;
+  const doctorSpecialty = clinician?.specialty;
 
   return (
     <View style={styles.root}>
@@ -85,9 +119,17 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
 
       {/* ── Doctor info ── */}
       <View style={styles.doctorInfo}>
-        <DoctorAvatar name={doctorName} />
-        <Text style={styles.doctorName}>{doctorName}</Text>
-        <Text style={styles.doctorSpecialty}>{doctorSpecialty}</Text>
+        <DoctorAvatar name={doctorName ?? ''} />
+        {clinicianLoading ? (
+          <ActivityIndicator size="small" color="#7A90A8" />
+        ) : clinicianError ? (
+          <Text style={styles.doctorSpecialty}>{clinicianError}</Text>
+        ) : (
+          <>
+            <Text style={styles.doctorName}>{doctorName}</Text>
+            <Text style={styles.doctorSpecialty}>{doctorSpecialty}</Text>
+          </>
+        )}
       </View>
 
       {/* ── Control bar ── */}

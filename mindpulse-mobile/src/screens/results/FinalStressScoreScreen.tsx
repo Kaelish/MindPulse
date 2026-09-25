@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,28 +19,29 @@ interface Props {
   heartRate: number;
   reaction: ReactionResult;
   onBack: () => void;
-  onDone: () => void;
+  onDone: (score: number) => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
+// Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35)
 const getLevel = (score: number) => {
-  if (score >= 70) return {
-    label: 'Low Stress', color: '#27AE60', bg: '#D6F5E3',
-    ringColor: '#27AE60', lightBg: '#EBF9F2',
-    message: 'Your signals suggest a calm and focused state. Keep it up!',
-    isHigh: false,
+  if (score > 60) return {
+    label: 'High Stress', color: '#E05C5C', bg: '#FFD6D6',
+    ringColor: '#E05C5C', lightBg: '#FFF0F0',
+    message: 'Your signals suggest elevated stress. Consider a short recovery break.',
+    isHigh: true,
   };
-  if (score >= 40) return {
+  if (score > 35) return {
     label: 'Moderate Stress', color: '#E08A00', bg: '#FFF3CD',
     ringColor: '#F5C842', lightBg: '#FFFBE6',
     message: 'Your signals suggest some cognitive or physical load. Monitor closely.',
     isHigh: false,
   };
   return {
-    label: 'High Stress', color: '#E05C5C', bg: '#FFD6D6',
-    ringColor: '#E05C5C', lightBg: '#FFF0F0',
-    message: 'Your signals suggest elevated stress. Consider a short recovery break.',
-    isHigh: true,
+    label: 'Low Stress', color: '#27AE60', bg: '#D6F5E3',
+    ringColor: '#27AE60', lightBg: '#EBF9F2',
+    message: 'Your signals suggest a calm and focused state. Keep it up!',
+    isHigh: false,
   };
 };
 
@@ -64,35 +66,15 @@ const FusionBar = ({ label, value, color }: { label: string; value: number; colo
   </View>
 );
 
-// ── Clinic row ──
-const ClinicRow = ({
-  name, distance, hours, badge,
-}: { name: string; distance: string; hours?: string; badge?: string }) => (
-  <View style={styles.clinicRow}>
-    <View style={styles.clinicPin}>
-      <Ionicons name="location" size={18} color="#E05C5C" />
-    </View>
-    <View style={styles.clinicInfo}>
-      <Text style={styles.clinicName}>{name}</Text>
-      {hours && <Text style={styles.clinicHours}>{hours}</Text>}
-      {badge && (
-        <View style={styles.clinicBadge}>
-          <Text style={styles.clinicBadgeText}>{badge}</Text>
-        </View>
-      )}
-    </View>
-    <View style={styles.clinicRight}>
-      <Text style={styles.clinicDist}>{distance}</Text>
-      <TouchableOpacity style={styles.callBtn}>
-        <Text style={styles.callBtnText}>Call</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
 // ── Hotline row ──
-const HotlineRow = ({ name, number, color }: { name: string; number: string; color: string }) => (
-  <View style={styles.hotlineRow}>
+const HotlineRow = ({
+  name, number, color, tel,
+}: { name: string; number: string; color: string; tel: string }) => (
+  <TouchableOpacity
+    style={styles.hotlineRow}
+    activeOpacity={0.7}
+    onPress={() => Linking.openURL(tel).catch(() => {})}
+  >
     <View style={[styles.hotlineIcon, { backgroundColor: color }]}>
       <Ionicons name="call" size={14} color="#FFF" />
     </View>
@@ -100,14 +82,18 @@ const HotlineRow = ({ name, number, color }: { name: string; number: string; col
       <Text style={styles.hotlineName}>{name}</Text>
       <Text style={styles.hotlineNum}>{number}</Text>
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
 export const FinalStressScoreScreen: React.FC<Props> = ({
   heartRate, reaction, onBack, onDone, onNavigateTab,
 }) => {
-  const heartRateScore = Math.max(0, Math.min(100, Math.round(100 - Math.abs(heartRate - 70) * 1.5)));
-  const score = Math.round(heartRateScore * 0.4 + reaction.score * 0.6);
+  // Heart rate → stress: deviation from a 70 bpm resting baseline (higher = more stress)
+  const heartRateStress = Math.max(0, Math.min(100, Math.round(Math.abs(heartRate - 70) * 1.5)));
+  // Reaction score: higher = slower reactions = more stress (ReactionGame mapping)
+  const reactionStress = Math.max(0, Math.min(100, reaction.score));
+  // Weighted stress score — higher = more stress, same convention as saved sessions
+  const score = Math.round(heartRateStress * 0.4 + reactionStress * 0.6);
   const level = getLevel(score);
   const activeTab = 'analysis' as const;
 
@@ -131,13 +117,13 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
                 <Text style={[styles.levelPillText, { color: level.color }]}>{level.label}</Text>
               </View>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#27AE60" /> Low Stress (≥ 70)
+                <Ionicons name="ellipse" size={8} color="#E05C5C" /> High Stress (61-100)
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#E08A00" /> Moderate Stress (40–69)
+                <Ionicons name="ellipse" size={8} color="#E08A00" /> Moderate Stress (36-60)
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#E05C5C" /> High Stress ({'<'} 40)
+                <Ionicons name="ellipse" size={8} color="#27AE60" /> Low Stress (0-35)
               </Text>
             </View>
           </View>
@@ -145,11 +131,9 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
 
         {/* ── Multi-Modal Fusion bars ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Multi-Modal Fusion (50 / 20 / 20 / 10)</Text>
-          <FusionBar label="Survey (PSS + Physio)" value={50} color="#5B6EF5" />
-          <FusionBar label="Facial Emotion" value={Math.round(reaction.score * 0.8)} color="#4A90D9" />
-          <FusionBar label="Heart Rate" value={Math.min(100, heartRateScore)} color="#E05C5C" />
-          <FusionBar label="Reaction Time" value={Math.max(10, Math.min(100, reaction.score))} color="#F5A623" />
+          <Text style={styles.cardTitle}>Multi-Modal Fusion (Heart Rate 40% · Reaction 60%)</Text>
+          <FusionBar label="Heart Rate" value={heartRateStress} color="#E05C5C" />
+          <FusionBar label="Reaction Time" value={reactionStress} color="#F5A623" />
         </View>
 
         {/* ── Guidance card ── */}
@@ -181,36 +165,30 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
           )}
         </View>
 
-        {/* ── Find Nearby Clinics ── */}
+        {/* ── Verified help in-app ── */}
         <View style={styles.clinicCard}>
-          <TouchableOpacity style={styles.clinicHeaderRow}>
-            <Ionicons name="location" size={16} color="#E05C5C" />
-            <Text style={styles.clinicCardTitle}>Find Nearby Psych Clinics</Text>
-            <View style={{ flex: 1 }} />
-            <Ionicons name="chevron-forward" size={16} color="#E05C5C" />
-          </TouchableOpacity>
-          <Text style={styles.clinicCardSub}>Suggested based on your stress level</Text>
-          <ClinicRow name="University Wellness Center" distance="0.2 km" hours="Mon–Fri, 8AM–5PM" badge="On-campus" />
-          <ClinicRow name="MindBridge Psych Clinic" distance="1.2 km" hours="Mon–Fri, 9AM–6PM" />
-          <ClinicRow name="National Center for Mental Health" distance="2.5 km" hours="Mon–Sat, 8AM–6PM" />
-          <ClinicRow name="Hopeful Hearts Counseling" distance="2.8 km" hours="Mon–Fri, 9AM–5PM" />
+          <View style={styles.clinicHeaderRow}>
+            <Ionicons name="people" size={16} color="#E05C5C" />
+            <Text style={styles.clinicCardTitle}>Verified telehealth professionals</Text>
+          </View>
+          <Text style={styles.clinicCardSub}>Open the Clinics tab to browse real clinicians and book a session.</Text>
         </View>
 
         {/* ── Emergency Hotlines ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Emergency Mental Health Hotlines</Text>
-          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color="#E05C5C" />
-          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color="#F5A623" />
-          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color="#5B6EF5" />
-          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color="#4A90D9" />
+          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color="#E05C5C" tel="tel:988" />
+          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color="#F5A623" tel="tel:09175584673" />
+          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color="#5B6EF5" tel="tel:1553" />
+          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color="#4A90D9" tel="sms:741741" />
         </View>
 
         {/* ── Action buttons ── */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.saveBtn} onPress={onDone}>
+          <TouchableOpacity style={styles.saveBtn} onPress={() => onDone(score)}>
             <Text style={styles.saveBtnText}>Save Result</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.helpBtn} onPress={onDone}>
+          <TouchableOpacity style={styles.helpBtn} onPress={() => onDone(score)}>
             <Text style={styles.helpBtnText}>Get Help  →</Text>
           </TouchableOpacity>
         </View>

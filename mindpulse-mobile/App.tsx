@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   Image,
@@ -120,9 +121,9 @@ function App() {
   const [currentTab, setCurrentTab] = useState<BottomNavTab>('home');
   const [heartRateBpm, setHeartRateBpm] = useState(0);
   const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
-  const [faceScanResult, setFaceScanResult] = useState<{ expression: string; score: number } | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
-  const [registeredUserName, setRegisteredUserName] = useState('John');
+  const [registeredUserName, setRegisteredUserName] = useState('friend');
+  const [callDoctorId, setCallDoctorId] = useState<string | null>(null);
 
   /* Splash → Onboarding after 3 s */
   useEffect(() => {
@@ -202,15 +203,24 @@ function App() {
     changeScreen('reaction');
   };
 
-  const handleFinalResultsDone = async () => {
-    if (!reactionResult) return;
-    const score = Math.min(100, Math.max(20, reactionResult.score));
-    await saveNewStressSession(
-      score,
-      `Completed reaction time assessment (${reactionResult.average} ms average)`,
-      heartRateBpm,
-    );
-    // Grow the MindPlant — a completed low-stress session counts toward growth
+  const handleFinalResultsDone = async (displayedScore?: number) => {
+    if (!reactionResult || displayedScore == null) return;
+    // Save exactly the score the user saw on the results screen (0-100, higher = more stress)
+    const score = Math.min(100, Math.max(0, Math.round(displayedScore)));
+    try {
+      await saveNewStressSession(
+        score,
+        `Completed reaction time assessment (${reactionResult.average} ms average)`,
+        heartRateBpm,
+      );
+    } catch (e: any) {
+      Alert.alert(
+        'Result not saved',
+        e?.message || 'Please check your connection and try again.',
+      );
+      return;
+    }
+    // Grow the MindPlant — a completed session counts toward growth
     await recordPlantSession().catch(() => {});
     setCurrentTab('profile');
     changeScreen('main');
@@ -293,10 +303,7 @@ function App() {
         {screenMode === 'call' && (
           <View style={styles.screenWithBackButton}>
             <VideoCallScreen
-              doctorId="doctor-123"
-              patientId="patient-456"
-              doctorName="Dr. Sarah Chen"
-              doctorSpecialty="Clinical Psychologist"
+              doctorId={callDoctorId ?? undefined}
               onEndCall={() => {
                 setCurrentTab('home');
                 changeScreen('main');
@@ -312,8 +319,8 @@ function App() {
             <View style={styles.tabViewArea}>
               <FaceScanNavigator
                 onBack={handleBack}
-                onFinishScan={(result) => {
-                  setFaceScanResult(result);
+                onFinishScan={() => {
+                  // Demo scan result is not persisted anywhere
                   changeScreen('main');
                   setCurrentTab('analysis');
                 }}
@@ -359,7 +366,10 @@ function App() {
                 <PatientDashboardScreen
                   activeTab={currentTab}
                   onNavigate={handleTabNavigate}
-                  onStartVideoCall={() => changeScreen('call')}
+                  onStartVideoCall={(doctorId) => {
+                        setCallDoctorId(doctorId ?? null);
+                        changeScreen('call');
+                      }}
                   onRunSurvey={() => setCurrentTab('profile')}
                   onRunFaceScan={() => changeScreen('faceScan')}
                   onRunDailyCheck={() => setCurrentTab('analysis')}
@@ -388,7 +398,10 @@ function App() {
                   <View style={styles.subScreenWrap}>
                     <AppointmentBookingScreen
                       onNavigateTab={handleTabNavigate}
-                      onStartVideoCall={() => changeScreen('call')}
+                      onStartVideoCall={(doctorId) => {
+                        setCallDoctorId(doctorId ?? null);
+                        changeScreen('call');
+                      }}
                     />
                   </View>
                 )}
