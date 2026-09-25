@@ -42,72 +42,6 @@ begin
 end;
 $$;
 
--- SECURITY DEFINER: avoids the RLS recursion that would happen if a policy on
--- profiles queried profiles directly.
-create or replace function public.current_app_role()
-returns text
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select p.role from public.profiles p where p.id = auth.uid();
-$$;
-
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce((select p.role = 'admin' from public.profiles p where p.id = auth.uid()), false);
-$$;
-
-create or replace function public.is_doctor()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce((select p.role = 'doctor' from public.profiles p where p.id = auth.uid()), false);
-$$;
-
--- True when the current user already has a consultation/appointment link to
--- the given profile (patient <-> doctor).
-create or replace function public.has_appointment_with(target uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.appointments a
-    where (a.patient_id = auth.uid() and a.doctor_id = target)
-       or (a.doctor_id  = auth.uid() and a.patient_id = target)
-  );
-$$;
-
--- True when the given account really is a doctor, so appointments can never
--- be written against an arbitrary user id.
-create or replace function public.is_account_doctor(target uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce((select p.role = 'doctor' from public.profiles p where p.id = target), false);
-$$;
-
-create or replace function public.is_self(target uuid)
-returns boolean
-language sql stable security definer set search_path = public
-as $$ select auth.uid() = target $$;
-
 -- Ordinary clients may never change their own (or anyone's) role.
 -- NOTE: the function must exist before the trigger that calls it.
 create or replace function public.profiles_protect_role()
@@ -329,19 +263,22 @@ begin
   -- profiles.role must be constrained to the three application roles even when
   -- the table pre-dates this script (only added when every existing value
   -- already conforms, so real data is never invalidated).
-  if to_regclass('public.profiles') is not null
-     and not exists (
-       select 1 from pg_constraint
-        where conrelid = 'public.profiles'::regclass
-          and contype = 'c'
-          and conname = 'profiles_role_check'
-     )
-     and not exists (
-       select 1 from public.profiles where role not in ('student', 'doctor', 'admin')
-     )
-  then
-    alter table public.profiles
-      add constraint profiles_role_check check (role in ('student', 'doctor', 'admin'));
+  -- Nested if, not a single "and" chain: the whole condition of one if is
+  -- planned as a single expression, so the subqueries on public.profiles
+  -- would be resolved at plan time - before the table exists on a first run.
+  if to_regclass('public.profiles') is not null then
+    if not exists (
+      select 1 from pg_constraint
+       where conrelid = 'public.profiles'::regclass
+         and contype = 'c'
+         and conname = 'profiles_role_check'
+    )
+    and not exists (
+      select 1 from public.profiles where role not in ('student', 'doctor', 'admin')
+    ) then
+      alter table public.profiles
+        add constraint profiles_role_check check (role in ('student', 'doctor', 'admin'));
+    end if;
   end if;
 end;
 $do$;
@@ -576,6 +513,75 @@ create table if not exists public.migration_report (
   created_at    timestamptz not null default now(),
   unique (legacy_table, legacy_id, problem)
 );
+
+-- ---------------------------------------------------------------------------
+-- 8b. Relationship helper functions
+--     These use `language sql`, whose bodies are validated at creation time,
+--     so they must come after sections 1-8 create public.profiles and
+--     public.appointments. (The plpgsql helpers in section 0 have no such
+--     constraint and stay above the tables for their triggers.)
+-- ---------------------------------------------------------------------------
+
+-- SECURITY DEFINER: avoids the RLS recursion that would happen if a policy on
+-- profiles queried profiles directly.
+create or replace function public.current_app_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.role from public.profiles p where p.id = auth.uid();
+$$;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select p.role = 'admin' from public.profiles p where p.id = auth.uid()), false);
+$$;
+
+create or replace function public.is_doctor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select p.role = 'doctor' from public.profiles p where p.id = auth.uid()), false);
+$$;
+
+-- True when the current user already has a consultation/appointment link to
+-- the given profile (patient <-> doctor).
+create or replace function public.has_appointment_with(target uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.appointments a
+    where (a.patient_id = auth.uid() and a.doctor_id = target)
+       or (a.doctor_id  = auth.uid() and a.patient_id = target)
+  );
+$$;
+
+-- True when the given account really is a doctor, so appointments can never
+-- be written against an arbitrary user id.
+create or replace function public.is_account_doctor(target uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select p.role = 'doctor' from public.profiles p where p.id = target), false);
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 9. Profile creation on signup (server side, single source of truth)
@@ -886,46 +892,54 @@ begin
 end;
 $$;
 
--- supabase-plant-progress.sql created these policies earlier; replace them
--- with the canonical names below so exactly one policy per action exists.
-drop policy if exists "Users can read their own plant progress" on public."MIND_PLANT_PROGRESS";
-drop policy if exists "Users can create their own plant progress" on public."MIND_PLANT_PROGRESS";
-drop policy if exists "Users can update their own plant progress" on public."MIND_PLANT_PROGRESS";
-drop policy if exists "Users can read their own growth log" on public."GROWTH_LOG";
-drop policy if exists "Users can create their own growth log" on public."GROWTH_LOG";
-drop policy if exists "Authenticated users can read growth stages" on public."GROWTH_STAGE";
+-- supabase-plant-progress.sql created these tables/policies earlier; replace
+-- them with the canonical names below so exactly one policy per action
+-- exists. Each block is skipped when its table does not exist yet - this
+-- script never invents application tables.
+do $do$
+begin
+  if to_regclass('public."MIND_PLANT_PROGRESS"') is not null then
+    drop policy if exists "Users can read their own plant progress" on public."MIND_PLANT_PROGRESS";
+    drop policy if exists "Users can create their own plant progress" on public."MIND_PLANT_PROGRESS";
+    drop policy if exists "Users can update their own plant progress" on public."MIND_PLANT_PROGRESS";
+    drop policy if exists "plant_progress_select_own" on public."MIND_PLANT_PROGRESS";
+    create policy "plant_progress_select_own" on public."MIND_PLANT_PROGRESS"
+      for select to authenticated using ("USER_ID" = auth.uid() or public.is_admin());
+    drop policy if exists "plant_progress_insert_own" on public."MIND_PLANT_PROGRESS";
+    create policy "plant_progress_insert_own" on public."MIND_PLANT_PROGRESS"
+      for insert to authenticated with check ("USER_ID" = auth.uid());
+    drop policy if exists "plant_progress_update_own" on public."MIND_PLANT_PROGRESS";
+    create policy "plant_progress_update_own" on public."MIND_PLANT_PROGRESS"
+      for update to authenticated
+      using ("USER_ID" = auth.uid() or public.is_admin())
+      with check ("USER_ID" = auth.uid());
+  end if;
 
-drop policy if exists "plant_progress_select_own" on public."MIND_PLANT_PROGRESS";
-create policy "plant_progress_select_own" on public."MIND_PLANT_PROGRESS"
-  for select to authenticated using (USER_ID = auth.uid() or public.is_admin());
+  if to_regclass('public."GROWTH_LOG"') is not null then
+    drop policy if exists "Users can read their own growth log" on public."GROWTH_LOG";
+    drop policy if exists "Users can create their own growth log" on public."GROWTH_LOG";
+    drop policy if exists "growth_log_select_own" on public."GROWTH_LOG";
+    create policy "growth_log_select_own" on public."GROWTH_LOG"
+      for select to authenticated using ("USER_ID" = auth.uid() or public.is_admin());
+    drop policy if exists "growth_log_insert_own" on public."GROWTH_LOG";
+    create policy "growth_log_insert_own" on public."GROWTH_LOG"
+      for insert to authenticated with check ("USER_ID" = auth.uid());
+  end if;
 
-drop policy if exists "plant_progress_insert_own" on public."MIND_PLANT_PROGRESS";
-create policy "plant_progress_insert_own" on public."MIND_PLANT_PROGRESS"
-  for insert to authenticated with check (USER_ID = auth.uid());
-
-drop policy if exists "plant_progress_update_own" on public."MIND_PLANT_PROGRESS";
-create policy "plant_progress_update_own" on public."MIND_PLANT_PROGRESS"
-  for update to authenticated
-  using (USER_ID = auth.uid() or public.is_admin())
-  with check (USER_ID = auth.uid());
-
-drop policy if exists "growth_log_select_own" on public."GROWTH_LOG";
-create policy "growth_log_select_own" on public."GROWTH_LOG"
-  for select to authenticated using (USER_ID = auth.uid() or public.is_admin());
-
-drop policy if exists "growth_log_insert_own" on public."GROWTH_LOG";
-create policy "growth_log_insert_own" on public."GROWTH_LOG"
-  for insert to authenticated with check (USER_ID = auth.uid());
-
-drop policy if exists "growth_stage_select_all" on public."GROWTH_STAGE";
-create policy "growth_stage_select_all" on public."GROWTH_STAGE"
-  for select to authenticated using (true);
+  if to_regclass('public."GROWTH_STAGE"') is not null then
+    drop policy if exists "Authenticated users can read growth stages" on public."GROWTH_STAGE";
+    drop policy if exists "growth_stage_select_all" on public."GROWTH_STAGE";
+    create policy "growth_stage_select_all" on public."GROWTH_STAGE"
+      for select to authenticated using (true);
+  end if;
+end;
+$do$;
 
 -- ---------------------------------------------------------------------------
 -- 6b. Plant progress is keyed by auth.uid()
 -- ---------------------------------------------------------------------------
 -- MIND_PLANT_PROGRESS still carries a legacy foreign key to
--- public."USER"(USER_ID), but the mobile app writes USER_ID = auth.uid() and
+-- public."USER"(USER_ID), but the mobile app writes "USER_ID" = auth.uid() and
 -- the policies above require exactly that. Because legacy USER rows hold
 -- pre-auth ids, every plant write would fail that foreign key. The table is
 -- empty, so the obsolete constraint is removed instead of inventing legacy
@@ -976,7 +990,7 @@ begin
     select 'USER', u."USER_ID"::text, u."EMAIL",
            'No auth.users row with this e-mail – legacy identity cannot be mapped to an authenticated user'
     from public."USER" u
-    where not exists (select 1 from auth.users au where lower(au.email) = lower(u.email))
+    where not exists (select 1 from auth.users au where lower(au.email) = lower(u."EMAIL"))
     on conflict do nothing;
   end if;
 
@@ -1456,10 +1470,17 @@ end;
 $$;
 
 -- The legacy "USER" table previously allowed users to read their own row; that
--- is superseded by public.profiles.
-drop policy if exists "Users can read their own application profile" on public."USER";
-drop policy if exists "Users can create their own application profile" on public."USER";
-drop policy if exists "Users can update their own application profile" on public."USER";
+-- is superseded by public.profiles. (DROP POLICY still requires the table to
+-- exist, hence the guard.)
+do $do$
+begin
+  if to_regclass('public."USER"') is not null then
+    drop policy if exists "Users can read their own application profile" on public."USER";
+    drop policy if exists "Users can create their own application profile" on public."USER";
+    drop policy if exists "Users can update their own application profile" on public."USER";
+  end if;
+end;
+$do$;
 
 -- ---------------------------------------------------------------------------
 -- 14. Server-side account provisioning (used by the web admin console)
@@ -1683,10 +1704,10 @@ begin
   end if;
 
   if to_regclass('public."MIND_PLANT_PROGRESS"') is not null then
-    delete from public."MIND_PLANT_PROGRESS" where USER_ID = v_uid;
+    delete from public."MIND_PLANT_PROGRESS" where "USER_ID" = v_uid;
   end if;
   if to_regclass('public."GROWTH_LOG"') is not null then
-    delete from public."GROWTH_LOG" where USER_ID = v_uid;
+    delete from public."GROWTH_LOG" where "USER_ID" = v_uid;
   end if;
 
   delete from auth.users where id = v_uid;
