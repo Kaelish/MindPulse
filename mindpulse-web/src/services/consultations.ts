@@ -1,12 +1,13 @@
 import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
 
 export interface WebConsultationItem {
   id: string;
+  patientId: string;
   patientName: string;
   studentId: string;
   scheduledTime: string;
-  duration: string;
-  status: 'Scheduled' | 'Completed' | 'In progress';
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
   notes?: string;
   avatarInitials: string;
   patientEmail: string;
@@ -28,209 +29,213 @@ export interface ManualBookingData {
   selectedTime: string;
 }
 
-// Local in-memory store for booked slots (e.g. "Today (Aug 31)_3:30 PM")
-export const memoryBookedSlotKeys: Set<string> = new Set(['Today (Aug 31)_3:30 PM', 'Today (Aug 31)_9:00 AM']);
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'PT';
 
-export const initialWebConsultations: WebConsultationItem[] = [
-  {
-    id: 'c-101',
-    patientName: 'John Doe',
-    studentId: 'STU-001',
-    scheduledTime: 'Today 3:30 PM',
-    duration: '45 min',
-    status: 'Scheduled',
-    avatarInitials: 'JD',
-    patientEmail: 'student.test@mindpulse.edu',
-  },
-  {
-    id: 'c-102',
-    patientName: 'John Doe',
-    studentId: 'STU-001',
-    scheduledTime: 'April 06, 2026 10:00 AM',
-    duration: '45 min',
-    status: 'Completed',
-    avatarInitials: 'JD',
-    patientEmail: 'student.test@mindpulse.edu',
-    notes: 'Discussed coping strategies for exam stress. Student reports better sleep quality after mindfulness sessions.',
-  },
-];
+const statusLabel = (status: string): WebConsultationItem['status'] =>
+  status === 'completed' ? 'Completed' : status === 'cancelled' ? 'Cancelled' : 'Scheduled';
 
-export const initialWebChatMessages: WebChatMessage[] = [
-  {
-    id: 'wm-1',
-    sender: 'doctor',
-    text: 'Hello John! I am Dr. Monroe. I reviewed your recent stress check score (68). How are you feeling today?',
-    timestamp: '9:00 AM',
-  },
-  {
-    id: 'wm-2',
-    sender: 'patient',
-    text: "Hi Dr. Monroe, I've been feeling quite stressed from work and class deadlines recently.",
-    timestamp: '9:02 AM',
-  },
-  {
-    id: 'wm-3',
-    sender: 'doctor',
-    text: "I see. Let's start with a guided breathing exercise during our scheduled consultation.",
-    timestamp: '9:05 AM',
-  },
-];
-
+/** Slot keys ("Aug 31, 2026_3:30 PM") for this doctor's active appointments. */
 export const fetchBookedSlotKeys = async (): Promise<Set<string>> => {
-  const slotSet = new Set<string>(memoryBookedSlotKeys);
+  const slotSet = new Set<string>();
+  if (!supabase) return slotSet;
 
-  try {
-    if (supabase) {
-      const { data, error } = await supabase.from('appointments').select('*');
-      if (!error && data) {
-        data.forEach((row: any) => {
-          if (row.scheduled_for) {
-            // Normalize "Today (Aug 31) at 3:30 PM" or "Today (Aug 31) 3:30 PM"
-            const raw = String(row.scheduled_for).replace(' at ', ' ');
-            const parts = raw.split(' ');
-            if (parts.length >= 3) {
-              const timeStr = `${parts[parts.length - 2]} ${parts[parts.length - 1]}`;
-              const dateStr = parts.slice(0, parts.length - 2).join(' ');
-              slotSet.add(`${dateStr}_${timeStr}`);
-            }
-          }
-        });
-      }
-    }
-  } catch (e) {
-    // Graceful fallback
+  const doctorId = await requireUserId();
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('scheduled_for, status')
+    .eq('doctor_id', doctorId)
+    .neq('status', 'cancelled');
+  if (error) throw new Error(error.message);
+
+  for (const row of (data ?? []) as { scheduled_for: string | null; status: string }[]) {
+    if (!row.scheduled_for) continue;
+    const separatorIndex = row.scheduled_for.lastIndexOf(' at ');
+    if (separatorIndex === -1) continue;
+    const dateStr = row.scheduled_for.slice(0, separatorIndex);
+    const timeStr = row.scheduled_for.slice(separatorIndex + 4);
+    slotSet.add(`${dateStr}_${timeStr}`);
   }
-
   return slotSet;
 };
 
+/** This doctor's appointments joined against patient profiles. */
 export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> => {
-  try {
-    if (!supabase) return initialWebConsultations;
+  if (!supabase) return [];
+  const doctorId = await requireUserId();
 
-    const { data: appts, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const { data: appointments, error } = await supabase
+    .from('appointments')
+    .select('id, patient_id, scheduled_for, status, notes, created_at')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
 
-    if (!error && appts && appts.length > 0) {
-      const fetched: WebConsultationItem[] = appts.map((row: any) => ({
-        id: String(row.id),
-        patientName: row.notes?.includes('Walk-in patient')
-          ? row.notes.split(',')[0].replace('Walk-in patient ', '')
-          : 'John Doe',
-        studentId: 'STU-001',
-        scheduledTime: row.scheduled_for || 'Today 3:30 PM',
-        duration: '45 min',
-        status: row.status === 'completed' ? 'Completed' : 'Scheduled',
-        avatarInitials: row.notes?.includes('Walk-in patient')
-          ? row.notes.split(',')[0].replace('Walk-in patient ', '').charAt(0).toUpperCase()
-          : 'JD',
-        patientEmail: row.notes?.includes('Email:')
-          ? row.notes.split('Email:')[1].trim()
-          : 'student.test@mindpulse.edu',
-        notes: row.notes,
-      }));
+  const rows = (appointments ?? []) as {
+    id: string;
+    patient_id: string;
+    scheduled_for: string | null;
+    status: string;
+    notes: string | null;
+  }[];
+  if (!rows.length) return [];
 
-      return fetched;
-    }
-  } catch (e) {
-    // Fallback
-  }
+  const patientIds = Array.from(new Set(rows.map((row) => row.patient_id)));
+  const { data: patientProfiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no')
+    .in('id', patientIds);
+  if (profilesError) throw new Error(profilesError.message);
 
-  return initialWebConsultations;
+  const byId = new Map(
+    ((patientProfiles ?? []) as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      student_no: string | null;
+    }[]).map((profile) => [profile.id, profile]),
+  );
+
+  return rows.map((row) => {
+    const profile = byId.get(row.patient_id);
+    const name = profile
+      ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient'
+      : 'Unknown patient';
+    return {
+      id: row.id,
+      patientId: row.patient_id,
+      patientName: name,
+      studentId: profile?.student_no || 'No student no.',
+      scheduledTime: row.scheduled_for || 'No date set',
+      status: statusLabel(row.status),
+      notes: row.notes ?? undefined,
+      avatarInitials: initialsOf(name),
+      patientEmail: profile?.email || 'No email',
+    };
+  });
 };
 
+/**
+ * Books a consultation for an existing MindPulse account (matched by email).
+ * Throws when Supabase errors, the account is missing, or the slot is taken.
+ */
 export const saveDoctorScheduleAppointment = async (
   booking: ManualBookingData,
 ): Promise<WebConsultationItem> => {
-  const slotKey = `${booking.selectedDate}_${booking.selectedTime}`;
-  memoryBookedSlotKeys.add(slotKey);
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const doctorId = await requireUserId();
 
-  const initials = booking.patientName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || 'P';
-
-  const newConsultation: WebConsultationItem = {
-    id: `c-manual-${Date.now()}`,
-    patientName: booking.patientName,
-    studentId: `STU-${Math.floor(100 + Math.random() * 900)}`,
-    scheduledTime: `${booking.selectedDate} ${booking.selectedTime}`,
-    duration: '45 min',
-    status: 'Scheduled',
-    avatarInitials: initials,
-    patientEmail: booking.patientEmail,
-    notes: `Walk-in patient ${booking.patientName}, Age ${booking.age}. Email: ${booking.patientEmail}. ${booking.notes}`,
-  };
-
-  try {
-    if (supabase) {
-      await supabase.from('appointments').insert({
-        patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
-        doctor_id: '1b64dd8f-48f1-4298-ac06-61377665e',
-        scheduled_for: `${booking.selectedDate} at ${booking.selectedTime}`,
-        status: 'confirmed',
-        notes: newConsultation.notes,
-      });
-    }
-  } catch (e) {
-    // Offline save fallback
+  const { data: patient, error: patientError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no')
+    .ilike('email', booking.patientEmail)
+    .maybeSingle();
+  if (patientError) throw new Error(patientError.message);
+  if (!patient) {
+    throw new Error(
+      `No MindPulse account matches ${booking.patientEmail}. The patient must register before you can book them.`,
+    );
   }
 
-  return newConsultation;
+  const scheduledFor = `${booking.selectedDate} at ${booking.selectedTime}`;
+  const { data: existing, error: slotError } = await supabase
+    .from('appointments')
+    .select('id')
+    .eq('doctor_id', doctorId)
+    .eq('scheduled_for', scheduledFor)
+    .neq('status', 'cancelled')
+    .limit(1);
+  if (slotError) throw new Error(slotError.message);
+  if (existing && existing.length > 0) {
+    throw new Error(`That time slot (${scheduledFor}) is already booked.`);
+  }
+
+  const noteParts = [
+    booking.age ? `Age ${booking.age}.` : null,
+    booking.notes || null,
+  ].filter(Boolean);
+  const notes = noteParts.length ? `Walk-in booking. ${noteParts.join(' ')}` : null;
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('appointments')
+    .insert({
+      patient_id: patient.id,
+      doctor_id: doctorId,
+      scheduled_for: scheduledFor,
+      status: 'scheduled',
+      notes,
+    })
+    .select('id, patient_id, scheduled_for, status, notes, created_at')
+    .single();
+  if (insertError) throw new Error(insertError.message);
+
+  const name =
+    `${patient.first_name || ''} ${patient.last_name || ''}`.trim() ||
+    patient.email ||
+    'Unknown patient';
+  return {
+    id: inserted.id,
+    patientId: inserted.patient_id,
+    patientName: name,
+    studentId: patient.student_no || 'No student no.',
+    scheduledTime: inserted.scheduled_for || scheduledFor,
+    status: 'Scheduled',
+    notes: inserted.notes ?? undefined,
+    avatarInitials: initialsOf(name),
+    patientEmail: patient.email || booking.patientEmail,
+  };
 };
 
-export const fetchWebChatMessages = async (clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e'): Promise<WebChatMessage[]> => {
-  try {
-    if (!supabase) return initialWebChatMessages;
+export const fetchWebChatMessages = async (
+  doctorId: string,
+  patientId: string,
+): Promise<WebChatMessage[]> => {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('id, sender, text, created_at')
+    .eq('clinician_id', doctorId)
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
 
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (!error && data && data.length > 0) {
-      return data.map((row: any) => ({
-        id: String(row.id),
-        sender: row.sender as 'doctor' | 'patient',
-        text: row.text,
-        timestamp: row.created_at ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-      }));
-    }
-  } catch (e) {
-    // Fallback
-  }
-
-  return initialWebChatMessages;
+  return ((data ?? []) as { id: string; sender: string; text: string; created_at: string }[]).map(
+    (row) => ({
+      id: row.id,
+      sender: row.sender === 'patient' ? 'patient' : 'doctor',
+      text: row.text,
+      timestamp: row.created_at
+        ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : 'Just now',
+    }),
+  );
 };
 
 export const sendWebChatMessage = async (
-  clinicianId: string = '1b64dd8f-48f1-4298-ac06-61377665e',
-  sender: 'doctor' | 'patient',
+  doctorId: string,
+  patientId: string,
   text: string,
 ): Promise<WebChatMessage> => {
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const newMsg: WebChatMessage = {
-    id: `wm-${Date.now()}`,
-    sender,
-    text,
-    timestamp,
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert({ clinician_id: doctorId, patient_id: patientId, sender: 'doctor', text })
+    .select('id, sender, text, created_at')
+    .single();
+  if (error) throw new Error(error.message);
+
+  return {
+    id: data.id,
+    sender: 'doctor',
+    text: data.text,
+    timestamp: data.created_at
+      ? new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Just now',
   };
-
-  try {
-    if (supabase) {
-      await supabase.from('chat_messages').insert({
-        clinician_id: '1b64dd8f-48f1-4298-ac06-61377665e',
-        patient_id: 'a6a45e6c-63b3-44e6-895b-98d5dd7',
-        sender,
-        text,
-      });
-    }
-  } catch (e) {
-    // Offline fallback
-  }
-
-  return newMsg;
 };

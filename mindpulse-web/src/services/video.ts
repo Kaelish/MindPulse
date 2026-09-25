@@ -27,53 +27,46 @@ export const startDoctorVideoSession = async (
   patientName: string,
 ): Promise<VideoCallResponse> => {
   try {
-    const roomName = `mindpulse-${doctorId}-${patientId}-${Date.now()}`;
-    const baseUrl =
-      process.env.REACT_APP_DAILY_BASE_URL ?? 'https://mindpulse.daily.co';
-    const token = process.env.REACT_APP_DAILY_TOKEN ?? 'demo-token';
+    const baseUrl = process.env.REACT_APP_DAILY_BASE_URL;
+    const token = process.env.REACT_APP_DAILY_TOKEN;
+    if (!baseUrl || !token) {
+      throw new Error(
+        'Video calling is not configured. Set REACT_APP_DAILY_BASE_URL and REACT_APP_DAILY_TOKEN in .env.',
+      );
+    }
+    if (!supabase) {
+      throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+    }
+
+    const roomName = `mindpulse-${doctorId.slice(0, 8)}-${patientId.slice(0, 8)}-${Date.now()}`;
+    const meetingUrl = `${baseUrl}/${roomName}?token=${encodeURIComponent(token)}`;
+
+    const { data, error } = await supabase
+      .from('video_sessions')
+      .insert({
+        patient_id: patientId,
+        doctor_id: doctorId,
+        room_name: roomName,
+        meeting_url: meetingUrl,
+        status: 'pending',
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
 
     const session: VideoCallSession = {
-      id: `call-${Date.now()}`,
+      id: String(data.id),
       patientId,
       patientName,
       doctorId,
       doctorName,
-      roomName,
-      meetingUrl: `${baseUrl}/${roomName}?token=${encodeURIComponent(token)}`,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+      roomName: data.room_name ?? roomName,
+      meetingUrl: data.meeting_url ?? meetingUrl,
+      status: (data.status ?? 'pending') as VideoCallStatus,
+      createdAt: data.created_at ?? new Date().toISOString(),
     };
 
-    const hasSupabaseConfig = Boolean(
-      process.env.REACT_APP_SUPABASE_URL &&
-        process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY,
-    );
-
-    if (hasSupabaseConfig && supabase) {
-      const { data, error } = await supabase
-        .from('video_sessions')
-        .insert({
-          patient_id: patientId,
-          doctor_id: doctorId,
-          room_name: roomName,
-          meeting_url: session.meetingUrl,
-          status: session.status,
-        })
-        .select()
-        .single();
-
-      if (!error && data) {
-        session.id = String(data.id);
-        session.status = (data.status ?? session.status) as VideoCallStatus;
-        session.createdAt = data.created_at ?? session.createdAt;
-      }
-    }
-
-    return {
-      data: session,
-      error: null,
-      loading: false,
-    };
+    return { data: session, error: null, loading: false };
   } catch (error) {
     return {
       data: null,

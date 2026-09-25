@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
 
 export interface DoctorProfileData {
   userId: string;
@@ -8,163 +9,143 @@ export interface DoctorProfileData {
   phone: string;
   licenseId: string;
   specialty: string;
+  department: string;
+  yearsExperience: string;
+  startDate: string;
   dob: string;
   gender: string;
   streetAddress: string;
   isVerified?: boolean;
 }
 
-export const DEFAULT_DOCTOR_ID = '1b64dd8f-48f1-4298-ac06-61377665e668';
+const emptyProfile = (userId: string): DoctorProfileData => ({
+  userId,
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  licenseId: '',
+  specialty: '',
+  department: '',
+  yearsExperience: '',
+  startDate: '',
+  dob: '',
+  gender: '',
+  streetAddress: '',
+  isVerified: false,
+});
 
-export const initialDoctorData: DoctorProfileData = {
-  userId: DEFAULT_DOCTOR_ID,
-  firstName: 'Monroe',
-  lastName: 'Leclair',
-  email: 'dr.monroeLeclair@gmail.com',
-  phone: '+1 (555) 987-6543',
-  licenseId: 'PSY-CA-12345',
-  specialty: 'Clinical Psychologist',
-  dob: '20/08/1985',
-  gender: 'Female',
-  streetAddress: '456 Medical Plaza',
-  isVerified: true,
+const parseExtras = (raw: string | null) => {
+  if (!raw) return {} as Partial<DoctorProfileData>;
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Partial<DoctorProfileData>)
+      : {};
+  } catch {
+    return {} as Partial<DoctorProfileData>;
+  }
 };
 
-/**
- * Fetch Doctor Profile from Supabase tables (USER + DOCTOR_PROFILES)
- */
-export async function fetchDoctorProfile(userId: string = DEFAULT_DOCTOR_ID): Promise<DoctorProfileData> {
-  if (!supabase) return initialDoctorData;
-
-  try {
-    // 1. Fetch from USER table
-    const { data: userData, error: userErr } = await supabase
-      .from('USER')
-      .select('USER_ID, FIRST_NAME, LAST_NAME, EMAIL')
-      .eq('USER_ID', userId)
-      .maybeSingle();
-
-    if (userErr) {
-      console.warn('Error fetching USER for doctor profile:', userErr.message);
-    }
-
-    // 2. Fetch from DOCTOR_PROFILES table
-    const { data: profData, error: profErr } = await supabase
-      .from('DOCTOR_PROFILES')
-      .select('SPECIALIZATION, CONTACT_NUMBER, LICENSE_NO, AVAILABILITY_NOTES, IS_VERIFIED')
-      .eq('USER_ID', userId)
-      .maybeSingle();
-
-    if (profErr) {
-      console.warn('Error fetching DOCTOR_PROFILES for doctor:', profErr.message);
-    }
-
-    let extra: { dob?: string; gender?: string; street_address?: string } = {};
-    if (profData?.AVAILABILITY_NOTES) {
-      try {
-        extra = JSON.parse(profData.AVAILABILITY_NOTES);
-      } catch (e) {
-        // If string note
-      }
-    }
-
-    return {
-      userId,
-      firstName: userData?.FIRST_NAME || initialDoctorData.firstName,
-      lastName: userData?.LAST_NAME || initialDoctorData.lastName,
-      email: userData?.EMAIL || initialDoctorData.email,
-      phone: profData?.CONTACT_NUMBER || initialDoctorData.phone,
-      licenseId: profData?.LICENSE_NO || initialDoctorData.licenseId,
-      specialty: profData?.SPECIALIZATION || initialDoctorData.specialty,
-      dob: extra.dob || initialDoctorData.dob,
-      gender: extra.gender || initialDoctorData.gender,
-      streetAddress: extra.street_address || initialDoctorData.streetAddress,
-      isVerified: profData?.IS_VERIFIED ?? true,
-    };
-  } catch (err) {
-    console.error('Failed to fetch doctor profile:', err);
-    return initialDoctorData;
+/** Loads the signed-in doctor's profile from profiles + doctor_profiles. */
+export async function fetchDoctorProfile(): Promise<DoctorProfileData> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
   }
+  const userId = await requireUserId();
+
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, email, department')
+    .eq('id', userId)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+  if (!profileRow) throw new Error('Your profile could not be loaded.');
+
+  const { data: doctorRow, error: doctorError } = await supabase
+    .from('doctor_profiles')
+    .select('specialization, contact_number, license_no, availability_notes, is_verified')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (doctorError) throw new Error(doctorError.message);
+
+  const extras = parseExtras(doctorRow?.availability_notes ?? null);
+
+  return {
+    ...emptyProfile(userId),
+    firstName: profileRow.first_name || '',
+    lastName: profileRow.last_name || '',
+    email: profileRow.email || '',
+    department: profileRow.department || '',
+    phone: doctorRow?.contact_number || '',
+    licenseId: doctorRow?.license_no || '',
+    specialty: doctorRow?.specialization || '',
+    yearsExperience: extras.yearsExperience || '',
+    startDate: extras.startDate || '',
+    dob: extras.dob || '',
+    gender: extras.gender || '',
+    streetAddress: extras.streetAddress || '',
+    isVerified: doctorRow?.is_verified ?? false,
+  };
 }
 
-/**
- * Save / Update Doctor Profile to Supabase
- */
-export async function saveDoctorProfile(profile: DoctorProfileData): Promise<{ success: boolean; message?: string }> {
-  if (!supabase) {
-    return { success: true, message: 'Saved locally (Supabase not configured).' };
-  }
-
+/** Saves the signed-in doctor's profile. Never fabricates a success. */
+export async function saveDoctorProfile(
+  profile: DoctorProfileData,
+): Promise<{ success: boolean; message?: string }> {
   try {
-    // 1. Update USER table
-    const { error: userErr } = await supabase
-      .from('USER')
+    if (!supabase) {
+      return { success: false, message: 'Supabase is not configured.' };
+    }
+    const userId = await requireUserId();
+
+    const { error: profileError } = await supabase
+      .from('profiles')
       .update({
-        FIRST_NAME: profile.firstName,
-        LAST_NAME: profile.lastName,
-        EMAIL: profile.email,
+        first_name: profile.firstName.trim(),
+        last_name: profile.lastName.trim(),
+        email: profile.email.trim(),
+        department: profile.department.trim() || null,
       })
-      .eq('USER_ID', profile.userId);
+      .eq('id', userId);
+    if (profileError) return { success: false, message: profileError.message };
 
-    if (userErr) {
-      console.error('Error updating USER table:', userErr);
-    }
-
-    // 2. Format JSON extra data
-    const extraNotes = JSON.stringify({
-      dob: profile.dob,
-      gender: profile.gender,
-      street_address: profile.streetAddress,
-    });
-
-    // 3. Check if DOCTOR_PROFILES row exists
-    const { data: existingProf } = await supabase
-      .from('DOCTOR_PROFILES')
-      .select('DOCTOR_PROFILE_ID')
-      .eq('USER_ID', profile.userId)
-      .maybeSingle();
-
-    if (existingProf) {
-      // Update existing record
-      const { error: updateErr } = await supabase
-        .from('DOCTOR_PROFILES')
-        .update({
-          SPECIALIZATION: profile.specialty,
-          CONTACT_NUMBER: profile.phone,
-          LICENSE_NO: profile.licenseId,
-          AVAILABILITY_NOTES: extraNotes,
-          IS_VERIFIED: profile.isVerified ?? true,
-        })
-        .eq('USER_ID', profile.userId);
-
-      if (updateErr) {
-        console.error('Error updating DOCTOR_PROFILES table:', updateErr);
-        return { success: false, message: updateErr.message };
-      }
-    } else {
-      // Insert new record
-      const { error: insertErr } = await supabase
-        .from('DOCTOR_PROFILES')
-        .insert([
-          {
-            USER_ID: profile.userId,
-            SPECIALIZATION: profile.specialty,
-            CONTACT_NUMBER: profile.phone,
-            LICENSE_NO: profile.licenseId,
-            AVAILABILITY_NOTES: extraNotes,
-            IS_VERIFIED: profile.isVerified ?? true,
-          },
-        ]);
-
-      if (insertErr) {
-        console.error('Error inserting DOCTOR_PROFILES table:', insertErr);
-        return { success: false, message: insertErr.message };
+    // Keep the auth email in sync when the user changed it on the form.
+    const { data: authData } = await supabase.auth.getUser();
+    const currentAuthEmail = authData.user?.email;
+    if (currentAuthEmail && profile.email.trim() && profile.email.trim() !== currentAuthEmail) {
+      const { error: emailError } = await supabase.auth.updateUser({
+        email: profile.email.trim(),
+      });
+      if (emailError) {
+        return {
+          success: false,
+          message: `Profile saved, but the login email could not be changed: ${emailError.message}`,
+        };
       }
     }
 
-    return { success: true, message: 'Doctor profile updated in Supabase successfully!' };
-  } catch (err: any) {
-    console.error('Failed to save doctor profile:', err);
-    return { success: false, message: err.message || 'Unknown error' };
+    const { error: upsertError } = await supabase.from('doctor_profiles').upsert(
+      {
+        user_id: userId,
+        specialization: profile.specialty.trim() || null,
+        contact_number: profile.phone.trim() || null,
+        license_no: profile.licenseId.trim() || null,
+        availability_notes: JSON.stringify({
+          dob: profile.dob,
+          gender: profile.gender,
+          streetAddress: profile.streetAddress,
+          yearsExperience: profile.yearsExperience,
+          startDate: profile.startDate,
+        }),
+        is_verified: profile.isVerified ?? false,
+      },
+      { onConflict: 'user_id' },
+    );
+    if (upsertError) return { success: false, message: upsertError.message };
+
+    return { success: true, message: 'Profile saved.' };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
