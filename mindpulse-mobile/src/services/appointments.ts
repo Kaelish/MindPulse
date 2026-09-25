@@ -132,13 +132,16 @@ export const fetchConversationClinician = async (): Promise<TelehealthClinician 
   return fetchClinicianById(data[0].doctor_id);
 };
 
-export const fetchBookedSlotKeys = async (): Promise<Set<string>> => {
-  const user = await requireUser();
+export const fetchBookedSlotKeys = async (doctorId: string): Promise<Set<string>> => {
+  await requireUser();
 
+  // Scoped per clinician: RLS only returns rows the caller owns, so this is
+  // "my active bookings with this clinician". Cross-patient conflicts are
+  // resolved on the clinician's dashboard.
   const { data, error } = await supabase
     .from('appointments')
     .select('scheduled_for')
-    .eq('patient_id', user.id)
+    .eq('doctor_id', doctorId)
     .in('status', ['scheduled', 'confirmed']);
 
   if (error) {

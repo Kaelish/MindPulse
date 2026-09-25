@@ -1,8 +1,9 @@
 import { supabase } from '../supabase/client';
 
-export type StudentCaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk';
+export type StudentCaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk' | 'No Assessment';
 
 export interface StudentCaseRecord {
+  userId: string;
   name: string;
   id: string;
   initials: string;
@@ -19,73 +20,108 @@ export interface StudentCaseRecord {
   trend: string;
 }
 
-type UserRow = { USER_ID: string; FIRST_NAME: string; LAST_NAME: string; EMAIL: string; ROLE: string };
-type ProfileRow = { USER_ID: string; STUDENT_NO: string; COURSE: string | null; YEAR_LEVEL: number | null; BIRTH_DATE: string | null; SEX: string | null };
-type SessionRow = { USER_ID: string; STARTED_AT: string | null; OVERALL_STRESS_SCORE: number | null; OVERALL_STRESS_LEVEL: string | null };
+type ProfileRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  student_no: string | null;
+  program: string | null;
+  year_level: string | null;
+  birth_date: string | null;
+  sex: string | null;
+};
+
+type SessionRow = {
+  user_id: string;
+  score: number | null;
+  created_at: string;
+};
 
 const formatAge = (birthDate: string | null) => {
   if (!birthDate) return 0;
   const birth = new Date(birthDate);
   const today = new Date();
-  return Math.max(0, today.getFullYear() - birth.getFullYear() - (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0));
+  return Math.max(
+    0,
+    today.getFullYear() -
+      birth.getFullYear() -
+      (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0),
+  );
 };
 
-const toStatus = (level: string | null, score: number) => {
-  const normalized = String(level || '').toLowerCase();
-  if (normalized.includes('high') || score >= 61) return 'High Risk' as const;
-  if (normalized.includes('moderate') || score >= 31) return 'Moderate Risk' as const;
-  return 'Low Risk' as const;
-};
+// Bands match dashboard levelForScore (High > 60, Moderate > 35, Low <= 35)
+const statusForScore = (score: number): StudentCaseStatus =>
+  score > 60 ? 'High Risk' : score > 35 ? 'Moderate Risk' : 'Low Risk';
 
-const formatDate = (value: string | null) => value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No assessment';
+const formatDate = (value: string | null) =>
+  value
+    ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'No assessment';
 
 export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
-  if (!supabase) throw new Error('Supabase is not configured. Showing sample cases.');
-
-  const { data: users, error: usersError } = await supabase
-    .from('USER')
-    .select('USER_ID, FIRST_NAME, LAST_NAME, EMAIL, ROLE')
-    .ilike('ROLE', '%student%');
-  if (usersError) throw new Error(usersError.message);
-
-  const userRows = (users || []) as UserRow[];
-  if (!userRows.length) return [];
-  const userIds = userRows.map((user) => user.USER_ID);
-
-  const [{ data: profiles, error: profilesError }, { data: sessions, error: sessionsError }] = await Promise.all([
-    supabase.from('STUDENT_PROFILES').select('USER_ID, STUDENT_NO, COURSE, YEAR_LEVEL, BIRTH_DATE, SEX').in('USER_ID', userIds),
-    supabase.from('ASSESSMENT_SESSIONS').select('USER_ID, STARTED_AT, OVERALL_STRESS_SCORE, OVERALL_STRESS_LEVEL').in('USER_ID', userIds).order('STARTED_AT', { ascending: false }),
-  ]);
-  if (profilesError) throw new Error(profilesError.message);
-  if (sessionsError) throw new Error(sessionsError.message);
-
-  const profileByUser = new Map(((profiles || []) as ProfileRow[]).map((profile) => [profile.USER_ID, profile]));
-  const latestSessionByUser = new Map<string, SessionRow>();
-  for (const session of (sessions || []) as SessionRow[]) {
-    if (!latestSessionByUser.has(session.USER_ID)) latestSessionByUser.set(session.USER_ID, session);
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
   }
 
-  return userRows.map((user) => {
-    const profile = profileByUser.get(user.USER_ID);
-    const session = latestSessionByUser.get(user.USER_ID);
-    const name = `${user.FIRST_NAME || ''} ${user.LAST_NAME || ''}`.trim() || user.EMAIL;
-    const score = session?.OVERALL_STRESS_SCORE ?? 0;
-    const status = toStatus(session?.OVERALL_STRESS_LEVEL || null, score);
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no, program, year_level, birth_date, sex')
+    .eq('role', 'student')
+    .order('created_at', { ascending: true });
+  if (profilesError) throw new Error(profilesError.message);
+
+  const profileRows = (profiles ?? []) as ProfileRow[];
+  if (!profileRows.length) return [];
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('stress_sessions')
+    .select('user_id, score, created_at')
+    .order('created_at', { ascending: false });
+  if (sessionsError) throw new Error(sessionsError.message);
+
+  // Newest-first list: keep the first two sessions per user for trend.
+  const recentByUser = new Map<string, SessionRow[]>();
+  for (const session of (sessions ?? []) as SessionRow[]) {
+    const list = recentByUser.get(session.user_id) ?? [];
+    if (list.length < 2) {
+      list.push(session);
+      recentByUser.set(session.user_id, list);
+    }
+  }
+
+  return profileRows.map((profile) => {
+    const name =
+      `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
+    const userSessions = recentByUser.get(profile.id) ?? [];
+    const latest = userSessions[0];
+    const previous = userSessions[1];
+
+    const score = latest?.score ?? 0;
+    const status: StudentCaseStatus = latest ? statusForScore(score) : 'No Assessment';
+
+    let trend = 'Stable';
+    if (latest && previous && latest.score != null && previous.score != null) {
+      const delta = latest.score - previous.score;
+      trend = delta > 2 ? 'Increasing' : delta < -2 ? 'Decreasing' : 'Stable';
+    }
+
     return {
+      userId: profile.id,
       name,
-      id: profile?.STUDENT_NO || user.USER_ID.slice(0, 8).toUpperCase(),
+      id: profile.student_no || profile.id.slice(0, 8).toUpperCase(),
       initials: name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
-      email: user.EMAIL,
-      phone: 'Not provided',
-      location: 'Not provided',
-      sex: profile?.SEX || 'Not provided',
-      program: profile?.COURSE || 'Not provided',
-      year: profile?.YEAR_LEVEL ? `${profile.YEAR_LEVEL}${profile.YEAR_LEVEL === 1 ? 'st' : profile.YEAR_LEVEL === 2 ? 'nd' : profile.YEAR_LEVEL === 3 ? 'rd' : 'th'} Year` : 'Not provided',
-      age: formatAge(profile?.BIRTH_DATE || null),
+      email: profile.email || 'No email',
+      phone: '—',
+      location: '—',
+      sex: profile.sex || '—',
+      program: profile.program || '—',
+      year: profile.year_level || '—',
+      age: formatAge(profile.birth_date),
       status,
-      lastAssessment: formatDate(session?.STARTED_AT || null),
+      lastAssessment: formatDate(latest?.created_at ?? null),
       score,
-      trend: status === 'High Risk' ? 'Increasing' : status === 'Moderate Risk' ? 'Stable' : 'Decreasing',
+      trend,
     };
   });
 }

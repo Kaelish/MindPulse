@@ -169,7 +169,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     setSelectedTime(null);
     try {
       // Availability must be fresh before offering times.
-      setBookedKeys(await fetchBookedSlotKeys());
+      setBookedKeys(await fetchBookedSlotKeys(c.id));
       setShowBookingModal(true);
     } catch (e: any) {
       Alert.alert('Could not load availability', e?.message || 'Please try again.');
@@ -195,7 +195,9 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       setSelectedTime(null);
 
       // Background refresh of availability and the Messages conversation.
-      fetchBookedSlotKeys().then(setBookedKeys).catch(() => { /* refreshed on next open */ });
+      fetchBookedSlotKeys(selectedClinician.id)
+        .then(setBookedKeys)
+        .catch(() => { /* refreshed on next open */ });
       void refreshConversation();
     } catch (e: any) {
       Alert.alert('Booking failed', e?.message || 'Could not book the appointment. Please try again.');
