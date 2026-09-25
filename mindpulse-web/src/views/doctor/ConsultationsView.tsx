@@ -9,6 +9,7 @@ import {
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
 } from '../../services/consultations';
+import { requireUserId } from '../../services/session';
 
 export const ConsultationsView: React.FC = () => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
@@ -18,16 +19,20 @@ export const ConsultationsView: React.FC = () => {
   const [webInputMessage, setWebInputMessage] = useState<string>('');
   const [showVideoCall, setShowVideoCall] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   // Manual Schedule Consultation Modal State
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
   const [scheduleStep, setScheduleStep] = useState<1 | 2>(1);
-  const [patientName, setPatientName] = useState<string>('John Doe');
-  const [patientAge, setPatientAge] = useState<string>('24');
-  const [patientEmail, setPatientEmail] = useState<string>('student.test@mindpulse.edu');
-  const [patientNotes, setPatientNotes] = useState<string>('Follow-up consultation');
-  const [selectedDate, setSelectedDate] = useState<string>('Today (Aug 31)');
-  const [selectedTime, setSelectedTime] = useState<string>('10:30 AM');
+  const [patientName, setPatientName] = useState<string>('');
+  const [patientAge, setPatientAge] = useState<string>('');
+  const [patientEmail, setPatientEmail] = useState<string>('');
+  const [patientNotes, setPatientNotes] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
   const [bookedSlotKeys, setBookedSlotKeys] = useState<Set<string>>(new Set());
 
   // Real-life date generation
@@ -54,6 +59,30 @@ export const ConsultationsView: React.FC = () => {
 
   const timeSlots = ['9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM', '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM'];
 
+  const chatTarget = activeSessionItem ?? consultations[0] ?? null;
+
+  useEffect(() => {
+    let isActive = true;
+    const loadDoctor = async () => {
+      try {
+        const id = await requireUserId();
+        if (isActive) {
+          setDoctorId(id);
+          setSessionError(null);
+        }
+      } catch (err) {
+        if (isActive) {
+          setDoctorId(null);
+          setSessionError(err instanceof Error ? err.message : 'Unable to identify the signed-in doctor.');
+        }
+      }
+    };
+    void loadDoctor();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   useEffect(() => {
     let isActive = true;
     const loadData = async () => {
@@ -74,13 +103,26 @@ export const ConsultationsView: React.FC = () => {
 
   // Poll Supabase chat messages & slot unavailability in real time
   useEffect(() => {
+    if (!doctorId || !chatTarget) {
+      setWebChatMessages([]);
+      return;
+    }
+
     let isSubscribed = true;
+    const targetPatientId = chatTarget.patientId;
     const loadMessages = async () => {
-      const msgs = await fetchWebChatMessages('1b64dd8f-48f1-4298-ac06-61377665e');
-      const slots = await fetchBookedSlotKeys();
-      if (isSubscribed) {
-        setWebChatMessages(msgs);
-        setBookedSlotKeys(slots);
+      try {
+        const msgs = await fetchWebChatMessages(doctorId, targetPatientId);
+        const slots = await fetchBookedSlotKeys();
+        if (isSubscribed) {
+          setWebChatMessages(msgs);
+          setBookedSlotKeys(slots);
+          setChatError(null);
+        }
+      } catch (err) {
+        if (isSubscribed) {
+          setChatError(err instanceof Error ? err.message : 'Unable to load messages.');
+        }
       }
     };
     void loadMessages();
@@ -90,39 +132,61 @@ export const ConsultationsView: React.FC = () => {
       isSubscribed = false;
       clearInterval(interval);
     };
-  }, [activeSessionItem, consultTab, showScheduleModal]);
+  }, [activeSessionItem, consultTab, showScheduleModal, doctorId, chatTarget]);
 
   const handleSendWebMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!webInputMessage.trim()) return;
+    if (!doctorId || !chatTarget) {
+      setChatError('No consultation selected — schedule one to start a conversation.');
+      return;
+    }
 
     const text = webInputMessage.trim();
     setWebInputMessage('');
+    setChatError(null);
 
-    const newMsg = await sendWebChatMessage('1b64dd8f-48f1-4298-ac06-61377665e', 'doctor', text);
-    setWebChatMessages((prev) => [...prev, newMsg]);
+    try {
+      const newMsg = await sendWebChatMessage(doctorId, chatTarget.patientId, text);
+      setWebChatMessages((prev) => [...prev, newMsg]);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : 'Unable to send the message.');
+      setWebInputMessage(text);
+    }
   };
 
   const handleConfirmSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientName.trim() || !patientEmail.trim() || !selectedDate || !selectedTime) return;
+    setScheduleError(null);
+    if (!patientName.trim() || !patientEmail.trim() || !selectedDate || !selectedTime) {
+      setScheduleError('Please fill in the patient name and email, then pick a date and a time slot.');
+      return;
+    }
 
     const slotKey = `${selectedDate}_${selectedTime}`;
-    if (bookedSlotKeys.has(slotKey)) return;
+    if (bookedSlotKeys.has(slotKey)) {
+      setScheduleError('That time slot is already booked. Pick another one.');
+      return;
+    }
 
-    const newConsult = await saveDoctorScheduleAppointment({
-      patientName: patientName.trim(),
-      age: patientAge.trim(),
-      patientEmail: patientEmail.trim(),
-      notes: patientNotes.trim(),
-      selectedDate,
-      selectedTime,
-    });
+    try {
+      const newConsult = await saveDoctorScheduleAppointment({
+        patientName: patientName.trim(),
+        age: patientAge.trim(),
+        patientEmail: patientEmail.trim(),
+        notes: patientNotes.trim(),
+        selectedDate,
+        selectedTime,
+      });
 
-    setConsultations((prev) => [newConsult, ...prev]);
-    setBookedSlotKeys((prev) => new Set([...Array.from(prev), slotKey]));
-    setShowScheduleModal(false);
-    setScheduleStep(1);
+      setConsultations((prev) => [newConsult, ...prev]);
+      setBookedSlotKeys((prev) => new Set([...Array.from(prev), slotKey]));
+      setShowScheduleModal(false);
+      setScheduleStep(1);
+      setScheduleError(null);
+    } catch (err) {
+      setScheduleError(err instanceof Error ? err.message : 'Unable to schedule the consultation.');
+    }
   };
 
   const upcomingConsultations = useMemo(
@@ -163,6 +227,7 @@ export const ConsultationsView: React.FC = () => {
             className="schedule-btn"
             onClick={() => {
               setScheduleStep(1);
+              setScheduleError(null);
               setShowScheduleModal(true);
             }}
           >
@@ -170,6 +235,23 @@ export const ConsultationsView: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {sessionError && (
+        <div
+          style={{
+            marginBottom: '14px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+          }}
+        >
+          {sessionError}
+        </div>
+      )}
 
       {/* 3 Top Stat Cards */}
       <div className="consult-stats-grid">
@@ -218,49 +300,62 @@ export const ConsultationsView: React.FC = () => {
         {consultTab === 'messages' ? (
           /* DEDICATED MESSAGES TAB INSIDE CONSULTATIONS PANEL */
           <div style={{ display: 'flex', flexDirection: 'column', height: '420px', background: '#faf8ed', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>JD</div>
-                <div>
-                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>John Doe (teststudent)</strong>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>student.test@mindpulse.edu · STU-001</div>
-                </div>
+            {!chatTarget ? (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
+                No consultations yet — schedule one to start a conversation.
               </div>
-
-              <button
-                type="button"
-                style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
-                onClick={() => {
-                  if (upcomingConsultations.length > 0) setActiveSessionItem(upcomingConsultations[0]);
-                  setShowVideoCall(true);
-                }}
-              >
-                📹 Launch Video Call
-              </button>
-            </div>
-
-            {/* Messages Thread Body */}
-            <div className="web-chat-body" style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
-              {webChatMessages.map((msg) => (
-                <div key={msg.id} className={`web-msg-row ${msg.sender}`}>
-                  <div className={`web-msg-bubble ${msg.sender}`}>
-                    <div>{msg.text}</div>
-                    <div className="web-msg-time">{msg.timestamp}</div>
+            ) : (
+              <>
+                <div style={{ padding: '12px 16px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{chatTarget.avatarInitials}</div>
+                    <div>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{chatTarget.patientName}</strong>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{chatTarget.patientEmail} · {chatTarget.studentId}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Message Input Bar */}
-            <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
-              <input
-                type="text"
-                placeholder="Type message to John Doe..."
-                value={webInputMessage}
-                onChange={(e) => setWebInputMessage(e.target.value)}
-              />
-              <button type="submit">Send Message</button>
-            </form>
+                  <button
+                    type="button"
+                    style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                    onClick={() => {
+                      setActiveSessionItem(chatTarget);
+                      setShowVideoCall(true);
+                    }}
+                  >
+                    📹 Launch Video Call
+                  </button>
+                </div>
+
+                {/* Messages Thread Body */}
+                <div className="web-chat-body" style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
+                  {webChatMessages.map((msg) => (
+                    <div key={msg.id} className={`web-msg-row ${msg.sender}`}>
+                      <div className={`web-msg-bubble ${msg.sender}`}>
+                        <div>{msg.text}</div>
+                        <div className="web-msg-time">{msg.timestamp}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Message Input Bar */}
+                <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
+                  <input
+                    type="text"
+                    placeholder={`Type message to ${chatTarget.patientName}...`}
+                    value={webInputMessage}
+                    onChange={(e) => setWebInputMessage(e.target.value)}
+                  />
+                  <button type="submit">Send Message</button>
+                </form>
+                {chatError && (
+                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+                    {chatError}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         ) : (
           /* UPCOMING AND COMPLETED LIST */
@@ -392,7 +487,7 @@ export const ConsultationsView: React.FC = () => {
                     <input
                       type="email"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
-                      placeholder="student.test@mindpulse.edu"
+                      placeholder="student@example.com"
                       value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
                     />
@@ -412,12 +507,31 @@ export const ConsultationsView: React.FC = () => {
                   />
                 </div>
 
+                {scheduleError && (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {scheduleError}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   style={{ background: '#5b6ef5', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
                   onClick={() => {
                     if (patientName.trim() && patientEmail.trim()) {
+                      setScheduleError(null);
                       setScheduleStep(2);
+                    } else {
+                      setScheduleError('Please enter the patient full name and email to continue.');
                     }
                   }}
                 >
@@ -429,7 +543,7 @@ export const ConsultationsView: React.FC = () => {
               <form onSubmit={handleConfirmSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                    Select Real-Life Booking Date
+                    Select Real-Life Booking Date *
                   </label>
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
                     {realLifeDates.map((d) => (
@@ -457,7 +571,7 @@ export const ConsultationsView: React.FC = () => {
 
                 <div>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                    Select Available Time Slot
+                    Select Available Time Slot *
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                     {timeSlots.map((t) => {
@@ -489,6 +603,22 @@ export const ConsultationsView: React.FC = () => {
                     })}
                   </div>
                 </div>
+
+                {scheduleError && (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {scheduleError}
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                   <button
@@ -529,7 +659,7 @@ export const ConsultationsView: React.FC = () => {
             <div className="web-chat-modal-header">
               <div>
                 <h3>Consultation Session: {activeSessionItem.patientName}</h3>
-                <p>STU-001 · {activeSessionItem.scheduledTime}</p>
+                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -586,6 +716,11 @@ export const ConsultationsView: React.FC = () => {
                   />
                   <button type="submit">Send</button>
                 </form>
+                {chatError && (
+                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+                    {chatError}
+                  </div>
+                )}
               </>
             )}
           </div>

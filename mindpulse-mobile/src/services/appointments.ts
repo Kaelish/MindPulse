@@ -5,7 +5,7 @@ export interface TelehealthClinician {
   name: string;
   specialty: string;
   avatar: string;
-  status: 'Available' | 'Offline';
+  verified: boolean;
   bio: string;
   tags: string[];
   email: string;
@@ -58,7 +58,7 @@ export const generateRealLifeDates = (): { label: string; dateStr: string }[] =>
 };
 
 const CLINICIAN_SELECT =
-  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags )';
+  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags, is_verified )';
 
 const toClinician = (row: any): TelehealthClinician => {
   const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
@@ -79,7 +79,7 @@ const toClinician = (row: any): TelehealthClinician => {
     name: displayName,
     specialty: embedded?.specialization || 'Mental Health Professional',
     avatar,
-    status: 'Available',
+    verified: Boolean(embedded?.is_verified),
     bio: embedded?.bio || 'No bio provided yet.',
     tags: Array.isArray(embedded?.tags) ? embedded.tags : [],
     email: row.email || '',

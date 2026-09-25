@@ -106,6 +106,22 @@ export interface AppNotification {
   created_at: string;
 }
 
+export type RecommendationPriority = 'Low' | 'Medium' | 'High';
+
+export type RecommendationStatus = 'Active' | 'Completed';
+
+export interface Recommendation {
+  id: string;
+  student_id: string;
+  doctor_id: string;
+  category: string;
+  priority: RecommendationPriority;
+  note: string;
+  status: RecommendationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MigrationReportRow {
   id: string;
   legacy_table: string;

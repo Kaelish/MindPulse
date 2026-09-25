@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,9 +32,47 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 }) => {
   const [fullName, setFullName] = useState(currentName);
   const [email, setEmail] = useState(currentEmail);
-  const [yearLevel, setYearLevel] = useState('3rd Year');
-  const [livingSituation, setLivingSituation] = useState('Off-campus — alone');
+  const [yearLevel, setYearLevel] = useState<string | null>(null);
+  const [livingSituation, setLivingSituation] = useState<string | null>(null);
+  const [savedYear, setSavedYear] = useState<string | null>(null);
+  const [savedLiving, setSavedLiving] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const chipsTouched = useRef(false);
+
+  // Load the real profile values every time the sheet opens — nothing here is
+  // prefilled with guessed data, so saving can never overwrite an empty field.
+  useEffect(() => {
+    if (!visible) return;
+    chipsTouched.current = false;
+    let active = true;
+    const loadProfile = async () => {
+      setLoadingProfile(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('year_level, living_situation')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (active && data && !chipsTouched.current) {
+          const year = data.year_level ?? null;
+          const living = data.living_situation ?? null;
+          setYearLevel(year);
+          setLivingSituation(living);
+          setSavedYear(year);
+          setSavedLiving(living);
+        }
+      } catch {
+        // Keep the fields empty rather than inventing values.
+      } finally {
+        if (active) setLoadingProfile(false);
+      }
+    };
+    void loadProfile();
+    return () => { active = false; };
+  }, [visible]);
 
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -67,20 +105,33 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Update Supabase user metadata & profiles table
-        await supabase.auth.updateUser({
-          data: { first_name: fullName.split(' ')[0], full_name: fullName },
-        });
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || null;
 
-        await supabase
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: { first_name: firstName, last_name: lastName, full_name: fullName },
+        });
+        if (metaError) throw new Error(metaError.message);
+
+        const patch: Record<string, string | null> = {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+        };
+        // Only send the chips when the user actually changed them, so an empty
+        // (unset) value is never written over a real one by accident.
+        if (yearLevel !== savedYear) patch.year_level = yearLevel;
+        if (livingSituation !== savedLiving) patch.living_situation = livingSituation;
+
+        const { error } = await supabase
           .from('profiles')
-          .update({
-            first_name: fullName.split(' ')[0],
-            full_name: fullName,
-            year_level: yearLevel,
-            living_situation: livingSituation,
-          })
+          .update(patch)
           .eq('id', user.id);
+        if (error) throw new Error(error.message);
+
+        setSavedYear(yearLevel);
+        setSavedLiving(livingSituation);
       }
       showToast('Profile information updated successfully!');
       onProfileUpdated?.();
@@ -167,6 +218,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 
             {/* ── BASIC INFORMATION ── */}
             <Text style={styles.sectionLabel}>PERSONAL DETAILS</Text>
+            {loadingProfile && <Text style={styles.fieldNote}>Loading your saved details…</Text>}
             <View style={styles.card}>
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Full Name</Text>
@@ -198,7 +250,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     <TouchableOpacity
                       key={lvl}
                       style={[styles.chip, yearLevel === lvl && styles.chipActive]}
-                      onPress={() => setYearLevel(lvl)}
+                      onPress={() => { chipsTouched.current = true; setYearLevel(lvl); }}
                     >
                       <Text style={[styles.chipText, yearLevel === lvl && styles.chipTextActive]}>{lvl}</Text>
                     </TouchableOpacity>
@@ -213,7 +265,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     <TouchableOpacity
                       key={opt}
                       style={[styles.chip, livingSituation === opt && styles.chipActive]}
-                      onPress={() => setLivingSituation(opt)}
+                      onPress={() => { chipsTouched.current = true; setLivingSituation(opt); }}
                     >
                       <Text style={[styles.chipText, livingSituation === opt && styles.chipTextActive]}>{opt}</Text>
                     </TouchableOpacity>

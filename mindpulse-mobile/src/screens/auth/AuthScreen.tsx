@@ -98,8 +98,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       if (error) throw error;
 
       if (data.session) {
-        // Email confirmation is disabled – the profile row was created by the
-        // database trigger, so the user can start onboarding right away.
+        // Email confirmation is disabled. Create the canonical profile row
+        // right away so onboarding is never a pre-requisite for having a
+        // profile. The insert is idempotent: when the database trigger
+        // (on_auth_user_created) already created the row we leave it alone.
+        const newUser = data.user;
+        if (newUser) {
+          const { error: profileError } = await supabase.from('profiles').upsert(
+            {
+              id: newUser.id,
+              email: regEmail.trim(),
+              first_name: firstName,
+              last_name: lastName,
+              full_name: `${firstName} ${lastName}`.trim(),
+              role: 'student',
+            },
+            { onConflict: 'id', ignoreDuplicates: true },
+          );
+          // Non-fatal: the signup itself succeeded and Health Setup upserts
+          // the same row, so a failed profile write must not block the user.
+          void profileError;
+        }
         onAuthSuccess(true);
         return;
       }

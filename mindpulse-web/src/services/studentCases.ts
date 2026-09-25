@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
 
 export type StudentCaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk' | 'No Assessment';
 
@@ -125,3 +126,91 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
     };
   });
 }
+
+// ---- Per-student history (visible to a doctor through the appointment link) --
+
+export interface StudentSessionRecord {
+  id: string;
+  createdAt: string;
+  score: number | null;
+  stressLevel: string | null;
+  heartRate: number | null;
+  surveyScore: number | null;
+  reactionTimeMs: number | null;
+  emotion: string | null;
+  notes: string | null;
+}
+
+export const fetchStudentSessions = async (studentId: string): Promise<StudentSessionRecord[]> => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+  }
+  await requireUserId();
+
+  const { data, error } = await supabase
+    .from('stress_sessions')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, notes')
+    .eq('user_id', studentId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as {
+    id: string;
+    created_at: string;
+    score: number | null;
+    stress_level: string | null;
+    heart_rate: number | null;
+    survey_score: number | null;
+    reaction_time_ms: number | null;
+    emotion: string | null;
+    notes: string | null;
+  }[]).map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    score: row.score,
+    stressLevel: row.stress_level,
+    heartRate: row.heart_rate,
+    surveyScore: row.survey_score,
+    reactionTimeMs: row.reaction_time_ms,
+    emotion: row.emotion,
+    notes: row.notes,
+  }));
+};
+
+export interface StudentAppointmentRecord {
+  id: string;
+  scheduledFor: string | null;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+export const fetchStudentConsultations = async (
+  studentId: string,
+): Promise<StudentAppointmentRecord[]> => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+  }
+  await requireUserId();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, scheduled_for, status, notes, created_at')
+    .eq('patient_id', studentId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as {
+    id: string;
+    scheduled_for: string | null;
+    status: string;
+    notes: string | null;
+    created_at: string;
+  }[]).map((row) => ({
+    id: row.id,
+    scheduledFor: row.scheduled_for,
+    status: row.status,
+    notes: row.notes,
+    createdAt: row.created_at,
+  }));
+};

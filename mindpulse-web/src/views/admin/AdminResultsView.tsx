@@ -1,32 +1,83 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
+import { AdminResultRow, bandForScore, fetchAdminResults } from '../../services/admin';
 
 interface AdminResultsViewProps {
   onSignOut: () => void;
   onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile') => void;
 }
 
-const results = [
-  { id: 'SD-2845', patient: 'John Doe', date: '2026-04-04 14:23:15', emotion: 'Calm', confidence: '96.5%', tension: 12, heartRate: '72 bpm', level: 'Low' },
-  { id: 'SD-2846', patient: 'Sarah Smith', date: '2026-04-04 13:58:30', emotion: 'Neutral', confidence: '91.8%', tension: 45, heartRate: '82 bpm', level: 'Moderate' },
-  { id: 'SD-2847', patient: 'Mike Johnson', date: '2026-04-04 13:41:08', emotion: 'Neutral', confidence: '89.4%', tension: 22, heartRate: '76 bpm', level: 'Low' },
-  { id: 'SD-2848', patient: 'Emma Wilson', date: '2026-04-04 12:35:44', emotion: 'Anxious', confidence: '78.2%', tension: 68, heartRate: '94 bpm', level: 'High' },
-];
+const pad = (value: number) => String(value).padStart(2, '0');
+
+const localDateKey = (iso: string) => {
+  const date = new Date(iso);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const todayKey = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const formatStamp = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const bandOf = (row: AdminResultRow) => (row.score != null ? bandForScore(row.score) : null);
 
 export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, onNavigate }) => {
+  const [rows, setRows] = useState<AdminResultRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [level, setLevel] = useState('All Levels');
   const [emotion, setEmotion] = useState('All Emotions');
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date(2026, 8, 1));
-  const filteredResults = useMemo(() => results.filter((result) =>
-    (level === 'All Levels' || result.level === level.replace('Moderate', 'Moderate')) &&
-    (emotion === 'All Emotions' || result.emotion === emotion) &&
-    (!selectedDate || result.date.startsWith(selectedDate)) &&
-    `${result.id} ${result.patient}`.toLowerCase().includes(search.toLowerCase()),
-  ), [level, emotion, search, selectedDate]);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setLoadError('');
+    fetchAdminResults()
+      .then((data) => {
+        if (active) setRows(data);
+      })
+      .catch((error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load detection results.');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
+
+  const emotionOptions = useMemo(() => Array.from(
+    new Set(rows.map((row) => row.emotion).filter((value): value is string => Boolean(value))),
+  ).sort(), [rows]);
+
+  const filteredResults = useMemo(() => rows.filter((row) => {
+    if (level !== 'All Levels' && bandOf(row) !== level.toLowerCase()) return false;
+    if (emotion !== 'All Emotions' && row.emotion !== emotion) return false;
+    if (selectedDate && localDateKey(row.createdAt) !== selectedDate) return false;
+    const term = search.toLowerCase();
+    if (term && !`${row.studentName} ${row.id.slice(0, 8)}`.toLowerCase().includes(term)) return false;
+    return true;
+  }), [rows, level, emotion, search, selectedDate]);
+
+  const scored = rows.filter((row) => row.score != null);
+  const averageScore = scored.length
+    ? Math.round(scored.reduce((total, row) => total + (row.score ?? 0), 0) / scored.length)
+    : null;
+  const scansToday = rows.filter((row) => localDateKey(row.createdAt) === todayKey()).length;
+  const highStress = rows.filter((row) => bandOf(row) === 'high').length;
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
@@ -51,10 +102,33 @@ export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, o
   return <div className="doctor-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="results" onNavigate={onNavigate} />
     <main className="main-panel detection-results-main">
-      <header className="topbar detection-results-topbar"><div><h1>Detection Results</h1><p className="page-subtitle">View and analyze stress detection scan results</p></div><div className="header-actions"><button type="button" className="ghost-button">⌕ Filter</button><button type="button" className="ghost-button">⇩ Export</button><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></div></header>
-      <section className="detection-summary-grid"><Summary label="Total Scans Today" value="2,847" change="+12.5% from yesterday" tone="green" /><Summary label="Avg Confidence" value="1,243" change="+2.1% from yesterday" tone="green" /><Summary label="High Stress Count" value="47" change="-15.3% from yesterday" tone="red" /><Summary label="Anomalies Detected" value="3" change="Requires review" tone="neutral" /></section>
-      <section className="detection-filter-bar"><label className="detection-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label><select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter stress level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select><select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter emotion"><option>All Emotions</option><option>Calm</option><option>Neutral</option><option>Anxious</option><option>Stressed</option></select><div className="date-filter-wrap"><button type="button" className="date-filter" onClick={() => setCalendarOpen((open) => !open)}>▣ {selectedDate || 'Today'}</button>{calendarOpen && <div className="calendar-popover" role="dialog" aria-label="Choose scan date"><div className="calendar-header"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Previous month">‹</button><strong>{calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</strong><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} aria-label="Next month">›</button></div><div className="calendar-weekdays">{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{calendarDays.map((item, index) => <button type="button" key={`${item.date}-${index}`} className={`${item.currentMonth ? '' : 'outside-month'} ${selectedDate === item.date ? 'selected-day' : ''}`} onClick={() => selectDate(item.date)} disabled={!item.currentMonth}>{item.day}</button>)}</div><div className="calendar-footer"><button type="button" onClick={() => { setSelectedDate(''); setCalendarOpen(false); }}>Clear</button><button type="button" onClick={() => { setSelectedDate('2026-09-03'); setCalendarOpen(false); }}>Today</button></div></div>}</div></section>
-      <section className="detection-results-panel"><h2>Recent Scans</h2><div className="scan-list">{filteredResults.map((result) => <article className="scan-row" key={result.id}><div className="scan-identity"><span className="scan-label">Scan ID</span><strong>{result.id}</strong><div className="scan-user"><span className="account-avatar">●</span><span><b>{result.patient}</b><small>{result.date}</small></span></div></div><div className="scan-detail"><span>Emotion</span><b className="emotion-badge">{result.emotion}</b><span>Stress Level</span><b className={`stress-text ${result.level.toLowerCase()}`}>{result.level}</b></div><div className="scan-detail"><span>Confidence</span><strong>{result.confidence}</strong><span>Heart Rate</span><strong>{result.heartRate}</strong></div><div className="tension-detail"><span>Facial Tension <small>{result.tension}%</small></span><div className="tension-track"><i style={{ width: `${result.tension}%` }} className={result.tension > 50 ? 'high' : ''} /></div></div><button type="button" className="view-details-button">View Details</button></article>)}</div>{filteredResults.length === 0 && <p className="empty-table">No scans match your filters.</p>}</section>
+      <header className="topbar detection-results-topbar"><div><h1>Detection Results</h1><p className="page-subtitle">View and analyze stress detection scan results</p></div><div className="header-actions"><div className="account-actions"><button type="button" className="notification-button" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>{showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong></div><p className="empty-notifications">No notifications yet</p></aside>}</div></div></header>
+      <section className="detection-summary-grid">
+        <Summary label="Total Scans" value={String(rows.length)} change="All recorded sessions" tone="neutral" />
+        <Summary label="Scans Today" value={String(scansToday)} change="Local calendar date" tone="green" />
+        <Summary label="Average Score" value={averageScore != null ? String(averageScore) : '—'} change="Scans with a recorded score" tone="neutral" />
+        <Summary label="High Stress Count" value={String(highStress)} change="Score above 60" tone="red" />
+      </section>
+      <section className="detection-filter-bar"><label className="detection-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label><select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter stress level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select><select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter emotion"><option>All Emotions</option>{emotionOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select><div className="date-filter-wrap"><button type="button" className="date-filter" onClick={() => setCalendarOpen((open) => !open)}>▣ {selectedDate || 'All dates'}</button>{calendarOpen && <div className="calendar-popover" role="dialog" aria-label="Choose scan date"><div className="calendar-header"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Previous month">‹</button><strong>{calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</strong><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} aria-label="Next month">›</button></div><div className="calendar-weekdays">{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{calendarDays.map((item, index) => <button type="button" key={`${item.date}-${index}`} className={`${item.currentMonth ? '' : 'outside-month'} ${selectedDate === item.date ? 'selected-day' : ''}`} onClick={() => selectDate(item.date)} disabled={!item.currentMonth}>{item.day}</button>)}</div><div className="calendar-footer"><button type="button" onClick={() => { setSelectedDate(''); setCalendarOpen(false); }}>Clear</button><button type="button" onClick={() => { setSelectedDate(todayKey()); setCalendarOpen(false); }}>Today</button></div></div>}</div></section>
+      <section className="detection-results-panel"><h2>Recent Scans</h2>
+        {isLoading && <div className="loading-state"><span className="spinner" /></div>}
+        {loadError && <div className="error-state"><p>{loadError}</p><button type="button" onClick={() => setReloadKey((key) => key + 1)}>Retry</button></div>}
+        {!isLoading && !loadError && <>
+          <div className="scan-list">{filteredResults.map((result) => {
+            const band = bandOf(result);
+            const levelText = band ? titleCase(band) : (result.stressLevel ?? '—');
+            return (
+              <article className="scan-row" key={result.id}>
+                <div className="scan-identity"><span className="scan-label">Scan ID</span><strong>{result.id.slice(0, 8)}</strong><div className="scan-user"><span className="account-avatar">●</span><span><b>{result.studentName}</b><small>{formatStamp(result.createdAt)}</small></span></div></div>
+                <div className="scan-detail"><span>Emotion</span><b className="emotion-badge">{result.emotion ?? '—'}</b><span>Stress Level</span><b className={`stress-text ${levelText.toLowerCase()}`}>{band && result.score != null ? `${levelText} (${result.score})` : levelText}</b></div>
+                <div className="scan-detail"><span>Heart Rate</span><strong>{result.heartRate != null ? `${result.heartRate} bpm` : '— bpm'}</strong><span>Survey Score</span><strong>{result.surveyScore ?? '—'}</strong></div>
+                <div className="tension-detail"><span>Reaction Time</span><strong>{result.reactionTimeMs != null ? `${result.reactionTimeMs} ms` : '—'}</strong></div>
+              </article>
+            );
+          })}</div>
+          {filteredResults.length === 0 && <p className="empty-table">{rows.length === 0 ? 'No scans recorded yet.' : 'No scans match your filters.'}</p>}
+        </>}
+      </section>
     </main>
   </div>;
 };

@@ -131,6 +131,222 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- 0b. Reconcile pre-existing canonical tables
+-- ---------------------------------------------------------------------------
+-- `create table if not exists` silently does nothing when the table is
+-- already there, so a canonical table created earlier by the mobile/web apps
+-- (public.profiles and public.stress_sessions pre-date this script) would
+-- keep its old shape and every later statement that references a canonical
+-- column would fail. This block only ever ADDS missing columns – nothing is
+-- dropped, renamed or rewritten, so existing rows always survive.
+--
+-- Key columns are different: a canonical table that is missing its identity
+-- column cannot be mapped safely, so it aborts with an explicit message
+-- instead of inventing ids.
+-- First run: the tables do not exist yet, the block skips them and the
+-- `create table if not exists` statements below build the full shape.
+
+do $do$
+declare
+  r record;
+begin
+  for r in
+    select * from (values
+      -- profiles
+      ('profiles', 'id',                  $c$uuid primary key references auth.users (id) on delete cascade$c$, true),
+      ('profiles', 'first_name',          $c$text$c$, false),
+      ('profiles', 'last_name',           $c$text$c$, false),
+      ('profiles', 'full_name',           $c$text$c$, false),
+      ('profiles', 'email',               $c$text$c$, false),
+      ('profiles', 'role',                $c$text not null default 'student'$c$, false),
+      ('profiles', 'year_level',          $c$text$c$, false),
+      ('profiles', 'program',             $c$text$c$, false),
+      ('profiles', 'living_situation',    $c$text$c$, false),
+      ('profiles', 'student_no',          $c$text$c$, false),
+      ('profiles', 'department',          $c$text$c$, false),
+      ('profiles', 'birth_date',          $c$date$c$, false),
+      ('profiles', 'sex',                 $c$text$c$, false),
+      ('profiles', 'mental_conditions',   $c$jsonb not null default '[]'::jsonb$c$, false),
+      ('profiles', 'physical_conditions', $c$jsonb not null default '[]'::jsonb$c$, false),
+      ('profiles', 'lifestyle_habits',    $c$jsonb not null default '[]'::jsonb$c$, false),
+      ('profiles', 'none_apply',          $c$boolean not null default false$c$, false),
+      ('profiles', 'onboarding_complete', $c$boolean not null default false$c$, false),
+      ('profiles', 'created_at',          $c$timestamptz not null default now()$c$, false),
+      ('profiles', 'updated_at',          $c$timestamptz not null default now()$c$, false),
+      -- doctor_profiles
+      ('doctor_profiles', 'id',               $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('doctor_profiles', 'user_id',          $c$uuid not null unique references public.profiles (id) on delete cascade$c$, true),
+      ('doctor_profiles', 'specialization',   $c$text$c$, false),
+      ('doctor_profiles', 'contact_number',   $c$text$c$, false),
+      ('doctor_profiles', 'license_no',       $c$text$c$, false),
+      ('doctor_profiles', 'is_verified',      $c$boolean not null default false$c$, false),
+      ('doctor_profiles', 'bio',              $c$text$c$, false),
+      ('doctor_profiles', 'tags',             $c$text[] not null default '{}'::text[]$c$, false),
+      ('doctor_profiles', 'availability_notes', $c$text$c$, false),
+      ('doctor_profiles', 'created_at',       $c$timestamptz not null default now()$c$, false),
+      ('doctor_profiles', 'updated_at',       $c$timestamptz not null default now()$c$, false),
+      -- stress_sessions
+      ('stress_sessions', 'id',               $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('stress_sessions', 'user_id',          $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('stress_sessions', 'score',            $c$integer$c$, false),
+      ('stress_sessions', 'stress_level',     $c$text$c$, false),
+      ('stress_sessions', 'heart_rate',       $c$integer$c$, false),
+      ('stress_sessions', 'survey_score',     $c$integer$c$, false),
+      ('stress_sessions', 'emotion',          $c$text$c$, false),
+      ('stress_sessions', 'reaction_time_ms', $c$integer$c$, false),
+      ('stress_sessions', 'face_confidence',  $c$integer$c$, false),
+      ('stress_sessions', 'notes',            $c$text$c$, false),
+      ('stress_sessions', 'created_at',       $c$timestamptz not null default now()$c$, false),
+      -- appointments
+      ('appointments', 'id',            $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('appointments', 'patient_id',    $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('appointments', 'doctor_id',     $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('appointments', 'scheduled_for', $c$text not null default ''$c$, false),
+      ('appointments', 'status',        $c$text not null default 'scheduled'$c$, false),
+      ('appointments', 'notes',         $c$text$c$, false),
+      ('appointments', 'created_at',    $c$timestamptz not null default now()$c$, false),
+      ('appointments', 'updated_at',    $c$timestamptz not null default now()$c$, false),
+      -- chat_messages
+      ('chat_messages', 'id',           $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('chat_messages', 'patient_id',   $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('chat_messages', 'clinician_id', $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('chat_messages', 'sender',       $c$text not null default 'patient'$c$, false),
+      ('chat_messages', 'text',         $c$text not null default ''$c$, false),
+      ('chat_messages', 'created_at',   $c$timestamptz not null default now()$c$, false),
+      -- video_sessions
+      ('video_sessions', 'id',             $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('video_sessions', 'patient_id',     $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('video_sessions', 'doctor_id',      $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('video_sessions', 'appointment_id', $c$uuid$c$, false),
+      ('video_sessions', 'room_name',      $c$text not null default ''$c$, false),
+      ('video_sessions', 'meeting_url',    $c$text$c$, false),
+      ('video_sessions', 'token',          $c$text$c$, false),
+      ('video_sessions', 'status',         $c$text not null default 'pending'$c$, false),
+      ('video_sessions', 'created_at',     $c$timestamptz not null default now()$c$, false),
+      -- notifications
+      ('notifications', 'id',         $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('notifications', 'user_id',    $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('notifications', 'title',      $c$text not null default ''$c$, false),
+      ('notifications', 'message',    $c$text not null default ''$c$, false),
+      ('notifications', 'type',       $c$text not null default 'info'$c$, false),
+      ('notifications', 'read',       $c$boolean not null default false$c$, false),
+      ('notifications', 'created_at', $c$timestamptz not null default now()$c$, false),
+      -- recommendations
+      ('recommendations', 'id',         $c$uuid primary key default gen_random_uuid()$c$, true),
+      ('recommendations', 'student_id', $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('recommendations', 'doctor_id',  $c$uuid not null references auth.users (id) on delete cascade$c$, true),
+      ('recommendations', 'category',   $c$text not null default 'General'$c$, false),
+      ('recommendations', 'priority',   $c$text not null default 'Medium'$c$, false),
+      ('recommendations', 'note',       $c$text not null default ''$c$, false),
+      ('recommendations', 'status',     $c$text not null default 'Active'$c$, false),
+      ('recommendations', 'created_at', $c$timestamptz not null default now()$c$, false),
+      ('recommendations', 'updated_at', $c$timestamptz not null default now()$c$, false)
+    ) as t(tbl, col, ddl, is_key)
+  loop
+    if to_regclass('public.' || quote_ident(r.tbl)) is null then
+      continue;  -- not created yet: the canonical DDL below builds it whole
+    end if;
+
+    if exists (
+      select 1 from information_schema.columns c
+      where c.table_schema = 'public'
+        and c.table_name = r.tbl
+        and c.column_name = r.col
+    ) then
+      continue;
+    end if;
+
+    if r.is_key then
+      raise exception 'public.% has no column % – reconcile the pre-existing table manually with this script''s canonical definition (ids must never be invented), then re-run',
+                      r.tbl, r.col;
+    end if;
+
+    execute format('alter table public.%I add column %I %s', r.tbl, r.col, r.ddl);
+    raise notice 'reconciled public.% : added column % (%)', r.tbl, r.col, r.ddl;
+  end loop;
+
+  -- The clients upsert on their key column (profiles on id, doctor_profiles
+  -- on user_id), which requires a unique key even when the table pre-dates
+  -- this script. A primary key is added for id columns, a plain unique
+  -- constraint for the others – and only when the data allows it.
+  for r in
+    select * from (values
+      ('profiles', 'id'), ('doctor_profiles', 'id'), ('doctor_profiles', 'user_id'),
+      ('stress_sessions', 'id'), ('appointments', 'id'), ('chat_messages', 'id'),
+      ('video_sessions', 'id'), ('notifications', 'id'), ('recommendations', 'id')
+    ) as t(tbl, col)
+  loop
+    if to_regclass('public.' || quote_ident(r.tbl)) is null then
+      continue;
+    end if;
+    if not exists (
+      select 1 from information_schema.columns c
+       where c.table_schema = 'public' and c.table_name = r.tbl and c.column_name = r.col
+    ) then
+      continue;  -- already reported above as a missing key
+    end if;
+
+    if exists (
+      select 1
+        from pg_index i
+       where i.indrelid = to_regclass('public.' || quote_ident(r.tbl))
+         and i.indisunique
+         and i.indnkeyatts = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = i.indrelid and a.attnum = i.indkey[0]) = r.col
+    ) then
+      continue;  -- already unique on exactly this column
+    end if;
+
+    if r.col = 'id' and exists (
+      select 1 from pg_constraint
+       where conrelid = to_regclass('public.' || quote_ident(r.tbl))
+         and contype = 'p'
+    ) then
+      raise notice 'public.% already has a primary key on a different column than id – reconcile it manually', r.tbl;
+      continue;
+    end if;
+
+    begin
+      if r.col = 'id' then
+        execute format(
+          'alter table public.%I add constraint %I primary key (%I)',
+          r.tbl, r.tbl || '_' || r.col || '_pkey', r.col
+        );
+        raise notice 'reconciled public.% : added primary key (%)', r.tbl, r.col;
+      else
+        execute format(
+          'alter table public.%I add constraint %I unique (%I)',
+          r.tbl, r.tbl || '_' || r.col || '_key', r.col
+        );
+        raise notice 'reconciled public.% : added unique key (%)', r.tbl, r.col;
+      end if;
+    exception when unique_violation or not_null_violation or duplicate_object or duplicate_table then
+      raise notice 'public.% : column % could not be keyed (nulls, duplicates or an existing key) – reconcile it manually', r.tbl, r.col;
+    end;
+  end loop;
+
+  -- profiles.role must be constrained to the three application roles even when
+  -- the table pre-dates this script (only added when every existing value
+  -- already conforms, so real data is never invalidated).
+  if to_regclass('public.profiles') is not null
+     and not exists (
+       select 1 from pg_constraint
+        where conrelid = 'public.profiles'::regclass
+          and contype = 'c'
+          and conname = 'profiles_role_check'
+     )
+     and not exists (
+       select 1 from public.profiles where role not in ('student', 'doctor', 'admin')
+     )
+  then
+    alter table public.profiles
+      add constraint profiles_role_check check (role in ('student', 'doctor', 'admin'));
+  end if;
+end;
+$do$;
+
+-- ---------------------------------------------------------------------------
 -- 1. profiles  (canonical application profile, id = auth.users.id)
 -- ---------------------------------------------------------------------------
 
@@ -318,6 +534,36 @@ create index if not exists notifications_user_idx
   on public.notifications (user_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- 7b. recommendations  (doctor -> student clinical guidance, persistent)
+-- ---------------------------------------------------------------------------
+-- The doctor console writes these and the student is the recipient, so they
+-- need real storage: a recommendation is a database entity, not a UI prop.
+
+create table if not exists public.recommendations (
+  id          uuid primary key default gen_random_uuid(),
+  student_id  uuid not null references auth.users (id) on delete cascade,
+  doctor_id   uuid not null references auth.users (id) on delete cascade,
+  category    text not null default 'General',
+  priority    text not null default 'Medium'
+              check (priority in ('Low', 'Medium', 'High')),
+  note        text not null,
+  status      text not null default 'Active'
+              check (status in ('Active', 'Completed')),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists recommendations_student_idx
+  on public.recommendations (student_id, created_at desc);
+create index if not exists recommendations_doctor_idx
+  on public.recommendations (doctor_id, created_at desc);
+
+drop trigger if exists recommendations_updated_at on public.recommendations;
+create trigger recommendations_updated_at
+  before update on public.recommendations
+  for each row execute function public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- 8. migration_report – records legacy rows that cannot be mapped safely
 -- ---------------------------------------------------------------------------
 
@@ -380,7 +626,8 @@ declare
 begin
   foreach t in array array[
     'profiles', 'doctor_profiles', 'stress_sessions', 'appointments',
-    'chat_messages', 'video_sessions', 'notifications', 'migration_report'
+    'chat_messages', 'video_sessions', 'notifications', 'recommendations',
+    'migration_report'
   ] loop
     execute format('alter table public.%I enable row level security', t);
   end loop;
@@ -388,10 +635,11 @@ end;
 $$;
 
 -- ---- profiles ---------------------------------------------------------------
--- Visibility model: everyone sees their own row and the professional doctor
--- directory; administrators see everything; doctors (trusted clinic staff)
--- review student cases, which requires reading student profiles; anyone who
--- shares an appointment with a profile may read it.
+-- Visibility model: everyone sees their own row and the public professional
+-- doctor directory; administrators see everything; a doctor only sees a
+-- student's private profile once an appointment links the two (relationship
+-- based authorization – a doctor never gets blanket read access to every
+-- student); anyone who shares an appointment with a profile may read it.
 drop policy if exists "profiles_select_self_admin_link" on public.profiles;
 create policy "profiles_select_self_admin_link" on public.profiles
   for select to authenticated
@@ -399,7 +647,6 @@ create policy "profiles_select_self_admin_link" on public.profiles
     id = auth.uid()
     or public.is_admin()
     or role = 'doctor'                                    -- public professional directory
-    or public.current_app_role() = 'doctor'               -- doctors review student cases
     or public.has_appointment_with(id)
   );
 
@@ -419,16 +666,16 @@ create policy "profiles_delete_admin" on public.profiles
   for delete to authenticated using (public.is_admin());
 
 -- ---- doctor_profiles --------------------------------------------------------
--- Owners and administrators manage the full row; doctors see each other;
--- every signed-up account may read the directory entries of real doctors so
--- the booking screen can show specialization / bio / availability.
+-- Owners and administrators manage the full row; every signed-up account may
+-- read the directory entries of real doctors so the booking screen can show
+-- specialization / bio / availability. Writing a row requires already being a
+-- doctor (or an administrator), so a student cannot mint a doctor profile.
 drop policy if exists "doctor_profiles_select" on public.doctor_profiles;
 create policy "doctor_profiles_select" on public.doctor_profiles
   for select to authenticated
   using (
     user_id = auth.uid()
     or public.is_admin()
-    or public.current_app_role() = 'doctor'
     or exists (
       select 1 from public.profiles p
       where p.id = doctor_profiles.user_id and p.role = 'doctor'
@@ -438,7 +685,10 @@ create policy "doctor_profiles_select" on public.doctor_profiles
 drop policy if exists "doctor_profiles_write_owner" on public.doctor_profiles;
 create policy "doctor_profiles_write_owner" on public.doctor_profiles
   for insert to authenticated
-  with check (user_id = auth.uid() or public.is_admin());
+  with check (
+    public.is_admin()
+    or (user_id = auth.uid() and public.current_app_role() = 'doctor')
+  );
 
 drop policy if exists "doctor_profiles_update_owner" on public.doctor_profiles;
 create policy "doctor_profiles_update_owner" on public.doctor_profiles
@@ -451,15 +701,15 @@ create policy "doctor_profiles_delete_admin" on public.doctor_profiles
   for delete to authenticated using (public.is_admin());
 
 -- ---- stress_sessions --------------------------------------------------------
--- Own rows, administrators, doctors (case review) and anyone who shares an
--- appointment with the assessed student.
+-- Own rows, administrators, and anyone who shares an appointment with the
+-- assessed student. Doctors are deliberately NOT given blanket access: they
+-- read a student's assessments only through a real appointment link.
 drop policy if exists "stress_sessions_select" on public.stress_sessions;
 create policy "stress_sessions_select" on public.stress_sessions
   for select to authenticated
   using (
     user_id = auth.uid()
     or public.is_admin()
-    or public.current_app_role() = 'doctor'
     or public.has_appointment_with(user_id)
   );
 
@@ -541,10 +791,12 @@ create policy "chat_messages_delete_admin" on public.chat_messages
   for delete to authenticated using (public.is_admin());
 
 -- ---- video_sessions (token is only visible to the participants) -------------
+-- Administrators are intentionally excluded: a Daily.co token is a
+-- participant credential, not an administrative fact.
 drop policy if exists "video_sessions_select" on public.video_sessions;
 create policy "video_sessions_select" on public.video_sessions
   for select to authenticated
-  using (patient_id = auth.uid() or doctor_id = auth.uid() or public.is_admin());
+  using (patient_id = auth.uid() or doctor_id = auth.uid());
 
 drop policy if exists "video_sessions_insert" on public.video_sessions;
 create policy "video_sessions_insert" on public.video_sessions
@@ -583,10 +835,34 @@ create policy "notifications_update" on public.notifications
   for update to authenticated
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
-
 drop policy if exists "notifications_delete" on public.notifications;
 create policy "notifications_delete" on public.notifications
-  for delete to authenticated using (user_id = auth.uid() or public.is_admin());
+  for delete to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
+-- ---- recommendations --------------------------------------------------------
+-- Only the two people on the recommendation see it: the student who receives
+-- it and the doctor who issued it. Doctors write; students read.
+drop policy if exists "recommendations_select" on public.recommendations;
+create policy "recommendations_select" on public.recommendations
+  for select to authenticated
+  using (student_id = auth.uid() or doctor_id = auth.uid());
+
+drop policy if exists "recommendations_insert" on public.recommendations;
+create policy "recommendations_insert" on public.recommendations
+  for insert to authenticated
+  with check (doctor_id = auth.uid() and public.current_app_role() = 'doctor');
+
+drop policy if exists "recommendations_update" on public.recommendations;
+create policy "recommendations_update" on public.recommendations
+  for update to authenticated
+  using (doctor_id = auth.uid())
+  with check (doctor_id = auth.uid());
+
+drop policy if exists "recommendations_delete" on public.recommendations;
+create policy "recommendations_delete" on public.recommendations
+  for delete to authenticated
+  using (doctor_id = auth.uid());
 
 -- ---- migration_report (readable by administrators only) ---------------------
 drop policy if exists "migration_report_select_admin" on public.migration_report;
@@ -687,8 +963,14 @@ $$;
 -- auth.users row. Never guess. Unmappable rows are reported, not invented.
 
 -- 11.1 report table for rows we refuse to guess about -------------------------
+-- Every mapping block below is wrapped in an exception guard: if a legacy
+-- table does not have the shape this script expects, the failure is recorded
+-- in public.migration_report (with the exact SQL error) and the script keeps
+-- going instead of rolling back the canonical schema. Legacy rows are never
+-- guessed at and never modified.
 do $$
 begin
+  begin
   if to_regclass('public."USER"') is not null then
     insert into public.migration_report (legacy_table, legacy_id, legacy_email, problem)
     select 'USER', u."USER_ID"::text, u."EMAIL",
@@ -734,12 +1016,20 @@ begin
        or not exists (select 1 from auth.users au where lower(au.email) = lower(u."EMAIL"))
     on conflict do nothing;
   end if;
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('legacy-scan', 'scan', 'legacy table scan failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'legacy table scan failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
 -- 11.2 profiles <- USER + STUDENT_PROFILES -----------------------------------
 do $$
 begin
+  begin
   if to_regclass('public."USER"') is null then
     return;
   end if;
@@ -795,6 +1085,13 @@ begin
     year_level  = coalesce(excluded.year_level, public.profiles.year_level),
     program     = coalesce(excluded.program, public.profiles.program),
     onboarding_complete = (public.profiles.onboarding_complete or excluded.onboarding_complete);
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('USER', 'mapping', 'profiles <- USER/STUDENT_PROFILES mapping failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'profiles <- USER mapping failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
@@ -808,6 +1105,7 @@ on conflict (user_id) do nothing;
 -- 11.4 doctor_profiles <- DOCTOR_PROFILES ------------------------------------
 do $$
 begin
+  begin
   if to_regclass('public."DOCTOR_PROFILES"') is null then
     return;
   end if;
@@ -845,6 +1143,13 @@ begin
     license_no       = coalesce(excluded.license_no, public.doctor_profiles.license_no),
     is_verified      = coalesce(excluded.is_verified, public.doctor_profiles.is_verified),
     availability_notes = coalesce(excluded.availability_notes, public.doctor_profiles.availability_notes);
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('DOCTOR_PROFILES', 'mapping', 'doctor_profiles <- DOCTOR_PROFILES mapping failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'doctor_profiles mapping failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
@@ -854,6 +1159,7 @@ $$;
 -- would be different every run and would duplicate the data).
 do $$
 begin
+  begin
   if to_regclass('public."ASSESSMENT_SESSIONS"') is null then
     return;
   end if;
@@ -931,12 +1237,20 @@ begin
     and a.score is not distinct from b.score
     and a.stress_level is not distinct from b.stress_level
     and a.created_at is not distinct from b.created_at;
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('ASSESSMENT_SESSIONS', 'mapping', 'stress_sessions <- ASSESSMENT_SESSIONS mapping failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'stress_sessions mapping failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
 -- 11.6 notifications <- NOTIFICATIONS ----------------------------------------
 do $$
 begin
+  begin
   if to_regclass('public."NOTIFICATIONS"') is null then
     return;
   end if;
@@ -958,12 +1272,20 @@ begin
   join public."USER" u on u."USER_ID" = n."USER_ID"
   join auth.users au on lower(au.email) = lower(u."EMAIL")
   on conflict (id) do nothing;
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('NOTIFICATIONS', 'mapping', 'notifications <- NOTIFICATIONS mapping failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'notifications mapping failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
 -- 11.7 chat_messages <- CONVERSATIONS + MESSAGES -----------------------------
 do $$
 begin
+  begin
   if to_regclass('public."CONVERSATIONS"') is null
      or to_regclass('public."MESSAGES"') is null then
     return;
@@ -983,6 +1305,13 @@ begin
   join auth.users pa on lower(pa.email) = lower((select uu."EMAIL" from public."USER" uu where uu."USER_ID" = c."STUDENT_USER_ID"))
   join auth.users doc on lower(doc.email) = lower((select uu."EMAIL" from public."USER" uu where uu."USER_ID" = c."DOCTOR_USER_ID"))
   on conflict (id) do nothing;
+
+  exception when others then
+    insert into public.migration_report (legacy_table, legacy_id, problem)
+    values ('MESSAGES', 'mapping', 'chat_messages <- CONVERSATIONS/MESSAGES mapping failed: ' || sqlerrm)
+    on conflict do nothing;
+    raise notice 'chat_messages mapping failed (recorded in migration_report): %', sqlerrm;
+  end;
 end;
 $$;
 
@@ -1067,11 +1396,19 @@ begin
   raise notice 'unmapped legacy rows: %', (select count(*) from public.migration_report);
 
   if legacy_users > 0 and mapped_profiles = 0 then
-    raise exception 'Migration verification failed: legacy USER rows exist but no profiles were created.';
+    if exists (select 1 from public.migration_report where legacy_table in ('USER', 'legacy-scan')) then
+      raise notice 'profiles mapping was skipped/failed - see migration_report; legacy USER rows left intact.';
+    else
+      raise exception 'Migration verification failed: legacy USER rows exist but no profiles were created.';
+    end if;
   end if;
 
   if legacy_sessions > 0 and mapped_sessions = 0 then
-    raise exception 'Migration verification failed: legacy ASSESSMENT_SESSIONS rows exist but no stress_sessions were created.';
+    if exists (select 1 from public.migration_report where legacy_table in ('ASSESSMENT_SESSIONS', 'legacy-scan')) then
+      raise notice 'stress_sessions mapping was skipped/failed - see migration_report; legacy assessment rows left intact.';
+    else
+      raise exception 'Migration verification failed: legacy ASSESSMENT_SESSIONS rows exist but no stress_sessions were created.';
+    end if;
   end if;
 
   if orphans > 0 then
@@ -1099,14 +1436,16 @@ do $$
 declare
   t text;
 begin
+  -- NOTE: GROWTH_LOG is deliberately NOT in this list. It is a MindPlant
+  -- application table (policies for authenticated users were created in
+  -- section 10), so revoking its privileges would break plant logging.
   foreach t in array array[
     'USER', 'STUDENT_PROFILES', 'DOCTOR_PROFILES', 'ASSESSMENT_SESSIONS',
     'STRESS_ASSESSMENT_RESULTS', 'SURVEY_RESULTS', 'SURVEY_RESPONSES',
     'SURVEY_QUESTION', 'SURVEY_CHOICES', 'HEART_RATE_RECORDS',
     'REACTION_TEST_RESULTS', 'FACIAL_ANALYSIS_RESULTS', 'STRESS_HISTORY',
     'CONSULTATIONS', 'CONSULTATION_REQUESTS', 'CONVERSATIONS', 'MESSAGES',
-    'NOTIFICATIONS', 'RECOMMENDATION', 'SESSION_SUGGESTION', 'CONSENT_RECORDS',
-    'GROWTH_LOG'
+    'NOTIFICATIONS', 'RECOMMENDATION', 'SESSION_SUGGESTION', 'CONSENT_RECORDS'
   ] loop
     if to_regclass('public.' || quote_ident(t)) is not null then
       execute format('alter table public.%I enable row level security', t);

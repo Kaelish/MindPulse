@@ -1,15 +1,37 @@
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$5zo)713dz%b&oi5je_to4@28of-5(&#mvcwrh379-fgvnv#e+'
+# Optional .env file (never committed — see mindpulse-backend/.gitignore).
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:  # pragma: no cover - dotenv is optional for local runs
+    pass
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').strip().lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['*']  # Allows requests during local development
+# SECURITY WARNING: keep the secret key used in production secret!
+# Set DJANGO_SECRET_KEY in .env for anything beyond local development; a random
+# key is generated for ephemeral dev runs instead of committing one to git.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '').strip()
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.')
+    SECRET_KEY = get_random_secret_key()
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -114,4 +136,11 @@ MAILERS = {
 }
 
 # CORS Configuration for React (Web) and React Native (Mobile)
-CORS_ALLOW_ALL_ORIGINS = True
+# Open by default for local development; set DJANGO_CORS_ALLOW_ALL=False and
+# DJANGO_CORS_ALLOWED_ORIGINS when deploying.
+CORS_ALLOW_ALL_ORIGINS = os.getenv('DJANGO_CORS_ALLOW_ALL', 'True').strip().lower() in ('1', 'true', 'yes')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('DJANGO_CORS_ALLOWED_ORIGINS', '').split(',')
+    if origin.strip()
+]

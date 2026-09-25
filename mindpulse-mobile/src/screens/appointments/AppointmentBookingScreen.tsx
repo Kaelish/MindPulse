@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -39,12 +40,12 @@ const TIME_SLOTS = [
 ];
 
 // ─── Avatar circle ────────────────────────────────────────────────────────────
-const ClinicianAvatar = ({ initials, available }: { initials: string; available: boolean }) => (
+const ClinicianAvatar = ({ initials }: { initials: string }) => (
   <View style={styles.avatarWrap}>
     <View style={styles.avatarCircle}>
       <Text style={styles.avatarInitials}>{initials}</Text>
     </View>
-    <View style={[styles.avatarDot, { backgroundColor: available ? '#27AE60' : '#B0B8C8' }]} />
+    <View style={[styles.avatarDot, { backgroundColor: '#27AE60' }]} />
   </View>
 );
 
@@ -53,9 +54,12 @@ const ClinicianCard = ({
   clinician, onConnect,
 }: { clinician: TelehealthClinician; onConnect: () => void }) => (
   <View style={styles.clinicianCard}>
-    <ClinicianAvatar initials={clinician.avatar} available={clinician.status === 'Available'} />
+    <ClinicianAvatar initials={clinician.avatar} />
     <View style={styles.clinicianInfo}>
-      <Text style={styles.clinicianName}>{clinician.name}</Text>
+      <View style={styles.nameRow}>
+        <Text style={styles.clinicianName}>{clinician.name}</Text>
+        {clinician.verified && <Text style={styles.verifiedBadge}>✓ Verified</Text>}
+      </View>
       <Text style={styles.clinicianSpec}>{clinician.specialty}</Text>
       <Text style={styles.clinicianBio} numberOfLines={2}>{clinician.bio}</Text>
       <View style={styles.tagRow}>
@@ -66,17 +70,8 @@ const ClinicianCard = ({
         ))}
       </View>
     </View>
-    <TouchableOpacity
-      style={[
-        styles.connectBtn,
-        clinician.status !== 'Available' && styles.connectBtnDisabled,
-      ]}
-      onPress={onConnect}
-      disabled={clinician.status !== 'Available'}
-    >
-      <Text style={styles.connectBtnText}>
-        {clinician.status === 'Available' ? 'Connect' : 'Offline'}
-      </Text>
+    <TouchableOpacity style={styles.connectBtn} onPress={onConnect}>
+      <Text style={styles.connectBtnText}>Connect</Text>
     </TouchableOpacity>
   </View>
 );
@@ -269,7 +264,14 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               <Text style={styles.crisisTitle}>Crisis Support</Text>
               <Text style={styles.crisisPhone}>988 · 24/7 free & confidential</Text>
             </View>
-            <TouchableOpacity style={styles.callNowBtn}>
+            <TouchableOpacity
+              style={styles.callNowBtn}
+              onPress={() => {
+                Linking.openURL('tel:988').catch(() =>
+                  Alert.alert('Crisis support', 'Call 988 for free, confidential crisis support — available 24/7.'),
+                );
+              }}
+            >
               <Ionicons name="call" size={14} color="#FFF" />
               <Text style={styles.callNowText}>Call Now</Text>
             </TouchableOpacity>
@@ -632,7 +634,9 @@ const styles = StyleSheet.create({
   avatarInitials: { fontSize: 16, fontWeight: '800', color: ACCENT },
   avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFF' },
   clinicianInfo: { flex: 1, gap: 3 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   clinicianName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  verifiedBadge: { fontSize: 9, fontWeight: '800', color: '#1E7E43', backgroundColor: '#D6F5E3', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
   clinicianSpec: { fontSize: 12, color: ACCENT, fontWeight: '600' },
   clinicianBio: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
@@ -645,7 +649,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignSelf: 'flex-start',
   },
-  connectBtnDisabled: { backgroundColor: Colors.border },
   connectBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
 
   /* Messages */

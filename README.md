@@ -1,6 +1,8 @@
 # MindPulse
 
-MindPulse contains the web and mobile frontends plus the Django backend.
+MindPulse contains the web and mobile frontends plus an optional Django backend.
+Supabase is the single source of truth: both apps read and write the same
+Postgres database directly, protected by Row Level Security.
 
 ## Shared Supabase connection
 
@@ -46,6 +48,38 @@ Important:
 - Use the service role key only in backend/server code.
 - Never commit `.env` files or share the secret key publicly.
 
+## Database schema (apply once per project)
+
+The canonical schema, RLS policies, signup triggers and legacy data mapping live
+in a single script:
+
+```
+supabase/migrations/0001_canonical_schema.sql
+```
+
+Run it in the Supabase dashboard under **SQL Editor → New query → Run** (it is
+one transaction, so a failure rolls everything back):
+
+1. Creates the canonical tables: `profiles`, `doctor_profiles`,
+   `stress_sessions`, `appointments`, `chat_messages`, `video_sessions`,
+   `notifications`, `recommendations`, `migration_report`.
+2. Enables RLS with policies for students, doctors and administrators.
+3. Maps rows from the older tables (`USER`, `STUDENT_PROFILES`,
+   `DOCTOR_PROFILES`, `ASSESSMENT_SESSIONS`, `NOTIFICATIONS`,
+   `CONVERSATIONS`/`MESSAGES`) when they exist. Rows that cannot be mapped
+   safely are left untouched and listed in `migration_report`.
+4. Re-running it is safe (`create table if not exists` + `on conflict do nothing`).
+
+### Roles
+
+`profiles.role` is `student` (default), `doctor` or `admin`. It can only be
+changed by an administrator — from the web Admin Dashboard (Manage Users) or
+with SQL for the first admin:
+
+```sql
+update public.profiles set role = 'admin' where email = 'you@school.edu';
+```
+
 ## Team access
 
 Each teammate needs:
@@ -60,7 +94,7 @@ Do not commit `.env` files. The repository `.gitignore` already ignores these fi
 
 - Node.js 22 or newer
 - Python 3.11 or newer
-- Android Studio and an Android emulator or device for the bare React Native app
+- Android Studio and an Android emulator or device for the mobile app
 - Xcode and CocoaPods for iOS development (macOS only)
 
 Install each app's dependencies once before running it.
@@ -99,9 +133,11 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The web sequence is `WEB - REGISTER` -> `WEB - LOGIN` -> workspace selection.
-From workspace selection, `Admin Dashboard` and `Doctor Dashboard` are
-separate role-based destinations.
+The web app starts on register/login. After signing in, the destination is
+chosen from `profiles.role` in Supabase: doctors open the Doctor Dashboard,
+administrators open the Admin Dashboard, and student accounts are told to use
+the mobile app (there is no manual workspace picker and no role selector on
+signup).
 
 Build for production:
 
@@ -117,7 +153,7 @@ npm test -- --watch=false
 
 ## Mobile app
 
-The main mobile app is the bare React Native project in `mindpulse-mobile`.
+The main mobile app is the Expo (React Native) project in `mindpulse-mobile`.
 
 Start Metro:
 
@@ -144,9 +180,9 @@ npm run web
 Open [http://localhost:8082](http://localhost:8082). This is the mobile app
 preview; the doctor web dashboard remains at port 3000.
 
-The mobile preview follows the Figma sequence: `SPLASH SCREEN` ->
-`HEALTH-SETUP` -> `DASHBOARD`. The doctor web app starts directly on its
-dashboard at port 3000.
+The mobile app follows `SPLASH` -> `ONBOARDING` -> `REGISTER / LOGIN` ->
+`HEALTH-SETUP` -> `DASHBOARD`, all backed by Supabase Auth. The doctor web app
+starts at its own login screen at port 3000.
 
 For iOS, use macOS with Xcode and CocoaPods:
 
@@ -191,10 +227,15 @@ main web, backend, or bare React Native mobile app.
 
 ## Current Limitations
 
-- Real Daily.co credentials are still required for live video calls.
-- The Supabase `video_sessions` table and its Row Level Security policies must
-	exist before cloud session persistence works.
-- The Django API currently uses local SQLite and is a separate backend contract;
-	frontend session persistence currently targets Supabase directly.
+- Real Daily.co credentials are still required for live video calls
+	(`REACT_APP_DAILY_BASE_URL` / `REACT_APP_DAILY_TOKEN` for web,
+	`EXPO_PUBLIC_DAILY_BASE_URL` / `EXPO_PUBLIC_DAILY_TOKEN` for mobile).
+	Without them the call panel reports that video calling is not configured
+	instead of faking a session.
+- The face scan is an explicitly labelled demo: no camera is opened and no
+	model runs, its values are never part of the stress score and are never
+	saved to `stress_sessions`.
+- The Django API is optional. Neither frontend calls it today — both talk to
+	Supabase directly — and it stores its own video-call rows in local SQLite.
 - Windows mobile development also requires Android Studio, Android SDK
   Platform-Tools, an emulator or connected phone, and JDK 17.
