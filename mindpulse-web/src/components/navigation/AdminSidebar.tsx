@@ -1,11 +1,27 @@
 import React from 'react';
 import './AdminSidebar.css';
+import '../../views/admin/admin-theme.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
   activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings';
   onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
+
+interface NavEntry {
+  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'settings';
+  icon: string;
+  label: string;
+}
+
+const NAV_ENTRIES: NavEntry[] = [
+  { key: 'dashboard', icon: '⌂', label: 'Dashboard' },
+  { key: 'users', icon: '◉', label: 'Users' },
+  { key: 'assessment', icon: '▣', label: 'Assessment tools' },
+  { key: 'results', icon: '▤', label: 'Results' },
+  { key: 'analytics', icon: '◌', label: 'Analytics' },
+  { key: 'settings', icon: '⚙', label: 'Settings' },
+];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
   return (
@@ -18,20 +34,35 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
         </div>
       </div>
       <nav className="nav-panel">
-        <button className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('dashboard')}>⌂ Dashboard</button>
-        <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('users')}>👥 Users</button>
-        <button className={`nav-item ${activeView === 'assessment' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('assessment')}>▣ Assessment tools</button>
-        <button className={`nav-item ${activeView === 'results' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('results')}>▤ Results</button>
-        <button className={`nav-item ${activeView === 'analytics' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('analytics')}>◌ Analytics</button>
-        <button className={`nav-item ${activeView === 'settings' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('settings')}>⚙ Settings</button>
+        <span className="nav-label">Menu</span>
+        {NAV_ENTRIES.map((entry) => (
+          <button
+            key={entry.key}
+            className={`nav-item ${activeView === entry.key ? 'active' : ''}`}
+            type="button"
+            onClick={() => onNavigate?.(entry.key)}
+          >
+            <span className="nav-icon" aria-hidden="true">{entry.icon}</span>
+            <span className="nav-text">{entry.label}</span>
+          </button>
+        ))}
       </nav>
       <div className="admin-account-area">
-        <div className={`admin-account ${activeView === 'profile' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => onNavigate?.('profile')}>
-          <span className="admin-account-avatar">●</span>
-          <span><strong>Admin User</strong><small>admin@mindpulse.com</small></span>
+        <div
+          className={`admin-account ${activeView === 'profile' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigate?.('profile')}
+        >
+          <span className="admin-account-avatar">A</span>
+          <span>
+            <strong>Admin User</strong>
+            <small>admin@mindpulse.com</small>
+          </span>
         </div>
         <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>
-          ➔ Sign Out
+          <span className="signout-icon" aria-hidden="true">➔</span>
+          <span className="signout-label">Sign Out</span>
         </button>
       </div>
     </aside>

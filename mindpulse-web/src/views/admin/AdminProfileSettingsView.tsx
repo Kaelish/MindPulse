@@ -156,7 +156,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
 
   if (isLoading) {
     return (
-      <div className="admin-shell admin-profile-shell">
+      <div className="admin-shell admin-scope admin-profile-shell">
         <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
         <main className="admin-main admin-profile-main">
           {header}
@@ -168,7 +168,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
 
   if (loadError || !profile) {
     return (
-      <div className="admin-shell admin-profile-shell">
+      <div className="admin-shell admin-scope admin-profile-shell">
         <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
         <main className="admin-main admin-profile-main">
           {header}
@@ -187,11 +187,11 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const showStudentFields = profile.role === 'student'
     || Boolean(profile.student_no || profile.program || profile.year_level);
 
-  return <div className="admin-shell admin-profile-shell">
+  return <div className="admin-shell admin-scope admin-profile-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
     <main className="admin-main admin-profile-main">
       {header}
-      <section className="admin-profile-card"><div className="admin-avatar-large">â—</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>âœ‰ {profile.email || 'No email'} &nbsp;&nbsp; â–£ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : 'âœŽ Edit Profile'}</button>}</section>
+      <section className="admin-profile-card"><div className="admin-avatar-large">●</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
       <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">{saved}</div>}
       {saveError && <div className="error-inline">{saveError}</div>}
@@ -217,8 +217,8 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
           <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
         </ProfileSection>}
-        {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Savingâ€¦' : 'â–£ Save Changes'}</button>}
-        {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updatingâ€¦' : 'â™§ Change Password'}</button>}
+        {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : '▣ Save Changes'}</button>}
+        {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
       </form>
     </main>
   </div>;

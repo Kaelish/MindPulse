@@ -80,7 +80,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
   const metrics = analytics
     ? [
         { label: 'Total Assessments', value: String(analytics.totalSessions), note: 'All recorded sessions' },
-        { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : 'â€”', note: 'Score out of 100' },
+        { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : '—', note: 'Score out of 100' },
         { label: 'Assessed Students', value: `${analytics.assessedStudents} of ${analytics.students}`, note: `${analytics.students} students` },
         { label: 'Engagement', value: `${analytics.engagementPct}%`, note: `${analytics.assessedStudents} of ${analytics.students} students` },
       ]
@@ -93,14 +93,14 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
   const bandShare = (count: number) => (assessedTotal ? Math.round((count / assessedTotal) * 100) : 0);
   const stressBands = analytics
     ? [
-        { key: 'low', label: 'Low', count: analytics.low, color: '#46a9b8' },
-        { key: 'moderate', label: 'Moderate', count: analytics.moderate, color: '#f2a93b' },
-        { key: 'high', label: 'High', count: analytics.high, color: '#e05c5c' },
+        { key: 'low', label: 'Low', count: analytics.low, color: '#0f9d63' },
+        { key: 'moderate', label: 'Moderate', count: analytics.moderate, color: '#e0a63a' },
+        { key: 'high', label: 'High', count: analytics.high, color: '#d64550' },
       ]
     : [];
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell admin-scope">
       <AdminSidebar onSignOut={onSignOut} activeView="analytics" onNavigate={onNavigate} />
       <main className="admin-main analytics-main">
         <header className="analytics-header">
@@ -119,7 +119,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
               <option value="1">This Month</option>
             </select>
             <button type="button" className="analytics-export-button" onClick={exportReport} disabled={exporting}>
-              {exporting ? 'Exportingâ€¦' : 'â‡© Export Report'}
+              {exporting ? 'Exporting…' : '⇩ Export Report'}
             </button>
             <button type="button" className="analytics-signout-button" onClick={onSignOut}>Sign Out</button>
           </div>
@@ -160,14 +160,13 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
                     {analytics.monthly.map((point) => (
                       <div
                         key={point.label}
+                        className="analytics-bar"
                         title={`${point.label}: ${point.sessions} session${point.sessions === 1 ? '' : 's'}${point.avgScore != null ? `, avg score ${point.avgScore}` : ''}`}
                         style={{
                           flex: 1,
                           maxWidth: '48px',
                           height: `${(point.sessions / maxSessions) * 100}%`,
                           minHeight: point.sessions > 0 ? '4px' : '0',
-                          background: '#5b68dd',
-                          borderRadius: '3px 3px 0 0',
                         }}
                       />
                     ))}
@@ -198,7 +197,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '8px' }}>
                       {stressBands.map((band) => (
-                        <span key={band.key} style={{ color: '#7e7e7e', fontSize: '0.6rem' }}>
+                        <span key={band.key} className="analytics-band-label">
                           {band.label} {band.count} ({bandShare(band.count)}%)
                         </span>
                       ))}
@@ -210,11 +209,11 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
                 <h2>User Engagement</h2>
                 <div
                   className="analytics-donut"
-                  style={{ background: `conic-gradient(#46a9b8 0 ${analytics.engagementPct}%, #e8eef0 ${analytics.engagementPct}% 100%)` }}
+                  style={{ background: `conic-gradient(#14a3bd 0 ${analytics.engagementPct}%, #e8eef0 ${analytics.engagementPct}% 100%)` }}
                 >
                   <b>{analytics.engagementPct}%</b>
                 </div>
-                <p style={{ margin: '6px 0 0', textAlign: 'center', color: '#7e7e7e', fontSize: '0.6rem' }}>
+                <p className="analytics-caption">
                   {analytics.assessedStudents} of {analytics.students} students assessed
                 </p>
               </article>

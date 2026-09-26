@@ -216,7 +216,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   );
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell admin-scope">
       <AdminSidebar onSignOut={onSignOut} activeView="assessment" onNavigate={onNavigate} />
       <main className="admin-assessment-main">
         <header className="assessment-header">

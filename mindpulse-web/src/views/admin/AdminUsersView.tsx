@@ -101,7 +101,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
   };
 
   return (
-    <div className="doctor-shell">
+    <div className="doctor-shell admin-scope">
       <AdminSidebar onSignOut={onSignOut} activeView="users" onNavigate={onNavigate} />
       <main className="main-panel admin-users-main">
         <header className="topbar admin-users-topbar">
@@ -122,7 +122,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
         )}
 
         <section className="content-panel account-list-panel">
-          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Students</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button></div><label className="doctor-search">âŒ•<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole.toLowerCase()} name`} /></label></div>
+          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Students</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button></div><label className="doctor-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole.toLowerCase()} name`} /></label></div>
           {actionError && <p className="error-inline">{actionError}</p>}
           {isLoading && <div className="loading-state"><span className="spinner" /></div>}
           {loadError && (
@@ -146,10 +146,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                       <tr key={account.id}>
                         <td><div className="account-name-cell"><span className="account-avatar">{account.initials}</span><strong>{account.name}</strong></div></td>
                         <td>
-                          <span className="contact-cell">âœ‰ {account.email}</span>
+                          <span className="contact-cell">✉ {account.email}</span>
                           {activeRole === 'Doctors' && account.licenseNo && (
-                            <span className="contact-cell" style={{ display: 'block', color: '#718096' }}>
-                              ðŸªª {account.licenseNo}
+                            <span className="contact-cell" style={{ display: 'block' }}>
+                              🪪 {account.licenseNo}
                             </span>
                           )}
                         </td>
@@ -159,7 +159,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                           <td>
                             {account.latestLevel
                               ? <span className={`status-pill status-${account.latestLevel.toLowerCase()}`}>{account.latestLevel}{account.latestScore != null ? ` (${account.latestScore})` : ''}</span>
-                              : <span>â€”</span>}
+                              : <span>—</span>}
                           </td>
                         )}
                         {activeRole === 'Doctors' && <td>{account.patients}</td>}
@@ -168,7 +168,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             {activeRole === 'Doctors' && !account.isVerified && (
                               <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => approveRegistration(account)}>
-                                {busy ? 'Workingâ€¦' : 'Approve'}
+                                {busy ? 'Working…' : 'Approve'}
                               </button>
                             )}
                             {activeRole === 'Doctors' && (
@@ -181,7 +181,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                                 Unverify
                               </button>
                             )}
-                            {activeRole === 'Students' && <span style={{ color: '#94a3b8' }}>â€”</span>}
+                            {activeRole === 'Students' && <span style={{ color: '#94a3b8' }}>—</span>}
                           </div>
                         </td>
                       </tr>
