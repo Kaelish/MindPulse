@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -25,13 +27,23 @@ import {
   editAppointmentTime,
   fetchDoctorAvailability,
   fetchDoctorChatMessages,
+  fetchDoctorChatThreads,
   fetchDoctorConsultations,
+  markDoctorThreadRead,
   saveDoctorAvailability,
   sendDoctorChatMessage,
   subscribeToDoctorAppointments,
   subscribeToDoctorMessages,
 } from '../../services/doctorConsultations';
 import { generateRealLifeDates, isSlotInPast } from '../../services/appointments';
+import {
+  ChatThreadSummary,
+  PickedAttachment,
+  formatThreadTime,
+  pickDocumentAttachment,
+  pickImageAttachment,
+  previewLabelFor,
+} from '../../services/chat';
 
 interface DoctorConsultationsScreenProps {
   onStartVideoCall?: (appointmentId: string) => void;
@@ -105,9 +117,24 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
   const [threadError, setThreadError] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [threads, setThreads] = useState<Map<string, ChatThreadSummary>>(new Map());
+  const [pendingAttachment, setPendingAttachment] = useState<PickedAttachment | null>(null);
 
   const threadRef = useRef<DoctorConsultation | null>(null);
   threadRef.current = thread;
+
+  const loadThreads = useCallback(async () => {
+    try {
+      setThreads(await fetchDoctorChatThreads());
+    } catch {
+      /* previews are cosmetic — the list still renders without them */
+    }
+  }, []);
+
+  const totalUnread = useMemo(
+    () => [...threads.values()].reduce((sum, row) => sum + row.unreadCount, 0),
+    [threads],
+  );
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -119,7 +146,8 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+    void loadThreads();
+  }, [loadThreads]);
 
   useEffect(() => {
     void load();
@@ -139,6 +167,7 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     });
 
     void subscribeToDoctorMessages(() => {
+      void loadThreads();
       const current = threadRef.current;
       if (current) void openThread(current, true);
     }).then((unsub) => {
@@ -294,30 +323,59 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     if (!silent) {
       setThreadLoading(true);
       setThreadError(null);
+      setPendingAttachment(null);
     }
     try {
       setThreadMessages(await fetchDoctorChatMessages(item.patientId));
       setThreadError(null);
+      // Viewing the thread clears its unread badge.
+      await markDoctorThreadRead(item.patientId);
+      void loadThreads();
     } catch (e: any) {
       setThreadError(e?.message || 'Could not load the conversation.');
     } finally {
       if (!silent) setThreadLoading(false);
     }
-  }, []);
+  }, [loadThreads]);
 
   const handleSend = async () => {
     const text = chatInput.trim();
-    if (!text || !thread || sending) return;
+    if (!thread || sending) return;
+    if (!text && !pendingAttachment) return;
     setSending(true);
     try {
-      const sent = await sendDoctorChatMessage(thread.patientId, text);
+      const sent = await sendDoctorChatMessage(thread.patientId, text, pendingAttachment);
       setThreadMessages((prev) => [...prev, sent]);
       setChatInput('');
+      setPendingAttachment(null);
+      void loadThreads();
     } catch (e: any) {
       Alert.alert('Message not sent', e?.message || 'Please try again.');
     } finally {
       setSending(false);
     }
+  };
+
+  const attachFile = () => {
+    Alert.alert('Add an attachment', 'What would you like to send?', [
+      {
+        text: 'Photo',
+        onPress: () => {
+          void pickImageAttachment().then((picked) => {
+            if (picked) setPendingAttachment(picked);
+          });
+        },
+      },
+      {
+        text: 'Document',
+        onPress: () => {
+          void pickDocumentAttachment().then((picked) => {
+            if (picked) setPendingAttachment(picked);
+          });
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const editDates = useMemo(() => generateRealLifeDates(), [editTarget]);
@@ -434,7 +492,11 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
         <View style={styles.tabRow}>
           <TabPill label={`Upcoming${upcoming.length ? ` (${upcoming.length})` : ''}`} active={consultTab === 'upcoming'} onPress={() => setConsultTab('upcoming')} />
           <TabPill label="History" active={consultTab === 'history'} onPress={() => setConsultTab('history')} />
-          <TabPill label="Messages" active={consultTab === 'messages'} onPress={() => setConsultTab('messages')} />
+          <TabPill
+            label={`Messages${totalUnread ? ` (${totalUnread > 9 ? '9+' : totalUnread})` : ''}`}
+            active={consultTab === 'messages'}
+            onPress={() => setConsultTab('messages')}
+          />
         </View>
       </SafeAreaView>
 
@@ -486,7 +548,13 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
             (thread ? (
               <View style={styles.threadWrap}>
                 <View style={styles.threadHeader}>
-                  <TouchableOpacity style={styles.threadBack} onPress={() => setThread(null)}>
+                  <TouchableOpacity
+                    style={styles.threadBack}
+                    onPress={() => {
+                      setThread(null);
+                      setPendingAttachment(null);
+                    }}
+                  >
                     <Ionicons name="arrow-back" size={18} color={Colors.btnBlue} />
                     <Text style={styles.threadBackText}>Patients</Text>
                   </TouchableOpacity>
@@ -506,23 +574,93 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
                     {threadMessages.length === 0 && (
                       <Text style={styles.emptyText}>No messages yet. Say hello to your patient.</Text>
                     )}
-                    {threadMessages.map((msg) => (
-                      <View
-                        key={msg.id}
-                        style={[styles.bubbleWrap, msg.sender === 'doctor' && styles.bubbleWrapMe]}
-                      >
-                        <View style={[styles.bubble, msg.sender === 'doctor' && styles.bubbleMe]}>
-                          <Text style={[styles.bubbleText, msg.sender === 'doctor' && { color: Colors.white }]}>
-                            {msg.text}
-                          </Text>
+                    {threadMessages.map((msg) => {
+                      const mine = msg.sender === 'doctor';
+                      const openAttachment = () => {
+                        if (msg.attachment?.url) void Linking.openURL(msg.attachment.url);
+                      };
+                      return (
+                        <View key={msg.id} style={[styles.bubbleWrap, mine && styles.bubbleWrapMe]}>
+                          <View style={[styles.bubble, mine && styles.bubbleMe]}>
+                            {msg.attachment?.kind === 'image' && (
+                              <TouchableOpacity
+                                onPress={openAttachment}
+                                activeOpacity={0.8}
+                                disabled={!msg.attachment.url}
+                              >
+                                {msg.attachment.url ? (
+                                  <Image source={{ uri: msg.attachment.url }} style={styles.bubbleImage} resizeMode="cover" />
+                                ) : (
+                                  <View style={[styles.bubbleImage, styles.bubbleImagePending]}>
+                                    <Ionicons name="image-outline" size={22} color={Colors.textHint} />
+                                  </View>
+                                )}
+                              </TouchableOpacity>
+                            )}
+
+                            {msg.attachment?.kind === 'document' && (
+                              <TouchableOpacity
+                                style={[styles.docRow, mine && styles.docRowMe]}
+                                onPress={openAttachment}
+                                activeOpacity={0.7}
+                                disabled={!msg.attachment.url}
+                              >
+                                <Ionicons name="document-text-outline" size={16} color={mine ? Colors.white : Colors.btnBlue} />
+                                <Text style={[styles.docName, mine && { color: Colors.white }]} numberOfLines={1}>
+                                  {msg.attachment.name}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+
+                            {msg.text.length > 0 && (
+                              <Text
+                                style={[
+                                  styles.bubbleText,
+                                  mine && { color: Colors.white },
+                                  msg.attachment && { marginTop: 6 },
+                                ]}
+                              >
+                                {msg.text}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.bubbleMetaRow}>
+                            <Text style={styles.bubbleTime}>{msg.timestamp}</Text>
+                            {mine && (
+                              <Text style={styles.receiptText}>{msg.readAt ? '✓✓ Read' : '✓ Sent'}</Text>
+                            )}
+                          </View>
                         </View>
-                        <Text style={styles.bubbleTime}>{msg.timestamp}</Text>
-                      </View>
-                    ))}
+                      );
+                    })}
+                  </View>
+                )}
+
+                {pendingAttachment && (
+                  <View style={styles.attachmentChip}>
+                    <Ionicons
+                      name={pendingAttachment.kind === 'image' ? 'image-outline' : 'document-text-outline'}
+                      size={16}
+                      color={Colors.btnBlue}
+                    />
+                    <Text style={styles.attachmentChipText} numberOfLines={1}>
+                      {pendingAttachment.name}
+                    </Text>
+                    <TouchableOpacity onPress={() => setPendingAttachment(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="close-circle" size={18} color={Colors.textHint} />
+                    </TouchableOpacity>
                   </View>
                 )}
 
                 <View style={styles.inputRow}>
+                  <TouchableOpacity
+                    style={styles.attachBtn}
+                    onPress={attachFile}
+                    disabled={sending}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="attach" size={22} color={Colors.btnBlue} />
+                  </TouchableOpacity>
                   <TextInput
                     style={styles.msgInput}
                     placeholder={`Message ${thread.patientName.split(' ')[0] || 'patient'}…`}
@@ -535,29 +673,48 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
                   <TouchableOpacity
                     style={[styles.sendBtn, sending && { opacity: 0.6 }]}
                     onPress={() => void handleSend()}
-                    disabled={sending}
+                    disabled={sending || (!chatInput.trim() && !pendingAttachment)}
                   >
-                    <Ionicons name="send" size={17} color={Colors.white} />
+                    {sending
+                      ? <ActivityIndicator size="small" color={Colors.white} />
+                      : <Ionicons name="send" size={17} color={Colors.white} />}
                   </TouchableOpacity>
                 </View>
               </View>
             ) : patients.length === 0 ? (
               <Text style={styles.emptyText}>No patients yet. Conversations appear once patients book with you.</Text>
             ) : (
-              patients.map((item) => (
-                <TouchableOpacity key={item.patientId} style={styles.patientRow} onPress={() => void openThread(item)}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{item.avatarInitials}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardName}>{item.patientName}</Text>
-                    <Text style={styles.cardMeta} numberOfLines={1}>
-                      {item.studentId} · {item.patientEmail}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.textHint} />
-                </TouchableOpacity>
-              ))
+              patients.map((item) => {
+                const summary = threads.get(item.patientId);
+                return (
+                  <TouchableOpacity key={item.patientId} style={styles.patientRow} onPress={() => void openThread(item)}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{item.avatarInitials}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardName}>{item.patientName}</Text>
+                      <Text style={styles.cardMeta} numberOfLines={1}>
+                        {summary
+                          ? previewLabelFor(summary.lastText, summary.lastAttachmentKind, summary.lastAttachmentName)
+                          : `${item.studentId} · ${item.patientEmail}`}
+                      </Text>
+                    </View>
+                    <View style={styles.patientRowMeta}>
+                      <Text style={styles.patientRowTime}>
+                        {summary ? formatThreadTime(summary.lastAt) : ''}
+                      </Text>
+                      {!!summary && summary.unreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {summary.unreadCount > 9 ? '9+' : summary.unreadCount}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.textHint} />
+                  </TouchableOpacity>
+                );
+              })
             ))}
         </ScrollView>
       )}
@@ -935,6 +1092,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bubbleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  receiptText: { fontSize: 10, color: Colors.textHint, fontWeight: '600' },
+  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: '#E4E7EF' },
+  bubbleImagePending: { alignItems: 'center', justifyContent: 'center' },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 140,
+  },
+  docRowMe: { backgroundColor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.4)' },
+  docName: { fontSize: 12.5, fontWeight: '600', color: Colors.textPrimary, flexShrink: 1 },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#EEF1FE',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D6DEFB',
+  },
+  attachmentChipText: { flex: 1, fontSize: 12.5, color: Colors.btnBlue, fontWeight: '600' },
+  attachBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  patientRowMeta: { alignItems: 'flex-end', gap: 6 },
+  patientRowTime: { fontSize: 11, color: Colors.textHint },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: '#E05C5C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.white },
 
   overlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalBox: {

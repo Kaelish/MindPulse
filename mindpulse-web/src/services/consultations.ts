@@ -32,7 +32,81 @@ export interface WebChatMessage {
   sender: 'doctor' | 'patient';
   text: string;
   timestamp: string;
+  attachment: {
+    url: string | null;
+    name: string;
+    kind: 'image' | 'document';
+  } | null;
+  readAt: string | null;
 }
+
+export interface WebThreadSummary {
+  otherId: string;
+  preview: string;
+  lastAt: string;
+  unreadCount: number;
+}
+
+const CHAT_BUCKET = 'chat-attachments';
+const SIGNED_URL_TTL_SECONDS = 3600;
+const SIGNED_URL_CACHE_MS = 45 * 60 * 1000; // refresh before the 60 min URL expires
+
+// The doctor portal polls every 1.5s — cache signed URLs so each poll does not
+// re-mint a URL for every attachment already on screen.
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+/** Mints a short-lived signed URL for a stored attachment path. */
+const signChatAttachment = async (path: string): Promise<string | null> => {
+  if (!supabase) return null;
+
+  const cached = signedUrlCache.get(path);
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(CHAT_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    signedUrlCache.set(path, { url: data.signedUrl, expiresAt: Date.now() + SIGNED_URL_CACHE_MS });
+    return data.signedUrl;
+  } catch {
+    return null;
+  }
+};
+
+const formatMessageTime = (iso: string | null | undefined): string =>
+  iso
+    ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'Just now';
+
+const mapWebChatRow = async (row: {
+  id: string;
+  sender: string;
+  text: string | null;
+  created_at: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_kind?: string | null;
+  read_at?: string | null;
+}): Promise<WebChatMessage> => {
+  let attachment: WebChatMessage['attachment'] = null;
+  if (row.attachment_url) {
+    attachment = {
+      url: await signChatAttachment(row.attachment_url),
+      name: row.attachment_name || 'Attachment',
+      kind: row.attachment_kind === 'image' ? 'image' : 'document',
+    };
+  }
+
+  return {
+    id: String(row.id),
+    sender: row.sender === 'patient' ? 'patient' : 'doctor',
+    text: row.text || '',
+    timestamp: formatMessageTime(row.created_at),
+    attachment,
+    readAt: row.read_at ?? null,
+  };
+};
 
 export interface ManualBookingData {
   patientName: string;
@@ -230,45 +304,87 @@ export const fetchWebChatMessages = async (
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('chat_messages')
-    .select('id, sender, text, created_at')
+    .select('*')
     .eq('clinician_id', doctorId)
     .eq('patient_id', patientId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as { id: string; sender: string; text: string; created_at: string }[]).map(
-    (row) => ({
-      id: row.id,
-      sender: row.sender === 'patient' ? 'patient' : 'doctor',
-      text: row.text,
-      timestamp: row.created_at
-        ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : 'Just now',
-    }),
-  );
+  return Promise.all((data ?? []).map((row: any) => mapWebChatRow(row)));
 };
 
 export const sendWebChatMessage = async (
   doctorId: string,
   patientId: string,
   text: string,
+  picked?: { file: File; name: string; kind: 'image' | 'document' } | null,
 ): Promise<WebChatMessage> => {
   if (!supabase) throw new Error('Supabase is not configured.');
+
+  let stored: { path: string; name: string; kind: 'image' | 'document' } | null = null;
+  if (picked) {
+    const path = `${patientId}/${doctorId}/${Date.now()}_${picked.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
+    const { error: uploadError } = await supabase.storage
+      .from(CHAT_BUCKET)
+      .upload(path, picked.file, { contentType: picked.file.type || 'application/octet-stream', upsert: false });
+    if (uploadError) throw new Error(uploadError.message || 'The file could not be uploaded.');
+    stored = { path, name: picked.name, kind: picked.kind };
+  }
+
   const { data, error } = await supabase
     .from('chat_messages')
-    .insert({ clinician_id: doctorId, patient_id: patientId, sender: 'doctor', text })
-    .select('id, sender, text, created_at')
+    .insert({
+      clinician_id: doctorId,
+      patient_id: patientId,
+      sender: 'doctor',
+      text: text || '',
+      attachment_url: stored?.path ?? null,
+      attachment_name: stored?.name ?? null,
+      attachment_kind: stored?.kind ?? null,
+    })
+    .select('*')
     .single();
   if (error) throw new Error(error.message);
 
-  return {
-    id: data.id,
-    sender: 'doctor',
-    text: data.text,
-    timestamp: data.created_at
-      ? new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Just now',
-  };
+  return mapWebChatRow(data as any);
+};
+
+/** Preview + unread badge for each of the doctor's conversations. */
+export const fetchWebChatThreads = async (): Promise<WebThreadSummary[]> => {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc('chat_threads');
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as {
+    other_id: string;
+    last_text: string | null;
+    last_attachment_kind: string | null;
+    last_attachment_name: string | null;
+    last_at: string;
+    unread_count: number;
+  }[]).map((row) => {
+    const text = (row.last_text || '').trim();
+    const preview = text
+      ? text
+      : row.last_attachment_kind === 'image'
+        ? '📷 Photo'
+        : row.last_attachment_kind === 'document'
+          ? `📎 ${row.last_attachment_name || 'Document'}`
+          : 'No messages yet — say hello.';
+    return {
+      otherId: String(row.other_id),
+      preview,
+      lastAt: row.last_at,
+      unreadCount: Number(row.unread_count || 0),
+    };
+  });
+};
+
+/** Marks every message received from this patient as read (best effort). */
+export const markWebThreadRead = async (patientId: string): Promise<void> => {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('mark_chat_read', { p_other: patientId });
+  void error; // receipts are cosmetic — never block the conversation
 };
 
 /** Best-effort notification row — a failed notice never blocks the workflow. */

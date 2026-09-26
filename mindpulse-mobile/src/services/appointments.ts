@@ -1,5 +1,17 @@
 import { supabase } from '../supabase/client';
 import { loadNotificationPrefs } from './notificationPrefs';
+import {
+  ChatAttachment,
+  ChatMessageBase,
+  ChatThreadSummary,
+  PickedAttachment,
+  fetchChatThreads,
+  formatThreadTime,
+  markThreadRead,
+  mapChatRow,
+  previewLabelFor,
+  uploadChatAttachment,
+} from './chat';
 
 export interface TelehealthClinician {
   id: string;
@@ -47,11 +59,15 @@ export interface MyBooking {
   createdAt: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  sender: 'doctor' | 'patient';
-  text: string;
-  timestamp: string;
+export interface ChatMessage extends ChatMessageBase {}
+
+/** One row of the patient's conversation list (Messages tab). */
+export interface PatientConversation {
+  clinicianId: string;
+  clinician: TelehealthClinician | null;
+  preview: string;
+  lastAt: string;
+  unreadCount: number;
 }
 
 const requireUser = async () => {
@@ -290,22 +306,21 @@ export const fetchChatMessages = async (clinicianId: string): Promise<ChatMessag
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: any) => ({
-    id: String(row.id),
-    sender: row.sender === 'doctor' ? 'doctor' : 'patient',
-    text: row.text,
-    timestamp: row.created_at
-      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Just now',
-  }));
+  return Promise.all((data ?? []).map((row: any) => mapChatRow(row)));
 };
 
 // The mobile app is the patient app: messages are always sent as the patient.
 export const sendChatMessage = async (
   clinicianId: string,
   text: string,
+  picked?: PickedAttachment | null,
 ): Promise<ChatMessage> => {
   const user = await requireUser();
+
+  let stored: { path: string; name: string; kind: ChatAttachment['kind'] } | null = null;
+  if (picked) {
+    stored = await uploadChatAttachment(user.id, clinicianId, picked);
+  }
 
   const { data: inserted, error } = await supabase
     .from('chat_messages')
@@ -313,7 +328,10 @@ export const sendChatMessage = async (
       patient_id: user.id,
       clinician_id: clinicianId,
       sender: 'patient',
-      text,
+      text: text || '',
+      attachment_url: stored?.path ?? null,
+      attachment_name: stored?.name ?? null,
+      attachment_kind: stored?.kind ?? null,
     })
     .select()
     .single();
@@ -322,16 +340,79 @@ export const sendChatMessage = async (
     throw new Error(error?.message || 'Could not send the message. Please try again.');
   }
 
-  const row: any = inserted;
-  return {
-    id: String(row.id),
-    sender: 'patient',
-    text: row.text,
-    timestamp: row.created_at
-      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Just now',
-  };
+  return mapChatRow(inserted as any);
 };
+
+/**
+ * The patient's conversation list: every clinician they have an appointment
+ * with or an existing thread with, most recent first, with preview + unread.
+ */
+export const fetchPatientConversations = async (): Promise<PatientConversation[]> => {
+  const user = await requireUser();
+
+  const [{ data: threadRows, error: threadError }, { data: appointmentRows, error: appointmentError }] =
+    await Promise.all([
+      supabase.rpc('chat_threads'),
+      supabase.from('appointments').select('doctor_id').eq('patient_id', user.id),
+    ]);
+  if (threadError) throw new Error(threadError.message);
+  if (appointmentError) throw new Error(appointmentError.message);
+
+  const threads = new Map<string, ChatThreadSummary>();
+  for (const raw of (threadRows ?? []) as any[]) {
+    threads.set(String(raw.other_id), {
+      otherId: String(raw.other_id),
+      lastText: raw.last_text || '',
+      lastSender: raw.last_sender === 'patient' || raw.last_sender === 'doctor' ? raw.last_sender : null,
+      lastAttachmentKind:
+        raw.last_attachment_kind === 'image' || raw.last_attachment_kind === 'document'
+          ? raw.last_attachment_kind
+          : null,
+      lastAttachmentName: raw.last_attachment_name ?? null,
+      lastAt: raw.last_at,
+      unreadCount: Number(raw.unread_count || 0),
+    });
+  }
+
+  // Appointments without messages still deserve a (empty) conversation row.
+  const clinicianIds = new Set<string>(threads.keys());
+  for (const row of (appointmentRows ?? []) as { doctor_id: string }[]) {
+    clinicianIds.add(String(row.doctor_id));
+  }
+  if (clinicianIds.size === 0) return [];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select(CLINICIAN_SELECT)
+    .in('id', [...clinicianIds]);
+  if (profilesError) throw new Error(profilesError.message);
+
+  const cliniciansById = new Map(
+    ((profiles ?? []) as any[]).map((row) => [String(row.id), toClinician(row)]),
+  );
+
+  return [...clinicianIds]
+    .map((clinicianId): PatientConversation => {
+      const thread = threads.get(clinicianId);
+      return {
+        clinicianId,
+        clinician: cliniciansById.get(clinicianId) ?? null,
+        preview: thread
+          ? previewLabelFor(thread.lastText, thread.lastAttachmentKind, thread.lastAttachmentName)
+          : 'No messages yet — say hello.',
+        lastAt: thread?.lastAt ?? '',
+        unreadCount: thread?.unreadCount ?? 0,
+      };
+    })
+    .sort((a, b) => (a.lastAt < b.lastAt ? 1 : a.lastAt > b.lastAt ? -1 : 0));
+};
+
+/** Marks every message received from this clinician as read. */
+export const markConversationRead = async (clinicianId: string): Promise<void> => {
+  await markThreadRead(clinicianId);
+};
+
+export const formatConversationTime = formatThreadTime;
 
 // ─── My bookings (patient side of the telehealth workflow) ───────────────────
 
@@ -500,14 +581,14 @@ export const subscribeToMyAppointments = async (
   };
 };
 
-/** Fires whenever a new message lands in this patient's inbox. */
+/** Fires whenever this patient's messages change (new message or read receipt). */
 export const subscribeToMyMessages = async (onChange: () => void): Promise<() => void> => {
   const user = await requireUser();
   const channel = supabase
     .channel(`my-messages-${user.id}`)
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `patient_id=eq.${user.id}` },
+      { event: '*', schema: 'public', table: 'chat_messages', filter: `patient_id=eq.${user.id}` },
       onChange,
     )
     .subscribe();

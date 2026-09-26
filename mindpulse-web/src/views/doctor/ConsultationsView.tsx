@@ -1,16 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
 import {
   DoctorAvailability,
   WebChatMessage,
   WebConsultationItem,
+  WebThreadSummary,
   approveAppointment,
   declineAppointment,
   editAppointmentTime,
   fetchBookedSlotKeys,
   fetchDoctorAvailability,
   fetchWebChatMessages,
+  fetchWebChatThreads,
   fetchWebConsultations,
+  markWebThreadRead,
   saveDoctorAvailability,
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
@@ -28,8 +31,12 @@ export const ConsultationsView: React.FC = () => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
   const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>('upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
+  const [webThreads, setWebThreads] = useState<WebThreadSummary[]>([]);
   const [webInputMessage, setWebInputMessage] = useState<string>('');
+  const [pendingFile, setPendingFile] = useState<{ file: File; name: string; kind: 'image' | 'document' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showVideoCall, setShowVideoCall] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [doctorId, setDoctorId] = useState<string | null>(null);
@@ -96,7 +103,15 @@ export const ConsultationsView: React.FC = () => {
 
   const timeSlots = availability?.slots?.length ? availability.slots : FALLBACK_SLOTS;
 
-  const chatTarget = activeSessionItem ?? consultations[0] ?? null;
+  const selectedConsultation = selectedPatientId
+    ? consultations.find((row) => row.patientId === selectedPatientId) ?? null
+    : null;
+  const chatTarget = selectedConsultation ?? activeSessionItem ?? consultations[0] ?? null;
+
+  const totalUnread = webThreads.reduce((sum, row) => sum + row.unreadCount, 0);
+
+  const threadFor = (patientId: string): WebThreadSummary | undefined =>
+    webThreads.find((row) => row.otherId === patientId);
 
   useEffect(() => {
     let isActive = true;
@@ -138,6 +153,13 @@ export const ConsultationsView: React.FC = () => {
           .catch(() => {
             /* defaults are used when the profile row cannot be read */
           });
+        fetchWebChatThreads()
+          .then((threadsRes) => {
+            if (isActive) setWebThreads(threadsRes);
+          })
+          .catch(() => {
+            /* previews are cosmetic — the list still renders without them */
+          });
       } catch (err) {
         if (isActive) {
           setSessionError(err instanceof Error ? err.message : 'Unable to load consultations.');
@@ -152,7 +174,7 @@ export const ConsultationsView: React.FC = () => {
     };
   }, []);
 
-  // Poll Supabase chat messages & slot unavailability in real time
+  // Poll Supabase chat messages, thread previews & slot unavailability in real time
   useEffect(() => {
     if (!doctorId || !chatTarget) {
       setWebChatMessages([]);
@@ -163,12 +185,25 @@ export const ConsultationsView: React.FC = () => {
     const targetPatientId = chatTarget.patientId;
     const loadMessages = async () => {
       try {
-        const msgs = await fetchWebChatMessages(doctorId, targetPatientId);
-        const slots = await fetchBookedSlotKeys();
+        const [msgs, slots, threads] = await Promise.all([
+          fetchWebChatMessages(doctorId, targetPatientId),
+          fetchBookedSlotKeys(),
+          fetchWebChatThreads(),
+        ]);
         if (isSubscribed) {
           setWebChatMessages(msgs);
           setBookedSlotKeys(slots);
+          setWebThreads(threads);
           setChatError(null);
+
+          // Read receipt: stamp incoming messages once the thread is on screen,
+          // then refresh previews so the badge clears.
+          const hasUnreadFromPatient = msgs.some((m) => m.sender === 'patient' && !m.readAt);
+          if (hasUnreadFromPatient) {
+            await markWebThreadRead(targetPatientId);
+            const refreshed = await fetchWebChatThreads();
+            if (isSubscribed) setWebThreads(refreshed);
+          }
         }
       } catch (err) {
         if (isSubscribed) {
@@ -183,27 +218,48 @@ export const ConsultationsView: React.FC = () => {
       isSubscribed = false;
       clearInterval(interval);
     };
-  }, [activeSessionItem, consultTab, showScheduleModal, doctorId, chatTarget]);
+  }, [selectedPatientId, activeSessionItem, consultTab, showScheduleModal, doctorId, chatTarget]);
 
   const handleSendWebMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!webInputMessage.trim()) return;
+    const text = webInputMessage.trim();
+    if (!text && !pendingFile) return;
     if (!doctorId || !chatTarget) {
       setChatError('No consultation selected — schedule one to start a conversation.');
       return;
     }
 
-    const text = webInputMessage.trim();
+    const outgoingFile = pendingFile;
     setWebInputMessage('');
+    setPendingFile(null);
     setChatError(null);
 
     try {
-      const newMsg = await sendWebChatMessage(doctorId, chatTarget.patientId, text);
+      const newMsg = await sendWebChatMessage(doctorId, chatTarget.patientId, text, outgoingFile);
       setWebChatMessages((prev) => [...prev, newMsg]);
+      fetchWebChatThreads()
+        .then(setWebThreads)
+        .catch(() => { /* refreshed by the poll */ });
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Unable to send the message.');
       setWebInputMessage(text);
+      if (outgoingFile) setPendingFile(outgoingFile);
     }
+  };
+
+  const handlePickFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const kind: 'image' | 'document' = isImage ? 'image' : 'document';
+    if (file.size > 15 * 1024 * 1024) {
+      setChatError('That file is larger than 15 MB. Please pick a smaller one.');
+      return;
+    }
+    setPendingFile({ file, name: file.name, kind });
+    setChatError(null);
   };
 
   /* ── Approve / decline / reschedule ─────────────────────────────────── */
@@ -626,13 +682,115 @@ export const ConsultationsView: React.FC = () => {
             onClick={() => setConsultTab('messages')}
           >
             Messages 💬
+            {totalUnread > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 20,
+                  height: 20,
+                  padding: '0 6px',
+                  borderRadius: 10,
+                  background: '#e05c5c',
+                  color: '#fff',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                }}
+              >
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
           </button>
         </div>
 
         {/* TAB CONTENT */}
         {consultTab === 'messages' ? (
           /* DEDICATED MESSAGES TAB INSIDE CONSULTATIONS PANEL */
-          <div style={{ display: 'flex', flexDirection: 'column', height: '420px', background: '#faf8ed', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', height: '420px', background: '#faf8ed', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            {/* Conversation list */}
+            <div style={{ width: '260px', flexShrink: 0, borderRight: '1px solid #e2e8f0', background: '#ffffff', overflowY: 'auto' }}>
+              <div style={{ padding: '10px 14px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', borderBottom: '1px solid #f1f5f9' }}>
+                Conversations
+              </div>
+              {consultations.length === 0 ? (
+                <div style={{ padding: '18px 14px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
+                  No consultations yet — schedule one to start a conversation.
+                </div>
+              ) : (
+                consultations.map((item) => {
+                  const summary = threadFor(item.patientId);
+                  const isSelected = chatTarget?.patientId === item.patientId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPatientId(item.patientId);
+                        setActiveSessionItem(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 14px',
+                        background: isSelected ? '#eef2ff' : 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', color: '#334155', flexShrink: 0 }}>
+                        {item.avatarInitials}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                          <strong style={{ fontSize: '0.84rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {item.patientName}
+                          </strong>
+                          <span style={{ fontSize: '0.66rem', color: '#94a3b8', flexShrink: 0 }}>
+                            {summary && summary.lastAt
+                              ? new Date(summary.lastAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
+                              : ''}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {summary?.preview ?? `${item.studentId} · ${item.patientEmail}`}
+                          </span>
+                          {!!summary && summary.unreadCount > 0 && (
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                minWidth: 18,
+                                height: 18,
+                                padding: '0 5px',
+                                borderRadius: 9,
+                                background: '#e05c5c',
+                                color: '#fff',
+                                fontSize: '0.66rem',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {summary.unreadCount > 9 ? '9+' : summary.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Thread */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             {!chatTarget ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
                 No consultations yet — schedule one to start a conversation.
@@ -665,22 +823,96 @@ export const ConsultationsView: React.FC = () => {
                   {webChatMessages.map((msg) => (
                     <div key={msg.id} className={`web-msg-row ${msg.sender}`}>
                       <div className={`web-msg-bubble ${msg.sender}`}>
-                        <div>{msg.text}</div>
-                        <div className="web-msg-time">{msg.timestamp}</div>
+                        {msg.attachment?.kind === 'image' && (
+                          msg.attachment.url ? (
+                            <a href={msg.attachment.url} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: msg.text ? 6 : 0 }}>
+                              <img src={msg.attachment.url} alt={msg.attachment.name} style={{ maxWidth: '220px', maxHeight: '160px', borderRadius: 8, display: 'block' }} />
+                            </a>
+                          ) : (
+                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: '#e2e8f0', borderRadius: 8, color: '#64748b', fontSize: '0.78rem', fontWeight: 600 }}>
+                              📷 Photo
+                            </div>
+                          )
+                        )}
+                        {msg.attachment?.kind === 'document' && (
+                          <a
+                            href={msg.attachment.url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginBottom: msg.text ? 6 : 0,
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : '#ffffff',
+                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid #e2e8f0',
+                              color: msg.sender === 'doctor' ? '#ffffff' : '#334155',
+                              textDecoration: 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              maxWidth: '220px',
+                            }}
+                          >
+                            <span>📄</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachment.name}</span>
+                          </a>
+                        )}
+                        {msg.text ? <div>{msg.text}</div> : null}
+                        <div className="web-msg-time">
+                          {msg.timestamp}
+                          {msg.sender === 'doctor' && (
+                            <span style={{ marginLeft: 6, fontWeight: 700 }}>
+                              {msg.readAt ? '✓✓ Read' : '✓ Sent'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
+                {pendingFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#eef2ff', borderTop: '1px solid #dbeafe' }}>
+                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? '🖼️' : '📄'}</span>
+                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: '#5b6ef5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {pendingFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPendingFile(null)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1rem' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Message Input Bar */}
                 <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePickFile}
+                    style={{ display: 'none' }}
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
+                  <button
+                    type="button"
+                    title="Attach a file"
+                    className="attach-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    📎
+                  </button>
                   <input
                     type="text"
                     placeholder={`Type message to ${chatTarget.patientName}...`}
                     value={webInputMessage}
                     onChange={(e) => setWebInputMessage(e.target.value)}
                   />
-                  <button type="submit">Send Message</button>
+                  <button type="submit" disabled={!webInputMessage.trim() && !pendingFile}>Send Message</button>
                 </form>
                 {chatError && (
                   <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
@@ -689,6 +921,7 @@ export const ConsultationsView: React.FC = () => {
                 )}
               </>
             )}
+            </div>
           </div>
         ) : (
           /* UPCOMING AND HISTORY LIST */
@@ -1298,21 +1531,95 @@ export const ConsultationsView: React.FC = () => {
                   {webChatMessages.map((msg) => (
                     <div key={msg.id} className={`web-msg-row ${msg.sender}`}>
                       <div className={`web-msg-bubble ${msg.sender}`}>
+                        {msg.attachment?.kind === 'image' && (
+                          msg.attachment.url ? (
+                            <a href={msg.attachment.url} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: msg.text ? 6 : 0 }}>
+                              <img src={msg.attachment.url} alt={msg.attachment.name} style={{ maxWidth: '220px', maxHeight: '160px', borderRadius: 8, display: 'block' }} />
+                            </a>
+                          ) : (
+                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: 'rgba(255,255,255,0.18)', borderRadius: 8, color: '#cbd5f5', fontSize: '0.78rem', fontWeight: 600 }}>
+                              📷 Photo
+                            </div>
+                          )
+                        )}
+                        {msg.attachment?.kind === 'document' && (
+                          <a
+                            href={msg.attachment.url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginBottom: msg.text ? 6 : 0,
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : '#ffffff',
+                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid #e2e8f0',
+                              color: msg.sender === 'doctor' ? '#ffffff' : '#334155',
+                              textDecoration: 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              maxWidth: '220px',
+                            }}
+                          >
+                            <span>📄</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachment.name}</span>
+                          </a>
+                        )}
                         <div>{msg.text}</div>
-                        <div className="web-msg-time">{msg.timestamp}</div>
+                        <div className="web-msg-time">
+                          {msg.timestamp}
+                          {msg.sender === 'doctor' && (
+                            <span style={{ marginLeft: 6, fontWeight: 700 }}>
+                              {msg.readAt ? '✓✓ Read' : '✓ Sent'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
+                {pendingFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#eef2ff', borderTop: '1px solid #dbeafe' }}>
+                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? '🖼️' : '📄'}</span>
+                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: '#5b6ef5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {pendingFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPendingFile(null)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1rem' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePickFile}
+                    style={{ display: 'none' }}
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
+                  <button
+                    type="button"
+                    title="Attach a file"
+                    className="attach-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    📎
+                  </button>
                   <input
                     type="text"
                     placeholder={`Reply to ${activeSessionItem.patientName}...`}
                     value={webInputMessage}
                     onChange={(e) => setWebInputMessage(e.target.value)}
                   />
-                  <button type="submit">Send</button>
+                  <button type="submit" disabled={!webInputMessage.trim() && !pendingFile}>Send</button>
                 </form>
                 {chatError && (
                   <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>

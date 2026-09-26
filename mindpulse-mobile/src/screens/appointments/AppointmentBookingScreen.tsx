@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -18,21 +20,30 @@ import {
   BookedAppointment,
   ChatMessage,
   MyBooking,
+  PatientConversation,
   PaymentMethod,
   TelehealthClinician,
   fetchBookedSlotKeys,
   fetchChatMessages,
   fetchClinicians,
-  fetchConversationClinician,
   fetchMyBookings,
+  fetchPatientConversations,
+  formatConversationTime,
   generateRealLifeDates,
   isSlotInPast,
+  markConversationRead,
   payForAppointment,
   saveBookedAppointment,
   sendChatMessage,
   subscribeToMyAppointments,
   subscribeToMyMessages,
 } from '../../services/appointments';
+import {
+  ChatAttachment,
+  PickedAttachment,
+  pickDocumentAttachment,
+  pickImageAttachment,
+} from '../../services/chat';
 
 interface AppointmentBookingScreenProps {
   onStartVideoCall?: (doctorId?: string, appointmentId?: string) => void;
@@ -245,15 +256,60 @@ const BookingPill = ({ status }: { status: MyBooking['status'] }) => {
 
 // ─── Chat bubble ──────────────────────────────────────────────────────────────
 const ChatBubble = ({
-  text, isMe, time,
-}: { text: string; isMe: boolean; time: string }) => (
-  <View style={[styles.bubbleWrap, isMe && styles.bubbleWrapMe]}>
-    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-      <Text style={[styles.bubbleText, isMe && { color: '#FFF' }]}>{text}</Text>
+  text, isMe, time, attachment, readAt,
+}: {
+  text: string;
+  isMe: boolean;
+  time: string;
+  attachment?: ChatAttachment | null;
+  readAt?: string | null;
+}) => {
+  const openAttachment = () => {
+    if (attachment?.url) void Linking.openURL(attachment.url);
+  };
+
+  return (
+    <View style={[styles.bubbleWrap, isMe && styles.bubbleWrapMe]}>
+      <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
+        {attachment?.kind === 'image' && (
+          <TouchableOpacity onPress={openAttachment} activeOpacity={0.8} disabled={!attachment.url}>
+            {attachment.url ? (
+              <Image source={{ uri: attachment.url }} style={styles.bubbleImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.bubbleImage, styles.bubbleImagePending]}>
+                <Ionicons name="image-outline" size={22} color={Colors.textHint} />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {attachment?.kind === 'document' && (
+          <TouchableOpacity
+            style={[styles.docRow, isMe && styles.docRowMe]}
+            onPress={openAttachment}
+            activeOpacity={0.7}
+            disabled={!attachment.url}
+          >
+            <Ionicons name="document-text-outline" size={16} color={isMe ? '#FFF' : ACCENT} />
+            <Text style={[styles.docName, isMe && { color: '#FFF' }]} numberOfLines={1}>
+              {attachment.name}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {text.length > 0 && (
+          <Text style={[styles.bubbleText, isMe && { color: '#FFF' }, attachment && { marginTop: 6 }]}>
+            {text}
+          </Text>
+        )}
+      </View>
+      <View style={styles.bubbleMetaRow}>
+        <Text style={styles.bubbleTime}>{time}</Text>
+        {isMe && <Text style={styles.receiptText}>{readAt ? '✓✓ Read' : '✓ Sent'}</Text>}
+      </View>
     </View>
-    <Text style={styles.bubbleTime}>{time}</Text>
-  </View>
-);
+  );
+};
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
@@ -276,11 +332,15 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [cliniciansError, setCliniciansError] = useState<string | null>(null);
   const [bookedKeys, setBookedKeys] = useState<Set<string>>(new Set());
 
-  const [conversation, setConversation] = useState<TelehealthClinician | null>(null);
+  const [conversation, setConversation] = useState<PatientConversation | null>(null);
+  const [conversations, setConversations] = useState<PatientConversation[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(true);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<PickedAttachment | null>(null);
+  const conversationRef = useRef<PatientConversation | null>(null);
+  conversationRef.current = conversation;
 
   // My bookings + mock payment flow
   const [bookings, setBookings] = useState<MyBooking[]>([]);
@@ -375,17 +435,16 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     }
   };
 
-  const refreshConversation = async () => {
+  /** Conversation list (previews + unread badges), never throws into the UI. */
+  const refreshConversations = async () => {
     try {
-      const clinician = await fetchConversationClinician();
-      setConversation(clinician);
-      if (clinician) {
-        const messages = await fetchChatMessages(clinician.id);
-        setChatMessages(messages);
-      } else {
-        setChatMessages([]);
-      }
+      const list = await fetchPatientConversations();
+      setConversations(list);
       setChatError(null);
+      // Keep an open thread's summary row in sync (name, preview, unread).
+      setConversation((current) =>
+        current ? list.find((row) => row.clinicianId === current.clinicianId) ?? current : null,
+      );
     } catch (e: any) {
       setChatError(e?.message || 'Could not load messages. Please try again.');
     } finally {
@@ -393,9 +452,36 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     }
   };
 
+  const refreshThread = async (target: PatientConversation, silent = true) => {
+    try {
+      const messages = await fetchChatMessages(target.clinicianId);
+      setChatMessages(messages);
+      setChatError(null);
+      // Viewing the thread clears its unread badge.
+      await markConversationRead(target.clinicianId);
+      void refreshConversations();
+    } catch (e: any) {
+      if (!silent) setChatError(e?.message || 'Could not load messages. Please try again.');
+    }
+  };
+
+  const openConversation = (target: PatientConversation) => {
+    setConversation(target);
+    setChatMessages([]);
+    setPendingAttachment(null);
+    setChatLoading(true);
+    void refreshThread(target, false).finally(() => setChatLoading(false));
+  };
+
+  const closeConversation = () => {
+    setConversation(null);
+    setPendingAttachment(null);
+    void refreshConversations();
+  };
+
   useEffect(() => {
     void loadClinicians();
-    void refreshConversation();
+    void refreshConversations();
     void loadBookings();
 
     // Realtime: approvals, declines, reschedules, and new messages show up
@@ -413,7 +499,9 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     });
 
     void subscribeToMyMessages(() => {
-      void refreshConversation();
+      void refreshConversations();
+      const current = conversationRef.current;
+      if (current) void refreshThread(current);
     }).then((unsub) => {
       if (disposed) unsub();
       else unsubMessages = unsub;
@@ -473,11 +561,12 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       setShowSuccessModal(true);
       setSelectedTime(null);
 
-      // Background refresh of availability and the Messages conversation.
+      // Background refresh of availability and the conversation list (a brand
+      // new booking opens a fresh thread row).
       fetchBookedSlotKeys(selectedClinician.id)
         .then(setBookedKeys)
         .catch(() => { /* refreshed on next open */ });
-      void refreshConversation();
+      void refreshConversations();
     } catch (e: any) {
       Alert.alert('Booking failed', e?.message || 'Could not book the appointment. Please try again.');
     } finally {
@@ -487,13 +576,16 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
   const sendMessage = async () => {
     const text = chatInput.trim();
-    if (!text || !conversation || sendingMessage) return;
+    if (!conversation || sendingMessage) return;
+    if (!text && !pendingAttachment) return;
 
     setSendingMessage(true);
     try {
-      const sent = await sendChatMessage(conversation.id, text);
+      const sent = await sendChatMessage(conversation.clinicianId, text, pendingAttachment);
       setChatMessages(prev => [...prev, sent]);
       setChatInput('');
+      setPendingAttachment(null);
+      void refreshConversations();
     } catch (e: any) {
       Alert.alert('Message not sent', e?.message || 'Please try again.');
     } finally {
@@ -501,7 +593,29 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     }
   };
 
-  const lastMessage = chatMessages.length > 0 ? chatMessages[chatMessages.length - 1] : null;
+  const attachFile = () => {
+    Alert.alert('Add an attachment', 'What would you like to send?', [
+      {
+        text: 'Photo',
+        onPress: () => {
+          void pickImageAttachment().then((picked) => {
+            if (picked) setPendingAttachment(picked);
+          });
+        },
+      },
+      {
+        text: 'Document',
+        onPress: () => {
+          void pickDocumentAttachment().then((picked) => {
+            if (picked) setPendingAttachment(picked);
+          });
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const totalUnread = conversations.reduce((sum, row) => sum + row.unreadCount, 0);
 
   return (
     <View style={styles.root}>
@@ -537,9 +651,18 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               style={[styles.tabBtn, activeTab === 'messages' && styles.tabBtnActive]}
               onPress={() => setActiveTab('messages')}
             >
-              <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
-                Messages
-              </Text>
+              <View style={styles.tabLabelRow}>
+                <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
+                  Messages
+                </Text>
+                {totalUnread > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {totalUnread > 9 ? '9+' : totalUnread}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tabBtn, activeTab === 'support' && styles.tabBtnActive]}
@@ -716,23 +839,26 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       {/* ── Messages Tab ── */}
       {activeTab === 'messages' && (
         <View style={styles.body}>
-          {chatLoading && (
+          {chatLoading && !conversation && (
             <View style={styles.stateBox}>
               <ActivityIndicator size="small" color={Colors.btnBlue} />
               <Text style={styles.stateText}>Loading messages…</Text>
             </View>
           )}
 
-          {!chatLoading && chatError && (
+          {!chatLoading && chatError && !conversation && (
             <View style={styles.stateBox}>
               <Text style={styles.stateError}>{chatError}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={() => { setChatLoading(true); void refreshConversation(); }}>
+              <TouchableOpacity
+                style={styles.retryBtn}
+                onPress={() => { setChatLoading(true); void refreshConversations(); }}
+              >
                 <Text style={styles.retryText}>Retry</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {!chatLoading && !chatError && !conversation && (
+          {!chatLoading && !chatError && !conversation && conversations.length === 0 && (
             <View style={styles.stateBox}>
               <Ionicons name="chatbubbles-outline" size={28} color={Colors.textHint} />
               <Text style={styles.stateText}>
@@ -744,43 +870,114 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </View>
           )}
 
-          {!chatLoading && !chatError && conversation && (
+          {/* Conversation list */}
+          {!chatLoading && !chatError && !conversation && conversations.length > 0 && (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {conversations.map((row) => (
+                <TouchableOpacity
+                  key={row.clinicianId}
+                  style={styles.convoRow}
+                  onPress={() => openConversation(row)}
+                >
+                  <View style={styles.convoAvatar}>
+                    <Text style={styles.convoAvatarText}>{row.clinician?.avatar ?? 'DR'}</Text>
+                  </View>
+                  <View style={styles.convoInfo}>
+                    <Text style={styles.convoName} numberOfLines={1}>
+                      {row.clinician?.name ?? 'Clinician'}
+                    </Text>
+                    <Text style={styles.convoPreview} numberOfLines={1}>
+                      {row.preview}
+                    </Text>
+                  </View>
+                  <View style={styles.convoMeta}>
+                    <Text style={styles.convoTime}>{formatConversationTime(row.lastAt)}</Text>
+                    {row.unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadBadgeText}>
+                          {row.unreadCount > 9 ? '9+' : row.unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Open thread */}
+          {conversation && (
             <>
-              {/* Conversation preview */}
-              <View style={styles.convoRow}>
-                <View style={styles.convoAvatar}>
-                  <Text style={styles.convoAvatarText}>{conversation.avatar}</Text>
-                </View>
-                <View style={styles.convoInfo}>
-                  <Text style={styles.convoName}>{conversation.name}</Text>
-                  <Text style={styles.convoPreview} numberOfLines={1}>
-                    {lastMessage ? lastMessage.text : 'No messages yet — say hello.'}
-                  </Text>
-                </View>
-                <View style={styles.convoMeta}>
-                  <Text style={styles.convoTime}>{lastMessage ? lastMessage.timestamp : ''}</Text>
-                </View>
+              <View style={styles.threadTopBar}>
+                <TouchableOpacity style={styles.threadBack} onPress={closeConversation}>
+                  <Ionicons name="arrow-back" size={18} color={Colors.btnBlue} />
+                  <Text style={styles.threadBackText}>Chats</Text>
+                </TouchableOpacity>
+                <Text style={styles.threadTitle} numberOfLines={1}>
+                  {conversation.clinician?.name ?? 'Clinician'}
+                </Text>
               </View>
 
-              {/* Chat thread */}
-              <ScrollView style={styles.chatScroll} contentContainerStyle={{ padding: Spacing.md, gap: 12 }}>
-                {chatMessages.length === 0 && (
-                  <Text style={styles.emptyThreadText}>
-                    This is the start of your conversation with {conversation.name}.
-                  </Text>
-                )}
-                {chatMessages.map(m => (
-                  <ChatBubble
-                    key={m.id}
-                    text={m.text}
-                    isMe={m.sender === 'patient'}
-                    time={m.timestamp}
+              {chatLoading ? (
+                <View style={styles.stateBox}>
+                  <ActivityIndicator size="small" color={Colors.btnBlue} />
+                </View>
+              ) : chatError ? (
+                <View style={styles.stateBox}>
+                  <Text style={styles.stateError}>{chatError}</Text>
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => { setChatLoading(true); void refreshThread(conversation, false).finally(() => setChatLoading(false)); }}
+                  >
+                    <Text style={styles.retryText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <ScrollView style={styles.chatScroll} contentContainerStyle={{ padding: Spacing.md, gap: 12 }}>
+                  {chatMessages.length === 0 && (
+                    <Text style={styles.emptyThreadText}>
+                      This is the start of your conversation with {conversation.clinician?.name ?? 'your clinician'}.
+                    </Text>
+                  )}
+                  {chatMessages.map(m => (
+                    <ChatBubble
+                      key={m.id}
+                      text={m.text}
+                      isMe={m.sender === 'patient'}
+                      time={m.timestamp}
+                      attachment={m.attachment}
+                      readAt={m.readAt}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+
+              {pendingAttachment && (
+                <View style={styles.attachmentChip}>
+                  <Ionicons
+                    name={pendingAttachment.kind === 'image' ? 'image-outline' : 'document-text-outline'}
+                    size={16}
+                    color={ACCENT}
                   />
-                ))}
-              </ScrollView>
+                  <Text style={styles.attachmentChipText} numberOfLines={1}>
+                    {pendingAttachment.name}
+                  </Text>
+                  <TouchableOpacity onPress={() => setPendingAttachment(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close-circle" size={18} color={Colors.textHint} />
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Input row */}
               <View style={styles.inputRow}>
+                <TouchableOpacity
+                  style={styles.attachBtn}
+                  onPress={attachFile}
+                  disabled={sendingMessage}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="attach" size={22} color={ACCENT} />
+                </TouchableOpacity>
                 <TextInput
                   style={styles.msgInput}
                   placeholder="Type your message here..."
@@ -793,9 +990,11 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 <TouchableOpacity
                   style={[styles.sendBtn, sendingMessage && { opacity: 0.6 }]}
                   onPress={() => void sendMessage()}
-                  disabled={sendingMessage}
+                  disabled={sendingMessage || (!chatInput.trim() && !pendingAttachment)}
                 >
-                  <Ionicons name="send" size={18} color="#FFF" />
+                  {sendingMessage
+                    ? <ActivityIndicator size="small" color="#FFF" />
+                    : <Ionicons name="send" size={18} color="#FFF" />}
                 </TouchableOpacity>
               </View>
             </>
@@ -1335,17 +1534,78 @@ const styles = StyleSheet.create({
   convoInfo: { flex: 1 },
   convoName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   convoPreview: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  convoMeta: { alignItems: 'flex-end' },
+  convoMeta: { alignItems: 'flex-end', gap: 6 },
   convoTime: { fontSize: 11, color: Colors.textHint },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: '#E05C5C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chatScroll: { flex: 1 },
   emptyThreadText: { fontSize: 12, color: Colors.textHint, textAlign: 'center', marginVertical: 8 },
+  threadTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  threadBack: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  threadBackText: { color: Colors.btnBlue, fontWeight: '700', fontSize: 13 },
+  threadTitle: { flex: 1, fontSize: 14, fontWeight: '800', color: Colors.textPrimary, textAlign: 'right' },
   bubbleWrap: { alignItems: 'flex-start', marginBottom: 6 },
   bubbleWrapMe: { alignItems: 'flex-end' },
   bubble: { maxWidth: '75%', borderRadius: 16, padding: 12 },
   bubbleThem: { backgroundColor: '#F0F2F6', borderBottomLeftRadius: 4 },
   bubbleMe: { backgroundColor: ACCENT, borderBottomRightRadius: 4 },
   bubbleText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
-  bubbleTime: { fontSize: 10, color: Colors.textHint, marginTop: 3 },
+  bubbleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  bubbleTime: { fontSize: 10, color: Colors.textHint },
+  receiptText: { fontSize: 10, color: Colors.textHint, fontWeight: '600' },
+  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: '#E4E7EF' },
+  bubbleImagePending: { alignItems: 'center', justifyContent: 'center' },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E4E7EF',
+  },
+  docRowMe: { backgroundColor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.4)' },
+  docName: { fontSize: 12.5, fontWeight: '600', color: Colors.textPrimary, flexShrink: 1 },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#EEF1FE',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D6DEFB',
+  },
+  attachmentChipText: { flex: 1, fontSize: 12.5, color: ACCENT, fontWeight: '600' },
+  attachBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

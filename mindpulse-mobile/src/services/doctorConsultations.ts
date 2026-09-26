@@ -1,5 +1,15 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import {
+  ChatAttachment,
+  ChatMessageBase,
+  ChatThreadSummary,
+  PickedAttachment,
+  fetchChatThreads,
+  markThreadRead,
+  mapChatRow,
+  uploadChatAttachment,
+} from './chat';
 
 export interface DoctorConsultation {
   id: string;
@@ -20,12 +30,7 @@ export interface DoctorAvailability {
   slots: string[];
 }
 
-export interface DoctorChatMessage {
-  id: string;
-  sender: 'doctor' | 'patient';
-  text: string;
-  timestamp: string;
-}
+export interface DoctorChatMessage extends ChatMessageBase {}
 
 export interface DoctorCallBooking {
   id: string;
@@ -246,43 +251,58 @@ export const saveDoctorAvailability = async (availability: DoctorAvailability): 
 
 // ─── Doctor-side messaging ────────────────────────────────────────────────────
 
+/** Per-patient preview + unread counts for the Messages tab list. */
+export const fetchDoctorChatThreads = async (): Promise<Map<string, ChatThreadSummary>> => {
+  const threads = await fetchChatThreads();
+  return new Map(threads.map((thread) => [thread.otherId, thread]));
+};
+
 export const fetchDoctorChatMessages = async (patientId: string): Promise<DoctorChatMessage[]> => {
   const doctorId = await requireUserId();
   const { data, error } = await supabase
     .from('chat_messages')
-    .select('id, sender, text, created_at')
+    .select('*')
     .eq('clinician_id', doctorId)
     .eq('patient_id', patientId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as { id: string; sender: string; text: string; created_at: string }[]).map((row) => ({
-    id: row.id,
-    sender: row.sender === 'patient' ? 'patient' : 'doctor',
-    text: row.text,
-    timestamp: row.created_at
-      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Just now',
-  }));
+  return Promise.all((data ?? []).map((row: any) => mapChatRow(row)));
 };
 
-export const sendDoctorChatMessage = async (patientId: string, text: string): Promise<DoctorChatMessage> => {
+export const sendDoctorChatMessage = async (
+  patientId: string,
+  text: string,
+  picked?: PickedAttachment | null,
+): Promise<DoctorChatMessage> => {
   const doctorId = await requireUserId();
+
+  let stored: { path: string; name: string; kind: ChatAttachment['kind'] } | null = null;
+  if (picked) {
+    stored = await uploadChatAttachment(patientId, doctorId, picked);
+  }
+
   const { data, error } = await supabase
     .from('chat_messages')
-    .insert({ clinician_id: doctorId, patient_id: patientId, sender: 'doctor', text })
-    .select('id, sender, text, created_at')
+    .insert({
+      clinician_id: doctorId,
+      patient_id: patientId,
+      sender: 'doctor',
+      text: text || '',
+      attachment_url: stored?.path ?? null,
+      attachment_name: stored?.name ?? null,
+      attachment_kind: stored?.kind ?? null,
+    })
+    .select('*')
     .single();
   if (error) throw new Error(error.message);
 
-  return {
-    id: data.id,
-    sender: 'doctor',
-    text: data.text,
-    timestamp: data.created_at
-      ? new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Just now',
-  };
+  return mapChatRow(data as any);
+};
+
+/** Marks every message received from this patient as read. */
+export const markDoctorThreadRead = async (patientId: string): Promise<void> => {
+  await markThreadRead(patientId);
 };
 
 // ─── Video call lobby data ────────────────────────────────────────────────────
@@ -390,14 +410,14 @@ export const subscribeToDoctorAppointments = async (onChange: () => void): Promi
   };
 };
 
-/** Fires whenever a new patient message lands in this doctor's inbox. */
+/** Fires whenever this doctor's messages change (new message or read receipt). */
 export const subscribeToDoctorMessages = async (onChange: () => void): Promise<() => void> => {
   const doctorId = await requireUserId();
   const channel = supabase
     .channel(`doctor-messages-${doctorId}`)
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `clinician_id=eq.${doctorId}` },
+      { event: '*', schema: 'public', table: 'chat_messages', filter: `clinician_id=eq.${doctorId}` },
       onChange,
     )
     .subscribe();

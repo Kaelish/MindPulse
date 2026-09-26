@@ -1815,6 +1815,19 @@ button {
   cursor: pointer;
 }
 
+.web-chat-input-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.web-chat-input-bar button.attach-btn {
+  background: transparent;
+  color: #5b6ef5;
+  padding: 10px 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 
 
 /* ================= Dark theme (Settings -> General -> Dark Mode) ================= */
