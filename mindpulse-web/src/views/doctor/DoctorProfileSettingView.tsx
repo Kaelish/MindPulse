@@ -2,34 +2,7 @@ import React, { FormEvent, useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../services/doctorProfile';
 
-type ProfileTab = 'personal' | 'credentials' | 'security' | 'notifications';
-
-interface NotificationPrefs {
-  email: boolean;
-  push: boolean;
-  sms: boolean;
-  cases: boolean;
-}
-
-const NOTIF_PREFS_KEY = 'mindpulse.web.notificationPrefs';
-
-const loadNotifPrefs = (): NotificationPrefs => {
-  try {
-    const raw = window.localStorage.getItem(NOTIF_PREFS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        email: Boolean(parsed.email),
-        push: Boolean(parsed.push),
-        sms: Boolean(parsed.sms),
-        cases: Boolean(parsed.cases),
-      };
-    }
-  } catch {
-    // Fall through to defaults.
-  }
-  return { email: true, push: true, sms: false, cases: true };
-};
+type ProfileTab = 'personal' | 'credentials' | 'security';
 
 export const DoctorProfileSettingView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
@@ -42,7 +15,6 @@ export const DoctorProfileSettingView: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotifPrefs);
 
   const flashSaved = (message: string) => {
     setSaved(message);
@@ -130,18 +102,6 @@ export const DoctorProfileSettingView: React.FC = () => {
     }
   };
 
-  const saveNotifPrefs = () => {
-    try {
-      window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(notifPrefs));
-      flashSaved('Notification preferences saved in this browser.');
-    } catch {
-      flashSaved('Could not save preferences in this browser.');
-    }
-  };
-
-  const setNotif = (key: keyof NotificationPrefs, value: boolean) =>
-    setNotifPrefs((current) => ({ ...current, [key]: value }));
-
   if (loading) {
     return (
       <main className="main-panel doctor-profile-main">
@@ -191,22 +151,19 @@ export const DoctorProfileSettingView: React.FC = () => {
 
   return <main className="main-panel doctor-profile-main">
     <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
-    <section className="doctor-profile-card"><div className="doctor-avatar-large">●</div><div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>✉ {profile.email} &nbsp;&nbsp; ☎ {profile.phone || '—'} &nbsp;&nbsp; ♙ {profile.licenseId || '—'}</p></div>{(activeTab === 'personal' || activeTab === 'credentials') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
-    <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security'], ['notifications', 'Notifications']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
+    <section className="doctor-profile-card"><div className="doctor-avatar-large">{`${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}</div><div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>{(activeTab === 'personal' || activeTab === 'credentials') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : 'Edit Profile'}</button>}</section>
+    <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
     {saved && <div className="profile-save-banner">{saved}</div>}
     <form className="doctor-profile-form" onSubmit={saveProfile}>
       {activeTab === 'personal' && <ProfileSection title="Personal Information"><Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} /><Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} /><Field label="Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" /><Field label="Phone Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} /><Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} /><Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} /><Field label="Street Address" value={profile.streetAddress} editing={editing} onChange={(value) => update('streetAddress', value)} full /></ProfileSection>}
       {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><Field label="Position" value={profile.specialty} editing={editing} onChange={(value) => update('specialty', value)} /><Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}
       {activeTab === 'security' && <ProfileSection title="Security"><Field label="Current Password" value={currentPassword} editing onChange={setCurrentPassword} type="password" placeholder="Enter current password" /><Field label="New Password" value={newPassword} editing onChange={setNewPassword} type="password" placeholder="Enter new password (min 8 characters)" /><Field label="Confirm New Password" value={confirmPassword} editing onChange={setConfirmPassword} type="password" placeholder="Confirm new password" /></ProfileSection>}
-      {activeTab === 'notifications' && <ProfileSection title="Notification Preferences"><p className="form-helper">Preferences are saved in this browser. The web portal does not deliver email, push, or SMS messages yet.</p><Toggle label="Email Notifications" description="Email me about consultation activity" value={notifPrefs.email} onChange={(value) => setNotif('email', value)} /><Toggle label="Push Notifications" description="Show browser notifications when available" value={notifPrefs.push} onChange={(value) => setNotif('push', value)} /><Toggle label="SMS Notifications" description="Text message alerts (not available yet)" value={notifPrefs.sms} onChange={(value) => setNotif('sms', value)} /><Toggle label="New Case Assignments" description="Notify me when new cases appear" value={notifPrefs.cases} onChange={(value) => setNotif('cases', value)} /></ProfileSection>}
-      {activeTab === 'personal' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : '▣ Save Changes'}</button>}
-      {activeTab === 'credentials' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : '▣ Save Changes'}</button>}
-      {activeTab === 'security' && <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
-      {activeTab === 'notifications' && <button type="button" className="small-profile-button" onClick={saveNotifPrefs}>▣ Save Preferences</button>}
+      {activeTab === 'personal' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>}
+      {activeTab === 'credentials' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>}
+      {activeTab === 'security' && <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : 'Change Password'}</button>}
     </form>
   </main>;
 };
 
 const ProfileSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => <section className="doctor-profile-section"><h2>{title}</h2><div className="doctor-profile-fields">{children}</div></section>;
 const Field: React.FC<{ label: string; value: string; editing: boolean; onChange?: (value: string) => void; full?: boolean; type?: string; placeholder?: string }> = ({ label, value, editing, onChange, full, type = 'text', placeholder }) => <label className={`doctor-profile-field ${full ? 'full' : ''}`}><span>{label}</span><input type={type} value={value} placeholder={placeholder} readOnly={!editing} onChange={(event) => onChange?.(event.target.value)} /></label>;
-const Toggle: React.FC<{ label: string; description: string; value: boolean; onChange: (value: boolean) => void }> = ({ label, description, value, onChange }) => <label className="doctor-profile-toggle"><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} /><i /></label>;

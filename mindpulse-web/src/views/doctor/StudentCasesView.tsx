@@ -40,10 +40,10 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
     <main className="main-panel student-cases-main">
       <header className="topbar student-cases-topbar">
         <div><h1>Student Cases</h1><p className="page-subtitle">Manage and review all assigned student cases</p></div>
-        <div className="header-actions"><button type="button" className="export-report-button">⇩ Export Report</button><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></div>
+        <div className="header-actions"><button type="button" className="export-report-button">Export Report</button><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></div>
       </header>
       <section className="case-summary-grid"><Summary label="Total Cases" value={String(loadedStudents.length)} /><Summary label="High Risk" value={String(loadedStudents.filter((student) => student.status === 'High Risk').length)} /><Summary label="Moderate Risk" value={String(loadedStudents.filter((student) => student.status === 'Moderate Risk').length)} /><Summary label="Low Risk" value={String(loadedStudents.filter((student) => student.status === 'Low Risk').length)} /></section>
-      <section className="case-filter-bar"><label className="case-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, ID, or program" /></label><select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status"><option>All Status</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select></section>
+      <section className="case-filter-bar"><label className="case-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, ID, or program" /></label><select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status"><option>All Status</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select></section>
       <section className="case-table-panel">
         {isLoading && <p className="case-loading">Loading student cases...</p>}
         {loadError && <p className="case-load-error">{loadError}</p>}

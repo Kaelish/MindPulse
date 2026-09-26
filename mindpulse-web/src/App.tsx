@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from './supabase/client';
 import { getCurrentUserRole } from './services/session';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
+import { applyDoctorSettings, loadDoctorSettings } from './services/doctorSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
@@ -10,6 +11,7 @@ import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView } from './views/doctor/ConsultationsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
 import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
+import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
 import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth, AuthScreen } from './views/auth/WebAuth';
 import './App.css';
@@ -19,7 +21,7 @@ type Portal = 'doctor' | 'admin' | 'pending' | 'unauthorized';
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
-  const [activeView, setActiveView] = useState<DoctorView>('consultations');
+  const [activeView, setActiveView] = useState<DoctorView>(() => loadDoctorSettings().landingView);
   const [selectedStudent, setSelectedStudent] = useState<StudentCase | null>(null);
 
   const renderActiveView = () => {
@@ -38,13 +40,15 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
         return <RecommendationsView />;
       case 'profile-setting':
         return <DoctorProfileSettingView />;
+      case 'settings':
+        return <DoctorSettingsView />;
       default:
         return <ConsultationsView />;
     }
   };
 
   return (
-    <div className="doctor-shell">
+    <div className="doctor-shell doctor-scope">
       <DoctorSidebar
         activeView={activeView === 'student-case-detail' ? 'student-cases' : activeView}
         setActiveView={setActiveView}
@@ -194,8 +198,11 @@ function App() {
   };
 
   // Apply saved Settings (theme, density, document title) as soon as the app boots.
+  // The doctor appearance is scoped to `.doctor-scope`, so applying it here never
+  // changes the admin portal or the auth screens.
   useEffect(() => {
     applyAdminSettings(loadAdminSettings());
+    applyDoctorSettings(loadDoctorSettings());
   }, []);
 
   // Security → Session Timeout: auto sign-out after 30 minutes of inactivity.

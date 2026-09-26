@@ -1,0 +1,2817 @@
+/* =========================================================================
+   MindPulse Doctor Portal - design system
+   Scoped to .doctor-scope (added to the doctor shell in App.tsx) so the
+   admin portal, auth screens and shared globals are never touched.
+   Accent: #53c7d7 (spec) with #0f8298 reserved for text-on-light and
+   white-on-fill states where the lighter tone fails contrast.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- tokens */
+.doctor-scope {
+  --primary: #53c7d7;
+  --primary-strong: #0f8298;
+  --primary-strong-hover: #0c6e7f;
+  --primary-soft: #e7f7fb;
+  --primary-contrast: #ffffff;
+
+  --doc-bg: #f3f7f9;
+  --doc-panel: #ffffff;
+  --doc-panel-2: #f8fbfc;
+  --doc-ink: #0e1c26;
+  --doc-ink-2: #2b3f4d;
+  --doc-muted: #5d7381;
+  --doc-line: #e4edf2;
+  --doc-line-strong: #cfdde5;
+  --doc-soft: #eef4f7;
+
+  --doc-danger: #d64550;
+  --doc-danger-soft: #fdecee;
+  --doc-danger-line: #f6cdd1;
+  --doc-success: #0f9d63;
+  --doc-success-soft: #e3f7ee;
+  --doc-warning: #b7791f;
+  --doc-warning-soft: #fdf4e0;
+
+  --doc-input-bg: #ffffff;
+  --doc-input-text: #0e1c26;
+  --doc-input-line: #cfdde5;
+
+  --doc-sidebar-bg: #ffffff;
+  --doc-sidebar-bg-2: #fbfdfe;
+  --doc-sidebar-text: #47606e;
+  --doc-sidebar-text-active: #06222a;
+  --doc-sidebar-line: #e4edf2;
+  --doc-sidebar-card: #f5fafb;
+
+  --doc-radius-lg: 20px;
+  --doc-radius: 14px;
+  --doc-radius-sm: 10px;
+  --doc-radius-xs: 8px;
+
+  --doc-shadow-sm: 0 1px 2px rgba(10, 28, 36, 0.05);
+  --doc-shadow: 0 1px 2px rgba(10, 28, 36, 0.05), 0 10px 24px rgba(10, 28, 36, 0.06);
+  --doc-shadow-lg: 0 22px 54px rgba(8, 22, 30, 0.2);
+
+  font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ----------------------------------------------------------------- shell */
+.doctor-scope.doctor-shell {
+  background: var(--doc-bg);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .main-panel {
+  background: var(--doc-bg);
+  color: var(--doc-ink);
+  padding: 30px 34px 52px;
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------- sidebar */
+.doctor-scope .sidebar {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  width: 276px;
+  flex: 0 0 276px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 16px 20px;
+  background: linear-gradient(180deg, var(--doc-sidebar-bg) 0%, var(--doc-sidebar-bg-2) 100%);
+  border-right: 1px solid var(--doc-sidebar-line);
+  color: var(--doc-sidebar-text);
+  scrollbar-width: thin;
+}
+
+.doctor-scope .sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.doctor-scope .sidebar::-webkit-scrollbar-thumb {
+  background: var(--doc-line-strong);
+  border-radius: 999px;
+}
+
+.doctor-scope .brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 10px;
+}
+
+.doctor-scope .brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, #53c7d7 0%, #0f8298 100%);
+  color: #04171d;
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  box-shadow: 0 8px 18px rgba(15, 130, 152, 0.35);
+}
+
+.doctor-scope .brand-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+  letter-spacing: -0.01em;
+}
+
+.doctor-scope .brand-subtitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .nav-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.doctor-scope .nav-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+  padding: 0 10px 4px;
+}
+
+.doctor-scope .nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--doc-radius-sm);
+  background: transparent;
+  color: var(--doc-sidebar-text);
+  font-size: 0.93rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.doctor-scope .nav-item:hover {
+  background: var(--doc-soft);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .nav-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.doctor-scope .nav-item.active {
+  background: linear-gradient(180deg, #53c7d7 0%, #3ab2c6 100%);
+  border-color: rgba(6, 34, 42, 0.12);
+  color: var(--doc-sidebar-text-active);
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(15, 130, 152, 0.25);
+}
+
+.doctor-scope .nav-icon {
+  width: 22px;
+  flex: 0 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.doctor-scope .nav-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------- sidebar account card */
+.doctor-scope .sidebar-account-area {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--doc-sidebar-line);
+}
+
+.doctor-scope .sidebar-profile-card {
+  margin-top: 0;
+  width: 100%;
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--doc-sidebar-line);
+  border-radius: var(--doc-radius);
+  background: var(--doc-sidebar-card);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.doctor-scope .sidebar-profile-card:hover {
+  background: var(--doc-soft);
+  border-color: rgba(15, 130, 152, 0.45);
+}
+
+.doctor-scope .sidebar-profile-card.is-active {
+  border-color: rgba(83, 199, 215, 0.7);
+  background: rgba(83, 199, 215, 0.12);
+}
+
+.doctor-scope .sidebar-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.doctor-scope .sidebar-doctor-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, #53c7d7, #0f8298);
+  color: #04171d;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.doctor-scope .sidebar-doctor-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.doctor-scope .sidebar-doctor-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--doc-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-scope .sidebar-doctor-email {
+  font-size: 0.7rem;
+  color: var(--doc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-scope .sidebar-doctor-spec {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-scope .sidebar-signout-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--doc-sidebar-line);
+  border-radius: var(--doc-radius-sm);
+  background: transparent;
+  color: var(--doc-sidebar-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.doctor-scope .sidebar-signout-btn:hover {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+/* ---------------------------------------------------------------- topbar */
+.doctor-scope .topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.doctor-scope .topbar h1 {
+  margin: 6px 0 0;
+  font-size: clamp(1.65rem, 2.4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 5px 11px;
+  border: 1px solid var(--doc-line);
+  border-radius: 999px;
+  background: var(--doc-panel);
+  color: var(--primary-strong);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.doctor-scope .page-subtitle {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------- buttons */
+.doctor-scope .ghost-button,
+.doctor-scope .primary-button,
+.doctor-scope .text-button,
+.doctor-scope .notification-button,
+.doctor-scope .bell-btn,
+.doctor-scope .export-report-button,
+.doctor-scope .add-recommendation-button,
+.doctor-scope .schedule-btn,
+.view-details-button.doctor-scope,
+.doctor-scope .view-details-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--doc-radius-sm);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+    transform 0.12s ease, box-shadow 0.16s ease;
+}
+
+.doctor-scope .ghost-button,
+.doctor-scope .export-report-button {
+  padding: 11px 16px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line-strong);
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .ghost-button:hover,
+.doctor-scope .export-report-button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .primary-button {
+  padding: 11px 18px;
+  background: var(--primary-strong);
+  border: 1px solid var(--primary-strong);
+  color: var(--primary-contrast);
+  box-shadow: 0 10px 22px rgba(15, 130, 152, 0.24);
+}
+
+.doctor-scope .primary-button:hover:not(:disabled) {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+  transform: translateY(-1px);
+}
+
+.doctor-scope .primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.doctor-scope .text-button {
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--primary-strong);
+}
+
+.doctor-scope .text-button:hover {
+  background: var(--primary-soft);
+}
+
+.doctor-scope .notification-button,
+.doctor-scope .bell-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line-strong);
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .notification-button:hover,
+.doctor-scope .bell-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .add-recommendation-button,
+.doctor-scope .schedule-btn {
+  padding: 11px 18px;
+  background: var(--primary-strong);
+  border: 1px solid var(--primary-strong);
+  color: var(--primary-contrast);
+  box-shadow: 0 10px 22px rgba(15, 130, 152, 0.22);
+}
+
+.doctor-scope .add-recommendation-button:hover:not(:disabled),
+.doctor-scope .schedule-btn:hover {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+  transform: translateY(-1px);
+}
+
+.doctor-scope button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.doctor-scope button:focus-visible,
+.doctor-scope input:focus-visible,
+.doctor-scope select:focus-visible,
+.doctor-scope textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------- form controls */
+.doctor-scope input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.doctor-scope select,
+.doctor-scope textarea {
+  background: var(--doc-input-bg);
+  color: var(--doc-input-text);
+  border: 1px solid var(--doc-input-line);
+  border-radius: var(--doc-radius-sm);
+  font: inherit;
+}
+
+.doctor-scope input::placeholder,
+.doctor-scope textarea::placeholder {
+  color: var(--doc-muted);
+  opacity: 0.75;
+}
+
+/* -------------------------------------------------------- feedback states */
+.doctor-scope .loading-state,
+.doctor-scope .case-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 54px 20px;
+  color: var(--doc-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.doctor-scope .spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--doc-line-strong);
+  border-top-color: var(--primary-strong);
+  animation: doc-spin 0.8s linear infinite;
+}
+
+@keyframes doc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.doctor-scope .error-state,
+.doctor-scope .case-load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 46px 22px;
+  border: 1px dashed var(--doc-danger-line);
+  border-radius: var(--doc-radius);
+  background: var(--doc-danger-soft);
+  color: var(--doc-danger);
+  text-align: center;
+  font-weight: 600;
+}
+
+.doctor-scope .empty-table {
+  padding: 44px 20px;
+  border: 1px dashed var(--doc-line-strong);
+  border-radius: var(--doc-radius);
+  background: var(--doc-panel-2);
+  color: var(--doc-muted);
+  text-align: center;
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+.doctor-scope .profile-save-banner,
+.doctor-scope .save-confirmation,
+.doctor-scope .recommendation-save-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px;
+  margin-bottom: 18px;
+  border: 1px solid #b9e6d2;
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-success-soft);
+  color: var(--doc-success);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.doctor-scope .error-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px;
+  margin-bottom: 18px;
+  border: 1px solid var(--doc-danger-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-danger-soft);
+  color: var(--doc-danger);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------- containers */
+.doctor-scope .panel,
+.doctor-scope .patients-panel,
+.doctor-scope .schedule-panel,
+.doctor-scope .insight-panel,
+.doctor-scope .case-table-panel,
+.doctor-scope .consultations-panel-card,
+.doctor-scope .assessment-list-panel,
+.doctor-scope .student-profile-card,
+.doctor-scope .doctor-profile-card,
+.doctor-scope .recommendation-card,
+.doctor-scope .assessment-card,
+.doctor-scope .doc-settings-card,
+.doctor-scope .detail-panel {
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg);
+  box-shadow: var(--doc-shadow);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .panel-header,
+.doctor-scope .doc-settings-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doctor-scope .panel-header h2,
+.doctor-scope .doc-settings-card-head h2,
+.doctor-scope .detail-panel h2,
+.doctor-scope .recommendation-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--doc-ink);
+}
+
+/* ------------------------------------------------------------ stat cards */
+.doctor-scope .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.doctor-scope .stat-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .stat-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), rgba(83, 199, 215, 0));
+}
+
+.doctor-scope .stat-card.tone-blue {
+  background: linear-gradient(150deg, var(--primary-soft) 0%, var(--doc-panel) 70%);
+}
+
+.doctor-scope .stat-card.tone-green {
+  background: linear-gradient(150deg, var(--doc-success-soft) 0%, var(--doc-panel) 70%);
+}
+
+.doctor-scope .stat-card.tone-amber {
+  background: linear-gradient(150deg, var(--doc-warning-soft) 0%, var(--doc-panel) 70%);
+}
+
+.doctor-scope .stat-card.tone-purple {
+  background: linear-gradient(150deg, #eef1ff 0%, var(--doc-panel) 70%);
+}
+
+.doctor-scope .stat-card.tone-cyan,
+.doctor-scope .stat-card.tone-teal {
+  background: linear-gradient(150deg, var(--primary-soft) 0%, var(--doc-panel) 70%);
+}
+
+.doctor-scope .stat-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .stat-value {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .stat-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--doc-muted);
+}
+
+/* ---------------------------------------------------------------- tables */
+.doctor-scope .table-header,
+.doctor-scope .patient-row {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+}
+
+.doctor-scope .table-header {
+  background: var(--doc-panel-2);
+  border-bottom: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg) var(--doc-radius-lg) 0 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .table-body .patient-row {
+  border-bottom: 1px solid var(--doc-line);
+  background: var(--doc-panel);
+  transition: background 0.14s ease;
+}
+
+.doctor-scope .table-body .patient-row:last-child {
+  border-bottom: 0;
+  border-radius: 0 0 var(--doc-radius-lg) var(--doc-radius-lg);
+}
+
+.doctor-scope .table-body .patient-row:hover {
+  background: var(--primary-soft);
+}
+
+.doctor-scope .patient-identity,
+.doctor-scope .case-student,
+.doctor-scope .assessment-student,
+.doctor-scope .consult-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.doctor-scope .avatar,
+.doctor-scope .case-avatar,
+.doctor-scope .account-avatar,
+.doctor-scope .consult-avatar,
+.doctor-scope .student-initials,
+.doctor-scope .doctor-avatar-large {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(140deg, var(--primary) 0%, var(--primary-strong) 100%);
+  color: #04171d;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex: 0 0 auto;
+}
+
+.doctor-scope .avatar,
+.doctor-scope .case-avatar,
+.doctor-scope .account-avatar,
+.doctor-scope .consult-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 0.9rem;
+}
+
+.doctor-scope .patient-name,
+.doctor-scope .consult-patient-name,
+.doctor-scope .scan-label,
+.doctor-scope .appointment-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .patient-meta,
+.doctor-scope .patient-subtle,
+.doctor-scope .case-muted,
+.doctor-scope .consult-student-id,
+.doctor-scope .consult-time-str,
+.doctor-scope .recommendation-meta {
+  font-size: 0.82rem;
+  color: var(--doc-muted);
+}
+
+/* --------------------------------------------------------- pills & badges */
+.doctor-scope .status-pill,
+.doctor-scope .risk-badge,
+.doctor-scope .score-pill,
+.doctor-scope .case-status,
+.doctor-scope .case-trend,
+.doctor-scope .recommendation-priority,
+.doctor-scope .consult-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.doctor-scope .status-pill,
+.doctor-scope .risk-badge,
+.doctor-scope .case-status {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .status-pill.status-active,
+.doctor-scope .status-pill.status-confirmed,
+.doctor-scope .status-pill.status-pill-green,
+.doctor-scope .status-active,
+.doctor-scope .status-confirmed,
+.doctor-scope .risk-badge.low,
+.doctor-scope .case-trend.up,
+.doctor-scope .case-trend.stable {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  color: var(--doc-success);
+}
+
+.doctor-scope .status-pill.status-pending,
+.doctor-scope .status-pill.status-pill-moderate,
+.doctor-scope .status-pill.status-pill-blue,
+.doctor-scope .status-moderate,
+.doctor-scope .risk-badge.moderate,
+.doctor-scope .case-trend.down {
+  background: var(--doc-warning-soft);
+  border-color: #f3e0b4;
+  color: var(--doc-warning);
+}
+
+.doctor-scope .status-pill.status-pill-high,
+.doctor-scope .status-high,
+.doctor-scope .risk-badge.high,
+.doctor-scope .case-trend.rising {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .status-pill.status-pill-grey,
+.doctor-scope .status-pill.status-completed,
+.doctor-scope .case-status.completed {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .status-pill.status-critical,
+.doctor-scope .status-critical {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .status-pill.status-watch,
+.doctor-scope .status-watch {
+  background: var(--doc-warning-soft);
+  border-color: #f3e0b4;
+  color: var(--doc-warning);
+}
+
+.doctor-scope .status-pill.status-stable,
+.doctor-scope .status-stable {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  color: var(--doc-success);
+}
+
+.doctor-scope .score-pill {
+  padding: 6px 12px;
+  background: var(--primary-soft);
+  border-color: #c3e9f2;
+  color: var(--primary-strong);
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------------- dashboard */
+.doctor-scope .content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.doctor-scope .content-grid > * {
+  min-width: 0;
+}
+
+.doctor-scope .appointment-list,
+.doctor-scope .insight-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+}
+
+.doctor-scope .appointment-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .time-block {
+  flex: 0 0 auto;
+  min-width: 74px;
+  padding: 8px 10px;
+  border-radius: var(--doc-radius-xs);
+  background: var(--primary-soft);
+  border: 1px solid #c3e9f2;
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.doctor-scope .appointment-main {
+  min-width: 0;
+}
+
+.doctor-scope .appointment-meta {
+  font-size: 0.8rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .insight-card {
+  padding: 15px 16px;
+  border: 1px solid var(--doc-line);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .insight-card.warning {
+  background: var(--doc-warning-soft);
+  border-color: #f3e0b4;
+  border-left-color: var(--doc-warning);
+}
+
+.doctor-scope .insight-card.success {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  border-left-color: var(--doc-success);
+}
+
+.doctor-scope .insight-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .insight-value {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.93rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .insight-card.warning .insight-value {
+  color: var(--doc-warning);
+}
+
+.doctor-scope .insight-card.success .insight-value {
+  color: var(--doc-success);
+}
+
+.doctor-scope .call-panel {
+  padding: 18px 20px 20px;
+}
+
+.doctor-scope .call-card {
+  padding: 16px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: linear-gradient(150deg, var(--primary-soft), var(--doc-panel));
+}
+
+.doctor-scope .call-main-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--primary-strong);
+}
+
+/* ---------------------------------------------------------- student cases */
+.doctor-scope .case-summary-grid,
+.doctor-scope .assessment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.doctor-scope .case-summary-card,
+.doctor-scope .assessment-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .case-summary-card span,
+.doctor-scope .assessment-summary-card span {
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .case-summary-card strong,
+.doctor-scope .assessment-summary-card strong {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .assessment-summary-card small {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .assessment-summary-card.green {
+  background: linear-gradient(150deg, var(--doc-success-soft), var(--doc-panel));
+  border-color: #b9e6d2;
+}
+
+.doctor-scope .assessment-summary-card.green strong {
+  color: var(--doc-success);
+}
+
+.doctor-scope .assessment-summary-card.red {
+  background: linear-gradient(150deg, var(--doc-danger-soft), var(--doc-panel));
+  border-color: var(--doc-danger-line);
+}
+
+.doctor-scope .assessment-summary-card.red strong {
+  color: var(--doc-danger);
+}
+
+.doctor-scope .case-filter-bar,
+.doctor-scope .assessment-filter-bar,
+.doctor-scope .recommendation-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .case-search,
+.doctor-scope .assessment-search {
+  display: flex;
+  align-items: center;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.doctor-scope .case-search input,
+.doctor-scope .assessment-search input {
+  width: 100%;
+  padding: 11px 14px;
+}
+
+.doctor-scope .case-filter-bar select,
+.doctor-scope .assessment-filter-bar select {
+  padding: 11px 13px;
+  min-width: 170px;
+}
+
+.doctor-scope .case-table-wrap {
+  overflow-x: auto;
+}
+
+.doctor-scope .case-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.doctor-scope .case-table thead th {
+  padding: 13px 16px;
+  background: var(--doc-panel-2);
+  border-bottom: 1px solid var(--doc-line);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+  text-align: left;
+}
+
+.doctor-scope .case-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--doc-line);
+  font-size: 0.9rem;
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .case-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.doctor-scope .case-table tbody tr:hover td {
+  background: var(--primary-soft);
+}
+
+.doctor-scope .view-details-button,
+.doctor-scope .decision-link {
+  padding: 8px 14px;
+  background: var(--primary-soft);
+  border: 1px solid #c3e9f2;
+  border-radius: var(--doc-radius-xs);
+  color: var(--primary-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .view-details-button:hover {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------- student case view */
+.doctor-scope .student-profile-card {
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.doctor-scope .student-profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .student-initials {
+  width: 62px;
+  height: 62px;
+  font-size: 1.25rem;
+}
+
+.doctor-scope .student-profile-heading h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .student-profile-heading p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .student-risk {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 12px 16px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .student-risk span {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.doctor-scope .student-risk.tone-low span {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  color: var(--doc-success);
+}
+
+.doctor-scope .student-risk.tone-watch span {
+  background: var(--doc-warning-soft);
+  border-color: #f3e0b4;
+  color: var(--doc-warning);
+}
+
+.doctor-scope .student-risk.tone-critical span {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .student-risk.tone-neutral span,
+.doctor-scope .student-risk span {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .student-risk strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .student-risk.tone-low strong {
+  color: var(--doc-success);
+}
+
+.doctor-scope .student-risk.tone-watch strong {
+  color: var(--doc-warning);
+}
+
+.doctor-scope .student-risk.tone-critical strong {
+  color: var(--doc-danger);
+}
+
+.doctor-scope .student-risk small {
+  font-size: 0.72rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .student-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--doc-line);
+  font-size: 0.86rem;
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .student-detail-tabs,
+.doctor-scope .doctor-profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 20px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .student-detail-tabs button,
+.doctor-scope .doctor-profile-tabs button {
+  flex: 1 1 auto;
+  padding: 11px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--doc-radius-sm);
+  background: transparent;
+  color: var(--doc-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.doctor-scope .student-detail-tabs button:hover,
+.doctor-scope .doctor-profile-tabs button:hover {
+  background: var(--doc-soft);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .student-detail-tabs button.active,
+.doctor-scope .doctor-profile-tabs button.active {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+.doctor-scope .detail-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.doctor-scope .detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 17px 18px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .detail-stat span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .detail-stat strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .detail-stat strong.danger-text {
+  color: var(--doc-danger);
+}
+
+.doctor-scope .detail-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.doctor-scope .detail-panel {
+  padding: 20px 22px;
+}
+
+.doctor-scope .detail-panel h2 {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .trend-chart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doctor-scope .chart-y-label,
+.doctor-scope .chart-x-labels {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .detail-assessment-card,
+.doctor-scope .consultation-detail,
+.doctor-scope .notes-detail {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .detail-assessment-card h3,
+.doctor-scope .consultation-detail h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .detail-assessment-card p,
+.doctor-scope .consultation-detail p,
+.doctor-scope .notes-detail p {
+  margin: 4px 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .detail-emotion-bars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.doctor-scope .detail-assessment-card > strong {
+  color: var(--doc-ink);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.doctor-scope .detail-assessment-card > strong.score-low {
+  color: var(--doc-success);
+}
+
+.doctor-scope .detail-assessment-card > strong.score-moderate {
+  color: var(--doc-warning);
+}
+
+.doctor-scope .detail-assessment-card > strong.score-high {
+  color: var(--doc-danger);
+}
+
+.doctor-scope .detail-emotion,
+.doctor-scope .emotion-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.doctor-scope .detail-emotion > div,
+.doctor-scope .emotion-bar > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .emotion-bar > b {
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .detail-emotion i,
+.doctor-scope .emotion-bar i {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+}
+
+.doctor-scope .emotion-bar i.green {
+  background: linear-gradient(90deg, #4bc98d, var(--doc-success));
+}
+
+.doctor-scope .emotion-bar i.cyan {
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+}
+
+.doctor-scope .emotion-bar i.blue {
+  background: linear-gradient(90deg, #7aa9f5, #3d6fd8);
+}
+
+.doctor-scope .analysis-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+  margin-bottom: 4px;
+}
+
+/* ------------------------------------------------------ assessment results */
+.doctor-scope .assessment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doctor-scope .emotion-analysis {
+  display: grid;
+  grid-template-columns: 92px repeat(3, minmax(120px, 1fr));
+  align-items: end;
+  gap: 24px;
+  padding: 18px 4px 0;
+}
+
+.doctor-scope .assessment-card {
+  position: relative;
+  padding: 18px 20px 54px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  background: var(--doc-panel);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .assessment-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 0;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doctor-scope .assessment-card-header strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .assessment-card-header small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .assessment-student > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.doctor-scope .assessment-student .scan-label {
+  font-size: 0.95rem;
+}
+
+.doctor-scope .assessment-student strong {
+  font-size: 0.82rem;
+  color: var(--primary-strong);
+}
+
+.doctor-scope .assessment-student small {
+  font-size: 0.78rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .assessment-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doctor-scope .assessment-score strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .view-case-button {
+  padding: 10px 15px;
+  border: 1px solid var(--primary-strong);
+  border-radius: var(--doc-radius-xs);
+  background: var(--primary-strong);
+  color: var(--primary-contrast);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.doctor-scope .view-case-button:hover {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+  transform: translateY(-1px);
+}
+
+.doctor-scope .review-button {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  padding: 9px 14px;
+  border: 1px solid #c3e9f2;
+  border-radius: var(--doc-radius-xs);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.doctor-scope .review-button:hover {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+.doctor-scope .review-button.reviewed {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  color: var(--doc-success);
+}
+
+/* ------------------------------------------------------------ consultations */
+.doctor-scope .consultations-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.doctor-scope .consultations-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .consultations-title-wrap h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 2.4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .consultations-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .consult-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.doctor-scope .consult-stat-card {
+  padding: 18px 20px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .consult-stat-card .label {
+  margin-bottom: 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .consult-stat-card .val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .consult-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doctor-scope .consult-tab-btn {
+  position: relative;
+  padding: 12px 2px;
+  border: 0;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--doc-muted);
+  cursor: pointer;
+}
+
+.doctor-scope .consult-tab-btn:hover {
+  color: var(--doc-ink);
+}
+
+.doctor-scope .consult-tab-btn.active {
+  color: var(--primary-strong);
+}
+
+.doctor-scope .consult-tab-btn.active::after {
+  background: var(--primary-strong);
+}
+
+.doctor-scope .consultation-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doctor-scope .consult-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  background: var(--doc-panel-2);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doctor-scope .consult-item-row:hover {
+  border-color: #c3e9f2;
+  box-shadow: var(--doc-shadow);
+}
+
+.doctor-scope .consult-item-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.doctor-scope .consult-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.doctor-scope .consult-item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.doctor-scope .appointment-reason {
+  padding: 9px 13px;
+  border-radius: var(--doc-radius-xs);
+  background: var(--primary-soft);
+  border: 1px solid #c3e9f2;
+  color: var(--primary-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.doctor-scope .consult-notes-box {
+  margin-top: 4px;
+  padding: 12px 15px;
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-soft);
+  border: 1px solid var(--doc-line);
+  color: var(--doc-ink-2);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.doctor-scope .decide-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--doc-radius-xs);
+  background: var(--doc-soft);
+  color: var(--doc-ink-2);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.doctor-scope .decide-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.doctor-scope .decide-btn-approve {
+  background: var(--doc-success);
+  border-color: var(--doc-success);
+  color: #ffffff;
+}
+
+.doctor-scope .decide-btn-approve:hover:not(:disabled) {
+  background: #0c8554;
+  border-color: #0c8554;
+}
+
+.doctor-scope .decide-btn-decline {
+  background: var(--doc-danger);
+  border-color: var(--doc-danger);
+  color: #ffffff;
+}
+
+.doctor-scope .decide-btn-decline:hover:not(:disabled) {
+  background: #bb3944;
+  border-color: #bb3944;
+}
+
+.doctor-scope .decide-btn-quiet {
+  background: var(--doc-panel);
+  border-color: var(--doc-line-strong);
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .decide-btn-quiet:hover:not(:disabled) {
+  background: var(--doc-soft);
+}
+
+.doctor-scope .view-case-btn {
+  padding: 9px 15px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: var(--doc-radius-xs);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .view-case-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .start-session-btn {
+  padding: 9px 16px;
+  border: 1px solid var(--primary-strong);
+  border-radius: var(--doc-radius-xs);
+  background: var(--primary-strong);
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .start-session-btn:hover {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+}
+
+.doctor-scope .status-pill-blue {
+  background: var(--primary-soft);
+  border: 1px solid #c3e9f2;
+  color: var(--primary-strong);
+}
+
+.doctor-scope .status-pill-green {
+  background: var(--doc-success-soft);
+  border: 1px solid #b9e6d2;
+  color: var(--doc-success);
+}
+
+/* ------------------------------------------------------------ chat overlay */
+.doctor-scope .web-chat-modal-overlay {
+  background: rgba(8, 22, 30, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.doctor-scope .web-chat-modal-box {
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg);
+  box-shadow: var(--doc-shadow-lg);
+  overflow: hidden;
+}
+
+.doctor-scope .web-chat-modal-header {
+  background: var(--doc-panel);
+  border-bottom: 1px solid var(--doc-line);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .web-chat-body {
+  background: var(--doc-bg);
+}
+
+.doctor-scope .web-msg-bubble {
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  color: var(--doc-ink);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .web-msg-bubble.doctor {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+.doctor-scope .web-msg-time {
+  color: var(--doc-muted);
+  font-size: 0.74rem;
+}
+
+.doctor-scope .web-chat-input-bar {
+  background: var(--doc-panel);
+  border-top: 1px solid var(--doc-line);
+}
+
+.doctor-scope .web-chat-input-bar input,
+.doctor-scope .web-chat-input-bar textarea {
+  background: var(--doc-input-bg);
+  border: 1px solid var(--doc-input-line);
+  color: var(--doc-input-text);
+}
+
+.doctor-scope .attach-btn {
+  border: 1px solid var(--doc-line-strong);
+  background: var(--doc-soft);
+  color: var(--doc-ink-2);
+  border-radius: var(--doc-radius-xs);
+}
+
+.doctor-scope .attach-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+/* ---------------------------------------------------------- recommendations */
+.doctor-scope .recommendation-filters {
+  margin-bottom: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.doctor-scope .recommendation-filters button {
+  padding: 9px 16px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 999px;
+  background: var(--doc-panel);
+  color: var(--doc-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.doctor-scope .recommendation-filters button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .recommendation-filters button.active {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+.doctor-scope .recommendation-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.doctor-scope .recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doctor-scope .recommendation-card {
+  padding: 20px 22px;
+}
+
+.doctor-scope .recommendation-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .recommendation-title-row h2 {
+  font-size: 1.05rem;
+}
+
+.doctor-scope .recommendation-category {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  border: 1px solid #c3e9f2;
+  color: var(--primary-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.doctor-scope .recommendation-priority {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .recommendation-priority.high {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .recommendation-priority.low {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+  color: var(--doc-success);
+}
+
+.doctor-scope .recommendation-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.doctor-scope .recommendation-completed {
+  color: var(--doc-success);
+  font-weight: 800;
+}
+
+.doctor-scope .recommendation-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--doc-line);
+}
+
+.doctor-scope .complete-recommendation,
+.doctor-scope .edit-recommendation {
+  padding: 9px 15px;
+  border-radius: var(--doc-radius-xs);
+  border: 1px solid var(--doc-line-strong);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .complete-recommendation {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #ffffff;
+}
+
+.doctor-scope .complete-recommendation:hover {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+}
+
+.doctor-scope .edit-recommendation:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .recommendation-student-id {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .modal-backdrop {
+  background: rgba(8, 22, 30, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.doctor-scope .recommendation-modal {
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg);
+  box-shadow: var(--doc-shadow-lg);
+}
+
+.doctor-scope .modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doctor-scope .modal-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .modal-close {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 50%;
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.doctor-scope .modal-close:hover {
+  background: var(--doc-soft);
+}
+
+.doctor-scope .recommendation-modal input,
+.doctor-scope .recommendation-modal textarea,
+.doctor-scope .recommendation-modal select {
+  width: 100%;
+  padding: 11px 13px;
+}
+
+.doctor-scope .recommendation-modal label {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--doc-muted);
+}
+
+/* ---------------------------------------------------------- profile screen */
+.doctor-scope .doctor-profile-main,
+.doctor-scope .doctor-settings-main,
+.doctor-scope .recommendations-main,
+.doctor-scope .assessment-results-main,
+.doctor-scope .student-cases-main,
+.doctor-scope .student-detail-main {
+  background: var(--doc-bg);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doctor-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 24px 26px;
+  margin-bottom: 20px;
+}
+
+.doctor-scope .doctor-avatar-large {
+  width: 76px;
+  height: 76px;
+  font-size: 1.6rem;
+  box-shadow: 0 10px 22px rgba(15, 130, 152, 0.25);
+}
+
+.doctor-scope .doctor-profile-identity {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.doctor-scope .doctor-profile-identity h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doctor-profile-identity > span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--primary-strong);
+}
+
+.doctor-scope .doctor-profile-identity p {
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+  color: var(--doc-muted);
+  word-break: break-word;
+}
+
+.doctor-scope .profile-edit-button {
+  padding: 10px 16px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font-size: 0.87rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .profile-edit-button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .doctor-profile-form {
+  padding: 24px 26px;
+}
+
+.doctor-scope .doctor-profile-section {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.doctor-scope .doctor-profile-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.doctor-scope .doctor-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.doctor-scope .doctor-profile-field.full {
+  grid-column: 1 / -1;
+}
+
+.doctor-scope .doctor-profile-field > span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .doctor-profile-field input {
+  padding: 12px 14px;
+  font-size: 0.94rem;
+}
+
+.doctor-scope .doctor-profile-field input[readonly] {
+  background: var(--doc-soft);
+  color: var(--doc-ink-2);
+  cursor: default;
+}
+
+.doctor-scope .doctor-profile-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 17px;
+  margin-bottom: 12px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .doctor-profile-toggle strong {
+  display: block;
+  font-size: 0.94rem;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doctor-profile-toggle span {
+  font-size: 0.84rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .form-helper {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .small-profile-button {
+  margin-top: 20px;
+  padding: 12px 20px;
+  border: 1px solid var(--primary-strong);
+  border-radius: var(--doc-radius-sm);
+  background: var(--primary-strong);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.doctor-scope .small-profile-button:hover:not(:disabled) {
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
+}
+
+/* ---------------------------------------------------------- settings screen */
+.doctor-scope .doctor-settings-main form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+}
+
+.doctor-scope .doc-settings-card {
+  overflow: hidden;
+}
+
+.doctor-scope .doc-settings-card-head p {
+  margin: 5px 0 0;
+  font-size: 0.87rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .doc-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 24px;
+  flex-wrap: wrap;
+}
+
+.doctor-scope .doc-setting-row + .doc-setting-row {
+  border-top: 1px solid var(--doc-line);
+}
+
+.doctor-scope .doc-setting-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.doctor-scope .doc-setting-copy strong {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doc-setting-copy span {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .doc-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 999px;
+  background: var(--doc-soft);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.doctor-scope .doc-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line-strong);
+  box-shadow: var(--doc-shadow-sm);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.doctor-scope .doc-switch.is-on {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+}
+
+.doctor-scope .doc-switch.is-on .doc-switch-knob {
+  transform: translateX(26px);
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.doctor-scope .doc-settings-select {
+  min-width: 250px;
+  padding: 11px 14px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.doctor-scope .doc-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.doctor-scope .doc-settings-actions .primary-button {
+  width: auto;
+}
+
+/* --------------------------------------------------------- misc components */
+.doctor-scope .back-to-cases {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font-size: 0.87rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.doctor-scope .back-to-cases:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .risk-indicator {
+  display: block;
+  margin: 12px 0;
+  padding: 11px 14px;
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-soft);
+  border: 1px solid var(--doc-line);
+}
+
+.doctor-scope .risk-indicator div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .risk-indicator b {
+  color: var(--doc-ink);
+  font-weight: 800;
+}
+
+.doctor-scope .risk-indicator i {
+  display: block;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+}
+
+.doctor-scope .risk-indicator.tone-good {
+  background: var(--doc-success-soft);
+  border-color: #b9e6d2;
+}
+
+.doctor-scope .risk-indicator.tone-good i {
+  background: linear-gradient(90deg, #4bc98d, var(--doc-success));
+}
+
+.doctor-scope .risk-indicator.tone-warn {
+  background: var(--doc-warning-soft);
+  border-color: #f3e0b4;
+}
+
+.doctor-scope .risk-indicator.tone-warn i {
+  background: linear-gradient(90deg, #f5c662, var(--doc-warning));
+}
+
+.doctor-scope .risk-indicator.tone-bad {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+}
+
+.doctor-scope .risk-indicator.tone-bad i {
+  background: linear-gradient(90deg, #f78d95, var(--doc-danger));
+}
+
+.doctor-scope .risk-indicator.tone-neutral i {
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+}
+
+.doctor-scope .jitsi-frame {
+  width: 100%;
+  min-height: 460px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  background: var(--doc-panel);
+}
+
+/* =========================================================================
+   Dark mode - doctor only (html[data-doctor-theme='dark'], stored in
+   mindpulse.doctorSettings). Admin/auth are unaffected.
+   ========================================================================= */
+html[data-doctor-theme='dark'] body {
+  background: #0a141a;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope {
+  --primary: #53c7d7;
+  --primary-strong: #23a5ba;
+  --primary-strong-hover: #1c93a7;
+  --primary-soft: #102b33;
+  --primary-contrast: #04171d;
+
+  --doc-bg: #0a141a;
+  --doc-panel: #111e26;
+  --doc-panel-2: #15242d;
+  --doc-ink: #e8f1f5;
+  --doc-ink-2: #c6d6de;
+  --doc-muted: #92a8b4;
+  --doc-line: #1e323d;
+  --doc-line-strong: #2b4553;
+  --doc-soft: #182a34;
+
+  --doc-danger: #ef8a92;
+  --doc-danger-soft: #2c1a1d;
+  --doc-danger-line: #57323a;
+  --doc-success: #4bc98d;
+  --doc-success-soft: #12291f;
+  --doc-warning: #e0b463;
+  --doc-warning-soft: #2a2213;
+
+  --doc-input-bg: #0d1a21;
+  --doc-input-text: #e8f1f5;
+  --doc-input-line: #2b4553;
+
+  --doc-sidebar-bg: #07131a;
+  --doc-sidebar-bg-2: #050e13;
+  --doc-sidebar-text: #9db4be;
+  --doc-sidebar-text-active: #04171d;
+  --doc-sidebar-line: rgba(255, 255, 255, 0.08);
+  --doc-sidebar-card: rgba(255, 255, 255, 0.05);
+
+  --doc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --doc-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 26px rgba(0, 0, 0, 0.3);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope.doctor-shell,
+html[data-doctor-theme='dark'] .doctor-scope .main-panel {
+  background: var(--doc-bg);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .nav-item.active {
+  color: var(--doc-sidebar-text-active);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .brand-mark,
+html[data-doctor-theme='dark'] .doctor-scope .sidebar-doctor-avatar,
+html[data-doctor-theme='dark'] .doctor-scope .avatar,
+html[data-doctor-theme='dark'] .doctor-scope .case-avatar,
+html[data-doctor-theme='dark'] .doctor-scope .account-avatar,
+html[data-doctor-theme='dark'] .doctor-scope .consult-avatar,
+html[data-doctor-theme='dark'] .doctor-scope .student-initials,
+html[data-doctor-theme='dark'] .doctor-scope .doctor-avatar-large {
+  color: #04171d;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .primary-button,
+html[data-doctor-theme='dark'] .doctor-scope .add-recommendation-button,
+html[data-doctor-theme='dark'] .doctor-scope .schedule-btn,
+html[data-doctor-theme='dark'] .doctor-scope .start-session-btn,
+html[data-doctor-theme='dark'] .doctor-scope .small-profile-button,
+html[data-doctor-theme='dark'] .doctor-scope .complete-recommendation,
+html[data-doctor-theme='dark'] .doctor-scope .view-details-button:hover {
+  color: #04171d;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-tabs button.active,
+html[data-doctor-theme='dark'] .doctor-scope .doctor-profile-tabs button.active,
+html[data-doctor-theme='dark'] .doctor-scope .recommendation-filters button.active {
+  color: #04171d;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .web-msg-bubble.doctor {
+  color: #04171d;
+}
+
+/* =========================================================================
+   Keep the doctor portal on its own tokens when the ADMIN dark theme
+   (html[data-theme='dark']) is active in the same browser.
+   ========================================================================= */
+html[data-theme='dark'] .doctor-scope .panel,
+html[data-theme='dark'] .doctor-scope .patients-panel,
+html[data-theme='dark'] .doctor-scope .schedule-panel,
+html[data-theme='dark'] .doctor-scope .insight-panel,
+html[data-theme='dark'] .doctor-scope .stat-card,
+html[data-theme='dark'] .doctor-scope .case-summary-card,
+html[data-theme='dark'] .doctor-scope .assessment-summary-card,
+html[data-theme='dark'] .doctor-scope .case-table-panel,
+html[data-theme='dark'] .doctor-scope .case-filter-bar,
+html[data-theme='dark'] .doctor-scope .assessment-filter-bar,
+html[data-theme='dark'] .doctor-scope .assessment-list-panel,
+html[data-theme='dark'] .doctor-scope .assessment-card,
+html[data-theme='dark'] .doctor-scope .consultations-panel-card,
+html[data-theme='dark'] .doctor-scope .consult-stat-card,
+html[data-theme='dark'] .doctor-scope .student-profile-card,
+html[data-theme='dark'] .doctor-scope .doctor-profile-card,
+html[data-theme='dark'] .doctor-scope .doctor-profile-form,
+html[data-theme='dark'] .doctor-scope .recommendation-card,
+html[data-theme='dark'] .doctor-scope .recommendation-modal,
+html[data-theme='dark'] .doctor-scope .doc-settings-card,
+html[data-theme='dark'] .doctor-scope .detail-panel,
+html[data-theme='dark'] .doctor-scope .empty-table,
+html[data-theme='dark'] .doctor-scope .view-details-button {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-ink);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .doctor-scope .eyebrow,
+html[data-theme='dark'] .doctor-scope .page-subtitle,
+html[data-theme='dark'] .doctor-scope .form-helper,
+html[data-theme='dark'] .doctor-scope .patient-subtle {
+  color: var(--doc-muted);
+}
+
+html[data-theme='dark'] .doctor-scope .topbar h1,
+html[data-theme='dark'] .doctor-scope .panel-header h2 {
+  color: var(--doc-ink);
+}
+
+html[data-theme='dark'] .doctor-scope .ghost-button,
+html[data-theme='dark'] .doctor-scope .view-case-btn,
+html[data-theme='dark'] .doctor-scope .profile-edit-button,
+html[data-theme='dark'] .doctor-scope .edit-recommendation,
+html[data-theme='dark'] .doctor-scope .back-to-cases,
+html[data-theme='dark'] .doctor-scope .notification-button,
+html[data-theme='dark'] .doctor-scope .bell-btn {
+  background: var(--doc-panel);
+  border-color: var(--doc-line-strong);
+  color: var(--doc-ink-2);
+}
+
+html[data-theme='dark'] .doctor-scope .decide-btn-quiet,
+html[data-theme='dark'] .doctor-scope .decide-btn {
+  background: var(--doc-soft);
+  border-color: var(--doc-line-strong);
+  color: var(--doc-ink-2);
+}
+
+html[data-theme='dark'] .doctor-scope .decide-btn-approve {
+  background: var(--doc-success);
+  border-color: var(--doc-success);
+  color: #04171d;
+}
+
+html[data-theme='dark'] .doctor-scope .decide-btn-decline {
+  background: var(--doc-danger);
+  border-color: var(--doc-danger);
+  color: #2a0c10;
+}
+
+html[data-theme='dark'] .doctor-scope .status-pill-grey,
+html[data-theme='dark'] .doctor-scope .appointment-reason {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-ink-2);
+}
+
+html[data-theme='dark'] .doctor-scope .sidebar {
+  background: linear-gradient(180deg, var(--doc-sidebar-bg) 0%, var(--doc-sidebar-bg-2) 100%);
+  border-right-color: var(--doc-sidebar-line);
+  color: var(--doc-sidebar-text);
+}
+
+html[data-theme='dark'] .doctor-scope .nav-item {
+  background: transparent;
+  color: var(--doc-sidebar-text);
+}
+
+html[data-theme='dark'] .doctor-scope .brand-name,
+html[data-theme='dark'] .doctor-scope .sidebar-doctor-name {
+  color: var(--doc-ink);
+}
+
+html[data-theme='dark'] .doctor-scope .brand-subtitle {
+  color: var(--doc-muted);
+}
+
+html[data-theme='dark'] .doctor-scope input:not([type='checkbox']):not([type='radio']):not([type='range']),
+html[data-theme='dark'] .doctor-scope select,
+html[data-theme='dark'] .doctor-scope textarea {
+  background: var(--doc-input-bg);
+  color: var(--doc-input-text);
+  border-color: var(--doc-input-line);
+}
+
+html[data-theme='dark'] .doctor-scope .notification-panel,
+html[data-theme='dark'] .doctor-scope .notification-heading,
+html[data-theme='dark'] .doctor-scope .notification-item {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-ink);
+}
+
+/* -------------------------------------------------------------- responsive */
+@media (max-width: 1280px) {
+  .doctor-scope .stats-grid,
+  .doctor-scope .case-summary-grid,
+  .doctor-scope .assessment-summary-grid {
+    grid-template-columns: repeat(2, minmax(170px, 1fr));
+  }
+
+  .doctor-scope .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .doctor-scope .main-panel {
+    padding: 26px 24px 46px;
+  }
+
+  .doctor-scope .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-scope .consult-item-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-scope .consult-item-right {
+    justify-content: flex-start;
+  }
+
+  .doctor-scope .assessment-card-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 980px) {
+  .doctor-scope.doctor-shell {
+    flex-direction: row;
+  }
+
+  .doctor-scope .sidebar {
+    width: 244px;
+    flex: 0 0 244px;
+  }
+
+  .doctor-scope .doctor-profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-scope .student-risk {
+    margin-left: 0;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .doctor-scope.doctor-shell {
+    flex-direction: column;
+  }
+
+  .doctor-scope .sidebar {
+    position: static;
+    height: auto;
+    max-height: none;
+    width: 100%;
+    flex: 1 1 auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--doc-sidebar-line);
+  }
+
+  .doctor-scope .nav-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  .doctor-scope .nav-label {
+    grid-column: 1 / -1;
+  }
+
+  .doctor-scope .sidebar-account-area {
+    margin-top: 0;
+  }
+
+  .doctor-scope .main-panel {
+    padding: 22px 18px 40px;
+  }
+
+  .doctor-scope .stats-grid,
+  .doctor-scope .case-summary-grid,
+  .doctor-scope .assessment-summary-grid,
+  .doctor-scope .consult-stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .doctor-scope .header-actions {
+    width: 100%;
+  }
+
+  .doctor-scope .doc-setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-scope .doc-settings-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doctor-scope .web-chat-modal-box {
+    width: 96vw;
+    height: 84vh;
+  }
+}

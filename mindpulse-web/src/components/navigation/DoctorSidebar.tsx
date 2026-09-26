@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { fetchDoctorProfile } from '../../services/doctorProfile';
+import '../../views/doctor/doctor-theme.css';
 
 export type DoctorView =
   | 'dashboard'
@@ -7,7 +9,8 @@ export type DoctorView =
   | 'assessment-results'
   | 'consultations'
   | 'recommendations'
-  | 'profile-setting';
+  | 'profile-setting'
+  | 'settings';
 
 interface DoctorSidebarProps {
   activeView: DoctorView;
@@ -15,17 +18,60 @@ interface DoctorSidebarProps {
   onSignOut: () => void;
 }
 
+interface SidebarIdentity {
+  name: string;
+  email: string;
+  role: string;
+  initials: string;
+}
+
+const initialsOf = (first: string, last: string): string => {
+  const mark = `${first.charAt(0)}${last.charAt(0)}`.trim();
+  return (mark || first.charAt(0) || 'D').toUpperCase();
+};
+
 export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
   activeView,
   setActiveView,
   onSignOut,
 }) => {
+  const [identity, setIdentity] = useState<SidebarIdentity>({
+    name: 'Doctor',
+    email: '',
+    role: 'Psychologist',
+    initials: 'D',
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDoctorProfile()
+      .then((profile) => {
+        if (cancelled) return;
+        const first = profile.firstName.trim();
+        const last = profile.lastName.trim();
+        const full = [first, last].filter(Boolean).join(' ');
+        setIdentity({
+          name: full ? `Dr. ${full}` : 'Doctor',
+          email: profile.email.trim(),
+          role: profile.specialty.trim() || profile.department.trim() || 'Psychologist',
+          initials: initialsOf(first, last),
+        });
+      })
+      .catch(() => {
+        // Signed out, offline, or Supabase not configured — keep the fallback.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const navItems: { key: DoctorView; label: string; icon: string }[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: '⌂' },
-    { key: 'student-cases', label: 'Student Cases', icon: '👥' },
-    { key: 'assessment-results', label: 'Assessment Results', icon: '▣' },
-    { key: 'consultations', label: 'Consultations', icon: '📅' },
-    { key: 'recommendations', label: 'Recommendations', icon: '📈' },
+    { key: 'dashboard', label: 'Dashboard', icon: '\u2302' },
+    { key: 'student-cases', label: 'Student Cases', icon: '\u25C9' },
+    { key: 'assessment-results', label: 'Assessment Results', icon: '\u25A3' },
+    { key: 'consultations', label: 'Consultations', icon: '\u25A4' },
+    { key: 'recommendations', label: 'Recommendations', icon: '\u25CE' },
+    { key: 'settings', label: 'Settings', icon: '\u2699' },
   ];
 
   return (
@@ -39,6 +85,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
       </div>
 
       <nav className="nav-panel" aria-label="Main sidebar navigation">
+        <span className="nav-label">Menu</span>
         {navItems.map((item) => (
           <button
             key={item.key}
@@ -46,40 +93,34 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
             type="button"
             onClick={() => setActiveView(item.key)}
           >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
+            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+            <span className="nav-text">{item.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Doctor Monroe Leclair Profile Footer Card (Clicking opens Profile Setting) */}
-      <div
-        className="sidebar-profile-card"
-        style={{
-          cursor: 'pointer',
-          border: activeView === 'profile-setting' ? '2px solid #5B6EF5' : '1px solid #e2e8f0',
-          backgroundColor: activeView === 'profile-setting' ? '#EEEDFE' : '#ffffff',
-          transition: 'all 0.15s ease',
-        }}
-        onClick={() => setActiveView('profile-setting')}
-      >
-        <div className="sidebar-profile-top">
-          <div className="sidebar-doctor-avatar">👤</div>
-          <div className="sidebar-doctor-info">
-            <div className="sidebar-doctor-name">Dr. Monroe Leclair</div>
-            <div className="sidebar-doctor-email">dr.monroeLeclair@gmail.com</div>
-            <div className="sidebar-doctor-spec">Clinical Psychologist</div>
+      <div className="sidebar-account-area">
+        <button
+          type="button"
+          className={`sidebar-profile-card ${activeView === 'profile-setting' ? 'is-active' : ''}`}
+          onClick={() => setActiveView('profile-setting')}
+        >
+          <div className="sidebar-profile-top">
+            <div className="sidebar-doctor-avatar">{identity.initials}</div>
+            <div className="sidebar-doctor-info">
+              <div className="sidebar-doctor-name">{identity.name}</div>
+              {identity.email && <div className="sidebar-doctor-email">{identity.email}</div>}
+              <div className="sidebar-doctor-spec">{identity.role}</div>
+            </div>
           </div>
-        </div>
+        </button>
+
         <button
           type="button"
           className="sidebar-signout-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSignOut();
-          }}
+          onClick={onSignOut}
         >
-          ➔ Sign Out
+          Sign Out
         </button>
       </div>
     </aside>

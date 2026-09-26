@@ -206,7 +206,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onSign
                 </div>
                 <div className="call-card">
                   <div className="call-main-label">No confirmed sessions</div>
-                  <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
+                  <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--doc-muted)', lineHeight: 1.5 }}>
                     Approve a booking in Consultations — once the patient pays, the join-call button
                     for that session appears here.
                   </p>

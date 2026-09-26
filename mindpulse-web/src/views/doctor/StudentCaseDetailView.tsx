@@ -113,6 +113,24 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   const latestSession = sessions[0];
 
+  const statusText = (student.status || '').toLowerCase();
+  const riskTone = statusText.includes('high')
+    ? 'critical'
+    : statusText.includes('moderate')
+      ? 'watch'
+      : statusText.includes('unassessed')
+        ? 'neutral'
+        : 'low';
+  const scoreTone = latestSession && latestSession.score != null
+    ? (bandForScore(latestSession.score) === 'low' ? 'good' : bandForScore(latestSession.score) === 'moderate' ? 'warn' : 'bad')
+    : 'neutral';
+  const heartTone = !latestSession || latestSession.heartRate == null
+    ? 'neutral'
+    : latestSession.heartRate >= 60 && latestSession.heartRate <= 100 ? 'good' : 'bad';
+  const reactionTone = !latestSession || latestSession.reactionTimeMs == null
+    ? 'neutral'
+    : latestSession.reactionTimeMs <= 1500 ? 'good' : 'bad';
+
   const saveRecommendation = async () => {
     if (!note.trim()) {
       setSaveError('Enter a recommendation before saving.');
@@ -144,8 +162,8 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
-        <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>♙ {student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;▣ {student.program}&nbsp;&nbsp; · &nbsp;&nbsp;▦ {student.year}</p></div><div className="student-risk"><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
-        <div className="student-contact-row"><span>✉ {student.email}</span><span>⌕ {student.phone}</span><span>⌖ {student.location}</span></div>
+        <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
+        <div className="student-contact-row"><span>{student.email}</span><span>{student.phone}</span><span>{student.location}</span></div>
       </section>
       <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
       {isLoading && <p className="case-loading">Loading case data…</p>}
@@ -185,21 +203,25 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                 <>
                   <RiskIndicator
                     label="Overall score"
+                    tone={scoreTone}
                     level={latestSession.score == null ? 'No score' : `${latestSession.score}% · ${bandLabel(latestSession.score)}`}
                     value={latestSession.score == null ? '0%' : `${clampPercent(latestSession.score)}%`}
                   />
                   <RiskIndicator
                     label="Heart rate"
+                    tone={heartTone}
                     level={latestSession.heartRate == null ? '—' : `${latestSession.heartRate} bpm · ${latestSession.heartRate >= 60 && latestSession.heartRate <= 100 ? 'in 60–100 range' : 'outside 60–100'}`}
                     value={`${latestSession.heartRate == null ? 0 : clampPercent(latestSession.heartRate)}%`}
                   />
                   <RiskIndicator
                     label="Survey score"
+                    tone="neutral"
                     level={latestSession.surveyScore == null ? '—' : String(latestSession.surveyScore)}
                     value={`${latestSession.surveyScore == null ? 0 : clampPercent(latestSession.surveyScore)}%`}
                   />
                   <RiskIndicator
                     label="Reaction time"
+                    tone={reactionTone}
                     level={latestSession.reactionTimeMs == null ? '—' : `${latestSession.reactionTimeMs} ms · ${latestSession.reactionTimeMs <= 1500 ? 'within 1500 ms' : 'over 1500 ms'}`}
                     value={`${latestSession.reactionTimeMs == null ? 0 : clampPercent(latestSession.reactionTimeMs / 30)}%`}
                   />
@@ -217,7 +239,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             return (
               <section className="detail-assessment-card" key={session.id}>
                 <div><h2>Assessment <span className={`risk-badge ${riskClass}`}>{riskLabel}</span></h2><p>{formatDateTime(session.createdAt)}</p></div>
-                <strong>{session.score == null ? '—' : `${session.score}%`}<small>Stress Level</small></strong>
+                <strong className={band ? `score-${band}` : ''}>{session.score == null ? '—' : `${session.score}%`}<small>Stress Level</small></strong>
                 <div className="detail-emotion-bars">
                   <SessionMetric label="Heart rate" value={session.heartRate == null ? '—' : `${session.heartRate} bpm`} />
                   <SessionMetric label="Survey score" value={session.surveyScore == null ? '—' : String(session.surveyScore)} />
@@ -269,5 +291,5 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 };
 
 const DetailStat: React.FC<{ label: string; value: string; danger?: boolean }> = ({ label, value, danger }) => <article className="detail-stat"><span>{label}</span><strong className={danger ? 'danger-text' : ''}>{value}</strong></article>;
-const RiskIndicator: React.FC<{ label: string; level: string; value: string }> = ({ label, level, value }) => <div className="risk-indicator"><div><span>{label}</span><b>{level}</b></div><i style={{ width: value }} /></div>;
+const RiskIndicator: React.FC<{ label: string; level: string; value: string; tone?: 'good' | 'warn' | 'bad' | 'neutral' }> = ({ label, level, value, tone = 'neutral' }) => <div className={`risk-indicator tone-${tone}`}><div><span>{label}</span><b>{level}</b></div><i style={{ width: value }} /></div>;
 const SessionMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="detail-emotion"><div><span>{label}</span><b>{value}</b></div></div>;

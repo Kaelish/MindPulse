@@ -124,7 +124,7 @@ export const RecommendationsView: React.FC = () => {
     <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
     <div className="recommendations-toolbar">
       <div className="recommendation-filters">{(['All', 'Active', 'Completed'] as const).map((filter) => <button type="button" key={filter} className={activeFilter === filter ? 'active' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>)}</div>
-      <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd}>＋ Add Recommendations</button>
+      <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd}>+ Add Recommendations</button>
     </div>
     {saved && <div className="recommendation-save-banner">Recommendation saved successfully.</div>}
     {actionError && <p className="case-load-error">{actionError}</p>}
@@ -135,7 +135,7 @@ export const RecommendationsView: React.FC = () => {
         <div className="recommendation-card-content">
           <div className="recommendation-title-row"><h2>{item.studentName}</h2><span className="recommendation-category">{item.category}</span><span className={`recommendation-priority ${item.priority === 'High' ? 'high' : 'low'}`}>{item.priority}</span></div>
           <p>{item.note}</p>
-          <div className="recommendation-meta"><span>◷ Created: {formatDate(item.createdAt)}</span><span className={item.status === 'Completed' ? 'recommendation-completed' : ''}>◉ {item.status}</span></div>
+          <div className="recommendation-meta"><span>Created: {formatDate(item.createdAt)}</span><span className={item.status === 'Completed' ? 'recommendation-completed' : ''}>{item.status}</span></div>
           <div className="recommendation-actions">{item.status !== 'Completed' && <button type="button" className="complete-recommendation" onClick={() => markComplete(item.id)}>Mark as Completed</button>}<button type="button" className="edit-recommendation" onClick={() => openEdit(item)}>Edit</button></div>
         </div>
         <div className="recommendation-student-id"><span>Student ID</span><strong>{item.studentNo}</strong></div>

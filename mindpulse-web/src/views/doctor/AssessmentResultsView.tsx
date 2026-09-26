@@ -88,7 +88,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
   };
 
   return <main className="main-panel assessment-results-main">
-    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv}>⇩ Export</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div></header>
+    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv}>Export</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div></header>
     <section className="assessment-summary-grid">
       <Summary label="Total Assessments" value={String(results.length)} change="" tone="green" />
       <Summary label="High Risk" value={String(highRisk)} change="" tone="red" />
@@ -96,7 +96,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
       <Summary label="Reviewed" value={String(reviewed.length)} change="" tone="green" />
     </section>
     <section className="assessment-filter-bar">
-      <label className="assessment-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label>
+      <label className="assessment-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label>
       <select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter assessment level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select>
       <select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter assessment emotion"><option>All Emotions</option>{emotionOptions.map((value) => <option key={value}>{value}</option>)}</select>
     </section>
@@ -111,7 +111,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const isReviewed = reviewed.includes(result.id);
           return <article className="assessment-card" key={result.id}>
             <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">●</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small></div></div>
+              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Student').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small></div></div>
               <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
               <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
             </div>

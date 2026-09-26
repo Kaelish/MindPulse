@@ -473,15 +473,15 @@ export const ConsultationsView: React.FC = () => {
             ✕ Decline
           </button>
           <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
-            🕐 Edit Time
+            Edit Time
           </button>
           <button
             type="button"
             className="view-case-btn"
-            style={{ background: '#5b6ef5' }}
+            style={{ background: 'var(--primary-strong)' }}
             onClick={() => setActiveSessionItem(item)}
           >
-            💬 Message
+            Message
           </button>
         </div>
       );
@@ -493,15 +493,15 @@ export const ConsultationsView: React.FC = () => {
             Waiting for patient payment
           </span>
           <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
-            🕐 Edit Time
+            Edit Time
           </button>
           <button
             type="button"
             className="view-case-btn"
-            style={{ background: '#5b6ef5' }}
+            style={{ background: 'var(--primary-strong)' }}
             onClick={() => setActiveSessionItem(item)}
           >
-            💬 Message
+            Message
           </button>
         </div>
       );
@@ -514,15 +514,15 @@ export const ConsultationsView: React.FC = () => {
             className="view-case-btn"
             onClick={() => openEditTimeModal(item)}
           >
-            🕐 Edit Time
+            Edit Time
           </button>
           <button
             type="button"
             className="view-case-btn"
-            style={{ background: '#5b6ef5' }}
+            style={{ background: 'var(--primary-strong)' }}
             onClick={() => setActiveSessionItem(item)}
           >
-            💬 Message
+            Message
           </button>
           <button
             type="button"
@@ -532,7 +532,7 @@ export const ConsultationsView: React.FC = () => {
               setShowVideoCall(true);
             }}
           >
-            📹 Join Call
+            Join Call
           </button>
         </div>
       );
@@ -545,7 +545,7 @@ export const ConsultationsView: React.FC = () => {
             className="view-case-btn"
             onClick={() => setConsultTab('messages')}
           >
-            💬 Message
+            Message
           </button>
           <button
             type="button"
@@ -561,10 +561,10 @@ export const ConsultationsView: React.FC = () => {
       <button
         type="button"
         className="view-case-btn"
-        style={{ background: '#5b6ef5' }}
+        style={{ background: 'var(--primary-strong)' }}
         onClick={() => setActiveSessionItem(item)}
       >
-        💬 Message
+        Message
       </button>
     );
   };
@@ -573,7 +573,7 @@ export const ConsultationsView: React.FC = () => {
     return (
       <div className="consultations-page" style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div className="spinner" />
-        <p style={{ color: '#64748b' }}>Loading Consultations...</p>
+        <p style={{ color: 'var(--doc-muted)' }}>Loading Consultations...</p>
       </div>
     );
   }
@@ -614,8 +614,8 @@ export const ConsultationsView: React.FC = () => {
             marginBottom: '14px',
             padding: '10px 14px',
             borderRadius: '10px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
+            background: 'var(--danger-soft)',
+            border: '1px solid var(--danger-line)',
             color: '#b91c1c',
             fontSize: '0.88rem',
             fontWeight: 600,
@@ -631,8 +631,8 @@ export const ConsultationsView: React.FC = () => {
             marginBottom: '14px',
             padding: '10px 14px',
             borderRadius: '10px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
+            background: 'var(--danger-soft)',
+            border: '1px solid var(--danger-line)',
             color: '#b91c1c',
             fontSize: '0.88rem',
             fontWeight: 600,
@@ -681,7 +681,7 @@ export const ConsultationsView: React.FC = () => {
             className={`consult-tab-btn ${consultTab === 'messages' ? 'active' : ''}`}
             onClick={() => setConsultTab('messages')}
           >
-            Messages 💬
+            Messages
             {totalUnread > 0 && (
               <span
                 style={{
@@ -708,14 +708,14 @@ export const ConsultationsView: React.FC = () => {
         {/* TAB CONTENT */}
         {consultTab === 'messages' ? (
           /* DEDICATED MESSAGES TAB INSIDE CONSULTATIONS PANEL */
-          <div style={{ display: 'flex', flexDirection: 'row', height: '420px', background: '#faf8ed', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', height: '420px', background: 'var(--doc-soft)', borderRadius: '14px', border: '1px solid var(--doc-line)', overflow: 'hidden' }}>
             {/* Conversation list */}
-            <div style={{ width: '260px', flexShrink: 0, borderRight: '1px solid #e2e8f0', background: '#ffffff', overflowY: 'auto' }}>
-              <div style={{ padding: '10px 14px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ width: '260px', flexShrink: 0, borderRight: '1px solid var(--doc-line)', background: 'var(--doc-panel)', overflowY: 'auto' }}>
+              <div style={{ padding: '10px 14px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--doc-muted)', borderBottom: '1px solid var(--doc-soft)' }}>
                 Conversations
               </div>
               {consultations.length === 0 ? (
-                <div style={{ padding: '18px 14px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
+                <div style={{ padding: '18px 14px', color: 'var(--doc-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
                   No consultations yet — schedule one to start a conversation.
                 </div>
               ) : (
@@ -736,29 +736,29 @@ export const ConsultationsView: React.FC = () => {
                         alignItems: 'center',
                         gap: '10px',
                         padding: '10px 14px',
-                        background: isSelected ? '#eef2ff' : 'transparent',
+                        background: isSelected ? 'var(--primary-soft)' : 'transparent',
                         border: 'none',
-                        borderBottom: '1px solid #f1f5f9',
+                        borderBottom: '1px solid var(--doc-soft)',
                         cursor: 'pointer',
                         textAlign: 'left',
                       }}
                     >
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', color: '#334155', flexShrink: 0 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', color: 'var(--doc-ink)', flexShrink: 0 }}>
                         {item.avatarInitials}
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ fontSize: '0.84rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <strong style={{ fontSize: '0.84rem', color: 'var(--doc-ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {item.patientName}
                           </strong>
-                          <span style={{ fontSize: '0.66rem', color: '#94a3b8', flexShrink: 0 }}>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--doc-muted)', flexShrink: 0 }}>
                             {summary && summary.lastAt
                               ? new Date(summary.lastAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
                               : ''}
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                          <span style={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--doc-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {summary?.preview ?? `${item.studentId} · ${item.patientEmail}`}
                           </span>
                           {!!summary && summary.unreadCount > 0 && (
@@ -792,29 +792,29 @@ export const ConsultationsView: React.FC = () => {
             {/* Thread */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             {!chatTarget ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--doc-muted)', fontSize: '0.9rem', fontWeight: 600 }}>
                 No consultations yet — schedule one to start a conversation.
               </div>
             ) : (
               <>
-                <div style={{ padding: '12px 16px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '12px 16px', background: 'var(--doc-panel)', borderBottom: '1px solid var(--doc-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{chatTarget.avatarInitials}</div>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{chatTarget.avatarInitials}</div>
                     <div>
-                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{chatTarget.patientName}</strong>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{chatTarget.patientEmail} · {chatTarget.studentId}</div>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--doc-ink)' }}>{chatTarget.patientName}</strong>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--doc-muted)' }}>{chatTarget.patientEmail} · {chatTarget.studentId}</div>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                    style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
                     onClick={() => {
                       setActiveSessionItem(chatTarget);
                       setShowVideoCall(true);
                     }}
                   >
-                    📹 Launch Video Call
+                    Start Video Call
                   </button>
                 </div>
 
@@ -829,8 +829,8 @@ export const ConsultationsView: React.FC = () => {
                               <img src={msg.attachment.url} alt={msg.attachment.name} style={{ maxWidth: '220px', maxHeight: '160px', borderRadius: 8, display: 'block' }} />
                             </a>
                           ) : (
-                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: '#e2e8f0', borderRadius: 8, color: '#64748b', fontSize: '0.78rem', fontWeight: 600 }}>
-                              📷 Photo
+                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: 'var(--doc-line)', borderRadius: 8, color: 'var(--doc-muted)', fontSize: '0.78rem', fontWeight: 600 }}>
+                              Photo
                             </div>
                           )
                         )}
@@ -846,16 +846,16 @@ export const ConsultationsView: React.FC = () => {
                               marginBottom: msg.text ? 6 : 0,
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : '#ffffff',
-                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid #e2e8f0',
-                              color: msg.sender === 'doctor' ? '#ffffff' : '#334155',
+                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : 'var(--doc-panel)',
+                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid var(--doc-line)',
+                              color: msg.sender === 'doctor' ? '#ffffff' : 'var(--doc-ink)',
                               textDecoration: 'none',
                               fontSize: '0.78rem',
                               fontWeight: 600,
                               maxWidth: '220px',
                             }}
                           >
-                            <span>📄</span>
+                            <span>File</span>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachment.name}</span>
                           </a>
                         )}
@@ -874,15 +874,15 @@ export const ConsultationsView: React.FC = () => {
                 </div>
 
                 {pendingFile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#eef2ff', borderTop: '1px solid #dbeafe' }}>
-                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? '🖼️' : '📄'}</span>
-                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: '#5b6ef5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-soft)', borderTop: '1px solid var(--primary-soft)' }}>
+                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? 'Image' : 'Document'}</span>
+                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pendingFile.name}
                     </span>
                     <button
                       type="button"
                       onClick={() => setPendingFile(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1rem' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
                     >
                       ✕
                     </button>
@@ -904,7 +904,7 @@ export const ConsultationsView: React.FC = () => {
                     className="attach-btn"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    📎
+                    +
                   </button>
                   <input
                     type="text"
@@ -915,7 +915,7 @@ export const ConsultationsView: React.FC = () => {
                   <button type="submit" disabled={!webInputMessage.trim() && !pendingFile}>Send Message</button>
                 </form>
                 {chatError && (
-                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: 'var(--danger-soft)', borderTop: '1px solid var(--danger-line)' }}>
                     {chatError}
                   </div>
                 )}
@@ -976,33 +976,33 @@ export const ConsultationsView: React.FC = () => {
           <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Decline appointment</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--doc-ink)' }}>Decline appointment</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: 'var(--doc-muted)' }}>
                   {declineTarget.patientName} · {declineTarget.scheduledTime}
                 </p>
               </div>
               <button
                 type="button"
-                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setDeclineTarget(null)}
               >
                 ✕
               </button>
             </div>
 
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
               Reason for declining * (the patient sees this)
             </label>
             <textarea
               rows={4}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
               placeholder="e.g. I am fully booked that day — please pick another slot."
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
             />
 
             {declineError && (
-              <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
                 {declineError}
               </div>
             )}
@@ -1036,14 +1036,14 @@ export const ConsultationsView: React.FC = () => {
           <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Edit appointment time</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--doc-ink)' }}>Edit appointment time</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: 'var(--doc-muted)' }}>
                   {editTarget.patientName} · currently {editTarget.scheduledTime}
                 </p>
               </div>
               <button
                 type="button"
-                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setEditTarget(null)}
               >
                 ✕
@@ -1051,7 +1051,7 @@ export const ConsultationsView: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
                 Date *
               </label>
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
@@ -1062,9 +1062,9 @@ export const ConsultationsView: React.FC = () => {
                     style={{
                       padding: '8px 14px',
                       borderRadius: '8px',
-                      border: editDate === d.dateStr ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
-                      background: editDate === d.dateStr ? '#eeedfe' : '#ffffff',
-                      color: editDate === d.dateStr ? '#5b6ef5' : '#1e293b',
+                      border: editDate === d.dateStr ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                      background: editDate === d.dateStr ? 'var(--primary-soft)' : 'var(--doc-panel)',
+                      color: editDate === d.dateStr ? 'var(--primary-strong)' : 'var(--doc-ink)',
                       fontWeight: 700,
                       fontSize: '0.82rem',
                       cursor: 'pointer',
@@ -1082,7 +1082,7 @@ export const ConsultationsView: React.FC = () => {
             </div>
 
             <div style={{ marginTop: '14px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
                 Time slot *
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -1098,9 +1098,9 @@ export const ConsultationsView: React.FC = () => {
                       style={{
                         padding: '10px 4px',
                         borderRadius: '8px',
-                        border: isBooked ? '1px dashed #cbd5e1' : isSelected ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
-                        background: isBooked ? '#f1f5f9' : isSelected ? '#5b6ef5' : '#ffffff',
-                        color: isBooked ? '#94a3b8' : isSelected ? '#ffffff' : '#1e293b',
+                        border: isBooked ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                        background: isBooked ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
+                        color: isBooked ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
                         fontWeight: 700,
                         fontSize: '0.8rem',
                         cursor: isBooked ? 'not-allowed' : 'pointer',
@@ -1108,7 +1108,7 @@ export const ConsultationsView: React.FC = () => {
                       }}
                       onClick={() => !isBooked && setEditTime(t)}
                     >
-                      {t} {isBooked ? '🔒' : ''}
+                      {t} {isBooked ? 'Booked' : ''}
                     </button>
                   );
                 })}
@@ -1116,7 +1116,7 @@ export const ConsultationsView: React.FC = () => {
             </div>
 
             {editError && (
-              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
                 {editError}
               </div>
             )}
@@ -1150,33 +1150,33 @@ export const ConsultationsView: React.FC = () => {
           <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Fee &amp; Availability</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--doc-ink)' }}>Fee &amp; Availability</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: 'var(--doc-muted)' }}>
                   Patients pay your fee to confirm a booking; your slots drive their booking grid.
                 </p>
               </div>
               <button
                 type="button"
-                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setShowAvailabilityModal(false)}
               >
                 ✕
               </button>
             </div>
 
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
               Consultation fee (₱) *
             </label>
             <input
               type="number"
               min={0}
               step={50}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
               value={availFee}
               onChange={(e) => setAvailFee(e.target.value)}
             />
 
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', margin: '16px 0 6px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', margin: '16px 0 6px' }}>
               Offered time slots *
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
@@ -1187,8 +1187,8 @@ export const ConsultationsView: React.FC = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    background: '#eeedfe',
-                    color: '#5b6ef5',
+                    background: 'var(--primary-soft)',
+                    color: 'var(--primary-strong)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '0.82rem',
@@ -1199,7 +1199,7 @@ export const ConsultationsView: React.FC = () => {
                   <button
                     type="button"
                     aria-label={`Remove ${slot}`}
-                    style={{ background: 'none', border: 'none', color: '#5b6ef5', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary-strong)', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', padding: 0 }}
                     onClick={() => setAvailSlots((prev) => prev.filter((s) => s !== slot))}
                   >
                     ✕
@@ -1217,7 +1217,7 @@ export const ConsultationsView: React.FC = () => {
               <input
                 type="text"
                 placeholder="e.g. 7:00 AM"
-                style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
                 value={availSlotDraft}
                 onChange={(e) => setAvailSlotDraft(e.target.value)}
                 onKeyDown={(e) => {
@@ -1233,7 +1233,7 @@ export const ConsultationsView: React.FC = () => {
             </div>
 
             {availError && (
-              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
                 {availError}
               </div>
             )}
@@ -1267,14 +1267,14 @@ export const ConsultationsView: React.FC = () => {
           <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Schedule Consultation</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--doc-ink)' }}>Schedule Consultation</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: 'var(--doc-muted)' }}>
                   {scheduleStep === 1 ? 'Step 1: Walk-In Patient Information' : 'Step 2: Real-Life Date & Time Slot'}
                 </p>
               </div>
               <button
                 type="button"
-                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setShowScheduleModal(false)}
               >
                 ✕
@@ -1285,12 +1285,12 @@ export const ConsultationsView: React.FC = () => {
               /* STEP 1: PATIENT INFORMATION TEXTBOXES */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '4px' }}>
                     Patient Full Name *
                   </label>
                   <input
                     type="text"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
                     placeholder="e.g. John Doe"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
@@ -1299,12 +1299,12 @@ export const ConsultationsView: React.FC = () => {
 
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '4px' }}>
                       Age *
                     </label>
                     <input
                       type="text"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
                       placeholder="e.g. 24"
                       value={patientAge}
                       onChange={(e) => setPatientAge(e.target.value)}
@@ -1312,12 +1312,12 @@ export const ConsultationsView: React.FC = () => {
                   </div>
 
                   <div style={{ flex: 2 }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '4px' }}>
                       Patient Email *
                     </label>
                     <input
                       type="email"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
                       placeholder="student@example.com"
                       value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
@@ -1326,12 +1326,12 @@ export const ConsultationsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '4px' }}>
                     Clinical Notes / Reason
                   </label>
                   <textarea
                     rows={3}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
                     placeholder="Walk-in consultation notes..."
                     value={patientNotes}
                     onChange={(e) => setPatientNotes(e.target.value)}
@@ -1343,8 +1343,8 @@ export const ConsultationsView: React.FC = () => {
                     style={{
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
+                      background: 'var(--danger-soft)',
+                      border: '1px solid var(--danger-line)',
                       color: '#b91c1c',
                       fontSize: '0.85rem',
                       fontWeight: 600,
@@ -1356,7 +1356,7 @@ export const ConsultationsView: React.FC = () => {
 
                 <button
                   type="button"
-                  style={{ background: '#5b6ef5', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
+                  style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
                   onClick={() => {
                     if (patientName.trim() && patientEmail.trim()) {
                       setScheduleError(null);
@@ -1373,7 +1373,7 @@ export const ConsultationsView: React.FC = () => {
               /* STEP 2: REAL-LIFE DATE & TIME BOOKING WITH UNAVAILABILITY */
               <form onSubmit={handleConfirmSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
                     Select Real-Life Booking Date *
                   </label>
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
@@ -1384,9 +1384,9 @@ export const ConsultationsView: React.FC = () => {
                         style={{
                           padding: '8px 14px',
                           borderRadius: '8px',
-                          border: selectedDate === d.dateStr ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
-                          background: selectedDate === d.dateStr ? '#eeedfe' : '#ffffff',
-                          color: selectedDate === d.dateStr ? '#5b6ef5' : '#1e293b',
+                          border: selectedDate === d.dateStr ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                          background: selectedDate === d.dateStr ? 'var(--primary-soft)' : 'var(--doc-panel)',
+                          color: selectedDate === d.dateStr ? 'var(--primary-strong)' : 'var(--doc-ink)',
                           fontWeight: 700,
                           fontSize: '0.82rem',
                           cursor: 'pointer',
@@ -1401,7 +1401,7 @@ export const ConsultationsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
                     Select Available Time Slot *
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -1418,9 +1418,9 @@ export const ConsultationsView: React.FC = () => {
                           style={{
                             padding: '10px 4px',
                             borderRadius: '8px',
-                            border: isBooked ? '1px dashed #cbd5e1' : isSelected ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
-                            background: isBooked ? '#f1f5f9' : isSelected ? '#5b6ef5' : '#ffffff',
-                            color: isBooked ? '#94a3b8' : isSelected ? '#ffffff' : '#1e293b',
+                            border: isBooked ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                            background: isBooked ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
+                            color: isBooked ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
                             fontWeight: 700,
                             fontSize: '0.8rem',
                             cursor: isBooked ? 'not-allowed' : 'pointer',
@@ -1428,7 +1428,7 @@ export const ConsultationsView: React.FC = () => {
                           }}
                           onClick={() => !isBooked && setSelectedTime(t)}
                         >
-                          {t} {isBooked ? '🔒 (Unavailable)' : ''}
+                          {t} {isBooked ? 'Booked (Unavailable)' : ''}
                         </button>
                       );
                     })}
@@ -1440,8 +1440,8 @@ export const ConsultationsView: React.FC = () => {
                     style={{
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
+                      background: 'var(--danger-soft)',
+                      border: '1px solid var(--danger-line)',
                       color: '#b91c1c',
                       fontSize: '0.85rem',
                       fontWeight: 600,
@@ -1454,7 +1454,7 @@ export const ConsultationsView: React.FC = () => {
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                   <button
                     type="button"
-                    style={{ flex: 1, background: '#e2e8f0', color: '#334155', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ flex: 1, background: 'var(--doc-line)', color: 'var(--doc-ink)', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
                     onClick={() => setScheduleStep(1)}
                   >
                     ← Back
@@ -1465,7 +1465,7 @@ export const ConsultationsView: React.FC = () => {
                     disabled={bookedSlotKeys.has(`${selectedDate}_${selectedTime}`)}
                     style={{
                       flex: 2,
-                      background: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? '#94a3b8' : '#5b6ef5',
+                      background: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? 'var(--doc-muted)' : 'var(--primary-strong)',
                       color: '#ffffff',
                       border: 'none',
                       padding: '12px',
@@ -1496,7 +1496,7 @@ export const ConsultationsView: React.FC = () => {
                 <button
                   type="button"
                   style={{
-                    background: '#2563eb',
+                    background: 'var(--primary-strong)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -1506,11 +1506,11 @@ export const ConsultationsView: React.FC = () => {
                   }}
                   onClick={() => setShowVideoCall(true)}
                 >
-                  📹 Start Video Call
+                  Start Video Call
                 </button>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                   onClick={() => {
                     setActiveSessionItem(null);
                     setShowVideoCall(false);
@@ -1537,8 +1537,8 @@ export const ConsultationsView: React.FC = () => {
                               <img src={msg.attachment.url} alt={msg.attachment.name} style={{ maxWidth: '220px', maxHeight: '160px', borderRadius: 8, display: 'block' }} />
                             </a>
                           ) : (
-                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: 'rgba(255,255,255,0.18)', borderRadius: 8, color: '#cbd5f5', fontSize: '0.78rem', fontWeight: 600 }}>
-                              📷 Photo
+                            <div style={{ marginBottom: msg.text ? 6 : 0, padding: '24px 32px', background: 'rgba(255,255,255,0.18)', borderRadius: 8, color: 'var(--primary-strong)', fontSize: '0.78rem', fontWeight: 600 }}>
+                              Photo
                             </div>
                           )
                         )}
@@ -1554,16 +1554,16 @@ export const ConsultationsView: React.FC = () => {
                               marginBottom: msg.text ? 6 : 0,
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : '#ffffff',
-                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid #e2e8f0',
-                              color: msg.sender === 'doctor' ? '#ffffff' : '#334155',
+                              background: msg.sender === 'doctor' ? 'rgba(255,255,255,0.18)' : 'var(--doc-panel)',
+                              border: msg.sender === 'doctor' ? '1px solid rgba(255,255,255,0.4)' : '1px solid var(--doc-line)',
+                              color: msg.sender === 'doctor' ? '#ffffff' : 'var(--doc-ink)',
                               textDecoration: 'none',
                               fontSize: '0.78rem',
                               fontWeight: 600,
                               maxWidth: '220px',
                             }}
                           >
-                            <span>📄</span>
+                            <span>File</span>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachment.name}</span>
                           </a>
                         )}
@@ -1582,15 +1582,15 @@ export const ConsultationsView: React.FC = () => {
                 </div>
 
                 {pendingFile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#eef2ff', borderTop: '1px solid #dbeafe' }}>
-                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? '🖼️' : '📄'}</span>
-                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: '#5b6ef5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-soft)', borderTop: '1px solid var(--primary-soft)' }}>
+                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? 'Image' : 'Document'}</span>
+                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pendingFile.name}
                     </span>
                     <button
                       type="button"
                       onClick={() => setPendingFile(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1rem' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
                     >
                       ✕
                     </button>
@@ -1611,7 +1611,7 @@ export const ConsultationsView: React.FC = () => {
                     className="attach-btn"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    📎
+                    +
                   </button>
                   <input
                     type="text"
@@ -1622,7 +1622,7 @@ export const ConsultationsView: React.FC = () => {
                   <button type="submit" disabled={!webInputMessage.trim() && !pendingFile}>Send</button>
                 </form>
                 {chatError && (
-                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+                  <div style={{ padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, color: '#b91c1c', background: 'var(--danger-soft)', borderTop: '1px solid var(--danger-line)' }}>
                     {chatError}
                   </div>
                 )}
