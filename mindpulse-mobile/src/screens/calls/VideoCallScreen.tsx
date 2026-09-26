@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  Platform,
+  Alert,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,306 +11,260 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import {
-  TelehealthClinician,
-  fetchClinicianById,
+  MyBooking,
+  fetchMyBookings,
+  fetchVideoRoom,
 } from '../../services/appointments';
 
 interface VideoCallScreenProps {
   doctorId?: string;
+  appointmentId?: string;
   onEndCall?: () => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
-// ── Animated recording timer ──
-const CallTimer = () => {
-  const [seconds, setSeconds] = useState(0);
-  const dot = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const timer = setInterval(() => setSeconds(s => s + 1), 1000);
-    const blink = Animated.loop(
-      Animated.sequence([
-        Animated.timing(dot, { toValue: 0, duration: 500, useNativeDriver: Platform.OS !== 'web' }),
-        Animated.timing(dot, { toValue: 1, duration: 500, useNativeDriver: Platform.OS !== 'web' }),
-      ])
-    );
-    blink.start();
-    return () => { clearInterval(timer); blink.stop(); };
-  }, [dot]);
-
-  const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
-  const ss = String(seconds % 60).padStart(2, '0');
-
-  return (
-    <View style={styles.timerBadge}>
-      <Animated.View style={[styles.timerDot, { opacity: dot }]} />
-      <Text style={styles.timerText}>{mm}:{ss}</Text>
-    </View>
-  );
+const STATUS_LABELS: Record<string, string> = {
+  scheduled: 'Awaiting approval',
+  awaiting_payment: 'Approved · payment required',
+  declined: 'Declined',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
-// ── Doctor avatar ──
-const DoctorAvatar = ({ name }: { name: string }) => {
-  const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <View style={styles.avatarWrap}>
-      <View style={styles.avatarCircle}>
-        <Ionicons name="person" size={32} color="#8B9ED4" />
-      </View>
-    </View>
-  );
-};
-
+/**
+ * Lobby for the appointment's real Jitsi room. The actual call opens in the
+ * phone's browser at the deterministic room mindpulse-appt-<appointment id>.
+ */
 export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   doctorId,
+  appointmentId,
   onEndCall,
   onNavigateTab,
 }) => {
-  const [muted, setMuted] = useState(false);
-  const [cameraOff, setCameraOff] = useState(false);
-  const [inChat, setInChat] = useState(false);
-  const [activeTab] = useState<'home' | 'analysis' | 'clinics' | 'profile'>('clinics');
+  const [booking, setBooking] = useState<MyBooking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [openedInBrowser, setOpenedInBrowser] = useState(false);
 
-  const [clinician, setClinician] = useState<TelehealthClinician | null>(null);
-  const [clinicianLoading, setClinicianLoading] = useState(true);
-  const [clinicianError, setClinicianError] = useState<string | null>(null);
+  const loadBooking = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const all = await fetchMyBookings();
+      const byId = appointmentId ? all.find((b) => b.id === appointmentId) : undefined;
+      const byDoctor = doctorId ? all.filter((b) => b.doctorId === doctorId) : [];
+      const picked =
+        byId ??
+        byDoctor.find((b) => b.status === 'confirmed') ??
+        byDoctor[0] ??
+        null;
+      setBooking(picked);
+      if (!picked) {
+        setLoadError('No appointment found for this call.');
+      }
+    } catch (e: any) {
+      setLoadError(e?.message || 'Could not load the appointment for this call.');
+    } finally {
+      setLoading(false);
+    }
+  }, [appointmentId, doctorId]);
 
   useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      if (!doctorId) {
-        if (isMounted) {
-          setClinicianError('No clinician selected for this call.');
-          setClinicianLoading(false);
-        }
-        return;
-      }
-      try {
-        const found = await fetchClinicianById(doctorId);
-        if (isMounted) {
-          if (found) setClinician(found);
-          else setClinicianError('Clinician not found.');
-        }
-      } catch (e: any) {
-        if (isMounted) setClinicianError(e?.message || 'Could not load clinician details.');
-      } finally {
-        if (isMounted) setClinicianLoading(false);
-      }
-    };
-    void load();
-    return () => { isMounted = false; };
-  }, [doctorId]);
+    void loadBooking();
+  }, [loadBooking]);
 
-  const doctorName = clinician?.name;
-  const doctorSpecialty = clinician?.specialty;
+  const handleJoin = async () => {
+    if (!booking || joining) return;
+    setJoining(true);
+    try {
+      const url = await fetchVideoRoom(booking.id, booking.doctorId);
+      const supported = await Linking.canOpenURL(url).catch(() => true);
+      if (supported === false) {
+        throw new Error('This device cannot open the video room link.');
+      }
+      await Linking.openURL(url);
+      setOpenedInBrowser(true);
+    } catch (e: any) {
+      Alert.alert(
+        'Could not open the call',
+        e?.message || 'Please check your connection and try again.',
+      );
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const initials = (booking?.doctorName ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'DR';
 
   return (
     <View style={styles.root}>
-      {/* ── Remote video area (grey placeholder) ── */}
-      <View style={styles.remoteVideo}>
-        {/* Recording timer top-left */}
-        <CallTimer />
-
-        {/* Local video PiP — top-right placeholder */}
-        <View style={styles.localPip}>
-          <Ionicons name="person" size={22} color="#B0B8C8" />
+      <View style={styles.lobbyCard}>
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarInitials}>{initials}</Text>
         </View>
-      </View>
 
-      {/* ── Doctor info ── */}
-      <View style={styles.doctorInfo}>
-        <DoctorAvatar name={doctorName ?? ''} />
-        {clinicianLoading ? (
-          <ActivityIndicator size="small" color="#7A90A8" />
-        ) : clinicianError ? (
-          <Text style={styles.doctorSpecialty}>{clinicianError}</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#5B6EF5" style={{ marginTop: 16 }} />
+        ) : loadError || !booking ? (
+          <Text style={styles.lobbyError}>{loadError ?? 'No appointment found for this call.'}</Text>
         ) : (
           <>
-            <Text style={styles.doctorName}>{doctorName}</Text>
-            <Text style={styles.doctorSpecialty}>{doctorSpecialty}</Text>
+            <Text style={styles.lobbyDoctor}>{booking.doctorName}</Text>
+            <Text style={styles.lobbySpec}>{booking.specialty}</Text>
+
+            <View style={styles.infoBox}>
+              <View style={styles.infoRow}>
+                <Ionicons name="calendar-outline" size={15} color="#5B6EF5" />
+                <Text style={styles.infoText}>{booking.scheduledFor}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="pricetag-outline" size={15} color="#5B6EF5" />
+                <Text style={styles.infoText}>
+                  {STATUS_LABELS[booking.status] ?? booking.status} · Fee ₱{booking.fee}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="videocam-outline" size={15} color="#5B6EF5" />
+                <Text style={styles.infoText}>Jitsi room · mindpulse-appt-{booking.id.slice(0, 8)}…</Text>
+              </View>
+            </View>
+
+            {booking.status === 'confirmed' ? (
+              openedInBrowser ? (
+                <View style={styles.openedBox}>
+                  <Ionicons name="checkmark-circle" size={20} color="#27AE60" />
+                  <Text style={styles.openedText}>
+                    Your video room is open in the browser. Return here when the session ends.
+                  </Text>
+                  <TouchableOpacity style={styles.primaryBtn} onPress={() => void handleJoin()}>
+                    <Ionicons name="videocam" size={16} color="#FFF" />
+                    <Text style={styles.primaryBtnText}>Re-open Video Room</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
+                  onPress={() => void handleJoin()}
+                  disabled={joining}
+                >
+                  {joining ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Ionicons name="videocam" size={16} color="#FFF" />
+                  )}
+                  <Text style={styles.primaryBtnText}>
+                    {joining ? 'Opening…' : 'Join Video Call'}
+                  </Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <Text style={styles.lockedText}>
+                {booking.status === 'awaiting_payment'
+                  ? 'Pay the consultation fee in Bookings to unlock this call.'
+                  : booking.status === 'declined'
+                    ? booking.declineReason
+                      ? `This booking was declined: ${booking.declineReason}`
+                      : 'This booking was declined.'
+                    : 'This call unlocks once the doctor approves your request and you complete the payment.'}
+              </Text>
+            )}
           </>
         )}
-      </View>
 
-      {/* ── Control bar ── */}
-      <View style={styles.controlBar}>
-        <TouchableOpacity
-          style={[styles.ctrlBtn, muted && styles.ctrlBtnActive]}
-          onPress={() => setMuted(v => !v)}
-        >
-          <Ionicons
-            name={muted ? 'mic-off' : 'mic'}
-            size={22}
-            color={muted ? '#FFF' : '#6B7A99'}
-          />
-          <Text style={[styles.ctrlLabel, muted && { color: '#FFF' }]}>Mute</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.endCallBtn} onPress={onEndCall}>
-          <Ionicons name="call" size={24} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
-          <Text style={styles.endCallLabel}>End</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.ctrlBtn, cameraOff && styles.ctrlBtnActive]}
-          onPress={() => setCameraOff(v => !v)}
-        >
-          <Ionicons
-            name={cameraOff ? 'videocam-off' : 'videocam'}
-            size={22}
-            color={cameraOff ? '#FFF' : '#6B7A99'}
-          />
-          <Text style={[styles.ctrlLabel, cameraOff && { color: '#FFF' }]}>Camera</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.ctrlBtn, inChat && styles.ctrlBtnBlue]}
-          onPress={() => setInChat(v => !v)}
-        >
-          <Ionicons
-            name="chatbubble-outline"
-            size={22}
-            color={inChat ? '#FFF' : '#6B7A99'}
-          />
-          <Text style={[styles.ctrlLabel, inChat && { color: '#FFF' }]}>Chat</Text>
+        <TouchableOpacity style={styles.endBtn} onPress={onEndCall}>
+          <Ionicons name="call" size={22} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
+          <Text style={styles.endBtnText}>Back</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Bottom Tab ── */}
-      <BottomTabBar activeTab={activeTab} onNavigate={tab => onNavigateTab?.(tab)} />
+      <BottomTabBar activeTab="clinics" onNavigate={(tab) => onNavigateTab?.(tab)} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  root: {
+  root: { flex: 1, backgroundColor: '#FAF8F3' },
+  lobbyCard: {
     flex: 1,
-    backgroundColor: '#FAF8F3',
-  },
-
-  /* Remote video placeholder */
-  remoteVideo: {
-    flex: 1,
-    backgroundColor: '#E2E6EE',
     margin: 16,
-    marginTop: 20,
+    marginTop: 24,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    position: 'relative',
-    minHeight: 320,
+    borderWidth: 1,
+    borderColor: '#E4E8F0',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  /* Recording timer */
-  timerBadge: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    padding: 24,
     gap: 6,
   },
-  timerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-  },
-  timerText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  /* Local PiP */
-  localPip: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 72,
-    height: 90,
-    backgroundColor: '#C8CDD8',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-
-  /* Doctor info */
-  doctorInfo: {
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  avatarWrap: {
-    marginBottom: 10,
-  },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: '#E8ECFA',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 6,
   },
-  doctorName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1A2E44',
-    marginBottom: 3,
+  avatarInitials: { fontSize: 22, fontWeight: '800', color: '#5B6EF5' },
+  lobbyDoctor: { fontSize: 19, fontWeight: '800', color: '#1A2E44', textAlign: 'center' },
+  lobbySpec: { fontSize: 13, color: '#7A90A8', marginBottom: 8 },
+  lobbyError: { fontSize: 13, color: '#B91C1C', textAlign: 'center', marginTop: 12, lineHeight: 19 },
+  infoBox: {
+    width: '100%',
+    backgroundColor: '#F5F7FC',
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 10,
   },
-  doctorSpecialty: {
-    fontSize: 13,
-    color: '#7A90A8',
-  },
-
-  /* Control bar */
-  controlBar: {
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoText: { fontSize: 13, color: '#334155', fontWeight: '600', flex: 1 },
+  primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
+    gap: 8,
+    backgroundColor: '#5B6EF5',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    width: '100%',
+    marginTop: 4,
   },
-  ctrlBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#EBEBEB',
+  primaryBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  openedBox: { width: '100%', alignItems: 'center', gap: 8, marginTop: 4 },
+  openedText: { fontSize: 12, color: '#1E7E43', textAlign: 'center', lineHeight: 18, fontWeight: '600' },
+  lockedText: {
+    fontSize: 13,
+    color: '#B45309',
+    textAlign: 'center',
+    lineHeight: 19,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 12,
+    overflow: 'hidden',
+  },
+  endBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-  },
-  ctrlBtnActive: {
+    gap: 8,
     backgroundColor: '#EF4444',
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    width: '100%',
+    marginTop: 14,
   },
-  ctrlBtnBlue: {
-    backgroundColor: '#4A90D9',
-  },
-  ctrlLabel: {
-    fontSize: 10,
-    color: '#6B7A99',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  endCallBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  endCallLabel: {
-    fontSize: 10,
-    color: '#FFF',
-    fontWeight: '700',
-    marginTop: 2,
-  },
+  endBtnText: { fontSize: 14, fontWeight: '800', color: '#FFF' },
 });

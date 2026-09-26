@@ -18,18 +18,25 @@ import { Spacing } from '../../theme/typography';
 import {
   BookedAppointment,
   ChatMessage,
+  MyBooking,
+  PaymentMethod,
   TelehealthClinician,
   fetchBookedSlotKeys,
   fetchChatMessages,
   fetchClinicians,
   fetchConversationClinician,
+  fetchMyBookings,
   generateRealLifeDates,
+  isSlotInPast,
+  payForAppointment,
   saveBookedAppointment,
   sendChatMessage,
+  subscribeToMyAppointments,
+  subscribeToMyMessages,
 } from '../../services/appointments';
 
 interface AppointmentBookingScreenProps {
-  onStartVideoCall?: (doctorId?: string) => void;
+  onStartVideoCall?: (doctorId?: string, appointmentId?: string) => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
@@ -76,6 +83,25 @@ const ClinicianCard = ({
   </View>
 );
 
+// ─── Booking status pill ─────────────────────────────────────────────────────
+const BOOKING_PILLS: Record<string, { label: string; bg: string; fg: string }> = {
+  scheduled: { label: 'Awaiting Approval', bg: '#FEF3C7', fg: '#B45309' },
+  awaiting_payment: { label: 'Approved · Pay Now', bg: '#DBEAFE', fg: '#1D4ED8' },
+  declined: { label: 'Declined', bg: '#FEE2E2', fg: '#B91C1C' },
+  confirmed: { label: 'Confirmed', bg: '#D6F5E3', fg: '#1E7E43' },
+  completed: { label: 'Completed', bg: '#D6F5E3', fg: '#1E7E43' },
+  cancelled: { label: 'Cancelled', bg: '#EEF1F6', fg: '#64748B' },
+};
+
+const BookingPill = ({ status }: { status: MyBooking['status'] }) => {
+  const pill = BOOKING_PILLS[status] ?? BOOKING_PILLS.scheduled;
+  return (
+    <View style={[styles.pill, { backgroundColor: pill.bg }]}>
+      <Text style={[styles.pillText, { color: pill.fg }]}>{pill.label}</Text>
+    </View>
+  );
+};
+
 // ─── Chat bubble ──────────────────────────────────────────────────────────────
 const ChatBubble = ({
   text, isMe, time,
@@ -92,7 +118,7 @@ const ChatBubble = ({
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
   onStartVideoCall,
 }) => {
-  const [activeTab, setActiveTab] = useState<'clinicians' | 'messages'>('clinicians');
+  const [activeTab, setActiveTab] = useState<'clinicians' | 'bookings' | 'messages'>('clinicians');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -114,7 +140,63 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
 
+  // My bookings + mock payment flow
+  const [bookings, setBookings] = useState<MyBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [payTarget, setPayTarget] = useState<MyBooking | null>(null);
+  const [payMethod, setPayMethod] = useState<PaymentMethod | null>(null);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [payDone, setPayDone] = useState<MyBooking | null>(null);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
   const dates = generateRealLifeDates();
+  const slotOptions = selectedClinician?.slots?.length ? selectedClinician.slots : TIME_SLOTS;
+
+  const openPayment = (booking: MyBooking) => {
+    setPayTarget(booking);
+    setPayMethod(null);
+    setPayError(null);
+    setPayDone(null);
+  };
+
+  const closePayment = () => {
+    if (payBusy) return;
+    setPayTarget(null);
+    setPayMethod(null);
+    setPayError(null);
+    setPayDone(null);
+  };
+
+  const handlePay = async () => {
+    if (!payTarget || !payMethod || payBusy) return;
+    if (
+      payMethod === 'card' &&
+      (!cardNumber.trim() || !cardName.trim() || !cardExpiry.trim() || !cardCvv.trim())
+    ) {
+      setPayError('Fill in the card details to continue.');
+      return;
+    }
+
+    setPayBusy(true);
+    setPayError(null);
+    try {
+      // Mock gateway processing time.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await payForAppointment(payTarget, payMethod);
+      setPayDone(payTarget);
+      void loadBookings(false);
+      void fetchBookedSlotKeysQuietly();
+    } catch (e: any) {
+      setPayError(e?.message || 'The payment failed. Please try again.');
+    } finally {
+      setPayBusy(false);
+    }
+  };
 
   const loadClinicians = async () => {
     setLoadingClinicians(true);
@@ -126,6 +208,28 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       setCliniciansError(e?.message || 'Could not load clinicians. Please try again.');
     } finally {
       setLoadingClinicians(false);
+    }
+  };
+
+  const loadBookings = async (withSpinner = true) => {
+    if (withSpinner) setBookingsLoading(true);
+    try {
+      const list = await fetchMyBookings();
+      setBookings(list);
+      setBookingsError(null);
+    } catch (e: any) {
+      setBookingsError(e?.message || 'Could not load your bookings. Please try again.');
+    } finally {
+      if (withSpinner) setBookingsLoading(false);
+    }
+  };
+
+  const fetchBookedSlotKeysQuietly = async () => {
+    if (!selectedClinician) return;
+    try {
+      setBookedKeys(await fetchBookedSlotKeys(selectedClinician.id));
+    } catch {
+      /* refreshed on next open */
     }
   };
 
@@ -150,8 +254,42 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   useEffect(() => {
     void loadClinicians();
     void refreshConversation();
+    void loadBookings();
+
+    // Realtime: approvals, declines, reschedules, and new messages show up
+    // without the patient having to pull-to-refresh.
+    let disposed = false;
+    let unsubAppointments: (() => void) | null = null;
+    let unsubMessages: (() => void) | null = null;
+
+    void subscribeToMyAppointments(() => {
+      void loadBookings(false);
+      void fetchBookedSlotKeysQuietly();
+    }).then((unsub) => {
+      if (disposed) unsub();
+      else unsubAppointments = unsub;
+    });
+
+    void subscribeToMyMessages(() => {
+      void refreshConversation();
+    }).then((unsub) => {
+      if (disposed) unsub();
+      else unsubMessages = unsub;
+    });
+
+    return () => {
+      disposed = true;
+      unsubAppointments?.();
+      unsubMessages?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refresh bookings each time the tab is opened.
+  useEffect(() => {
+    if (activeTab === 'bookings') void loadBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const filtered = clinicians.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -174,6 +312,10 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const handleConfirm = async () => {
     if (!selectedClinician || !selectedTime || bookingSaving) return;
     const date = dates[selectedDateIdx];
+    if (isSlotInPast(date.dateStr, selectedTime)) {
+      Alert.alert('Time already passed', 'That time has already passed. Please pick a later slot.');
+      return;
+    }
 
     setBookingSaving(true);
     try {
@@ -238,6 +380,14 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           >
             <Text style={[styles.tabText, activeTab === 'clinicians' && styles.tabTextActive]}>
               Clinicians
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'bookings' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('bookings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bookings' && styles.tabTextActive]}>
+              Bookings
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -321,6 +471,100 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           {!loadingClinicians && !cliniciansError && filtered.map(c => (
             <ClinicianCard key={c.id} clinician={c} onConnect={() => void handleConnect(c)} />
           ))}
+        </ScrollView>
+      )}
+
+      {/* ── Bookings Tab ── */}
+      {activeTab === 'bookings' && (
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionLabel}>My Appointments</Text>
+
+          {bookingsLoading && (
+            <View style={styles.stateBox}>
+              <ActivityIndicator size="small" color={Colors.btnBlue} />
+              <Text style={styles.stateText}>Loading your bookings…</Text>
+            </View>
+          )}
+
+          {!bookingsLoading && bookingsError && (
+            <View style={styles.stateBox}>
+              <Text style={styles.stateError}>{bookingsError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => void loadBookings()}>
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!bookingsLoading && !bookingsError && bookings.length === 0 && (
+            <View style={styles.stateBox}>
+              <Ionicons name="calendar-outline" size={28} color={Colors.textHint} />
+              <Text style={styles.stateText}>
+                You have no appointments yet. Book a session and it will show up here after the
+                doctor reviews it.
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => setActiveTab('clinicians')}>
+                <Text style={styles.retryText}>Browse clinicians</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!bookingsLoading && !bookingsError && bookings.map(b => {
+            const initials = b.doctorName.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'DR';
+            return (
+              <View key={b.id} style={styles.bookingCard}>
+                <View style={styles.bookingTop}>
+                  <ClinicianAvatar initials={initials} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.clinicianName}>{b.doctorName}</Text>
+                    <Text style={styles.clinicianSpec}>{b.specialty}</Text>
+                    <Text style={styles.bookingWhen}>{b.scheduledFor}</Text>
+                  </View>
+                  <BookingPill status={b.status} />
+                </View>
+
+                {b.status === 'declined' && b.declineReason ? (
+                  <View style={styles.reasonBox}>
+                    <Text style={styles.reasonText}>Reason: {b.declineReason}</Text>
+                  </View>
+                ) : null}
+
+                {b.status === 'scheduled' && (
+                  <Text style={styles.waitNote}>
+                    Waiting for the doctor to approve your request. You'll get a notification.
+                  </Text>
+                )}
+
+                {b.status === 'awaiting_payment' && (
+                  <View style={styles.bookingActions}>
+                    <Text style={styles.feeText}>Consultation fee ₱{b.fee}</Text>
+                    <TouchableOpacity style={styles.payBtn} onPress={() => openPayment(b)}>
+                      <Ionicons name="card" size={15} color="#FFF" />
+                      <Text style={styles.payBtnText}>Pay &amp; Confirm</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {b.status === 'confirmed' && (
+                  <View style={styles.bookingActions}>
+                    <Text style={styles.confirmedNote}>
+                      Payment received — your video room opens at the scheduled time.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.joinBtn}
+                      onPress={() => onStartVideoCall?.(b.doctorId, b.id)}
+                    >
+                      <Ionicons name="videocam" size={15} color="#FFF" />
+                      <Text style={styles.payBtnText}>Join Video Call</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {b.status === 'cancelled' && (
+                  <Text style={styles.waitNote}>This appointment was cancelled.</Text>
+                )}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
 
@@ -455,24 +699,27 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
             <Text style={styles.modalSectionLabel}>Select Time</Text>
             <View style={styles.timeGrid}>
-              {TIME_SLOTS.map(t => {
+              {slotOptions.map(t => {
                 const slotKey = `${dates[selectedDateIdx].dateStr}_${t}`;
                 const isBooked = bookedKeys.has(slotKey);
+                const isPast = isSlotInPast(dates[selectedDateIdx].dateStr, t);
+                const isUnavailable = isBooked || isPast;
                 return (
                   <TouchableOpacity
                     key={t}
                     style={[
                       styles.timeSlot,
                       selectedTime === t && styles.timeSlotActive,
-                      isBooked && styles.timeSlotBooked,
+                      isUnavailable && styles.timeSlotPast,
                     ]}
-                    onPress={() => !isBooked && setSelectedTime(t)}
-                    disabled={isBooked}
+                    onPress={() => !isUnavailable && setSelectedTime(t)}
+                    disabled={isUnavailable}
                   >
                     <Text
                       style={[
                         styles.timeSlotText,
                         selectedTime === t && { color: '#FFF' },
+                        isUnavailable && styles.timeSlotPastText,
                         isBooked && styles.timeSlotBookedText,
                       ]}
                     >
@@ -482,6 +729,18 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 );
               })}
             </View>
+            {slotOptions.every(t => isSlotInPast(dates[selectedDateIdx].dateStr, t)) && (
+              <Text style={styles.timeGridHint}>
+                All times for this day have already passed. Please choose another day.
+              </Text>
+            )}
+
+            <View style={styles.feeRow}>
+              <Ionicons name="card-outline" size={14} color={Colors.textSecondary} />
+              <Text style={styles.feeRowText}>
+                Consultation fee ₱{selectedClinician?.fee ?? 500} · payable after the doctor approves
+              </Text>
+            </View>
 
             <TouchableOpacity
               style={[styles.confirmBtn, (!selectedTime || bookingSaving) && styles.confirmBtnDisabled]}
@@ -489,7 +748,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               disabled={!selectedTime || bookingSaving}
             >
               <Text style={styles.confirmBtnText}>
-                {bookingSaving ? 'Booking…' : 'Confirm Appointment'}
+                {bookingSaving ? 'Sending Request…' : 'Request Appointment'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -503,26 +762,195 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             <View style={styles.successIcon}>
               <Ionicons name="checkmark" size={36} color="#FFF" />
             </View>
-            <Text style={styles.successTitle}>Appointment Booked!</Text>
+            <Text style={styles.successTitle}>Request Sent!</Text>
             <Text style={styles.successBody}>
               Your session with {lastBooking?.clinicianName || selectedClinician?.name}{' '}
               {lastBooking
                 ? `on ${lastBooking.selectedDate} at ${lastBooking.selectedTime}`
                 : ''}{' '}
-              has been requested. The clinic will confirm shortly.
+              is waiting for the doctor's approval. Once approved, you can pay the consultation
+              fee here to confirm it.
             </Text>
             <TouchableOpacity
               style={styles.successBtn}
               onPress={() => {
                 setShowSuccessModal(false);
-                onStartVideoCall?.(selectedClinician?.id);
+                setActiveTab('bookings');
               }}
             >
-              <Text style={styles.successBtnText}>Start Video Call</Text>
+              <Text style={styles.successBtnText}>View My Bookings</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowSuccessModal(false)}>
               <Text style={styles.successDismiss}>Dismiss</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Payment Modal (mock online payment) ── */}
+      <Modal visible={payTarget !== null} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>
+                  {payDone ? 'Payment Successful' : 'Pay Consultation Fee'}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {payTarget
+                    ? `${payTarget.doctorName} · ${payTarget.scheduledFor}`
+                    : ''}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={closePayment}>
+                <Ionicons name="close" size={22} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {payDone ? (
+              <View style={{ alignItems: 'center', paddingBottom: 12 }}>
+                <View style={[styles.successIcon, { marginBottom: 14 }]}>
+                  <Ionicons name="checkmark" size={34} color="#FFF" />
+                </View>
+                <Text style={styles.payAmount}>₱{payDone.fee} paid</Text>
+                <Text style={styles.waitNote}>
+                  Your appointment is confirmed. Join the video room when it's time for your
+                  session.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.payBtn, { width: '100%', marginTop: 18 }]}
+                  onPress={() => {
+                    const booking = payDone;
+                    setPayTarget(null);
+                    setPayDone(null);
+                    onStartVideoCall?.(booking.doctorId, booking.id);
+                  }}
+                >
+                  <Ionicons name="videocam" size={15} color="#FFF" />
+                  <Text style={styles.payBtnText}>Join Video Call</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setPayTarget(null);
+                    setPayDone(null);
+                  }}
+                  style={{ marginTop: 12 }}
+                >
+                  <Text style={styles.successDismiss}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={styles.feeRow}>
+                  <Ionicons name="wallet-outline" size={14} color={Colors.textSecondary} />
+                  <Text style={styles.feeRowText}>
+                    Amount due: ₱{payTarget?.fee ?? 0} · mock payment, no real charge
+                  </Text>
+                </View>
+
+                <Text style={styles.modalSectionLabel}>Payment Method</Text>
+                <View style={styles.methodRow}>
+                  {([
+                    { key: 'card', label: 'Card', icon: 'card' },
+                    { key: 'gcash', label: 'GCash', icon: 'phone-portrait' },
+                    { key: 'maya', label: 'Maya', icon: 'wallet' },
+                  ] as const).map(m => (
+                    <TouchableOpacity
+                      key={m.key}
+                      style={[styles.methodChip, payMethod === m.key && styles.methodChipActive]}
+                      onPress={() => {
+                        setPayMethod(m.key);
+                        setPayError(null);
+                      }}
+                    >
+                      <Ionicons
+                        name={m.icon as any}
+                        size={16}
+                        color={payMethod === m.key ? '#FFF' : ACCENT}
+                      />
+                      <Text
+                        style={[
+                          styles.methodChipText,
+                          payMethod === m.key && { color: '#FFF' },
+                        ]}
+                      >
+                        {m.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {payMethod === 'card' && (
+                  <View style={{ gap: 8, marginTop: 12 }}>
+                    <TextInput
+                      style={styles.cardInput}
+                      placeholder="Card number (e.g. 4242 4242 4242 4242)"
+                      placeholderTextColor={Colors.textHint}
+                      value={cardNumber}
+                      onChangeText={setCardNumber}
+                      keyboardType="number-pad"
+                    />
+                    <TextInput
+                      style={styles.cardInput}
+                      placeholder="Name on card"
+                      placeholderTextColor={Colors.textHint}
+                      value={cardName}
+                      onChangeText={setCardName}
+                    />
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        style={[styles.cardInput, { flex: 1 }]}
+                        placeholder="MM/YY"
+                        placeholderTextColor={Colors.textHint}
+                        value={cardExpiry}
+                        onChangeText={setCardExpiry}
+                      />
+                      <TextInput
+                        style={[styles.cardInput, { flex: 1 }]}
+                        placeholder="CVV"
+                        placeholderTextColor={Colors.textHint}
+                        value={cardCvv}
+                        onChangeText={setCardCvv}
+                        keyboardType="number-pad"
+                        secureTextEntry
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {(payMethod === 'gcash' || payMethod === 'maya') && (
+                  <Text style={[styles.waitNote, { marginTop: 10 }]}>
+                    You'll approve the ₱{payTarget?.fee ?? 0} payment inside your{' '}
+                    {payMethod === 'gcash' ? 'GCash' : 'Maya'} wallet.
+                  </Text>
+                )}
+
+                {payError && (
+                  <View style={[styles.reasonBox, { marginTop: 12 }]}>
+                    <Text style={[styles.reasonText, { color: '#B91C1C' }]}>{payError}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.payBtn,
+                    { width: '100%', marginTop: 18 },
+                    (!payMethod || payBusy) && { opacity: 0.45 },
+                  ]}
+                  disabled={!payMethod || payBusy}
+                  onPress={() => void handlePay()}
+                >
+                  <ActivityIndicator size="small" color="#FFF" style={payBusy ? undefined : { display: 'none' }} />
+                  <Text style={styles.payBtnText}>
+                    {payBusy ? 'Processing…' : `Pay ₱${payTarget?.fee ?? 0}`}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={closePayment} style={{ marginTop: 12, alignItems: 'center' }}>
+                  <Text style={styles.successDismiss}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -742,9 +1170,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   timeSlotActive: { backgroundColor: ACCENT, borderColor: ACCENT },
-  timeSlotBooked: { backgroundColor: Colors.divider, opacity: 0.5 },
-  timeSlotBookedText: { color: Colors.textHint, textDecorationLine: 'line-through' },
+  timeSlotPast: { backgroundColor: Colors.divider, opacity: 0.5 },
+  timeSlotPastText: { color: Colors.textHint },
+  timeSlotBookedText: { textDecorationLine: 'line-through' },
   timeSlotText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  timeGridHint: { fontSize: 12, color: Colors.textHint, marginTop: 8, textAlign: 'center' },
 
   confirmBtn: {
     backgroundColor: ACCENT,
@@ -786,4 +1216,97 @@ const styles = StyleSheet.create({
   },
   successBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
   successDismiss: { fontSize: 13, color: Colors.textSecondary },
+
+  /* Bookings */
+  bookingCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  bookingWhen: { fontSize: 12, color: Colors.textPrimary, fontWeight: '600', marginTop: 3 },
+  pill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
+  pillText: { fontSize: 10, fontWeight: '800' },
+  reasonBox: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    padding: 10,
+  },
+  reasonText: { fontSize: 12, color: '#B91C1C', lineHeight: 17, fontWeight: '600' },
+  waitNote: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  confirmedNote: { fontSize: 12, color: '#1E7E43', lineHeight: 17, fontWeight: '600' },
+  bookingActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 10,
+  },
+  feeText: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
+  payBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: ACCENT,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  joinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#27AE60',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  payBtnText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
+  payAmount: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
+
+  /* Payment modal */
+  feeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.divider,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 14,
+  },
+  feeRowText: { fontSize: 12, color: Colors.textSecondary, flex: 1, lineHeight: 17 },
+  methodRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  methodChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: ACCENT,
+    borderRadius: 12,
+    paddingVertical: 10,
+    backgroundColor: Colors.surface,
+  },
+  methodChipActive: { backgroundColor: ACCENT },
+  methodChipText: { fontSize: 12, fontWeight: '800', color: ACCENT },
+  cardInput: {
+    backgroundColor: Colors.divider,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 13,
+    color: Colors.textPrimary,
+  },
 });

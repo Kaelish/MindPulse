@@ -2008,3 +2008,68 @@ html[data-theme='dark'] .admin-sidebar .nav-panel {
 html[data-theme='dark'] .admin-account strong {
   color: var(--text);
 }
+
+/* ── Telehealth (0006): status pills, decision buttons, inline Jitsi frame ── */
+.status-pill-grey {
+  background: #eef1f6;
+  color: #64748b;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.decide-btn {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.decide-btn-approve { background: #27ae60; color: #fff; }
+.decide-btn-approve:hover { background: #219253; }
+.decide-btn-decline { background: #e05c5c; color: #fff; }
+.decide-btn-decline:hover { background: #cf4f4f; }
+.decide-btn-quiet { background: #e2e8f0; color: #334155; }
+.decide-btn-quiet:hover { background: #d5dde8; }
+.decide-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.jitsi-frame {
+  width: 100%;
+  min-height: 460px;
+  height: 460px;
+  border: 0;
+  border-radius: 12px;
+  background: #0b1220;
+}
+
+.appointment-reason {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+html[data-theme='dark'] .status-pill-grey {
+  background: #2a3242;
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .decide-btn-quiet {
+  background: #2a3242;
+  color: var(--text);
+}
+
+html[data-theme='dark'] .appointment-reason {
+  background: #3a1d22;
+  border-color: #7f2b34;
+  color: #fca5a5;
+}

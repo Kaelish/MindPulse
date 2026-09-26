@@ -1,19 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DoctorVideoCallPanel } from '../../components/DoctorVideoCallPanel';
+import { JitsiCallPanel } from '../../components/JitsiCallPanel';
 import {
+  DoctorAvailability,
   WebChatMessage,
   WebConsultationItem,
+  approveAppointment,
+  declineAppointment,
+  editAppointmentTime,
   fetchBookedSlotKeys,
+  fetchDoctorAvailability,
   fetchWebChatMessages,
   fetchWebConsultations,
+  saveDoctorAvailability,
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
 
+const FALLBACK_SLOTS = [
+  '9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM',
+  '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM',
+];
+
+const UPCOMING_STATUSES = ['scheduled', 'awaiting_payment', 'confirmed'] as const;
+
 export const ConsultationsView: React.FC = () => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
-  const [consultTab, setConsultTab] = useState<'upcoming' | 'completed' | 'messages'>('upcoming');
+  const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>('upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
   const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
   const [webInputMessage, setWebInputMessage] = useState<string>('');
@@ -23,6 +36,30 @@ export const ConsultationsView: React.FC = () => {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [decisionBusy, setDecisionBusy] = useState<string | null>(null);
+
+  // Doctor's consultation fee + offered time slots (read by the mobile app too)
+  const [availability, setAvailability] = useState<DoctorAvailability | null>(null);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [availFee, setAvailFee] = useState('');
+  const [availSlots, setAvailSlots] = useState<string[]>([]);
+  const [availSlotDraft, setAvailSlotDraft] = useState('');
+  const [availError, setAvailError] = useState<string | null>(null);
+  const [availBusy, setAvailBusy] = useState(false);
+
+  // Decline flow (reason is required)
+  const [declineTarget, setDeclineTarget] = useState<WebConsultationItem | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
+  const [declineError, setDeclineError] = useState<string | null>(null);
+  const [declineBusy, setDeclineBusy] = useState(false);
+
+  // Edit appointment time flow
+  const [editTarget, setEditTarget] = useState<WebConsultationItem | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editBusy, setEditBusy] = useState(false);
 
   // Manual Schedule Consultation Modal State
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
@@ -57,7 +94,7 @@ export const ConsultationsView: React.FC = () => {
     return dates;
   }, []);
 
-  const timeSlots = ['9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM', '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM'];
+  const timeSlots = availability?.slots?.length ? availability.slots : FALLBACK_SLOTS;
 
   const chatTarget = activeSessionItem ?? consultations[0] ?? null;
 
@@ -87,12 +124,26 @@ export const ConsultationsView: React.FC = () => {
     let isActive = true;
     const loadData = async () => {
       setLoading(true);
-      const res = await fetchWebConsultations();
-      const slots = await fetchBookedSlotKeys();
-      if (isActive) {
-        setConsultations(res);
-        setBookedSlotKeys(slots);
-        setLoading(false);
+      try {
+        const res = await fetchWebConsultations();
+        const slots = await fetchBookedSlotKeys();
+        if (isActive) {
+          setConsultations(res);
+          setBookedSlotKeys(slots);
+        }
+        fetchDoctorAvailability()
+          .then((availabilityRes) => {
+            if (isActive) setAvailability(availabilityRes);
+          })
+          .catch(() => {
+            /* defaults are used when the profile row cannot be read */
+          });
+      } catch (err) {
+        if (isActive) {
+          setSessionError(err instanceof Error ? err.message : 'Unable to load consultations.');
+        }
+      } finally {
+        if (isActive) setLoading(false);
       }
     };
     void loadData();
@@ -155,6 +206,129 @@ export const ConsultationsView: React.FC = () => {
     }
   };
 
+  /* ── Approve / decline / reschedule ─────────────────────────────────── */
+
+  const patchConsultation = (id: string, patch: Partial<WebConsultationItem>) => {
+    setConsultations((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  };
+
+  const handleApprove = async (item: WebConsultationItem) => {
+    setActionError(null);
+    setDecisionBusy(item.id);
+    try {
+      await approveAppointment(item);
+      patchConsultation(item.id, { rawStatus: 'awaiting_payment', status: 'Awaiting Payment' });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Unable to approve the booking.');
+    } finally {
+      setDecisionBusy(null);
+    }
+  };
+
+  const openDeclineModal = (item: WebConsultationItem) => {
+    setDeclineTarget(item);
+    setDeclineReason('');
+    setDeclineError(null);
+  };
+
+  const handleDeclineConfirm = async () => {
+    if (!declineTarget) return;
+    if (!declineReason.trim()) {
+      setDeclineError('A reason is required when declining an appointment.');
+      return;
+    }
+    setDeclineBusy(true);
+    setDeclineError(null);
+    try {
+      await declineAppointment(declineTarget, declineReason);
+      patchConsultation(declineTarget.id, {
+        rawStatus: 'declined',
+        status: 'Declined',
+        declineReason: declineReason.trim(),
+      });
+      setDeclineTarget(null);
+      setDeclineReason('');
+    } catch (err) {
+      setDeclineError(err instanceof Error ? err.message : 'Unable to decline the booking.');
+    } finally {
+      setDeclineBusy(false);
+    }
+  };
+
+  const openEditTimeModal = (item: WebConsultationItem) => {
+    const [datePart, timePart] = item.scheduledTime.split(' at ');
+    setEditTarget(item);
+    setEditDate(datePart || realLifeDates[0].dateStr);
+    setEditTime(timePart || '');
+    setEditError(null);
+  };
+
+  const handleEditTimeConfirm = async () => {
+    if (!editTarget) return;
+    if (!editDate || !editTime) {
+      setEditError('Pick both a date and a time slot.');
+      return;
+    }
+    setEditBusy(true);
+    setEditError(null);
+    try {
+      const scheduledFor = await editAppointmentTime(editTarget, editDate, editTime);
+      patchConsultation(editTarget.id, { scheduledTime: scheduledFor });
+      setEditTarget(null);
+      const slots = await fetchBookedSlotKeys();
+      setBookedSlotKeys(slots);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Unable to reschedule the appointment.');
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  /* ── Fee & availability ─────────────────────────────────────────────── */
+
+  const openAvailabilityModal = () => {
+    setAvailFee(availability ? String(availability.fee) : '500');
+    setAvailSlots(availability ? [...availability.slots] : [...FALLBACK_SLOTS]);
+    setAvailSlotDraft('');
+    setAvailError(null);
+    setShowAvailabilityModal(true);
+  };
+
+  const handleAvailabilityConfirm = async () => {
+    const fee = Number(availFee);
+    if (!Number.isFinite(fee) || fee < 0) {
+      setAvailError('Enter a valid consultation fee.');
+      return;
+    }
+    if (availSlots.length === 0) {
+      setAvailError('Offer at least one time slot.');
+      return;
+    }
+    setAvailBusy(true);
+    setAvailError(null);
+    try {
+      await saveDoctorAvailability({ fee, slots: availSlots });
+      setAvailability({ fee, slots: availSlots });
+      setShowAvailabilityModal(false);
+    } catch (err) {
+      setAvailError(err instanceof Error ? err.message : 'Unable to save your availability.');
+    } finally {
+      setAvailBusy(false);
+    }
+  };
+
+  const addAvailabilitySlot = () => {
+    const slot = availSlotDraft.trim();
+    if (!slot) return;
+    if (availSlots.includes(slot)) {
+      setAvailError('That slot is already in your list.');
+      return;
+    }
+    setAvailSlots((prev) => [...prev, slot]);
+    setAvailSlotDraft('');
+    setAvailError(null);
+  };
+
   const handleConfirmSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleError(null);
@@ -190,14 +364,154 @@ export const ConsultationsView: React.FC = () => {
   };
 
   const upcomingConsultations = useMemo(
-    () => consultations.filter((c) => c.status !== 'Completed'),
+    () => consultations.filter((c) => (UPCOMING_STATUSES as readonly string[]).includes(c.rawStatus)),
+    [consultations],
+  );
+
+  const pastConsultations = useMemo(
+    () => consultations.filter((c) => !(UPCOMING_STATUSES as readonly string[]).includes(c.rawStatus)),
     [consultations],
   );
 
   const completedConsultations = useMemo(
-    () => consultations.filter((c) => c.status === 'Completed'),
+    () => consultations.filter((c) => c.rawStatus === 'completed'),
     [consultations],
   );
+
+  const statusPill = (item: WebConsultationItem) => {
+    switch (item.rawStatus) {
+      case 'awaiting_payment':
+        return <span className="status-pill status-pill-moderate">Awaiting Payment</span>;
+      case 'declined':
+        return <span className="status-pill status-pill-high">Declined</span>;
+      case 'confirmed':
+        return <span className="status-pill status-pill-green">Confirmed</span>;
+      case 'completed':
+        return <span className="status-pill status-pill-green">Completed</span>;
+      case 'cancelled':
+        return <span className="status-pill-grey">Cancelled</span>;
+      default:
+        return <span className="status-pill status-pill-blue">Awaiting Approval</span>;
+    }
+  };
+
+  const renderActions = (item: WebConsultationItem) => {
+    const busy = decisionBusy === item.id;
+    if (item.rawStatus === 'scheduled') {
+      return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="decide-btn decide-btn-approve"
+            disabled={busy}
+            onClick={() => void handleApprove(item)}
+          >
+            {busy ? 'Approving…' : '✓ Approve'}
+          </button>
+          <button
+            type="button"
+            className="decide-btn decide-btn-decline"
+            disabled={busy}
+            onClick={() => openDeclineModal(item)}
+          >
+            ✕ Decline
+          </button>
+          <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
+            🕐 Edit Time
+          </button>
+          <button
+            type="button"
+            className="view-case-btn"
+            style={{ background: '#5b6ef5' }}
+            onClick={() => setActiveSessionItem(item)}
+          >
+            💬 Message
+          </button>
+        </div>
+      );
+    }
+    if (item.rawStatus === 'awaiting_payment') {
+      return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309' }}>
+            Waiting for patient payment
+          </span>
+          <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
+            🕐 Edit Time
+          </button>
+          <button
+            type="button"
+            className="view-case-btn"
+            style={{ background: '#5b6ef5' }}
+            onClick={() => setActiveSessionItem(item)}
+          >
+            💬 Message
+          </button>
+        </div>
+      );
+    }
+    if (item.rawStatus === 'confirmed') {
+      return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="view-case-btn"
+            onClick={() => openEditTimeModal(item)}
+          >
+            🕐 Edit Time
+          </button>
+          <button
+            type="button"
+            className="view-case-btn"
+            style={{ background: '#5b6ef5' }}
+            onClick={() => setActiveSessionItem(item)}
+          >
+            💬 Message
+          </button>
+          <button
+            type="button"
+            className="start-session-btn"
+            onClick={() => {
+              setActiveSessionItem(item);
+              setShowVideoCall(true);
+            }}
+          >
+            📹 Join Call
+          </button>
+        </div>
+      );
+    }
+    if (item.rawStatus === 'completed') {
+      return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="view-case-btn"
+            onClick={() => setConsultTab('messages')}
+          >
+            💬 Message
+          </button>
+          <button
+            type="button"
+            className="view-case-btn"
+            onClick={() => setActiveSessionItem(item)}
+          >
+            View Case
+          </button>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="view-case-btn"
+        style={{ background: '#5b6ef5' }}
+        onClick={() => setActiveSessionItem(item)}
+      >
+        💬 Message
+      </button>
+    );
+  };
 
   if (loading) {
     return (
@@ -214,14 +528,16 @@ export const ConsultationsView: React.FC = () => {
       <header className="consultations-header">
         <div className="consultations-title-wrap">
           <h1>Consultations</h1>
-          <p>Manage consultations and provide recommendations</p>
+          <p>Approve requests, collect your fee, and run video sessions</p>
         </div>
 
         <div className="consultations-header-actions">
           <button type="button" className="bell-btn" title="Notifications">
             <span className="bell-icon" />
           </button>
-          {/* Schedule Consultation Button opens Manual Booking Modal */}
+          <button type="button" className="schedule-btn" onClick={openAvailabilityModal}>
+            ⚙ Fee &amp; Slots
+          </button>
           <button
             type="button"
             className="schedule-btn"
@@ -250,6 +566,23 @@ export const ConsultationsView: React.FC = () => {
           }}
         >
           {sessionError}
+        </div>
+      )}
+
+      {actionError && (
+        <div
+          style={{
+            marginBottom: '14px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+          }}
+        >
+          {actionError}
         </div>
       )}
 
@@ -282,10 +615,10 @@ export const ConsultationsView: React.FC = () => {
           </button>
           <button
             type="button"
-            className={`consult-tab-btn ${consultTab === 'completed' ? 'active' : ''}`}
-            onClick={() => setConsultTab('completed')}
+            className={`consult-tab-btn ${consultTab === 'history' ? 'active' : ''}`}
+            onClick={() => setConsultTab('history')}
           >
-            Completed ({completedConsultations.length})
+            History ({pastConsultations.length})
           </button>
           <button
             type="button"
@@ -358,9 +691,9 @@ export const ConsultationsView: React.FC = () => {
             )}
           </div>
         ) : (
-          /* UPCOMING AND COMPLETED LIST */
+          /* UPCOMING AND HISTORY LIST */
           <div className="consultation-items-list">
-            {(consultTab === 'upcoming' ? upcomingConsultations : completedConsultations).map((item) => (
+            {(consultTab === 'upcoming' ? upcomingConsultations : pastConsultations).map((item) => (
               <div key={item.id} className="consult-item-row">
                 <div className="consult-item-main">
                   <div className="consult-item-left">
@@ -373,51 +706,18 @@ export const ConsultationsView: React.FC = () => {
                   </div>
 
                   <div className="consult-item-right">
-                    {item.status === 'Completed' ? (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span className="status-pill-green">Completed</span>
-                        <button
-                          type="button"
-                          className="view-case-btn"
-                          onClick={() => setConsultTab('messages')}
-                        >
-                          💬 Message
-                        </button>
-                        <button
-                          type="button"
-                          className="view-case-btn"
-                          onClick={() => setActiveSessionItem(item)}
-                        >
-                          View Case
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span className="status-pill-blue">Scheduled</span>
-                        <button
-                          type="button"
-                          className="view-case-btn"
-                          style={{ background: '#5b6ef5' }}
-                          onClick={() => {
-                            setActiveSessionItem(item);
-                          }}
-                        >
-                          💬 Message Patient
-                        </button>
-                        <button
-                          type="button"
-                          className="start-session-btn"
-                          onClick={() => {
-                            setActiveSessionItem(item);
-                            setShowVideoCall(true);
-                          }}
-                        >
-                          Start Session
-                        </button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {statusPill(item)}
+                      {renderActions(item)}
+                    </div>
                   </div>
                 </div>
+
+                {item.rawStatus === 'declined' && item.declineReason ? (
+                  <div className="appointment-reason">
+                    <strong>Declined:</strong> {item.declineReason}
+                  </div>
+                ) : null}
 
                 {item.notes ? (
                   <div className="consult-notes-box">
@@ -426,9 +726,307 @@ export const ConsultationsView: React.FC = () => {
                 ) : null}
               </div>
             ))}
+            {(consultTab === 'upcoming' ? upcomingConsultations : pastConsultations).length === 0 && (
+              <p className="empty-table">
+                {consultTab === 'upcoming'
+                  ? 'No upcoming consultations.'
+                  : 'No past consultations yet.'}
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {/* DECLINE MODAL (reason required) */}
+      {declineTarget && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Decline appointment</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  {declineTarget.patientName} · {declineTarget.scheduledTime}
+                </p>
+              </div>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                onClick={() => setDeclineTarget(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              Reason for declining * (the patient sees this)
+            </label>
+            <textarea
+              rows={4}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
+              placeholder="e.g. I am fully booked that day — please pick another slot."
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+            />
+
+            {declineError && (
+              <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+                {declineError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="decide-btn decide-btn-quiet"
+                style={{ flex: 1 }}
+                onClick={() => setDeclineTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="decide-btn decide-btn-decline"
+                style={{ flex: 2 }}
+                disabled={declineBusy}
+                onClick={() => void handleDeclineConfirm()}
+              >
+                {declineBusy ? 'Declining…' : 'Decline Appointment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT APPOINTMENT TIME MODAL */}
+      {editTarget && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Edit appointment time</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  {editTarget.patientName} · currently {editTarget.scheduledTime}
+                </p>
+              </div>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                onClick={() => setEditTarget(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Date *
+              </label>
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+                {realLifeDates.map((d) => (
+                  <button
+                    key={d.label}
+                    type="button"
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: editDate === d.dateStr ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
+                      background: editDate === d.dateStr ? '#eeedfe' : '#ffffff',
+                      color: editDate === d.dateStr ? '#5b6ef5' : '#1e293b',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onClick={() => {
+                      setEditDate(d.dateStr);
+                      setEditTime('');
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: '14px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Time slot *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                {timeSlots.map((t) => {
+                  const slotKey = `${editDate}_${t}`;
+                  const isBooked = bookedSlotKeys.has(slotKey) && slotKey !== editTarget.scheduledTime.replace(' at ', '_');
+                  const isSelected = editTime === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={isBooked}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: '8px',
+                        border: isBooked ? '1px dashed #cbd5e1' : isSelected ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
+                        background: isBooked ? '#f1f5f9' : isSelected ? '#5b6ef5' : '#ffffff',
+                        color: isBooked ? '#94a3b8' : isSelected ? '#ffffff' : '#1e293b',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                        textAlign: 'center',
+                      }}
+                      onClick={() => !isBooked && setEditTime(t)}
+                    >
+                      {t} {isBooked ? '🔒' : ''}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {editError && (
+              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+                {editError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="decide-btn decide-btn-quiet"
+                style={{ flex: 1 }}
+                onClick={() => setEditTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="start-session-btn"
+                style={{ flex: 2, padding: '12px' }}
+                disabled={editBusy || !editTime}
+                onClick={() => void handleEditTimeConfirm()}
+              >
+                {editBusy ? 'Saving…' : 'Save New Time'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FEE & AVAILABILITY MODAL */}
+      {showAvailabilityModal && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box" style={{ height: 'auto', maxHeight: '90vh', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Fee &amp; Availability</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  Patients pay your fee to confirm a booking; your slots drive their booking grid.
+                </p>
+              </div>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#64748b' }}
+                onClick={() => setShowAvailabilityModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              Consultation fee (₱) *
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={50}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+              value={availFee}
+              onChange={(e) => setAvailFee(e.target.value)}
+            />
+
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', margin: '16px 0 6px' }}>
+              Offered time slots *
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+              {availSlots.map((slot) => (
+                <span
+                  key={slot}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#eeedfe',
+                    color: '#5b6ef5',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {slot}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${slot}`}
+                    style={{ background: 'none', border: 'none', color: '#5b6ef5', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', padding: 0 }}
+                    onClick={() => setAvailSlots((prev) => prev.filter((s) => s !== slot))}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {availSlots.length === 0 && (
+                <span style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 700 }}>
+                  No slots yet — add at least one.
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder="e.g. 7:00 AM"
+                style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                value={availSlotDraft}
+                onChange={(e) => setAvailSlotDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addAvailabilitySlot();
+                  }
+                }}
+              />
+              <button type="button" className="view-case-btn" onClick={addAvailabilitySlot}>
+                + Add Slot
+              </button>
+            </div>
+
+            {availError && (
+              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
+                {availError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="decide-btn decide-btn-quiet"
+                style={{ flex: 1 }}
+                onClick={() => setShowAvailabilityModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="start-session-btn"
+                style={{ flex: 2, padding: '12px' }}
+                disabled={availBusy}
+                onClick={() => void handleAvailabilityConfirm()}
+              >
+                {availBusy ? 'Saving…' : 'Save Fee & Slots'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MANUAL SCHEDULE CONSULTATION BOOKING MODAL */}
       {showScheduleModal && (
@@ -553,15 +1151,15 @@ export const ConsultationsView: React.FC = () => {
                         style={{
                           padding: '8px 14px',
                           borderRadius: '8px',
-                          border: selectedDate === d.label ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
-                          background: selectedDate === d.label ? '#eeedfe' : '#ffffff',
-                          color: selectedDate === d.label ? '#5b6ef5' : '#1e293b',
+                          border: selectedDate === d.dateStr ? '2px solid #5b6ef5' : '1px solid #cbd5e1',
+                          background: selectedDate === d.dateStr ? '#eeedfe' : '#ffffff',
+                          color: selectedDate === d.dateStr ? '#5b6ef5' : '#1e293b',
                           fontWeight: 700,
                           fontSize: '0.82rem',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
                         }}
-                        onClick={() => setSelectedDate(d.label)}
+                        onClick={() => setSelectedDate(d.dateStr)}
                       >
                         {d.label}
                       </button>
@@ -659,7 +1257,7 @@ export const ConsultationsView: React.FC = () => {
             <div className="web-chat-modal-header">
               <div>
                 <h3>Consultation Session: {activeSessionItem.patientName}</h3>
-                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime}</p>
+                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime} · {activeSessionItem.status}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -692,7 +1290,7 @@ export const ConsultationsView: React.FC = () => {
 
             {showVideoCall ? (
               <div style={{ flex: 1, padding: '10px' }}>
-                <DoctorVideoCallPanel />
+                <JitsiCallPanel appointment={activeSessionItem} onBack={() => setShowVideoCall(false)} />
               </div>
             ) : (
               <>

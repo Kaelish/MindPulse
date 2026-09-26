@@ -10,7 +10,19 @@ export interface TelehealthClinician {
   bio: string;
   tags: string[];
   email: string;
+  fee: number;
+  slots: string[];
 }
+
+export type AppointmentState =
+  | 'scheduled'
+  | 'awaiting_payment'
+  | 'declined'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled';
+
+export type PaymentMethod = 'card' | 'gcash' | 'maya';
 
 export interface BookedAppointment {
   id: string;
@@ -19,6 +31,19 @@ export interface BookedAppointment {
   specialty: string;
   selectedDate: string; // e.g. "Aug 31, 2026"
   selectedTime: string; // e.g. "3:30 PM"
+  createdAt: string;
+}
+
+/** One of the patient's appointment rows plus the doctor's current fee. */
+export interface MyBooking {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  specialty: string;
+  scheduledFor: string; // "Aug 31, 2026 at 3:30 PM"
+  status: AppointmentState;
+  declineReason?: string;
+  fee: number;
   createdAt: string;
 }
 
@@ -37,12 +62,13 @@ const requireUser = async () => {
   return user;
 };
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export const generateRealLifeDates = (): { label: string; dateStr: string }[] => {
   const dates: { label: string; dateStr: string }[] = [];
   const today = new Date();
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   for (let i = 0; i < 6; i++) {
     const d = new Date(today);
@@ -51,15 +77,49 @@ export const generateRealLifeDates = (): { label: string; dateStr: string }[] =>
     const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : daysOfWeek[d.getDay()];
     dates.push({
       label: dayName,
-      dateStr: `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+      dateStr: `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
     });
   }
 
   return dates;
 };
 
+/**
+ * True when the slot's start time has already passed in real time.
+ * Formats: dateStr "Oct 2, 2026" (as produced by generateRealLifeDates) and
+ * time "5:30 PM". Unknown formats are treated as bookable.
+ */
+export const isSlotInPast = (dateStr: string, time: string, now: Date = new Date()): boolean => {
+  const dateMatch = /^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/.exec(dateStr.trim());
+  const timeMatch = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec(time.trim());
+  if (!dateMatch || !timeMatch) return false;
+
+  const monthIdx = MONTHS_SHORT.indexOf(
+    dateMatch[1][0].toUpperCase() + dateMatch[1].slice(1, 3).toLowerCase(),
+  );
+  if (monthIdx < 0) return false;
+
+  let hour = Number(timeMatch[1]) % 12;
+  if (timeMatch[3].toLowerCase() === 'pm') hour += 12;
+  const slotStart = new Date(
+    Number(dateMatch[3]),
+    monthIdx,
+    Number(dateMatch[2]),
+    hour,
+    Number(timeMatch[2]),
+  );
+
+  return slotStart.getTime() <= now.getTime();
+};
+
 const CLINICIAN_SELECT =
-  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags, is_verified )';
+  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags, is_verified, consultation_fee, available_slots )';
+
+const DEFAULT_SLOTS = [
+  '9:00 AM', '10:30 AM', '11:45 AM',
+  '1:30 PM', '2:15 PM', '3:30 PM',
+  '4:45 PM', '5:30 PM',
+];
 
 const toClinician = (row: any): TelehealthClinician => {
   const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
@@ -84,6 +144,11 @@ const toClinician = (row: any): TelehealthClinician => {
     bio: embedded?.bio || 'No bio provided yet.',
     tags: Array.isArray(embedded?.tags) ? embedded.tags : [],
     email: row.email || '',
+    fee: embedded?.consultation_fee != null ? Number(embedded.consultation_fee) : 500,
+    slots:
+      Array.isArray(embedded?.available_slots) && embedded.available_slots.length > 0
+        ? embedded.available_slots
+        : [...DEFAULT_SLOTS],
   };
 };
 
@@ -143,7 +208,7 @@ export const fetchBookedSlotKeys = async (doctorId: string): Promise<Set<string>
     .from('appointments')
     .select('scheduled_for')
     .eq('doctor_id', doctorId)
-    .in('status', ['scheduled', 'confirmed']);
+    .in('status', ['scheduled', 'awaiting_payment', 'confirmed']);
 
   if (error) {
     throw new Error(error.message);
@@ -188,8 +253,8 @@ export const saveBookedAppointment = async (
   if (prefs.appointmentReminders) {
     const { error: patientNoticeError } = await supabase.from('notifications').insert({
       user_id: user.id,
-      title: 'Appointment Booked',
-      message: `Your session with ${appointment.clinicianName} is set for ${appointment.selectedDate} at ${appointment.selectedTime}.`,
+      title: 'Appointment Requested',
+      message: `Your request for ${appointment.selectedDate} at ${appointment.selectedTime} with ${appointment.clinicianName} was sent for approval.`,
       type: 'appointment',
     });
     void patientNoticeError;
@@ -198,7 +263,7 @@ export const saveBookedAppointment = async (
   const { error: doctorNoticeError } = await supabase.from('notifications').insert({
     user_id: appointment.clinicianId,
     title: 'New Appointment Request',
-    message: `A student requested a session on ${appointment.selectedDate} at ${appointment.selectedTime}.`,
+    message: `A student requested a session on ${appointment.selectedDate} at ${appointment.selectedTime}. Approve or decline it from the Consultations page.`,
     type: 'appointment',
   });
   void doctorNoticeError;
@@ -265,5 +330,188 @@ export const sendChatMessage = async (
     timestamp: row.created_at
       ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : 'Just now',
+  };
+};
+
+// ─── My bookings (patient side of the telehealth workflow) ───────────────────
+
+export const fetchMyBookings = async (): Promise<MyBooking[]> => {
+  const user = await requireUser();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, doctor_id, scheduled_for, status, decline_reason, created_at')
+    .eq('patient_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) return [];
+
+  const doctorIds = Array.from(new Set(rows.map((row) => String(row.doctor_id))));
+  const { data: doctors, error: doctorsError } = await supabase
+    .from('profiles')
+    .select(CLINICIAN_SELECT)
+    .in('id', doctorIds);
+  if (doctorsError) {
+    throw new Error(doctorsError.message);
+  }
+  const doctorById = new Map<string, any>();
+  (doctors ?? []).forEach((doc) => doctorById.set(String(doc.id), doc));
+
+  return rows.map((row) => {
+    const doc = doctorById.get(String(row.doctor_id));
+    const clinician = doc ? toClinician(doc) : null;
+    return {
+      id: String(row.id),
+      doctorId: String(row.doctor_id),
+      doctorName: clinician?.name ?? 'Clinician',
+      specialty: clinician?.specialty ?? 'Mental Health Professional',
+      scheduledFor: String(row.scheduled_for || ''),
+      status: (row.status ?? 'scheduled') as AppointmentState,
+      declineReason: row.decline_reason ?? undefined,
+      fee: clinician?.fee ?? 500,
+      createdAt: row.created_at ?? new Date().toISOString(),
+    } satisfies MyBooking;
+  });
+};
+
+/**
+ * Deterministic Jitsi room per appointment — the patient and the doctor always
+ * meet in the same room (mindpulse-appt-<appointment id>).
+ */
+export const fetchVideoRoom = async (appointmentId: string, doctorId: string): Promise<string> => {
+  const user = await requireUser();
+  const roomName = `mindpulse-appt-${appointmentId}`;
+  const meetingUrl = `https://meet.jit.si/${roomName}`;
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('video_sessions')
+    .select('room_name, meeting_url')
+    .eq('appointment_id', appointmentId)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (existing?.meeting_url || existing?.room_name) {
+    return existing.meeting_url || `https://meet.jit.si/${existing.room_name}`;
+  }
+
+  const { error } = await supabase.from('video_sessions').insert({
+    patient_id: user.id,
+    doctor_id: doctorId,
+    appointment_id: appointmentId,
+    room_name: roomName,
+    meeting_url: meetingUrl,
+    status: 'pending',
+  });
+  if (error) {
+    const { data: again } = await supabase
+      .from('video_sessions')
+      .select('room_name, meeting_url')
+      .eq('appointment_id', appointmentId)
+      .maybeSingle();
+    if (again?.meeting_url || again?.room_name) {
+      return again.meeting_url || `https://meet.jit.si/${again.room_name}`;
+    }
+    throw new Error(error.message);
+  }
+  return meetingUrl;
+};
+
+/**
+ * Mock online payment: records a paid payment, flips the appointment to
+ * confirmed (a DB guard requires the payment row to exist first), notifies the
+ * doctor, and returns the shared video room URL.
+ */
+export const payForAppointment = async (
+  booking: MyBooking,
+  method: PaymentMethod,
+): Promise<string> => {
+  const user = await requireUser();
+
+  // Idempotency: a retry after a half-failed attempt must not double-charge.
+  const { data: prior, error: priorError } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('appointment_id', booking.id)
+    .eq('status', 'paid')
+    .limit(1);
+  if (priorError) throw new Error(priorError.message);
+
+  if (!prior || prior.length === 0) {
+    const reference = `MP-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
+    const { data: payment, error: payError } = await supabase
+      .from('payments')
+      .insert({
+        appointment_id: booking.id,
+        patient_id: user.id,
+        amount: booking.fee,
+        method,
+        reference,
+      })
+      .select('id')
+      .single();
+    if (payError || !payment) {
+      throw new Error(payError?.message || 'The payment could not be processed. Please try again.');
+    }
+  }
+
+  const { error: confirmError } = await supabase
+    .from('appointments')
+    .update({ status: 'confirmed' })
+    .eq('id', booking.id)
+    .eq('status', 'awaiting_payment');
+  if (confirmError) {
+    throw new Error(confirmError.message || 'Your payment was recorded but confirmation failed.');
+  }
+
+  const { error: noticeError } = await supabase.from('notifications').insert({
+    user_id: booking.doctorId,
+    title: 'Payment Received',
+    message: `Payment received for the session on ${booking.scheduledFor}. The appointment is confirmed.`,
+    type: 'appointment',
+  });
+  void noticeError;
+
+  return fetchVideoRoom(booking.id, booking.doctorId);
+};
+
+// ─── Realtime refreshes ──────────────────────────────────────────────────────
+
+/** Fires whenever this patient's appointments change (approval, decline, edits). */
+export const subscribeToMyAppointments = async (
+  onChange: () => void,
+): Promise<() => void> => {
+  const user = await requireUser();
+  const channel = supabase
+    .channel(`my-appointments-${user.id}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'appointments', filter: `patient_id=eq.${user.id}` },
+      onChange,
+    )
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+};
+
+/** Fires whenever a new message lands in this patient's inbox. */
+export const subscribeToMyMessages = async (onChange: () => void): Promise<() => void> => {
+  const user = await requireUser();
+  const channel = supabase
+    .channel(`my-messages-${user.id}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `patient_id=eq.${user.id}` },
+      onChange,
+    )
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
   };
 };

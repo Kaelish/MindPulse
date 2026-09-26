@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DoctorVideoCallPanel } from '../../components/DoctorVideoCallPanel';
+import { JitsiCallPanel } from '../../components/JitsiCallPanel';
 import { fetchDoctorDashboard, DoctorDashboardData } from '../../services/doctorDashboard';
+import { WebConsultationItem, fetchWebConsultations } from '../../services/consultations';
 
 interface SummaryCard {
   label: string;
@@ -18,6 +19,21 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onSign
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [nextCall, setNextCall] = useState<WebConsultationItem | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchWebConsultations()
+      .then((rows) => {
+        if (active) setNextCall(rows.find((row) => row.rawStatus === 'confirmed') ?? null);
+      })
+      .catch(() => {
+        if (active) setNextCall(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
 
   useEffect(() => {
     let active = true;
@@ -181,7 +197,22 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onSign
               </div>
             </article>
 
-            <DoctorVideoCallPanel />
+            {nextCall ? (
+              <JitsiCallPanel appointment={nextCall} />
+            ) : (
+              <article className="panel call-panel" aria-label="Video consultation">
+                <div className="panel-header">
+                  <h2>Video consultation</h2>
+                </div>
+                <div className="call-card">
+                  <div className="call-main-label">No confirmed sessions</div>
+                  <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
+                    Approve a booking in Consultations — once the patient pays, the join-call button
+                    for that session appears here.
+                  </p>
+                </div>
+              </article>
+            )}
           </section>
         </>
       )}

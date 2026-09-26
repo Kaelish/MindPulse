@@ -124,6 +124,7 @@ function App() {
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
   const [registeredUserName, setRegisteredUserName] = useState('friend');
   const [callDoctorId, setCallDoctorId] = useState<string | null>(null);
+  const [callAppointmentId, setCallAppointmentId] = useState<string | null>(null);
 
   /* Splash → Onboarding after 3 s */
   useEffect(() => {
@@ -304,6 +305,7 @@ function App() {
           <View style={styles.screenWithBackButton}>
             <VideoCallScreen
               doctorId={callDoctorId ?? undefined}
+              appointmentId={callAppointmentId ?? undefined}
               onEndCall={() => {
                 setCurrentTab('home');
                 changeScreen('main');
@@ -398,8 +400,9 @@ function App() {
                   <View style={styles.subScreenWrap}>
                     <AppointmentBookingScreen
                       onNavigateTab={handleTabNavigate}
-                      onStartVideoCall={(doctorId) => {
+                      onStartVideoCall={(doctorId, appointmentId) => {
                         setCallDoctorId(doctorId ?? null);
+                        setCallAppointmentId(appointmentId ?? null);
                         changeScreen('call');
                       }}
                     />
