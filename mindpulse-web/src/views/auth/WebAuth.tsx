@@ -12,6 +12,7 @@ interface WebAuthProps {
 export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -464,7 +465,22 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
             </label>
             <label>
               <span>Password</span>
-              <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <span className="auth-password-field">
+                <input type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button
+                  className="auth-password-toggle"
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {!showPassword && <path d="m4 4 16 16" />}
+                  </svg>
+                </button>
+              </span>
             </label>
             {errorMessage && <p className="auth-error">{errorMessage}</p>}
             {infoMessage && <p className="auth-error">{infoMessage}</p>}

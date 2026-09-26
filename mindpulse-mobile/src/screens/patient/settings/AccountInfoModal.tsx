@@ -80,6 +80,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Success message toast
@@ -299,8 +300,13 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     placeholder="Enter current password"
                     placeholderTextColor={Colors.textHint}
                   />
-                  <Pressable onPress={() => setShowCurrentPassword(v => !v)} style={styles.eyeBtn}>
-                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#64748B" />
+                  <Pressable
+                    onPress={() => setShowCurrentPassword(v => !v)}
+                    style={styles.eyeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                  >
+                    <Ionicons name={showCurrentPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
                   </Pressable>
                 </View>
               </View>
@@ -316,22 +322,37 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     placeholder="Enter new password"
                     placeholderTextColor={Colors.textHint}
                   />
-                  <Pressable onPress={() => setShowNewPassword(v => !v)} style={styles.eyeBtn}>
-                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#64748B" />
+                  <Pressable
+                    onPress={() => setShowNewPassword(v => !v)}
+                    style={styles.eyeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={showNewPassword ? 'Hide new password' : 'Show new password'}
+                  >
+                    <Ionicons name={showNewPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
                   </Pressable>
                 </View>
               </View>
 
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Confirm New Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showNewPassword}
-                  placeholder="Confirm new password"
-                  placeholderTextColor={Colors.textHint}
-                />
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Confirm new password"
+                    placeholderTextColor={Colors.textHint}
+                  />
+                  <Pressable
+                    onPress={() => setShowConfirmPassword(v => !v)}
+                    style={styles.eyeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                  >
+                    <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
+                  </Pressable>
+                </View>
               </View>
 
               {/* Password Requirements List */}
