@@ -55,14 +55,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   const share = (count: number) => (assessed ? Math.round((count / assessed) * 100) : 0);
   const bands = stats
     ? [
-        { key: 'low', label: 'Low (0–30)', count: stats.low, color: '#33bd91' },
-        { key: 'moderate', label: 'Moderate (31–60)', count: stats.moderate, color: '#ff9f16' },
-        { key: 'high', label: 'High (61–100)', count: stats.high, color: '#ff414b' },
+        { key: 'low', label: 'Low (0–30)', count: stats.low, color: '#0f9d63' },
+        { key: 'moderate', label: 'Moderate (31–60)', count: stats.moderate, color: '#e0a63a' },
+        { key: 'high', label: 'High (61–100)', count: stats.high, color: '#d64550' },
       ]
     : [];
 
   return (
-    <div className="doctor-shell">
+    <div className="doctor-shell admin-scope">
       <AdminSidebar onSignOut={onSignOut} activeView={activeView} onNavigate={setActiveView} />
 
       <main className="admin-dashboard-main">
@@ -80,20 +80,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
         </header>
 
         {!isLoading && !loadError && stats && stats.pendingApprovals > 0 && (
-          <div
-            style={{
-              background: '#fff7ec',
-              border: '1px solid #ffcf8f',
-              borderRadius: '12px',
-              padding: '14px 18px',
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '18px',
-            }}
-          >
-            <span style={{ color: '#8a5a00', fontWeight: 700 }}>
+          <div className="admin-alert">
+            <span>
               {stats.pendingApprovals} doctor registration{stats.pendingApprovals === 1 ? '' : 's'} waiting
               for approval.
             </span>
@@ -126,12 +114,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
                 ) : (
                   <div className="admin-dashboard-chart">
                     {bands.map((band) => (
-                      <div key={band.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <span style={{ width: '128px', color: '#718096', fontSize: '0.66rem' }}>{band.label}</span>
-                        <span style={{ flex: 1, height: '16px', borderRadius: '8px', background: '#eef2f6', overflow: 'hidden' }}>
-                          <span style={{ display: 'block', height: '100%', width: `${share(band.count)}%`, background: band.color, borderRadius: '8px' }} />
+                      <div key={band.key} className="admin-dashboard-bar">
+                        <span className="admin-dashboard-bar-label">{band.label}</span>
+                        <span className="admin-dashboard-bar-track">
+                          <span
+                            className="admin-dashboard-bar-fill"
+                            style={{ width: `${share(band.count)}%`, background: band.color }}
+                          />
                         </span>
-                        <strong style={{ width: '92px', textAlign: 'right', color: '#202938', fontSize: '0.68rem' }}>
+                        <strong className="admin-dashboard-bar-value">
                           {band.count} ({share(band.count)}%)
                         </strong>
                       </div>

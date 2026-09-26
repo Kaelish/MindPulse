@@ -7,8 +7,6 @@
 .admin-dashboard-actions .ghost-button { min-width: 76px; }
 .admin-dashboard-actions .primary-button { min-width: 164px; }
 .admin-dashboard-notification-wrap { position: relative; }
-.admin-dashboard-notification { width: 38px; min-height: 38px !important; padding: 0 !important; border: 0; background: transparent; color: #334155; font-size: 1.25rem; }
-.admin-dashboard-notification > span:last-child { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; }
 .admin-dashboard-notification-panel { position: absolute; top: 46px; right: 0; z-index: 10; width: 260px; padding: 14px; border: 1px solid #e1e7ee; border-radius: 10px; background: #fff; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14); }
 .admin-dashboard-notification-panel strong { display: block; color: #202938; font-size: 0.78rem; }
 .admin-dashboard-notification-panel p { margin: 8px 0 0; color: #718096; font-size: 0.68rem; line-height: 1.4; }

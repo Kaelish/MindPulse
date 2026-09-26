@@ -119,7 +119,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
   );
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell admin-scope">
       <AdminSidebar onSignOut={onSignOut} activeView="settings" onNavigate={onNavigate} />
       <main className="admin-main admin-settings-main">
         <header className="admin-settings-header">
