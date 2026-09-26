@@ -1,5 +1,4 @@
 import { supabase } from '../supabase/client';
-import { requireUserId } from './session';
 import type { AppRole, StressLevel } from '../types/supabase';
 
 const notConfigured = () =>
@@ -219,32 +218,6 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       contactNumber: professional?.contact_number ?? null,
     };
   });
-};
-
-/**
- * Changes another account's role. RLS (profiles_update_self_or_admin) is the
- * real gate: non-admins get a policy violation from Supabase.
- */
-export const setAccountRole = async (userId: string, role: AppRole): Promise<void> => {
-  if (!supabase) throw notConfigured();
-  const me = await requireUserId();
-  if (me === userId) throw new Error('You cannot change your own role.');
-
-  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
-  if (error) throw new Error(error.message);
-
-  if (role === 'doctor') {
-    const { data: existing, error: lookupError } = await supabase
-      .from('doctor_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1);
-    if (lookupError) throw new Error(lookupError.message);
-    if (!existing || existing.length === 0) {
-      const { error: insertError } = await supabase.from('doctor_profiles').insert({ user_id: userId });
-      if (insertError) throw new Error(insertError.message);
-    }
-  }
 };
 
 export const setDoctorVerified = async (userId: string, verified: boolean): Promise<void> => {

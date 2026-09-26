@@ -1,11 +1,11 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { NotificationSettings } from '../../components/NotificationSettings';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { OwnProfile, OwnProfilePatch, changeOwnPassword, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
+import { passwordPolicyError } from '../../services/adminSettings';
 
-type ProfileTab = 'personal' | 'professional' | 'security' | 'notifications';
+type ProfileTab = 'personal' | 'professional' | 'security';
 
 type EditableField = 'first_name' | 'last_name' | 'department' | 'program' | 'year_level' | 'student_no' | 'sex' | 'living_situation';
 
@@ -46,7 +46,7 @@ const formatDate = (value: string) => {
 
 interface AdminProfileSettingsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> = ({ onSignOut, onNavigate }) => {
@@ -97,8 +97,9 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     setSaveError('');
 
     if (activeTab === 'security') {
-      if (newPassword.length < 8) {
-        setSaveError('New password must be at least 8 characters.');
+      const policyError = passwordPolicyError(newPassword);
+      if (policyError) {
+        setSaveError(policyError);
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -190,8 +191,8 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
     <main className="admin-main admin-profile-main">
       {header}
-      <section className="admin-profile-card"><div className="admin-avatar-large">●</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
-      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security'], ['notifications', 'Notifications']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
+      <section className="admin-profile-card"><div className="admin-avatar-large">â—</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>âœ‰ {profile.email || 'No email'} &nbsp;&nbsp; â–£ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : 'âœŽ Edit Profile'}</button>}</section>
+      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">{saved}</div>}
       {saveError && <div className="error-inline">{saveError}</div>}
       <form className="admin-profile-form" onSubmit={save}>
@@ -213,12 +214,11 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
         </ProfileSection>}
         {activeTab === 'security' && <ProfileSection title="Change Password">
           <Field label="Current Password" value={currentPassword} editing onChange={(value) => setCurrentPassword(value)} placeholder="Enter current password" type="password" />
-          <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password (min 8 characters)" type="password" />
+          <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
           <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
         </ProfileSection>}
-        {activeTab === 'notifications' && <NotificationSettings />}
-        {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : '▣ Save Changes'}</button>}
-        {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
+        {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Savingâ€¦' : 'â–£ Save Changes'}</button>}
+        {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updatingâ€¦' : 'â™§ Change Password'}</button>}
       </form>
     </main>
   </div>;

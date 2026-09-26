@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase/client';
 import { getCurrentUserRole } from './services/session';
+import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
@@ -14,6 +15,8 @@ import { WebAuth, AuthScreen } from './views/auth/WebAuth';
 import './App.css';
 
 type Portal = 'doctor' | 'admin' | 'pending' | 'unauthorized';
+
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>('consultations');
@@ -189,6 +192,31 @@ function App() {
     setPortal(null);
     setAuthScreen('login');
   };
+
+  // Apply saved Settings (theme, density, document title) as soon as the app boots.
+  useEffect(() => {
+    applyAdminSettings(loadAdminSettings());
+  }, []);
+
+  // Security → Session Timeout: auto sign-out after 30 minutes of inactivity.
+  useEffect(() => {
+    if (portal !== 'admin' || !loadAdminSettings().security.sessionTimeout) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reset = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void signOut();
+      }, SESSION_TIMEOUT_MS);
+    };
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'click', 'touchstart'];
+    events.forEach((event) => window.addEventListener(event, reset, { passive: true }));
+    reset();
+    return () => {
+      if (timer) clearTimeout(timer);
+      events.forEach((event) => window.removeEventListener(event, reset));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portal]);
 
   if (portal === 'doctor') return <DoctorPortal onSignOut={signOut} />;
   if (portal === 'admin') return <AdminDashboardView onSignOut={signOut} />;

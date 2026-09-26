@@ -1815,3 +1815,196 @@ button {
   cursor: pointer;
 }
 
+
+
+/* ================= Dark theme (Settings -> General -> Dark Mode) ================= */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d1424;
+  --text: #e7ebf3;
+  --muted: #96a2b8;
+  --line: #26314a;
+  --success-soft: #10362a;
+  --warning-soft: #39300f;
+  --danger-soft: #3c1f1f;
+}
+
+html[data-theme='dark'] body,
+html[data-theme='dark'] .admin-shell,
+html[data-theme='dark'] .admin-main,
+html[data-theme='dark'] .admin-users-main,
+html[data-theme='dark'] .admin-dashboard-main,
+html[data-theme='dark'] .admin-profile-main,
+html[data-theme='dark'] .admin-settings-main,
+html[data-theme='dark'] .analytics-main,
+html[data-theme='dark'] .detection-results-main,
+html[data-theme='dark'] .assessment-results-main,
+html[data-theme='dark'] .recommendations-main {
+  background: var(--bg);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .panel,
+html[data-theme='dark'] .role-card,
+html[data-theme='dark'] .admin-stats article,
+html[data-theme='dark'] .admin-profile-card,
+html[data-theme='dark'] .admin-profile-section,
+html[data-theme='dark'] .user-summary-card,
+html[data-theme='dark'] .account-list-panel,
+html[data-theme='dark'] .add-account-menu,
+html[data-theme='dark'] .notification-panel,
+html[data-theme='dark'] .account-modal,
+html[data-theme='dark'] .admin-dashboard-notification-panel,
+html[data-theme='dark'] .admin-dashboard-stat,
+html[data-theme='dark'] .admin-dashboard-panel,
+html[data-theme='dark'] .admin-dashboard-actions .ghost-button,
+html[data-theme='dark'] .analytics-metric-card,
+html[data-theme='dark'] .analytics-panel,
+html[data-theme='dark'] .analytics-icon-button,
+html[data-theme='dark'] .analytics-export-button,
+html[data-theme='dark'] .analytics-select,
+html[data-theme='dark'] .analytics-signout-button,
+html[data-theme='dark'] .assessment-summary-card,
+html[data-theme='dark'] .assessment-filter-bar,
+html[data-theme='dark'] .assessment-list-panel,
+html[data-theme='dark'] .assessment-card,
+html[data-theme='dark'] .detection-summary-card,
+html[data-theme='dark'] .detection-filter-bar,
+html[data-theme='dark'] .detection-results-panel,
+html[data-theme='dark'] .calendar-popover,
+html[data-theme='dark'] .view-details-button,
+html[data-theme='dark'] .consult-stat-card,
+html[data-theme='dark'] .consultations-panel-card,
+html[data-theme='dark'] .admin-health {
+  background: #141d31;
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .admin-dashboard-header h1,
+html[data-theme='dark'] .admin-users-topbar h1,
+html[data-theme='dark'] .admin-dashboard-eyebrow,
+html[data-theme='dark'] .admin-users-main .eyebrow,
+html[data-theme='dark'] .admin-dashboard-panel h2,
+html[data-theme='dark'] .admin-dashboard-stat strong,
+html[data-theme='dark'] .admin-dashboard-legend span,
+html[data-theme='dark'] .admin-dashboard-notification-panel strong,
+html[data-theme='dark'] .admin-list p,
+html[data-theme='dark'] .admin-profile-card h2,
+html[data-theme='dark'] .admin-profile-section h2,
+html[data-theme='dark'] .admin-profile-section h3,
+html[data-theme='dark'] .profile-field span,
+html[data-theme='dark'] .user-summary-card strong,
+html[data-theme='dark'] .account-name-cell,
+html[data-theme='dark'] .analytics-header h1,
+html[data-theme='dark'] .analytics-metric-card strong,
+html[data-theme='dark'] .analytics-panel h2,
+html[data-theme='dark'] h1,
+html[data-theme='dark'] h2,
+html[data-theme='dark'] h3 {
+  color: var(--text);
+}
+
+html[data-theme='dark'] .admin-users-main .page-subtitle,
+html[data-theme='dark'] .user-summary-card span,
+html[data-theme='dark'] .admin-dashboard-stat span,
+html[data-theme='dark'] .admin-dashboard-stat small,
+html[data-theme='dark'] .admin-dashboard-notification-panel p,
+html[data-theme='dark'] .admin-dashboard-legend,
+html[data-theme='dark'] .admin-dashboard-chart-labels,
+html[data-theme='dark'] .admin-dashboard-chart-times,
+html[data-theme='dark'] .contact-cell,
+html[data-theme='dark'] .role-tab,
+html[data-theme='dark'] .account-table th,
+html[data-theme='dark'] .account-table td,
+html[data-theme='dark'] .account-modal label,
+html[data-theme='dark'] .notification-item,
+html[data-theme='dark'] .notification-heading button,
+html[data-theme='dark'] .empty-notifications,
+html[data-theme='dark'] .empty-table,
+html[data-theme='dark'] .analytics-header p,
+html[data-theme='dark'] .analytics-metric-heading,
+html[data-theme='dark'] .analytics-y-axis,
+html[data-theme='dark'] .analytics-x-axis,
+html[data-theme='dark'] .profile-field input,
+html[data-theme='dark'] .form-helper,
+html[data-theme='dark'] .admin-account small {
+  color: var(--muted);
+}
+
+html[data-theme='dark'] .notification-heading,
+html[data-theme='dark'] .notification-item,
+html[data-theme='dark'] .account-list-toolbar,
+html[data-theme='dark'] .admin-profile-tabs,
+html[data-theme='dark'] .data-table td,
+html[data-theme='dark'] .data-table th,
+html[data-theme='dark'] .admin-list > div,
+html[data-theme='dark'] .health-line,
+html[data-theme='dark'] .analytics-grid-lines i,
+html[data-theme='dark'] .analytics-placeholder-bars {
+  border-color: var(--line);
+}
+
+html[data-theme='dark'] input:not([type='checkbox']):not([type='radio']):not([type='range']),
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] .profile-field input:not([readonly]),
+html[data-theme='dark'] .doctor-search,
+html[data-theme='dark'] .account-modal input,
+html[data-theme='dark'] .account-modal select,
+html[data-theme='dark'] .auth-field input {
+  background: #0f1729;
+  border-color: var(--line);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .admin-dashboard-donut::before,
+html[data-theme='dark'] .analytics-donut::before {
+  background: #141d31;
+}
+
+html[data-theme='dark'] .admin-dashboard-chart {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 40px, #23304a 41px);
+}
+
+html[data-theme='dark'] .sidebar {
+  background: #101a2e;
+  border-right-color: var(--line);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .nav-item {
+  color: #cdd6e4;
+}
+
+html[data-theme='dark'] .brand-subtitle {
+  color: rgba(231, 235, 243, 0.6);
+}
+
+html[data-theme='dark'] .admin-sidebar {
+  background: #101a2e;
+  border-right-color: var(--line);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .admin-sidebar .nav-item {
+  color: #cdd6e4;
+}
+
+html[data-theme='dark'] .admin-sidebar .nav-item:hover {
+  background: #182338;
+  color: var(--text);
+}
+
+html[data-theme='dark'] .admin-sidebar .nav-item.active {
+  background: #0e3f4c;
+  color: #7fd6e4;
+}
+
+html[data-theme='dark'] .admin-sidebar .nav-panel {
+  border-top-color: var(--line);
+}
+
+html[data-theme='dark'] .admin-account strong {
+  color: var(--text);
+}

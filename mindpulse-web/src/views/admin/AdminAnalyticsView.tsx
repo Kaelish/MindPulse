@@ -7,7 +7,7 @@ import './AdminAnalyticsView.css';
 
 interface AdminAnalyticsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -80,7 +80,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
   const metrics = analytics
     ? [
         { label: 'Total Assessments', value: String(analytics.totalSessions), note: 'All recorded sessions' },
-        { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : '—', note: 'Score out of 100' },
+        { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : 'â€”', note: 'Score out of 100' },
         { label: 'Assessed Students', value: `${analytics.assessedStudents} of ${analytics.students}`, note: `${analytics.students} students` },
         { label: 'Engagement', value: `${analytics.engagementPct}%`, note: `${analytics.assessedStudents} of ${analytics.students} students` },
       ]
@@ -119,7 +119,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
               <option value="1">This Month</option>
             </select>
             <button type="button" className="analytics-export-button" onClick={exportReport} disabled={exporting}>
-              {exporting ? 'Exporting…' : '⇩ Export Report'}
+              {exporting ? 'Exportingâ€¦' : 'â‡© Export Report'}
             </button>
             <button type="button" className="analytics-signout-button" onClick={onSignOut}>Sign Out</button>
           </div>

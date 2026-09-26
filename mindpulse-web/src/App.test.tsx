@@ -26,14 +26,14 @@ test('registers a doctor account with professional details for approval', async 
   fireEvent.change(screen.getByLabelText('Specialization'), { target: { value: 'Clinical Psychologist' } });
   fireEvent.change(screen.getByLabelText('Contact number'), { target: { value: '09171234567' } });
   fireEvent.change(screen.getByLabelText('Short bio'), { target: { value: 'Six years of practice.' } });
-  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Pass1234!' } });
-  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Pass1234!' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Str0ng!Pass2026' } });
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Str0ng!Pass2026' } });
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
   await waitFor(() => {
     expect(mockedSignUp).toHaveBeenCalledWith({
       email: 'maria@example.com',
-      password: 'Pass1234!',
+      password: 'Str0ng!Pass2026',
       options: {
         data: {
           role: 'doctor',

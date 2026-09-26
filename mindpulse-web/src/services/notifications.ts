@@ -1,9 +1,5 @@
 import { supabase } from '../supabase/client';
-import {
-  AdminNotificationPrefs,
-  feedNotificationEnabled,
-  loadAdminNotificationPrefs,
-} from './adminNotificationPrefs';
+import { AdminSystemSettings, feedNotificationEnabled, loadAdminSettings } from './adminSettings';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -42,13 +38,13 @@ const timeAgo = (iso: string): string => {
 
 /**
  * Notifications for the bell panel. RLS decides visibility (administrators
- * see every row, per notifications_select); the admin's saved preferences
- * (Profile Settings → Notifications) then filter disabled categories — rows
- * hidden by settings are returned as `hiddenCount` so the UI can say so.
+ * see every row, per notifications_select); the saved Settings → Notification
+ * preferences then filter disabled categories — rows hidden by settings are
+ * returned as `hiddenCount` so the UI can say so.
  */
 export const fetchFeedNotifications = async (
   limit = 15,
-  prefs: AdminNotificationPrefs = loadAdminNotificationPrefs(),
+  settings: AdminSystemSettings = loadAdminSettings(),
 ): Promise<{ notifications: FeedNotification[]; hiddenCount: number }> => {
   if (!supabase) throw notConfigured();
 
@@ -70,7 +66,7 @@ export const fetchFeedNotifications = async (
     createdAt: row.created_at,
   }));
 
-  const visible = mapped.filter((row) => feedNotificationEnabled(row, prefs));
+  const visible = mapped.filter((row) => feedNotificationEnabled(row, settings));
   return { notifications: visible, hiddenCount: mapped.length - visible.length };
 };
 

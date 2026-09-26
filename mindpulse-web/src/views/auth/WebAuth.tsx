@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabase/client';
+import { passwordPolicyError } from '../../services/adminSettings';
 
 export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm' | 'pending';
 
@@ -32,8 +33,9 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
       setErrorMessage('Please complete all required fields to create your doctor account.');
       return;
     }
-    if (password.length < 8) {
-      setErrorMessage('Please choose a password with at least 8 characters.');
+    const policyError = passwordPolicyError(password);
+    if (policyError) {
+      setErrorMessage(policyError);
       return;
     }
     if (password !== confirmPassword) {
@@ -155,8 +157,9 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
     setErrorMessage('');
     setInfoMessage('');
 
-    if (!password.trim() || password.length < 8) {
-      setErrorMessage('Please choose a password with at least 8 characters.');
+    const resetPolicyError = passwordPolicyError(password);
+    if (!password.trim() || resetPolicyError) {
+      setErrorMessage(resetPolicyError ?? 'Please enter a new password.');
       return;
     }
     if (password !== confirmPassword) {

@@ -1,0 +1,408 @@
+.admin-settings-main {
+  padding: 26px 32px 48px;
+  overflow-y: auto;
+}
+
+.admin-settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-settings-header h1 {
+  margin: 0;
+  color: var(--as-text, #111827);
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.admin-settings-header p {
+  margin: 4px 0 0;
+  color: var(--as-muted, #6b7280);
+  font-size: 0.82rem;
+}
+
+.admin-settings-header .account-actions {
+  position: relative;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 18px;
+  border: 1px solid var(--as-border, #e5e7eb);
+  border-radius: 12px;
+  background: var(--as-surface-2, #f3f4f6);
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 9px 8px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--as-muted, #4b5563);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-tab.active {
+  background: var(--as-surface, #fff);
+  color: var(--as-text, #111827);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px 28px;
+  border: 1px solid var(--as-border, #e5e7eb);
+  border-radius: 14px;
+  background: var(--as-surface, #fff);
+}
+
+.settings-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-card-heading.plain {
+  margin-top: -4px;
+}
+
+.settings-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--as-icon-bg, #eef2ff);
+  color: var(--as-accent, #4f6bd8);
+  font-size: 1rem;
+}
+
+.settings-card-heading h2 {
+  margin: 0;
+  color: var(--as-text, #111827);
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.settings-card-heading p {
+  margin: 3px 0 0;
+  color: var(--as-muted, #6b7280);
+  font-size: 0.78rem;
+}
+
+.settings-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field span {
+  color: var(--as-text, #111827);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.settings-field input,
+.settings-email-value input,
+.settings-select-head select {
+  padding: 10px 12px;
+  border: 1px solid var(--as-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--as-field, #f9fafb);
+  color: var(--as-text, #111827);
+  font-size: 0.82rem;
+}
+
+.settings-field input.readonly {
+  background: var(--as-field-readonly, #eceef1);
+  color: var(--as-muted, #6b7280);
+}
+
+.settings-divider {
+  height: 1px;
+  background: var(--as-border, #e5e7eb);
+}
+
+.settings-group-label {
+  margin: 4px 0 -6px;
+  color: var(--as-text, #111827);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.settings-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-toggle-info strong {
+  color: var(--as-text, #111827);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.settings-toggle-info span {
+  color: var(--as-muted, #6b7280);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.settings-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  border: none;
+  border-radius: 11px;
+  background: #cbd5e1;
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.settings-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: left 0.15s ease;
+}
+
+.settings-switch:checked {
+  background: #0e7f96;
+}
+
+.settings-switch:checked::after {
+  left: 20px;
+}
+
+.settings-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-slider-label {
+  color: var(--as-text, #111827);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settings-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-slider-row input[type='range'] {
+  flex: 1;
+  accent-color: #0e7f96;
+  cursor: pointer;
+}
+
+.settings-slider-row strong {
+  width: 48px;
+  text-align: right;
+  color: var(--as-text, #111827);
+  font-size: 0.86rem;
+}
+
+.settings-slider p,
+.settings-select-row p {
+  margin: 0;
+  color: var(--as-muted, #6b7280);
+  font-size: 0.74rem;
+}
+
+.settings-select-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 0;
+}
+
+.settings-select-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-select-head span {
+  color: var(--as-text, #111827);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settings-select-head select {
+  min-width: 260px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.settings-email-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.settings-email-row > span {
+  color: var(--as-text, #111827);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settings-email-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-email-value span {
+  color: var(--as-muted, #6b7280);
+}
+
+.settings-email-value input {
+  flex: 1;
+}
+
+.settings-api-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--as-success-bg, #e7f7ef);
+}
+
+.settings-api-key-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-api-key-row strong {
+  color: var(--as-text, #111827);
+  font-size: 0.84rem;
+}
+
+.settings-api-key-row code {
+  color: var(--as-muted, #4b5563);
+  font-size: 0.76rem;
+}
+
+.settings-export-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.settings-export-state {
+  color: var(--as-muted, #6b7280);
+  font-size: 0.76rem;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.settings-dirty {
+  margin-right: auto;
+  color: #b45309;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.settings-saved {
+  margin-right: auto;
+  color: #0e7f96;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.settings-button {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-button.primary {
+  border: 1px solid #0e7f96;
+  background: #0e7f96;
+  color: #fff;
+}
+
+.settings-button.primary:hover {
+  background: #0b6c80;
+}
+
+.settings-button.secondary {
+  border: 1px solid var(--as-border, #e5e7eb);
+  background: var(--as-surface, #fff);
+  color: var(--as-text, #374151);
+}
+
+/* Compact View (General tab) tightens data tables app-wide. */
+body.compact-view .data-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+body.compact-view .data-table th {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+/* Dark theme tokens for the settings surface itself. */
+html[data-theme='dark'] .admin-settings-main {
+  --as-surface: #1b2331;
+  --as-surface-2: #141b27;
+  --as-border: #2c3648;
+  --as-text: #e6eaf2;
+  --as-muted: #9aa6bb;
+  --as-field: #121826;
+  --as-field-readonly: #232c3c;
+  --as-icon-bg: #232d42;
+  --as-success-bg: #14332a;
+}
