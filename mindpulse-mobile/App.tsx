@@ -13,10 +13,14 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingNavigator } from './src/screens/onboarding/OnboardingNavigator';
 import { AuthScreen } from './src/screens/auth/AuthScreen';
+import { PortalNoticeScreen } from './src/screens/auth/PortalNoticeScreen';
 import { HealthSetupScreen } from './src/screens/onboarding/HealthSetupScreen';
 import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardScreen';
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
 import { PlantProgressScreen } from './src/screens/patient/PlantProgressScreen';
+import { DoctorDashboardScreen } from './src/screens/doctor/DoctorDashboardScreen';
+import { DoctorConsultationsScreen } from './src/screens/doctor/DoctorConsultationsScreen';
+import { DoctorProfileScreen } from './src/screens/doctor/DoctorProfileScreen';
 import { AssessmentNavigator } from './src/screens/assessment/AssessmentNavigator';
 import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
@@ -27,6 +31,7 @@ import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTa
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { recordPlantSession } from './src/services/plantProgress';
+import { AppRole, getCurrentUserRole } from './src/services/session';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
 
@@ -123,6 +128,7 @@ function App() {
   const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
   const [registeredUserName, setRegisteredUserName] = useState('friend');
+  const [userRole, setUserRole] = useState<AppRole>(null);
   const [callDoctorId, setCallDoctorId] = useState<string | null>(null);
   const [callAppointmentId, setCallAppointmentId] = useState<string | null>(null);
 
@@ -172,7 +178,7 @@ function App() {
     }
     if (screenMode === 'call') {
       changeScreen('main');
-      setCurrentTab('home');
+      setCurrentTab(userRole === 'doctor' ? 'clinics' : 'home');
       return;
     }
     if (screenMode === 'faceScan') {
@@ -248,12 +254,29 @@ function App() {
       console.warn('Failed to fetch user name', e);
     }
 
+    // Role decides the portal: doctor → doctor shell, admin → web notice,
+    // pending → approval gate, everything else → the student app.
+    const role = await getCurrentUserRole();
+    setUserRole(role);
+
     if (isNewUser) {
       changeScreen('healthSetup');
+    } else if (role === 'doctor') {
+      setCurrentTab('home');
+      changeScreen('main');
+    } else if (role === 'admin' || role === 'pending') {
+      changeScreen('main');
     } else {
       setCurrentTab('home');
       changeScreen('main');
     }
+  };
+
+  /* ── Sign out from role-gated screens (doctor profile / portal notice) ── */
+  const handlePortalSignOut = () => {
+    setUserRole(null);
+    setAuthTab('login');
+    changeScreen('auth');
   };
 
   /* ─────────── Render ─────────── */
@@ -306,8 +329,10 @@ function App() {
             <VideoCallScreen
               doctorId={callDoctorId ?? undefined}
               appointmentId={callAppointmentId ?? undefined}
+              role={userRole === 'doctor' ? 'doctor' : 'patient'}
               onEndCall={() => {
-                setCurrentTab('home');
+                // Doctors return to whichever doctor tab they left; patients go home.
+                if (userRole !== 'doctor') setCurrentTab('home');
                 changeScreen('main');
               }}
               onNavigateTab={handleTabNavigate}
@@ -360,8 +385,49 @@ function App() {
           <PlantProgressScreen onBack={handleBack} />
         )}
 
-        {/* ── MAIN PATIENT PORTAL ── */}
-        {screenMode === 'main' && (
+        {/* ── MAIN DOCTOR PORTAL ── */}
+        {screenMode === 'main' && userRole === 'doctor' && (
+          <View style={styles.mainWrapper}>
+            <View style={styles.tabViewArea}>
+              {currentTab === 'profile' && <DoctorProfileScreen onSignOut={handlePortalSignOut} />}
+              {currentTab === 'clinics' && (
+                <DoctorConsultationsScreen
+                  onStartVideoCall={(appointmentId) => {
+                    setCallDoctorId(null);
+                    setCallAppointmentId(appointmentId);
+                    changeScreen('call');
+                  }}
+                />
+              )}
+              {currentTab !== 'profile' && currentTab !== 'clinics' && (
+                <DoctorDashboardScreen
+                  onNavigate={handleTabNavigate}
+                  onStartVideoCall={(appointmentId) => {
+                    setCallDoctorId(null);
+                    setCallAppointmentId(appointmentId);
+                    changeScreen('call');
+                  }}
+                />
+              )}
+            </View>
+            <BottomTabBar
+              variant="doctor"
+              activeTab={currentTab === 'analysis' ? 'home' : currentTab}
+              onNavigate={handleTabNavigate}
+            />
+          </View>
+        )}
+
+        {/* ── ADMIN / PENDING GATE ── */}
+        {screenMode === 'main' && (userRole === 'admin' || userRole === 'pending') && (
+          <PortalNoticeScreen kind={userRole === 'admin' ? 'admin' : 'pending'} onSignOut={handlePortalSignOut} />
+        )}
+
+        {/* ── MAIN STUDENT PORTAL ── */}
+        {screenMode === 'main' &&
+          userRole !== 'doctor' &&
+          userRole !== 'admin' &&
+          userRole !== 'pending' && (
           <View style={styles.mainWrapper}>
             <View style={styles.tabViewArea}>
               {currentTab === 'home' && (
@@ -370,6 +436,7 @@ function App() {
                   onNavigate={handleTabNavigate}
                   onStartVideoCall={(doctorId) => {
                         setCallDoctorId(doctorId ?? null);
+                        setCallAppointmentId(null);
                         changeScreen('call');
                       }}
                   onRunSurvey={() => setCurrentTab('profile')}
@@ -382,6 +449,7 @@ function App() {
                   onNavigateHome={() => setCurrentTab('home')}
                   onNavigateTab={handleTabNavigate}
                   onSignOut={() => {
+                    setUserRole(null);
                     setAuthTab('login');
                     changeScreen('auth');
                   }}

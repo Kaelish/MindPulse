@@ -15,10 +15,17 @@ import {
   fetchMyBookings,
   fetchVideoRoom,
 } from '../../services/appointments';
+import {
+  DoctorCallBooking,
+  fetchDoctorCallBooking,
+  getDoctorVideoRoomUrl,
+} from '../../services/doctorConsultations';
 
 interface VideoCallScreenProps {
   doctorId?: string;
   appointmentId?: string;
+  /** 'doctor' renders the doctor portal variant (tab bar, gating, room logic). */
+  role?: 'patient' | 'doctor';
   onEndCall?: () => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
@@ -32,17 +39,53 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
+interface LobbyView {
+  id: string;
+  counterpartName: string;
+  counterpartSub: string;
+  scheduledFor: string;
+  status: string;
+  declineReason?: string;
+  fee: number;
+  roomDoctorId?: string;
+}
+
+const fromPatientBooking = (booking: MyBooking): LobbyView => ({
+  id: booking.id,
+  counterpartName: booking.doctorName,
+  counterpartSub: booking.specialty,
+  scheduledFor: booking.scheduledFor,
+  status: booking.status,
+  declineReason: booking.declineReason,
+  fee: booking.fee,
+  roomDoctorId: booking.doctorId,
+});
+
+const fromDoctorBooking = (booking: DoctorCallBooking): LobbyView => ({
+  id: booking.id,
+  counterpartName: booking.counterpartName,
+  counterpartSub: booking.specialtyLabel,
+  scheduledFor: booking.scheduledFor,
+  status: booking.status,
+  declineReason: booking.declineReason,
+  fee: booking.fee,
+});
+
 /**
  * Lobby for the appointment's real Jitsi room. The actual call opens in the
  * phone's browser at the deterministic room mindpulse-appt-<appointment id>.
+ * Patients and doctors each get their own variant of the same lobby.
  */
 export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   doctorId,
   appointmentId,
+  role = 'patient',
   onEndCall,
   onNavigateTab,
 }) => {
-  const [booking, setBooking] = useState<MyBooking | null>(null);
+  const isDoctor = role === 'doctor';
+  const [booking, setBooking] = useState<LobbyView | null>(null);
+  const [doctorBooking, setDoctorBooking] = useState<DoctorCallBooking | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -52,6 +95,17 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
     setLoading(true);
     setLoadError(null);
     try {
+      if (isDoctor) {
+        if (!appointmentId) {
+          setLoadError('No appointment was passed to this call.');
+          return;
+        }
+        const loaded = await fetchDoctorCallBooking(appointmentId);
+        setDoctorBooking(loaded);
+        setBooking(fromDoctorBooking(loaded));
+        return;
+      }
+
       const all = await fetchMyBookings();
       const byId = appointmentId ? all.find((b) => b.id === appointmentId) : undefined;
       const byDoctor = doctorId ? all.filter((b) => b.doctorId === doctorId) : [];
@@ -60,7 +114,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         byDoctor.find((b) => b.status === 'confirmed') ??
         byDoctor[0] ??
         null;
-      setBooking(picked);
+      setBooking(picked ? fromPatientBooking(picked) : null);
       if (!picked) {
         setLoadError('No appointment found for this call.');
       }
@@ -69,7 +123,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [appointmentId, doctorId]);
+  }, [appointmentId, doctorId, isDoctor]);
 
   useEffect(() => {
     void loadBooking();
@@ -79,7 +133,13 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
     if (!booking || joining) return;
     setJoining(true);
     try {
-      const url = await fetchVideoRoom(booking.id, booking.doctorId);
+      const url = isDoctor
+        ? doctorBooking
+          ? await getDoctorVideoRoomUrl(doctorBooking)
+          : (() => {
+              throw new Error('No appointment was passed to this call.');
+            })()
+        : await fetchVideoRoom(booking.id, booking.roomDoctorId ?? '');
       const supported = await Linking.canOpenURL(url).catch(() => true);
       if (supported === false) {
         throw new Error('This device cannot open the video room link.');
@@ -96,13 +156,35 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
     }
   };
 
-  const initials = (booking?.doctorName ?? '')
+  const initials = (booking?.counterpartName ?? '')
     .split(' ')
     .filter(Boolean)
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase() || 'DR';
+    .toUpperCase() || (isDoctor ? 'PT' : 'DR');
+
+  const lockedText = () => {
+    if (!booking) return '';
+    if (isDoctor) {
+      return booking.status === 'awaiting_payment'
+        ? 'Waiting for the patient to pay the consultation fee to confirm this session.'
+        : booking.status === 'scheduled'
+          ? 'You have not approved this booking request yet — approve it from Consultations.'
+          : booking.status === 'declined'
+            ? booking.declineReason
+              ? `You declined this booking: ${booking.declineReason}`
+              : 'You declined this booking.'
+            : 'This call unlocks once the appointment is confirmed.';
+    }
+    return booking.status === 'awaiting_payment'
+      ? 'Pay the consultation fee in Bookings to unlock this call.'
+      : booking.status === 'declined'
+        ? booking.declineReason
+          ? `This booking was declined: ${booking.declineReason}`
+          : 'This booking was declined.'
+        : 'This call unlocks once the doctor approves your request and you complete the payment.';
+  };
 
   return (
     <View style={styles.root}>
@@ -117,8 +199,10 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
           <Text style={styles.lobbyError}>{loadError ?? 'No appointment found for this call.'}</Text>
         ) : (
           <>
-            <Text style={styles.lobbyDoctor}>{booking.doctorName}</Text>
-            <Text style={styles.lobbySpec}>{booking.specialty}</Text>
+            <Text style={styles.lobbyDoctor}>{booking.counterpartName}</Text>
+            <Text style={styles.lobbySpec}>
+              {isDoctor ? `${booking.counterpartSub} · with you` : booking.counterpartSub}
+            </Text>
 
             <View style={styles.infoBox}>
               <View style={styles.infoRow}>
@@ -166,15 +250,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                 </TouchableOpacity>
               )
             ) : (
-              <Text style={styles.lockedText}>
-                {booking.status === 'awaiting_payment'
-                  ? 'Pay the consultation fee in Bookings to unlock this call.'
-                  : booking.status === 'declined'
-                    ? booking.declineReason
-                      ? `This booking was declined: ${booking.declineReason}`
-                      : 'This booking was declined.'
-                    : 'This call unlocks once the doctor approves your request and you complete the payment.'}
-              </Text>
+              <Text style={styles.lockedText}>{lockedText()}</Text>
             )}
           </>
         )}
@@ -185,7 +261,11 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         </TouchableOpacity>
       </View>
 
-      <BottomTabBar activeTab="clinics" onNavigate={(tab) => onNavigateTab?.(tab)} />
+      <BottomTabBar
+        variant={isDoctor ? 'doctor' : 'patient'}
+        activeTab="clinics"
+        onNavigate={(tab) => onNavigateTab?.(tab)}
+      />
     </View>
   );
 };

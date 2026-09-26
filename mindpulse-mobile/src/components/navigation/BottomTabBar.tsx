@@ -9,18 +9,28 @@ export type BottomNavTab = 'home' | 'analysis' | 'clinics' | 'profile';
 interface BottomTabBarProps {
   activeTab: BottomNavTab;
   onNavigate?: (screen: BottomNavTab) => void;
+  /** 'doctor' renders the doctor portal tabs (Home / Consults / Profile). */
+  variant?: 'patient' | 'doctor';
 }
 
 const ACTIVE_COLOR = '#FFFFFF';
 const INACTIVE_COLOR = 'rgba(255,255,255,0.45)';
 
-export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onNavigate }) => {
-  const tabs: { key: BottomNavTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
-    { key: 'home', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
-    { key: 'analysis', label: 'Analysis', icon: 'pulse-outline', activeIcon: 'pulse' },
-    { key: 'clinics', label: 'Clinics', icon: 'medical-outline', activeIcon: 'medical' },
-    { key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
-  ];
+const PATIENT_TABS: { key: BottomNavTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'home', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
+  { key: 'analysis', label: 'Analysis', icon: 'pulse-outline', activeIcon: 'pulse' },
+  { key: 'clinics', label: 'Clinics', icon: 'medical-outline', activeIcon: 'medical' },
+  { key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
+];
+
+const DOCTOR_TABS: { key: BottomNavTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'home', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
+  { key: 'clinics', label: 'Consults', icon: 'calendar-outline', activeIcon: 'calendar' },
+  { key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
+];
+
+export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onNavigate, variant = 'patient' }) => {
+  const tabs = variant === 'doctor' ? DOCTOR_TABS : PATIENT_TABS;
 
   return (
     <View style={styles.bottomNav}>

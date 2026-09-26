@@ -1,0 +1,407 @@
+import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
+
+export interface DoctorConsultation {
+  id: string;
+  patientId: string;
+  patientName: string;
+  studentId: string;
+  scheduledTime: string;
+  status: 'Scheduled' | 'Awaiting Payment' | 'Declined' | 'Confirmed' | 'Completed' | 'Cancelled';
+  rawStatus: 'scheduled' | 'awaiting_payment' | 'declined' | 'confirmed' | 'completed' | 'cancelled';
+  declineReason?: string;
+  notes?: string;
+  avatarInitials: string;
+  patientEmail: string;
+}
+
+export interface DoctorAvailability {
+  fee: number;
+  slots: string[];
+}
+
+export interface DoctorChatMessage {
+  id: string;
+  sender: 'doctor' | 'patient';
+  text: string;
+  timestamp: string;
+}
+
+export interface DoctorCallBooking {
+  id: string;
+  counterpartName: string;
+  counterpartId: string;
+  specialtyLabel: string;
+  scheduledFor: string;
+  status: 'scheduled' | 'awaiting_payment' | 'declined' | 'confirmed' | 'completed' | 'cancelled';
+  declineReason?: string;
+  fee: number;
+}
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'PT';
+
+const statusLabel = (status: string): DoctorConsultation['status'] =>
+  status === 'awaiting_payment'
+    ? 'Awaiting Payment'
+    : status === 'declined'
+      ? 'Declined'
+      : status === 'confirmed'
+        ? 'Confirmed'
+        : status === 'completed'
+          ? 'Completed'
+          : status === 'cancelled'
+            ? 'Cancelled'
+            : 'Scheduled';
+
+/** Statuses that still hold the time slot for this doctor. */
+const ACTIVE_STATUSES = ['scheduled', 'awaiting_payment', 'confirmed', 'completed'] as const;
+
+const DEFAULT_SLOTS = [
+  '9:00 AM', '10:30 AM', '11:45 AM',
+  '1:30 PM', '2:15 PM', '3:30 PM',
+  '4:45 PM', '5:30 PM',
+];
+
+/** Best-effort notification row — a failed notice never blocks the workflow. */
+const notifyAppointment = async (userId: string, title: string, message: string): Promise<void> => {
+  const { error } = await supabase
+    .from('notifications')
+    .insert({ user_id: userId, title, message, type: 'appointment' });
+  void error;
+};
+
+/** This doctor's appointments joined against patient profiles. */
+export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> => {
+  const doctorId = await requireUserId();
+
+  const { data: appointments, error } = await supabase
+    .from('appointments')
+    .select('id, patient_id, scheduled_for, status, notes, decline_reason, created_at')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  const rows = (appointments ?? []) as {
+    id: string;
+    patient_id: string;
+    scheduled_for: string | null;
+    status: string;
+    notes: string | null;
+    decline_reason: string | null;
+  }[];
+  if (!rows.length) return [];
+
+  const patientIds = Array.from(new Set(rows.map((row) => row.patient_id)));
+  const { data: patientProfiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no')
+    .in('id', patientIds);
+  if (profilesError) throw new Error(profilesError.message);
+
+  const byId = new Map(
+    ((patientProfiles ?? []) as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      student_no: string | null;
+    }[]).map((profile) => [profile.id, profile]),
+  );
+
+  return rows.map((row) => {
+    const profile = byId.get(row.patient_id);
+    const name = profile
+      ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient'
+      : 'Unknown patient';
+    return {
+      id: row.id,
+      patientId: row.patient_id,
+      patientName: name,
+      studentId: profile?.student_no || 'No student no.',
+      scheduledTime: row.scheduled_for || 'No date set',
+      status: statusLabel(row.status),
+      rawStatus: row.status as DoctorConsultation['rawStatus'],
+      declineReason: row.decline_reason ?? undefined,
+      notes: row.notes ?? undefined,
+      avatarInitials: initialsOf(name),
+      patientEmail: profile?.email || 'No email',
+    };
+  });
+};
+
+/** Doctor approves the booking; the patient must then pay to confirm it. */
+export const approveAppointment = async (item: DoctorConsultation): Promise<void> => {
+  const { error } = await supabase
+    .from('appointments')
+    .update({ status: 'awaiting_payment' })
+    .eq('id', item.id)
+    .eq('status', 'scheduled');
+  if (error) throw new Error(error.message);
+
+  await notifyAppointment(
+    item.patientId,
+    'Appointment Approved',
+    `Your session on ${item.scheduledTime} was approved. Pay the consultation fee to confirm it.`,
+  );
+};
+
+/** Doctor declines the booking — a reason is required (enforced here and in the DB). */
+export const declineAppointment = async (item: DoctorConsultation, reason: string): Promise<void> => {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error('A reason is required when declining an appointment.');
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({ status: 'declined', decline_reason: trimmed })
+    .eq('id', item.id)
+    .eq('status', 'scheduled');
+  if (error) throw new Error(error.message);
+
+  await notifyAppointment(
+    item.patientId,
+    'Appointment Declined',
+    `Your session on ${item.scheduledTime} was declined: ${trimmed}`,
+  );
+};
+
+/** Doctor moves an appointment to a different date/time; the payment stands. */
+export const editAppointmentTime = async (
+  item: DoctorConsultation,
+  dateStr: string,
+  timeStr: string,
+): Promise<string> => {
+  const doctorId = await requireUserId();
+  const scheduledFor = `${dateStr} at ${timeStr}`;
+
+  const { data: existing, error: slotError } = await supabase
+    .from('appointments')
+    .select('id')
+    .eq('doctor_id', doctorId)
+    .eq('scheduled_for', scheduledFor)
+    .in('status', [...ACTIVE_STATUSES])
+    .neq('id', item.id)
+    .limit(1);
+  if (slotError) throw new Error(slotError.message);
+  if (existing && existing.length > 0) {
+    throw new Error(`That time slot (${scheduledFor}) is already booked.`);
+  }
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({ scheduled_for: scheduledFor })
+    .eq('id', item.id);
+  if (error) throw new Error(error.message);
+
+  await notifyAppointment(item.patientId, 'Appointment Rescheduled', `Your session was moved to ${scheduledFor}.`);
+  return scheduledFor;
+};
+
+/** This doctor's consultation fee and offered time slots. */
+export const fetchDoctorAvailability = async (): Promise<DoctorAvailability> => {
+  const doctorId = await requireUserId();
+
+  const { data, error } = await supabase
+    .from('doctor_profiles')
+    .select('consultation_fee, available_slots')
+    .eq('user_id', doctorId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  return {
+    fee: data?.consultation_fee != null ? Number(data.consultation_fee) : 500,
+    slots:
+      Array.isArray(data?.available_slots) && (data!.available_slots as string[]).length > 0
+        ? (data!.available_slots as string[])
+        : [...DEFAULT_SLOTS],
+  };
+};
+
+/** Doctor updates their fee and offered slots; the patient booking grid reads both. */
+export const saveDoctorAvailability = async (availability: DoctorAvailability): Promise<void> => {
+  const doctorId = await requireUserId();
+  const fee = Number(availability.fee);
+  if (!Number.isFinite(fee) || fee < 0) throw new Error('Enter a valid consultation fee.');
+  const slots = availability.slots.map((slot) => slot.trim()).filter(Boolean);
+  if (slots.length === 0) throw new Error('Offer at least one time slot.');
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('doctor_profiles')
+    .select('user_id')
+    .eq('user_id', doctorId)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+
+  const payload = { consultation_fee: fee, available_slots: slots };
+  const { error } = existing
+    ? await supabase.from('doctor_profiles').update(payload).eq('user_id', doctorId)
+    : await supabase.from('doctor_profiles').insert({ user_id: doctorId, ...payload });
+  if (error) throw new Error(error.message);
+};
+
+// ─── Doctor-side messaging ────────────────────────────────────────────────────
+
+export const fetchDoctorChatMessages = async (patientId: string): Promise<DoctorChatMessage[]> => {
+  const doctorId = await requireUserId();
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('id, sender, text, created_at')
+    .eq('clinician_id', doctorId)
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as { id: string; sender: string; text: string; created_at: string }[]).map((row) => ({
+    id: row.id,
+    sender: row.sender === 'patient' ? 'patient' : 'doctor',
+    text: row.text,
+    timestamp: row.created_at
+      ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Just now',
+  }));
+};
+
+export const sendDoctorChatMessage = async (patientId: string, text: string): Promise<DoctorChatMessage> => {
+  const doctorId = await requireUserId();
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert({ clinician_id: doctorId, patient_id: patientId, sender: 'doctor', text })
+    .select('id, sender, text, created_at')
+    .single();
+  if (error) throw new Error(error.message);
+
+  return {
+    id: data.id,
+    sender: 'doctor',
+    text: data.text,
+    timestamp: data.created_at
+      ? new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Just now',
+  };
+};
+
+// ─── Video call lobby data ────────────────────────────────────────────────────
+
+/**
+ * Everything the mobile call lobby needs when the signed-in DOCTOR joins:
+ * the appointment, the patient's display name, and the doctor's own fee.
+ */
+export const fetchDoctorCallBooking = async (appointmentId: string): Promise<DoctorCallBooking> => {
+  const doctorId = await requireUserId();
+
+  const { data: appointment, error } = await supabase
+    .from('appointments')
+    .select('id, patient_id, doctor_id, scheduled_for, status, decline_reason')
+    .eq('id', appointmentId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!appointment) throw new Error('No appointment found for this call.');
+
+  const [{ data: patient }, { data: doctorProfile }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', appointment.patient_id)
+      .maybeSingle(),
+    supabase
+      .from('doctor_profiles')
+      .select('specialization, consultation_fee')
+      .eq('user_id', doctorId)
+      .maybeSingle(),
+  ]);
+
+  const patientName = patient
+    ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.email || 'Unknown patient'
+    : 'Unknown patient';
+
+  return {
+    id: String(appointment.id),
+    counterpartId: String(appointment.patient_id),
+    counterpartName: patientName,
+    specialtyLabel: doctorProfile?.specialization || 'Telehealth Consultation',
+    scheduledFor: String(appointment.scheduled_for || ''),
+    status: appointment.status as DoctorCallBooking['status'],
+    declineReason: appointment.decline_reason ?? undefined,
+    fee: doctorProfile?.consultation_fee != null ? Number(doctorProfile.consultation_fee) : 500,
+  };
+};
+
+/**
+ * Deterministic Jitsi room per appointment — both sides compute the same URL,
+ * so the patient and the doctor always meet in the same room.
+ */
+export const getDoctorVideoRoomUrl = async (booking: DoctorCallBooking): Promise<string> => {
+  const doctorId = await requireUserId();
+  const roomName = `mindpulse-appt-${booking.id}`;
+  const meetingUrl = `https://meet.jit.si/${roomName}`;
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('video_sessions')
+    .select('room_name, meeting_url')
+    .eq('appointment_id', booking.id)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (existing?.meeting_url || existing?.room_name) {
+    return existing.meeting_url || `https://meet.jit.si/${existing.room_name}`;
+  }
+
+  const { error } = await supabase.from('video_sessions').insert({
+    patient_id: booking.counterpartId,
+    doctor_id: doctorId,
+    appointment_id: booking.id,
+    room_name: roomName,
+    meeting_url: meetingUrl,
+    status: 'pending',
+  });
+  if (error) {
+    const { data: again } = await supabase
+      .from('video_sessions')
+      .select('room_name, meeting_url')
+      .eq('appointment_id', booking.id)
+      .maybeSingle();
+    if (again?.meeting_url || again?.room_name) {
+      return again.meeting_url || `https://meet.jit.si/${again.room_name}`;
+    }
+    throw new Error(error.message);
+  }
+  return meetingUrl;
+};
+
+// ─── Realtime refreshes (doctor side) ────────────────────────────────────────
+
+/** Fires whenever any of this doctor's appointments change (bookings, payments, edits). */
+export const subscribeToDoctorAppointments = async (onChange: () => void): Promise<() => void> => {
+  const doctorId = await requireUserId();
+  const channel = supabase
+    .channel(`doctor-appointments-${doctorId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'appointments', filter: `doctor_id=eq.${doctorId}` },
+      onChange,
+    )
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+};
+
+/** Fires whenever a new patient message lands in this doctor's inbox. */
+export const subscribeToDoctorMessages = async (onChange: () => void): Promise<() => void> => {
+  const doctorId = await requireUserId();
+  const channel = supabase
+    .channel(`doctor-messages-${doctorId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `clinician_id=eq.${doctorId}` },
+      onChange,
+    )
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+};
