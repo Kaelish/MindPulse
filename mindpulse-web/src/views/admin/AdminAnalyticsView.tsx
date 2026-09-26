@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
+import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminAnalytics, bandForScore, fetchAdminAnalytics, fetchAdminResults } from '../../services/admin';
 import './AdminAnalyticsView.css';
 
@@ -110,7 +111,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
           <div className="analytics-actions">
             <div className="account-actions">
               <button type="button" className="analytics-icon-button" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>
-              {showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong></div><p className="empty-notifications">No notifications yet</p></aside>}
+              {showNotifications && <NotificationPanel />}
             </div>
             <select className="analytics-select" value={months} onChange={(event) => setMonths(event.target.value)} aria-label="Analytics period">
               <option value="6">Last 6 Months</option>

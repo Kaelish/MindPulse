@@ -5,6 +5,7 @@ import { AdminUsersView } from './AdminUsersView';
 import { AdminResultsView } from './AdminResultsView';
 import { AdminProfileSettingsView } from './AdminProfileSettingsView';
 import { NotificationBell } from '../../components/NotificationBell';
+import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminOverviewStats, fetchAdminOverview } from '../../services/admin';
 import './AdminDashboardView.css';
 
@@ -69,7 +70,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
           <div className="admin-dashboard-actions">
             <div className="admin-dashboard-notification-wrap">
               <button type="button" className="admin-dashboard-notification" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /><span /></button>
-              {showNotifications && <div className="admin-dashboard-notification-panel"><strong>Notifications</strong><p>No notifications yet.</p></div>}
+              {showNotifications && <NotificationPanel variant="dashboard" />}
             </div>
           </div>
         </header>

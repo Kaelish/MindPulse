@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
+import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminResultRow, bandForScore, fetchAdminResults } from '../../services/admin';
 
 interface AdminResultsViewProps {
@@ -102,7 +103,7 @@ export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, o
   return <div className="doctor-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="results" onNavigate={onNavigate} />
     <main className="main-panel detection-results-main">
-      <header className="topbar detection-results-topbar"><div><h1>Detection Results</h1><p className="page-subtitle">View and analyze stress detection scan results</p></div><div className="header-actions"><div className="account-actions"><button type="button" className="notification-button" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>{showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong></div><p className="empty-notifications">No notifications yet</p></aside>}</div></div></header>
+      <header className="topbar detection-results-topbar"><div><h1>Detection Results</h1><p className="page-subtitle">View and analyze stress detection scan results</p></div><div className="header-actions"><div className="account-actions"><button type="button" className="notification-button" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>{showNotifications && <NotificationPanel />}</div></div></header>
       <section className="detection-summary-grid">
         <Summary label="Total Scans" value={String(rows.length)} change="All recorded sessions" tone="neutral" />
         <Summary label="Scans Today" value={String(scansToday)} change="Local calendar date" tone="green" />

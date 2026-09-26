@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
+import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminAccountRow, approveDoctor, denyDoctor, fetchAdminAccounts, setAccountRole, setDoctorVerified } from '../../services/admin';
 import { requireUserId } from '../../services/session';
 import type { AppRole } from '../../types/supabase';
@@ -114,7 +115,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
           <div><div className="eyebrow">System Management</div><h1>Manage {activeRole === 'Doctors' ? 'Doctor' : 'Student'} Accounts</h1><p className="page-subtitle">Review and manage {activeRole.toLowerCase()} accounts</p></div>
           <div className="account-actions">
             <button type="button" className="notification-button" aria-label="View notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>
-            {showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong></div><p className="empty-notifications">No notifications yet</p></aside>}
+            {showNotifications && <NotificationPanel />}
           </div>
         </header>
 
@@ -187,16 +188,12 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                                 Unverify
                               </button>
                             )}
-                            {activeRole === 'Students' && (
-                              <button
-                                type="button"
-                                className="table-action"
-                                disabled={isSelf || busy}
-                                onClick={() => changeRole(account, 'doctor')}
-                              >
-                                Make doctor
+                            {activeRole === 'Doctors' && account.isVerified && (
+                              <button type="button" className="table-action" disabled={isSelf || busy} onClick={() => changeRole(account, 'student')}>
+                                Make student
                               </button>
                             )}
+                            {activeRole === 'Students' && <span style={{ color: '#94a3b8' }}>—</span>}
                           </div>
                         </td>
                       </tr>

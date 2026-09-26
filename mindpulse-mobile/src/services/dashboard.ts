@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { recordPlantSession } from './plantProgress';
+import { isNotificationEnabled, loadNotificationPrefs } from './notificationPrefs';
 
 export interface StressSessionItem {
   id: string;
@@ -175,14 +176,18 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
     throw new Error(notificationsError.message);
   }
 
-  const notifications: NotificationItem[] = (dbNotifications ?? []).map((row: any) => ({
-    id: String(row.id),
-    title: row.title,
-    message: row.message,
-    time: timeAgo(row.created_at),
-    read: Boolean(row.read),
-    type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
-  }));
+  // Respect the device's notification preferences (settings → Notifications).
+  const notificationPrefs = await loadNotificationPrefs();
+  const notifications: NotificationItem[] = (dbNotifications ?? [])
+    .filter((row) => isNotificationEnabled(row, notificationPrefs))
+    .map((row: any) => ({
+      id: String(row.id),
+      title: row.title,
+      message: row.message,
+      time: timeAgo(row.created_at),
+      read: Boolean(row.read),
+      type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+    }));
 
   const latestScore = recentSessions.length > 0 ? recentSessions[0].score : null;
   const latestLevel = latestScore !== null ? levelForScore(latestScore) : null;
@@ -273,7 +278,8 @@ export const saveNewStressSession = async (
     throw new Error(error?.message || 'Could not save your assessment result.');
   }
 
-  if (status === 'High') {
+  const prefs = await loadNotificationPrefs();
+  if (status === 'High' && prefs.analysisResults) {
     // Non-critical: a failed notification must not undo a saved assessment.
     const { error: notificationError } = await supabase.from('notifications').insert({
       user_id: user.id,

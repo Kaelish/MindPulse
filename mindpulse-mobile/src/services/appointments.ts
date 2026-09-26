@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { loadNotificationPrefs } from './notificationPrefs';
 
 export interface TelehealthClinician {
   id: string;
@@ -181,13 +182,18 @@ export const saveBookedAppointment = async (
   }
 
   // Non-critical: a notification failure must not undo a booked appointment.
-  const { error: patientNoticeError } = await supabase.from('notifications').insert({
-    user_id: user.id,
-    title: 'Appointment Booked',
-    message: `Your session with ${appointment.clinicianName} is set for ${appointment.selectedDate} at ${appointment.selectedTime}.`,
-    type: 'appointment',
-  });
-  void patientNoticeError;
+  // The patient's own notice honours their appointment-reminder preference;
+  // the doctor's notice is always written and filtered on their own device.
+  const prefs = await loadNotificationPrefs();
+  if (prefs.appointmentReminders) {
+    const { error: patientNoticeError } = await supabase.from('notifications').insert({
+      user_id: user.id,
+      title: 'Appointment Booked',
+      message: `Your session with ${appointment.clinicianName} is set for ${appointment.selectedDate} at ${appointment.selectedTime}.`,
+      type: 'appointment',
+    });
+    void patientNoticeError;
+  }
 
   const { error: doctorNoticeError } = await supabase.from('notifications').insert({
     user_id: appointment.clinicianId,

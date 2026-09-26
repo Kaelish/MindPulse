@@ -1,9 +1,11 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
+import { NotificationPanel } from '../../components/NotificationPanel';
+import { NotificationSettings } from '../../components/NotificationSettings';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { OwnProfile, OwnProfilePatch, changeOwnPassword, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
 
-type ProfileTab = 'personal' | 'professional' | 'security';
+type ProfileTab = 'personal' | 'professional' | 'security' | 'notifications';
 
 type EditableField = 'first_name' | 'last_name' | 'department' | 'program' | 'year_level' | 'student_no' | 'sex' | 'living_situation';
 
@@ -146,7 +148,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       <div><h1>Profile Settings</h1><p>Manage your personal information and preferences</p></div>
       <div className="account-actions">
         <button type="button" className="notification-button" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>
-        {showNotifications && <aside className="notification-panel"><div className="notification-heading"><strong>Notifications</strong></div><p className="empty-notifications">No notifications yet</p></aside>}
+        {showNotifications && <NotificationPanel />}
       </div>
     </header>
   );
@@ -189,7 +191,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     <main className="admin-main admin-profile-main">
       {header}
       <section className="admin-profile-card"><div className="admin-avatar-large">●</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
-      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
+      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security'], ['notifications', 'Notifications']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">{saved}</div>}
       {saveError && <div className="error-inline">{saveError}</div>}
       <form className="admin-profile-form" onSubmit={save}>
@@ -214,6 +216,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password (min 8 characters)" type="password" />
           <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
         </ProfileSection>}
+        {activeTab === 'notifications' && <NotificationSettings />}
         {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : '▣ Save Changes'}</button>}
         {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
       </form>

@@ -9,43 +9,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  NotificationPrefs,
+  loadNotificationPrefs,
+  saveNotificationPrefs,
+} from '../../../services/notificationPrefs';
 
 interface NotificationsModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-const STORAGE_KEY = 'mindpulse.notificationPrefs';
-
-interface NotificationPrefs {
-  dailyReminders: boolean;
-  reminderTime: string;
-  analysisResults: boolean;
-  wellnessRecommendations: boolean;
-  appointmentReminders: boolean;
-  consultationUpdates: boolean;
-  systemAnnouncements: boolean;
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
-}
-
-const DEFAULT_PREFS: NotificationPrefs = {
-  dailyReminders: true,
-  reminderTime: '8:00 PM',
-  analysisResults: true,
-  wellnessRecommendations: true,
-  appointmentReminders: true,
-  consultationUpdates: true,
-  systemAnnouncements: true,
-  soundEnabled: true,
-  vibrationEnabled: true,
-};
-
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible, onClose }) => {
-  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
   const {
     dailyReminders, reminderTime, analysisResults, wellnessRecommendations,
     appointmentReminders, consultationUpdates, systemAnnouncements,
@@ -55,10 +34,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
   // Load saved preferences each time the modal opens
   useEffect(() => {
     if (!visible) return;
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
-      })
+    loadNotificationPrefs()
+      .then((saved) => setPrefs(saved))
       .catch(() => {});
   }, [visible]);
 
@@ -73,7 +50,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
   const setField = <K extends keyof NotificationPrefs>(key: K, value: NotificationPrefs[K]) => {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+    void saveNotificationPrefs(next);
   };
 
   const handleToggle = (key: keyof NotificationPrefs, val: boolean, label: string) => {
