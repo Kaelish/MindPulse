@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -44,6 +43,148 @@ const TIME_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM',
   '1:30 PM', '2:15 PM', '3:30 PM',
   '4:45 PM', '5:30 PM',
+];
+
+// ─── Philippine support hotlines (researched & verified) ─────────────────────
+type SupportCategory = 'crisis' | 'emergency' | 'community';
+
+interface SupportNumber {
+  label: string;
+  value: string;
+}
+
+interface SupportHotline {
+  id: string;
+  name: string;
+  operator: string;
+  tagline: string;
+  availability: string;
+  description: string;
+  numbers: SupportNumber[];
+  source: string;
+  category: SupportCategory;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}
+
+const SUPPORT_SECTIONS: { key: SupportCategory; label: string }[] = [
+  { key: 'crisis', label: 'Crisis Support — 24/7' },
+  { key: 'emergency', label: 'Emergency' },
+  { key: 'community', label: 'Community & Other Helplines' },
+];
+
+const SUPPORT_HOTLINES: SupportHotline[] = [
+  {
+    id: 'ncmh',
+    name: 'NCMH Crisis Hotline',
+    operator: 'Department of Health — National Center for Mental Health',
+    tagline: "The country's national 24/7 mental health crisis line",
+    availability: '24/7 · Free',
+    description:
+      'The national crisis hotline under the Mental Health Act (RA 11036). Trained responders provide crisis intervention, suicide prevention support, psychological first aid, and referrals to mental health professionals and facilities.',
+    numbers: [
+      { label: 'Toll-free landline (nationwide)', value: '1553' },
+      { label: 'Toll-free (Smart / TNT)', value: '1800-1888-1553' },
+      { label: 'Smart / TNT', value: '0919-057-1553' },
+      { label: 'Globe / TM', value: '0917-899-8727' },
+      { label: 'Globe / TM', value: '0966-351-4518' },
+      { label: 'Landline (Metro Manila)', value: '(02) 7-989-8727' },
+    ],
+    source: 'NCMH / DOH (doh.gov.ph)',
+    category: 'crisis',
+    icon: 'heart',
+  },
+  {
+    id: 'intouch',
+    name: 'In Touch Community Services',
+    operator: 'In Touch Community Services, Inc.',
+    tagline: 'Free, anonymous emotional support',
+    availability: '24/7 · Free · Anonymous',
+    description:
+      'A free, confidential, and anonymous crisis line run by a non-profit mental health organisation. Trained volunteer responders listen and provide emotional support, information, and referrals for anyone in distress.',
+    numbers: [
+      { label: 'Landline (Metro Manila)', value: '(02) 8893-7603' },
+      { label: 'Smart / TNT', value: '0919-056-0709' },
+      { label: 'Globe / TM', value: '0917-800-1123' },
+      { label: 'Globe / TM', value: '0917-108-5412' },
+      { label: 'Mobile', value: '0922-893-8944' },
+    ],
+    source: 'In Touch Community Services (in-touch.org)',
+    category: 'crisis',
+    icon: 'chatbubble-ellipses',
+  },
+  {
+    id: 'hopeline',
+    name: 'HOPE LINE',
+    operator: 'NGF Mindstrong (formerly Natasha Goulbourn Foundation)',
+    tagline: 'Suicide prevention & emotional crisis helpline',
+    availability: '24/7 · Free',
+    description:
+      'A suicide prevention and emotional crisis helpline staffed by social workers, psychologists, and psychiatric nurses who listen and help callers work through moments of distress.',
+    numbers: [
+      { label: 'Landline (Metro Manila)', value: '(02) 8804-4673' },
+      { label: 'Globe / TM', value: '0917-558-4673' },
+      { label: 'Smart', value: '0918-873-4673' },
+    ],
+    source: 'HOPE LINE / DOH',
+    category: 'crisis',
+    icon: 'hand-left',
+  },
+  {
+    id: 'emergency-911',
+    name: 'Emergency 911',
+    operator: 'Emergency 911 National Office',
+    tagline: 'Police, fire, and medical emergencies',
+    availability: '24/7',
+    description:
+      "The Philippines' national emergency number, in service since 2018. Call 911 if you or someone near you is in immediate physical danger, needs urgent medical help, or requires police assistance.",
+    numbers: [{ label: 'National emergency number', value: '911' }],
+    source: 'Emergency 911 National Office',
+    category: 'emergency',
+    icon: 'alarm',
+  },
+  {
+    id: 'bantay-bata',
+    name: 'Bantay Bata Helpline 163',
+    operator: 'ABS-CBN Foundation, Inc.',
+    tagline: 'Child abuse & welfare helpline',
+    availability: 'Free · Call or message',
+    description:
+      "The Philippines' pioneering child helpline (since 1997). Licensed social workers receive reports of child abuse and neglect and provide guidance, counselling, and psychological first aid for children and families. Reachable by calling 163 and through Bantay Bata's Facebook Messenger.",
+    numbers: [{ label: 'Child helpline', value: '163' }],
+    source: 'ABS-CBN Foundation — Bantay Bata',
+    category: 'community',
+    icon: 'people',
+  },
+  {
+    id: 'tawag-paglaum',
+    name: 'Tawag Paglaum – Centro Bisaya',
+    operator: 'Centro Bisaya, Inc. (Cebu)',
+    tagline: 'Community mental health support — Central Visayas',
+    availability: 'Hours vary · Cebu / Region VII',
+    description:
+      'A community-based mental health and psychosocial support line in Cebu serving Central Visayas (Region VII).',
+    numbers: [
+      { label: 'Mobile', value: '0966-467-9626' },
+      { label: 'Mobile', value: '0939-937-5433' },
+      { label: 'Mobile', value: '0939-936-5433' },
+    ],
+    source: 'MentalHealthPH helpline directory',
+    category: 'community',
+    icon: 'call',
+  },
+  {
+    id: 'wisupport',
+    name: 'DSWD WiSupport',
+    operator: 'Department of Social Welfare and Development',
+    tagline: 'Text-based mental health & psychosocial support',
+    availability: 'SMS · Free',
+    description:
+      "The DSWD's wireless mental health and psychosocial support service. Text your concern to the hotline — responders guide you online, and emergency cases are referred to partner mental health institutions such as NCMH.",
+    numbers: [{ label: 'SMS text line', value: '0918-912-2813' }],
+    source: 'DSWD (dswd.gov.ph)',
+    category: 'community',
+    icon: 'chatbox-ellipses',
+  },
 ];
 
 // ─── Avatar circle ────────────────────────────────────────────────────────────
@@ -118,11 +259,12 @@ const ChatBubble = ({
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
   onStartVideoCall,
 }) => {
-  const [activeTab, setActiveTab] = useState<'clinicians' | 'bookings' | 'messages'>('clinicians');
+  const [activeTab, setActiveTab] = useState<'clinicians' | 'bookings' | 'messages' | 'support'>('clinicians');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedHotline, setSelectedHotline] = useState<SupportHotline | null>(null);
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [bookingSaving, setBookingSaving] = useState(false);
@@ -374,30 +516,40 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
         {/* Tab row */}
         <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'clinicians' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('clinicians')}
-          >
-            <Text style={[styles.tabText, activeTab === 'clinicians' && styles.tabTextActive]}>
-              Clinicians
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'bookings' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('bookings')}
-          >
-            <Text style={[styles.tabText, activeTab === 'bookings' && styles.tabTextActive]}>
-              Bookings
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'messages' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('messages')}
-          >
-            <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
-              Messages
-            </Text>
-          </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRowInner}>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'clinicians' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('clinicians')}
+            >
+              <Text style={[styles.tabText, activeTab === 'clinicians' && styles.tabTextActive]}>
+                Clinicians
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'bookings' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('bookings')}
+            >
+              <Text style={[styles.tabText, activeTab === 'bookings' && styles.tabTextActive]}>
+                Bookings
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'messages' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('messages')}
+            >
+              <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
+                Messages
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'support' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('support')}
+            >
+              <Text style={[styles.tabText, activeTab === 'support' && styles.tabTextActive]}>
+                Support
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </SafeAreaView>
 
@@ -412,18 +564,11 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 <Text style={styles.onlineText}>Online</Text>
               </View>
               <Text style={styles.crisisTitle}>Crisis Support</Text>
-              <Text style={styles.crisisPhone}>988 · 24/7 free & confidential</Text>
+              <Text style={styles.crisisPhone}>1553 · NCMH Crisis Hotline — 24/7 &amp; free</Text>
             </View>
-            <TouchableOpacity
-              style={styles.callNowBtn}
-              onPress={() => {
-                Linking.openURL('tel:988').catch(() =>
-                  Alert.alert('Crisis support', 'Call 988 for free, confidential crisis support — available 24/7.'),
-                );
-              }}
-            >
-              <Ionicons name="call" size={14} color="#FFF" />
-              <Text style={styles.callNowText}>Call Now</Text>
+            <TouchableOpacity style={styles.callNowBtn} onPress={() => setActiveTab('support')}>
+              <Text style={styles.callNowText}>Hotlines</Text>
+              <Ionicons name="chevron-forward" size={14} color="#FFF" />
             </TouchableOpacity>
           </View>
 
@@ -656,6 +801,53 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </>
           )}
         </View>
+      )}
+
+      {/* ── Support Tab ── */}
+      {activeTab === 'support' && (
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.supportIntro}>
+            <Ionicons name="information-circle" size={22} color="#E05C5C" />
+            <Text style={styles.supportIntroText}>
+              You are not alone. Free, confidential help is available — the numbers below are
+              listed for reference and can be dialed from any phone. In an emergency, call 911.
+            </Text>
+          </View>
+
+          {SUPPORT_SECTIONS.map(section => {
+            const list = SUPPORT_HOTLINES.filter(h => h.category === section.key);
+            if (list.length === 0) return null;
+            return (
+              <View key={section.key} style={{ gap: 10 }}>
+                <Text style={styles.sectionLabel}>{section.label}</Text>
+                {list.map(h => (
+                  <TouchableOpacity
+                    key={h.id}
+                    style={styles.supportCard}
+                    onPress={() => setSelectedHotline(h)}
+                  >
+                    <View style={styles.supportIcon}>
+                      <Ionicons name={h.icon} size={20} color="#E05C5C" />
+                    </View>
+                    <View style={styles.supportInfo}>
+                      <Text style={styles.supportName}>{h.name}</Text>
+                      <Text style={styles.supportTagline} numberOfLines={2}>{h.tagline}</Text>
+                      <View style={styles.supportAvailPill}>
+                        <Text style={styles.supportAvailText}>{h.availability}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.textHint} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            );
+          })}
+
+          <Text style={styles.supportDisclaimer}>
+            Hotline numbers can change over time. If a line does not connect, try the next
+            option or go to the nearest hospital.
+          </Text>
+        </ScrollView>
       )}
 
       {/* ── Booking Modal ── */}
@@ -954,6 +1146,53 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           </View>
         </View>
       </Modal>
+
+      {/* ── Hotline info modal ── */}
+      <Modal visible={selectedHotline !== null} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={styles.modalTitle}>{selectedHotline?.name}</Text>
+                  <Text style={styles.modalSubtitle}>{selectedHotline?.operator}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedHotline(null)}>
+                  <Ionicons name="close" size={22} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.supportDetailBadge}>
+                <Ionicons name="time-outline" size={13} color={ACCENT} />
+                <Text style={styles.supportDetailBadgeText}>{selectedHotline?.availability}</Text>
+              </View>
+
+              <Text style={styles.supportDetailText}>{selectedHotline?.description}</Text>
+
+              <Text style={styles.modalSectionLabel}>Phone numbers</Text>
+              <View style={styles.supportNumbers}>
+                {selectedHotline?.numbers.map(n => (
+                  <View key={`${n.label}-${n.value}`} style={styles.supportNumberRow}>
+                    <Text style={styles.supportNumberLabel}>{n.label}</Text>
+                    <Text style={styles.supportNumberValue}>{n.value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.supportSourceBox}>
+                <Text style={styles.supportSourceText}>
+                  Source: {selectedHotline?.source}. Numbers are shown for reference — dial them
+                  from any phone. In an emergency, call 911.
+                </Text>
+              </View>
+
+              <TouchableOpacity style={styles.confirmBtn} onPress={() => setSelectedHotline(null)}>
+                <Text style={styles.confirmBtnText}>Close</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -970,8 +1209,9 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 
   /* Tabs */
-  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border, paddingHorizontal: 20 },
-  tabBtn: { paddingVertical: 10, paddingHorizontal: 4, marginRight: 20 },
+  tabRow: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  tabRowInner: { flexDirection: 'row', paddingHorizontal: 20 },
+  tabBtn: { paddingVertical: 10, paddingHorizontal: 4, marginRight: 16 },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: ACCENT },
   tabText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   tabTextActive: { color: ACCENT },
@@ -1142,6 +1382,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: 40,
+    maxHeight: '88%',
   },
   modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
@@ -1309,4 +1550,85 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textPrimary,
   },
+
+  /* Support tab */
+  supportIntro: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#FFF1F1',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFD6D6',
+    padding: 14,
+    alignItems: 'flex-start',
+  },
+  supportIntroText: { flex: 1, fontSize: 12, color: '#9B3B3B', lineHeight: 18 },
+  supportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  supportIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF1F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supportInfo: { flex: 1, gap: 3 },
+  supportName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  supportTagline: { fontSize: 12, color: Colors.textSecondary, lineHeight: 16 },
+  supportAvailPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF0FB',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 3,
+  },
+  supportAvailText: { fontSize: 10, fontWeight: '700', color: ACCENT },
+  supportDisclaimer: { fontSize: 11, color: Colors.textHint, textAlign: 'center', lineHeight: 16 },
+
+  /* Hotline detail modal */
+  supportDetailBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF0FB',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 14,
+  },
+  supportDetailBadgeText: { fontSize: 12, fontWeight: '700', color: ACCENT },
+  supportDetailText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 16 },
+  supportNumbers: { gap: 8, marginBottom: 14 },
+  supportNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.divider,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  supportNumberLabel: { flex: 1, fontSize: 11, color: Colors.textSecondary },
+  supportNumberValue: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 0.3 },
+  supportSourceBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 10,
+    marginBottom: 18,
+  },
+  supportSourceText: { fontSize: 11, color: Colors.textHint, lineHeight: 16 },
 });
