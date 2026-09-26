@@ -1,0 +1,798 @@
+/* =========================================================================
+   Admin → Records (Assessments / Students / At-Risk) and Generate Reports.
+   Scoped under .admin-scope by the shared tokens (--adm-*), so both light and
+   dark admin themes adapt automatically.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- header */
+/* Flex child must be allowed to shrink below its content so wide tables
+   scroll inside .records-table-wrap instead of widening the whole page. */
+.records-main {
+  min-width: 0;
+}
+
+.records-topbar {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.records-title-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border-radius: 11px;
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+  font-size: 1.05rem;
+  font-style: normal;
+  vertical-align: 4px;
+}
+
+.records-primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--adm-accent);
+  color: var(--adm-accent-contrast);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--adm-shadow-sm);
+  transition: background 0.16s ease;
+}
+
+.records-primary-button:hover {
+  background: var(--adm-accent-hover);
+}
+
+/* ------------------------------------------------------------- tab bar */
+.records-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 7px;
+  margin-bottom: 22px;
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  background: var(--adm-surface-3);
+}
+
+.records-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--adm-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.records-tab:hover {
+  color: var(--adm-text);
+}
+
+.records-tab.active {
+  background: var(--adm-surface);
+  color: var(--adm-accent);
+  box-shadow: var(--adm-shadow-sm);
+}
+
+/* --------------------------------------------------------------- panel */
+.records-panel {
+  padding: 22px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow);
+}
+
+.records-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.records-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  background: var(--adm-surface-2);
+  color: var(--adm-muted);
+  font-weight: 700;
+}
+
+.records-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--adm-text);
+  font-size: 0.9rem;
+}
+
+.records-search input::placeholder {
+  color: var(--adm-muted-2);
+}
+
+.records-toolbar select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  background: var(--adm-surface);
+  color: var(--adm-text);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.records-count {
+  margin-left: auto;
+  color: var(--adm-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------- tables */
+.records-table-wrap {
+  overflow-x: auto;
+}
+
+.records-table {
+  min-width: 860px;
+}
+
+.records-table td strong {
+  display: block;
+}
+
+.records-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.records-person > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.records-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent);
+  font-style: normal;
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.records-avatar.sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.7rem;
+}
+
+.records-row-button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 10px;
+  background: var(--adm-surface);
+  color: var(--adm-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.records-row-button:hover {
+  background: var(--adm-accent-soft);
+  border-color: var(--adm-accent);
+}
+
+.records-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.records-trend.up {
+  color: var(--adm-danger);
+}
+
+.records-trend.down {
+  color: var(--adm-success);
+}
+
+.records-trend.flat {
+  color: var(--adm-muted);
+}
+
+/* ----------------------------------------------------------- at-risk UI */
+.records-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.records-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius);
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow-sm);
+}
+
+.records-stat span {
+  color: var(--adm-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.records-stat strong {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  color: var(--adm-text);
+}
+
+.records-stat.danger strong {
+  color: var(--adm-danger);
+}
+
+.records-stat.warning strong {
+  color: var(--adm-warning);
+}
+
+.records-stat.neutral strong {
+  color: var(--adm-muted-2);
+}
+
+.records-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+  gap: 18px;
+}
+
+.records-risk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius);
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow);
+}
+
+.records-risk-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.records-risk-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.records-risk-identity strong {
+  font-size: 1rem;
+  color: var(--adm-text);
+}
+
+.records-risk-identity small {
+  color: var(--adm-muted);
+  font-size: 0.82rem;
+}
+
+.records-badges {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.records-risk-pill,
+.records-care-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.records-risk-pill.critical {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+}
+
+.records-risk-pill.high {
+  background: var(--adm-warning-soft);
+  color: var(--adm-warning);
+}
+
+.records-care-pill.treatment {
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent);
+}
+
+.records-care-pill.contacted {
+  background: var(--adm-info-soft);
+  color: var(--adm-info);
+}
+
+.records-care-pill.pending {
+  background: var(--adm-surface-3);
+  color: var(--adm-muted);
+}
+
+.records-risk-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--adm-border);
+}
+
+.records-risk-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.records-risk-meta span {
+  color: var(--adm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.records-risk-meta strong {
+  font-size: 0.9rem;
+  color: var(--adm-text);
+}
+
+.records-risk-meta .danger-text {
+  color: var(--adm-danger);
+}
+
+.records-risk-meta .warning-text {
+  color: var(--adm-warning);
+}
+
+.records-risk-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.records-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 10px;
+  background: var(--adm-surface);
+  color: var(--adm-text-2);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.records-action:hover:not(:disabled) {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+.records-action.primary {
+  background: var(--adm-accent);
+  border-color: var(--adm-accent);
+  color: var(--adm-accent-contrast);
+}
+
+.records-action.primary:hover:not(:disabled) {
+  background: var(--adm-accent-hover);
+  color: var(--adm-accent-contrast);
+}
+
+.records-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------- modals */
+.records-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 22, 40, 0.55);
+}
+
+.records-modal {
+  width: min(680px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: var(--adm-radius-lg);
+  background: var(--adm-surface);
+  color: var(--adm-text);
+  box-shadow: var(--adm-shadow-lg);
+}
+
+.records-modal.wide {
+  width: min(960px, 100%);
+}
+
+.records-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.records-modal-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--adm-text);
+}
+
+.records-modal-head p {
+  margin: 6px 0 0;
+  color: var(--adm-muted);
+  font-size: 0.85rem;
+}
+
+.records-modal-head > button {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  background: var(--adm-surface-2);
+  color: var(--adm-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.records-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.records-detail-grid div {
+  padding: 12px 14px;
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  background: var(--adm-surface-2);
+}
+
+.records-detail-grid dt {
+  color: var(--adm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.records-detail-grid dd {
+  margin: 6px 0 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.records-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.records-banner {
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.records-banner.error {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+}
+
+/* ------------------------------------------------------ generate reports */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+  gap: 18px;
+}
+
+.reports-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius);
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow);
+}
+
+.reports-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.reports-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent);
+  font-size: 1.15rem;
+}
+
+.reports-card-head h3 {
+  margin: 2px 0 4px;
+  font-size: 1.02rem;
+  color: var(--adm-text);
+}
+
+.reports-card-head p {
+  margin: 0;
+  color: var(--adm-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.reports-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reports-control-wrap {
+  position: relative;
+}
+
+.reports-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 10px;
+  background: var(--adm-surface);
+  color: var(--adm-text-2);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.reports-control:hover {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+.reports-control.is-set {
+  border-color: var(--adm-accent);
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent);
+}
+
+.reports-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.reports-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 264px;
+  padding: 16px;
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow-lg);
+}
+
+.reports-popover > strong {
+  font-size: 0.86rem;
+  color: var(--adm-text);
+}
+
+.reports-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reports-field span {
+  color: var(--adm-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.reports-field input,
+.reports-field select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  background: var(--adm-surface-2);
+  color: var(--adm-text);
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.reports-popover-hint {
+  color: var(--adm-muted-2);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.reports-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reports-popover-actions button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 10px;
+  background: var(--adm-surface);
+  color: var(--adm-text-2);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reports-popover-actions .reports-popover-apply {
+  border-color: var(--adm-accent);
+  background: var(--adm-accent);
+  color: var(--adm-accent-contrast);
+}
+
+.reports-generate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--adm-accent);
+  color: var(--adm-accent-contrast);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.reports-generate:hover:not(:disabled) {
+  background: var(--adm-accent-hover);
+}
+
+.reports-generate:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.reports-note {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.reports-note.error {
+  color: var(--adm-danger);
+}
+
+.reports-note.success {
+  color: var(--adm-success);
+}
+
+.reports-note.hint {
+  color: var(--adm-muted-2);
+}
+
+/* ----------------------------------------------------------- responsive */
+@media (max-width: 1180px) {
+  .records-stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .records-risk-grid,
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .records-tabs {
+    overflow-x: auto;
+  }
+
+  .records-tab {
+    flex: 0 0 auto;
+  }
+
+  .records-risk-meta,
+  .records-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .records-count {
+    margin-left: 0;
+  }
+}

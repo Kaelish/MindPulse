@@ -1,0 +1,271 @@
+import { supabase } from '../supabase/client';
+import { bandForScore } from './admin';
+
+const notConfigured = () =>
+  new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+
+export type RiskTier = 'critical' | 'high';
+export type CareStatus = 'In Treatment' | 'Contacted' | 'Pending';
+export type TrendLabel = 'Increasing' | 'Decreasing' | 'Stable' | 'New' | 'No assessment';
+
+/** At-risk list splits the High stress band (>60) into Critical/High tiers. */
+export const riskTierForScore = (score: number): RiskTier => (score > 80 ? 'critical' : 'high');
+
+export const riskLabelForTier = (tier: RiskTier) => (tier === 'critical' ? 'Critical Risk' : 'High Risk');
+
+export const levelForScore = (score: number): 'Low' | 'Moderate' | 'High' => {
+  const band = bandForScore(score);
+  return band === 'low' ? 'Low' : band === 'moderate' ? 'Moderate' : 'High';
+};
+
+interface StudentProfileRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  student_no: string | null;
+  program: string | null;
+  year_level: string | null;
+  created_at: string;
+}
+
+interface SessionLite {
+  user_id: string;
+  score: number | null;
+  created_at: string;
+}
+
+interface AppointmentLite {
+  patient_id: string;
+  doctor_id: string;
+  status: string;
+  created_at: string;
+}
+
+interface Bundles {
+  students: StudentProfileRow[];
+  sessionsByUser: Map<string, SessionLite[]>;
+  appointmentsByPatient: Map<string, AppointmentLite[]>;
+  doctorNames: Map<string, string>;
+}
+
+const nameOf = (firstName: string | null, lastName: string | null, email: string | null) =>
+  `${firstName || ''} ${lastName || ''}`.trim() || email || 'Unknown student';
+
+const initialsOf = (name: string, email: string) => {
+  const source = name || email || '?';
+  const parts = source.split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+};
+
+/** Groups rows (already sorted newest-first) by user, preserving order. */
+const groupNewestFirst = <T extends { created_at: string; key: string }>(rows: T[]): Map<string, T[]> => {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.key) ?? [];
+    list.push(row);
+    grouped.set(row.key, list);
+  }
+  return grouped;
+};
+
+const trendFor = (sessions: SessionLite[]): TrendLabel => {
+  const usable = sessions.filter((session) => session.score != null);
+  if (usable.length === 0) return 'No assessment';
+  if (usable.length === 1) return 'New';
+  const delta = (usable[0].score ?? 0) - (usable[1].score ?? 0);
+  return delta > 2 ? 'Increasing' : delta < -2 ? 'Decreasing' : 'Stable';
+};
+
+const ACTIVE_APPOINTMENT_STATUSES = new Set(['scheduled', 'confirmed', 'awaiting_payment']);
+
+const careStatusFor = (appointments: AppointmentLite[]): CareStatus => {
+  if (appointments.some((appointment) => ACTIVE_APPOINTMENT_STATUSES.has(appointment.status))) return 'In Treatment';
+  if (appointments.some((appointment) => appointment.status === 'completed')) return 'Contacted';
+  return 'Pending';
+};
+
+const pullBundles = async (): Promise<Bundles> => {
+  if (!supabase) throw notConfigured();
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no, program, year_level, created_at')
+    .eq('role', 'student')
+    .order('created_at', { ascending: false });
+  if (profilesError) throw new Error(profilesError.message);
+  const students = (profiles ?? []) as StudentProfileRow[];
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('stress_sessions')
+    .select('user_id, score, created_at')
+    .order('created_at', { ascending: false });
+  if (sessionsError) throw new Error(sessionsError.message);
+
+  const { data: appointments, error: appointmentsError } = await supabase
+    .from('appointments')
+    .select('patient_id, doctor_id, status, created_at')
+    .order('created_at', { ascending: false });
+  if (appointmentsError) throw new Error(appointmentsError.message);
+
+  const { data: doctorProfiles, error: doctorProfilesError } = await supabase.from('doctor_profiles').select('user_id');
+  if (doctorProfilesError) throw new Error(doctorProfilesError.message);
+  const doctorIds = Array.from(new Set(((doctorProfiles ?? []) as { user_id: string }[]).map((row) => row.user_id)));
+
+  const doctorNames = new Map<string, string>();
+  if (doctorIds.length) {
+    const { data: doctorUsers, error: doctorUsersError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, email')
+      .in('id', doctorIds);
+    if (doctorUsersError) throw new Error(doctorUsersError.message);
+    for (const row of (doctorUsers ?? []) as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+    }[]) {
+      doctorNames.set(row.id, nameOf(row.first_name, row.last_name, row.email));
+    }
+  }
+
+  return {
+    students,
+    sessionsByUser: groupNewestFirst(
+      ((sessions ?? []) as SessionLite[]).map((row) => ({ ...row, key: row.user_id })),
+    ),
+    appointmentsByPatient: groupNewestFirst(
+      ((appointments ?? []) as AppointmentLite[]).map((row) => ({ ...row, key: row.patient_id })),
+    ),
+    doctorNames,
+  };
+};
+
+export interface StudentRecordRow {
+  userId: string;
+  name: string;
+  initials: string;
+  email: string;
+  studentNo: string;
+  program: string;
+  year: string;
+  createdAt: string;
+  sessions: number;
+  lastAssessment: string | null;
+  score: number | null;
+  level: 'Low' | 'Moderate' | 'High' | null;
+  trend: TrendLabel;
+  assignedDoctor: string | null;
+}
+
+const buildRecord = (student: StudentProfileRow, bundles: Bundles): StudentRecordRow => {
+  const sessions = bundles.sessionsByUser.get(student.id) ?? [];
+  const latest = sessions.find((session) => session.score != null) ?? sessions[0] ?? null;
+  const appointments = bundles.appointmentsByPatient.get(student.id) ?? [];
+  const name = nameOf(student.first_name, student.last_name, student.email);
+
+  return {
+    userId: student.id,
+    name,
+    initials: initialsOf(name, student.email || ''),
+    email: student.email || 'No email',
+    studentNo: student.student_no || student.id.slice(0, 8).toUpperCase(),
+    program: student.program || '—',
+    year: student.year_level || '—',
+    createdAt: student.created_at,
+    sessions: sessions.length,
+    lastAssessment: latest?.created_at ?? null,
+    score: latest?.score ?? null,
+    level: latest && latest.score != null ? levelForScore(latest.score) : null,
+    trend: trendFor(sessions),
+    assignedDoctor: appointments.length ? bundles.doctorNames.get(appointments[0].doctor_id) ?? null : null,
+  };
+};
+
+export interface AtRiskRecordRow extends StudentRecordRow {
+  riskTier: RiskTier;
+  riskLabel: string;
+  careStatus: CareStatus;
+  phone: string | null;
+}
+
+interface RecordBundles {
+  students: StudentRecordRow[];
+  atRisk: AtRiskRecordRow[];
+}
+
+const buildBundles = (bundles: Bundles): RecordBundles => {
+  const students = bundles.students.map((student) => buildRecord(student, bundles));
+
+  const atRisk = students
+    .map((record) => ({ record, appointments: bundles.appointmentsByPatient.get(record.userId) ?? [] }))
+    // At-risk = most recent scored assessment in the High band (>60).
+    .filter(({ record }) => record.score != null && (record.score ?? 0) > 60)
+    .map(({ record, appointments }) => {
+      const riskTier = riskTierForScore(record.score ?? 0);
+      return {
+        ...record,
+        riskTier,
+        riskLabel: riskLabelForTier(riskTier),
+        careStatus: careStatusFor(appointments),
+        // profiles has no student phone column yet; tel: actions enable once it does.
+        phone: null,
+      };
+    })
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  return { students, atRisk };
+};
+
+/** Single round-trip used by the Records view (both lists share one pull). */
+export const fetchRecordBundles = async (): Promise<RecordBundles> => buildBundles(await pullBundles());
+
+export const fetchStudentRecords = async (): Promise<StudentRecordRow[]> =>
+  (await fetchRecordBundles()).students;
+
+/** Students whose most recent scored assessment sits in the High band (>60). */
+export const fetchAtRiskStudents = async (): Promise<AtRiskRecordRow[]> =>
+  (await fetchRecordBundles()).atRisk;
+
+export interface RecordSessionRow {
+  id: string;
+  createdAt: string;
+  score: number | null;
+  stressLevel: string | null;
+  heartRate: number | null;
+  surveyScore: number | null;
+  reactionTimeMs: number | null;
+  emotion: string | null;
+}
+
+export const fetchStudentRecordSessions = async (userId: string): Promise<RecordSessionRow[]> => {
+  if (!supabase) throw notConfigured();
+
+  const { data, error } = await supabase
+    .from('stress_sessions')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as {
+    id: string;
+    created_at: string;
+    score: number | null;
+    stress_level: string | null;
+    heart_rate: number | null;
+    survey_score: number | null;
+    reaction_time_ms: number | null;
+    emotion: string | null;
+  }[]).map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    score: row.score,
+    stressLevel: row.stress_level,
+    heartRate: row.heart_rate,
+    surveyScore: row.survey_score,
+    reactionTimeMs: row.reaction_time_ms,
+    emotion: row.emotion,
+  }));
+};

@@ -4,12 +4,12 @@ import '../../views/admin/admin-theme.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings';
-  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
+  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings';
+  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 interface NavEntry {
-  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'settings';
+  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'settings';
   icon: string;
   label: string;
 }
@@ -19,6 +19,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'users', icon: '◉', label: 'Users' },
   { key: 'assessment', icon: '▣', label: 'Assessment tools' },
   { key: 'results', icon: '▤', label: 'Results' },
+  { key: 'records', icon: '▥', label: 'Records' },
   { key: 'analytics', icon: '◌', label: 'Analytics' },
   { key: 'settings', icon: '⚙', label: 'Settings' },
 ];

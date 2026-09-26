@@ -23,7 +23,7 @@ type Mode = 'tools' | 'outcomes';
 interface AdminAssessmentViewProps {
   onSignOut: () => void;
   onNavigate: (
-    view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings',
+    view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings',
   ) => void;
 }
 

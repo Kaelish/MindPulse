@@ -8,7 +8,7 @@ import './AdminUsersView.css';
 
 interface AdminUsersViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 type UserRole = 'Students' | 'Doctors';
