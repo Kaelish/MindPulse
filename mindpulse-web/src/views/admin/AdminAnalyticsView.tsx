@@ -7,7 +7,7 @@ import './AdminAnalyticsView.css';
 
 interface AdminAnalyticsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);

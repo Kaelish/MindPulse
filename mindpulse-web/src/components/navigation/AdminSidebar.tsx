@@ -3,8 +3,8 @@ import './AdminSidebar.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings';
-  onNavigate?: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings') => void;
+  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings';
+  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
@@ -20,7 +20,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       <nav className="nav-panel">
         <button className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('dashboard')}>⌂ Dashboard</button>
         <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('users')}>👥 Users</button>
-        <button className="nav-item" type="button">▣ Assessment tools</button>
+        <button className={`nav-item ${activeView === 'assessment' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('assessment')}>▣ Assessment tools</button>
         <button className={`nav-item ${activeView === 'results' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('results')}>▤ Results</button>
         <button className={`nav-item ${activeView === 'analytics' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('analytics')}>◌ Analytics</button>
         <button className={`nav-item ${activeView === 'settings' ? 'active' : ''}`} type="button" onClick={() => onNavigate?.('settings')}>⚙ Settings</button>

@@ -6,7 +6,7 @@ import { AdminResultRow, bandForScore, fetchAdminResults } from '../../services/
 
 interface AdminResultsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'results' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 const pad = (value: number) => String(value).padStart(2, '0');

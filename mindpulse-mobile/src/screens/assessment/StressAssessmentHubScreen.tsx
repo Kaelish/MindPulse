@@ -4,6 +4,11 @@ import { Colors } from '../../theme/colors';
 import { Typography, Radius, Spacing } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  AssessmentTool,
+  fetchActiveAssessmentTools,
+  loadToolCompletions,
+} from '../../services/assessmentTools';
 
 export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed';
 
@@ -95,11 +100,56 @@ const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, w
   );
 };
 
-export const StressAssessmentHubScreen = ({ onNavigate, onExit }: { onNavigate: (screen: string) => void, onExit?: () => void }) => {
+interface ToolCardProps {
+  tool: AssessmentTool;
+  completedAt?: string;
+  onPress: () => void;
+}
+
+/** Assessment questionnaire published by the administrator (Supabase). */
+const ToolCard = ({ tool, completedAt, onPress }: ToolCardProps) => (
+  <TouchableOpacity style={styles.stepCard} activeOpacity={0.7} onPress={onPress}>
+    <View style={[styles.iconBox, { backgroundColor: '#EEF0FD' }]}>
+      <MaterialCommunityIcons name="clipboard-text-outline" size={26} color="#6B79F2" />
+    </View>
+
+    <View style={styles.stepTextContent}>
+      <Text style={styles.stepTitle}>{tool.title}</Text>
+      <Text style={styles.stepSubtitle}>
+        {tool.category} · {tool.questions.length} Questions · {tool.durationMinutes} min
+      </Text>
+    </View>
+
+    <View style={styles.statusIndicator}>
+      {completedAt ? (
+        <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+      ) : (
+        <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+      )}
+    </View>
+  </TouchableOpacity>
+);
+
+interface HubExtras {
+  tools: AssessmentTool[];
+  completions: Record<string, string>;
+}
+
+export const StressAssessmentHubScreen = ({
+  onNavigate,
+  onExit,
+}: {
+  onNavigate: (screen: string, tool?: AssessmentTool) => void;
+  onExit?: () => void;
+}) => {
   const [state, setState] = useState<AssessmentState | null>(null);
+  const [extras, setExtras] = useState<HubExtras>({ tools: [], completions: {} });
 
   useEffect(() => {
     loadAssessmentState().then(setState);
+    Promise.all([fetchActiveAssessmentTools(), loadToolCompletions()]).then(([tools, completions]) =>
+      setExtras({ tools, completions }),
+    );
   }, []);
 
   if (!state) {
@@ -123,6 +173,29 @@ export const StressAssessmentHubScreen = ({ onNavigate, onExit }: { onNavigate: 
           <Text style={styles.title}>Stress Assessment</Text>
           <Text style={styles.subtitle}>Complete all steps for the most accurate result</Text>
         </View>
+
+        {/* Questionnaires published by the administrator */}
+        {extras.tools.length > 0 && (
+          <View style={styles.stepsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>AVAILABLE ASSESSMENTS</Text>
+              <Text style={styles.progressText}>{extras.tools.length} Tools</Text>
+            </View>
+            {extras.tools.map((tool) => (
+              <ToolCard
+                key={tool.id}
+                tool={tool}
+                completedAt={extras.completions[tool.id]}
+                onPress={() => {
+                  // Multi-Modal tools launch the full 4-step flow (survey →
+                  // scan → heart rate → reaction); surveys run standalone.
+                  if (tool.category === 'Multi-Modal') onNavigate('StressSurvey');
+                  else onNavigate('ToolSurvey', tool);
+                }}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Steps List */}
         <View style={styles.stepsSection}>

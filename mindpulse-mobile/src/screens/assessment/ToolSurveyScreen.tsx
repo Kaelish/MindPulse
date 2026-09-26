@@ -1,0 +1,252 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  AssessmentTool,
+  AssessmentToolQuestion,
+  DEFAULT_LIKERT,
+  scoreToolAnswers,
+  recordToolCompletion,
+} from '../../services/assessmentTools';
+import { saveNewStressSession } from '../../services/dashboard';
+
+interface ToolSurveyScreenProps {
+  tool: AssessmentTool;
+  onBack: () => void;
+  onComplete: () => void;
+}
+
+/**
+ * Renders a questionnaire exactly as configured by the administrator
+ * (admin portal → Assessment Tools). On completion the score is persisted to
+ * stress_sessions so the admin's "Review Assessment Outcomes" page reflects it.
+ */
+export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenProps) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const questions: AssessmentToolQuestion[] = tool.questions;
+  const currentQuestion = questions[currentIndex];
+  const selectedValue = currentQuestion ? answers[currentQuestion.id] : undefined;
+  const canProceed = selectedValue !== undefined;
+  const progressPercent = questions.length ? ((currentIndex + 1) / questions.length) * 100 : 0;
+
+  const handleNext = async () => {
+    if (!currentQuestion) return;
+
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      return;
+    }
+
+    // Last question answered → score, persist, done.
+    setSaving(true);
+    setSaveError('');
+    try {
+      const score = scoreToolAnswers(questions, answers);
+      await saveNewStressSession(
+        score,
+        `Completed assessment: ${tool.title}`,
+        undefined,
+        score,
+      );
+      await recordToolCompletion(tool.id);
+      Alert.alert('Assessment complete', `${tool.title}\nYour score: ${score}/100 (saved).`);
+      onComplete();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save your result. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!currentQuestion) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>This assessment has no questions yet.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={onBack}>
+            <Text style={styles.retryText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const options = currentQuestion.options?.length ? currentQuestion.options : DEFAULT_LIKERT;
+
+  return (
+    <SafeAreaView style={styles.root}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
+          <Ionicons name="chevron-back" size={24} color="#6B79F2" />
+          <Text style={styles.headerBtnText}>Back</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerPill}>
+          <Text style={styles.headerPillText}>
+            {currentIndex + 1}/{questions.length}
+          </Text>
+        </View>
+
+        <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
+          <Text style={styles.headerExitText}>Exit</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Progress */}
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.titlePill}>
+          <Text style={styles.titlePillText}>{tool.title}</Text>
+        </View>
+
+        <Text style={styles.questionText}>{currentQuestion.text}</Text>
+
+        <View style={styles.optionsContainer}>
+          {options.map((opt) => {
+            const isSelected = selectedValue === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                activeOpacity={0.7}
+                disabled={saving}
+                onPress={() => setAnswers({ ...answers, [currentQuestion.id]: opt.value })}
+              >
+                <View style={[styles.optionIcon, isSelected && styles.optionIconSelected]}>
+                  {isSelected ? (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  ) : (
+                    <Text style={styles.optionIconText}>{opt.value}</Text>
+                  )}
+                </View>
+                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {!!saveError && <Text style={styles.saveError}>{saveError}</Text>}
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.nextBtn, canProceed && !saving && styles.nextBtnActive]}
+          disabled={!canProceed || saving}
+          onPress={() => void handleNext()}
+        >
+          <Text style={[styles.nextBtnText, canProceed && styles.nextBtnTextActive]}>
+            {saving
+              ? 'Saving…'
+              : currentIndex === questions.length - 1
+                ? 'Complete Assessment'
+                : 'Next Question'}
+          </Text>
+          {canProceed && !saving && <Ionicons name="chevron-forward" size={20} color="#fff" />}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#FCFBF8' },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  headerBtn: { flexDirection: 'row', alignItems: 'center' },
+  headerBtnText: { fontSize: 16, fontWeight: '600', color: '#6B79F2' },
+  headerExitText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
+  headerPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#EEF0FD' },
+  headerPillText: { fontSize: 12, fontWeight: '700', color: '#6B79F2' },
+
+  progressTrack: {
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 18,
+    borderRadius: 3,
+    marginBottom: 24,
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: '#6B79F2' },
+
+  scrollContent: { paddingHorizontal: 18 },
+
+  titlePill: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#EEF0FD',
+    marginBottom: 16,
+  },
+  titlePillText: { fontSize: 12, fontWeight: '700', color: '#6B79F2' },
+
+  questionText: {
+    color: '#182033',
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 28,
+    marginBottom: 8,
+  },
+
+  optionsContainer: { gap: 12, marginTop: 16 },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  optionCardSelected: { backgroundColor: '#FFF8E6', borderColor: '#E6C252' },
+  optionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F0F0F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  optionIconSelected: { backgroundColor: '#E6C252' },
+  optionIconText: { color: '#8b95a5', fontSize: 14, fontWeight: '700' },
+  optionLabel: { color: '#182033', fontSize: 15, fontWeight: '600' },
+  optionLabelSelected: { color: '#8a6d0f' },
+
+  saveError: { marginTop: 18, color: '#d95d5d', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+
+  footer: { padding: 18 },
+  nextBtn: {
+    backgroundColor: '#F0F0F0',
+    flexDirection: 'row',
+    height: 56,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextBtnActive: { backgroundColor: '#6B79F2' },
+  nextBtnText: { color: '#8b95a5', fontSize: 16, fontWeight: '700', marginRight: 8 },
+  nextBtnTextActive: { color: '#fff' },
+
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
+  emptyText: { color: '#64748b', fontSize: 15, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, backgroundColor: '#6B79F2' },
+  retryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+});

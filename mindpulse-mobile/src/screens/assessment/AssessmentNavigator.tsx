@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StressAssessmentHubScreen } from './StressAssessmentHubScreen';
 import { StressSurveyScreen } from '../survey/StressSurveyScreen';
+import { ToolSurveyScreen } from './ToolSurveyScreen';
+import { AssessmentTool } from '../../services/assessmentTools';
 
 import { FaceScanNavigator } from '../facescan/FaceScanNavigator';
 import { HeartRateNavigator } from '../heartrate/HeartRateNavigator';
@@ -10,7 +12,8 @@ import { loadAssessmentState, saveAssessmentState } from './StressAssessmentHubS
 import { AssessmentResultScreen } from './AssessmentResultScreen';
 
 export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
-  const [screen, setScreen] = useState<'hub' | 'survey' | 'faceScan' | 'heartRate' | 'reaction' | 'results'>('hub');
+  const [screen, setScreen] = useState<'hub' | 'survey' | 'toolSurvey' | 'faceScan' | 'heartRate' | 'reaction' | 'results'>('hub');
+  const [activeTool, setActiveTool] = useState<AssessmentTool | null>(null);
 
   const handleFaceScanComplete = async (data: any) => {
     const state = await loadAssessmentState();
@@ -44,12 +47,16 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
       case 'hub':
         return (
           <StressAssessmentHubScreen
-            onNavigate={(nextScreen: string) => {
+            onNavigate={(nextScreen: string, tool?: AssessmentTool) => {
               if (nextScreen === 'StressSurvey') setScreen('survey');
               if (nextScreen === 'FaceScan') setScreen('faceScan');
               if (nextScreen === 'HeartRate') setScreen('heartRate');
               if (nextScreen === 'ReactionGame') setScreen('reaction');
               if (nextScreen === 'Results') setScreen('results');
+              if (nextScreen === 'ToolSurvey' && tool) {
+                setActiveTool(tool);
+                setScreen('toolSurvey');
+              }
             }}
           />
         );
@@ -59,6 +66,20 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
             onBack={() => setScreen('hub')}
           />
         );
+      case 'toolSurvey':
+        return activeTool ? (
+          <ToolSurveyScreen
+            tool={activeTool}
+            onBack={() => {
+              setActiveTool(null);
+              setScreen('hub');
+            }}
+            onComplete={() => {
+              setActiveTool(null);
+              setScreen('hub');
+            }}
+          />
+        ) : null;
       case 'faceScan':
         return (
           <FaceScanNavigator
