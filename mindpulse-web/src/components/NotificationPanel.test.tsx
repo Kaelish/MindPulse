@@ -48,7 +48,7 @@ test('shows only notifications for the active section', async () => {
   expect(screen.queryByText('Critical Student Alert')).not.toBeInTheDocument();
 });
 
-test('shows a contextual empty state and keeps Show more available', async () => {
+test('shows a contextual empty state without Show more', async () => {
   window.history.pushState({}, '', '/results');
   mockFetchFeedNotifications.mockResolvedValue({ notifications: [sampleNotifications[0]], hiddenCount: 0 });
 
@@ -56,11 +56,32 @@ test('shows a contextual empty state and keeps Show more available', async () =>
 
   expect(await screen.findByText('No notifications for Results')).toBeInTheDocument();
   expect(screen.getByText("You're all caught up for this section.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+  expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+});
+
+test('Show more navigates to the full feed with current section context', async () => {
+  window.history.pushState({}, '', '/results');
+  mockFetchFeedNotifications.mockResolvedValue({ notifications: [sampleNotifications[1]], hiddenCount: 0 });
+
+  render(<div className="admin-scope"><NotificationPanel /></div>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Show more' }));
 
   await waitFor(() => {
     expect(window.location.pathname).toBe('/notifications');
     expect(window.location.search).toBe('?category=results&from=%2Fresults');
+  });
+});
+
+test('Show more from Dashboard carries the global context', async () => {
+  window.history.pushState({}, '', '/dashboard');
+  mockFetchFeedNotifications.mockResolvedValue({ notifications: sampleNotifications, hiddenCount: 0 });
+
+  render(<div className="admin-scope"><NotificationPanel /></div>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Show more' }));
+
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/notifications');
+    expect(window.location.search).toBe('?category=all&from=%2Fdashboard');
   });
 });
 
