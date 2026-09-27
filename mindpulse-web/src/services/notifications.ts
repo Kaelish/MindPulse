@@ -10,9 +10,27 @@ export interface FeedNotification {
   title: string;
   message: string;
   type: 'alert' | 'info' | 'appointment';
+  category: NotificationCategory;
   read: boolean;
   createdAt: string;
 }
+
+export type NotificationCategory =
+  | 'users'
+  | 'assessment-tools'
+  | 'results'
+  | 'records'
+  | 'analytics'
+  | 'settings';
+
+export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: string }[] = [
+  { value: 'users', label: 'Users' },
+  { value: 'assessment-tools', label: 'Assessment Tools' },
+  { value: 'results', label: 'Results' },
+  { value: 'records', label: 'Records' },
+  { value: 'analytics', label: 'Analytics' },
+  { value: 'settings', label: 'Settings' },
+];
 
 interface NotificationRow {
   id: string;
@@ -34,6 +52,45 @@ const timeAgo = (iso: string): string => {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+export const categoryForNotification = (
+  notification: Pick<FeedNotification, 'title' | 'message' | 'type'>,
+): NotificationCategory => {
+  const content = `${notification.title} ${notification.message}`.toLowerCase();
+  if (notification.type === 'appointment' || /appointment|capacity|registration|account|\buser\b|\bdoctor\b/.test(content)) return 'users';
+  if (/assessment tool|assessment-tools|\btool\b/.test(content)) return 'assessment-tools';
+  if (/stress|score|risk|critical|assessment result/.test(content)) return 'results';
+  if (/record|archive|backup/.test(content)) return 'records';
+  if (/analytics|analytic|report|trend/.test(content)) return 'analytics';
+  if (/setting|preference|configuration/.test(content)) return 'settings';
+  return 'users';
+};
+
+export const notificationCategoryForPath = (pathname: string): NotificationCategory | 'all' => {
+  const section = pathname.replace(/\/+$/, '').split('/').pop()?.toLowerCase();
+  switch (section) {
+    case 'users': return 'users';
+    case 'assessment-tools':
+    case 'assessment': return 'assessment-tools';
+    case 'results': return 'results';
+    case 'records': return 'records';
+    case 'analytics': return 'analytics';
+    case 'settings': return 'settings';
+    default: return 'all';
+  }
+};
+
+export const adminPathForNotificationCategory = (category: NotificationCategory | 'all'): string => {
+  switch (category) {
+    case 'users': return '/users';
+    case 'assessment-tools': return '/assessment-tools';
+    case 'results': return '/results';
+    case 'records': return '/records';
+    case 'analytics': return '/analytics';
+    case 'settings': return '/settings';
+    default: return '/dashboard';
+  }
 };
 
 /**
@@ -62,12 +119,26 @@ export const fetchFeedNotifications = async (
     title: row.title,
     message: row.message,
     type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+    category: categoryForNotification({
+      title: row.title,
+      message: row.message,
+      type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+    }),
     read: Boolean(row.read),
     createdAt: row.created_at,
   }));
 
   const visible = mapped.filter((row) => feedNotificationEnabled(row, settings));
   return { notifications: visible, hiddenCount: mapped.length - visible.length };
+};
+
+export const markFeedNotificationRead = async (id: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 };
 
 export const notificationTimeAgo = timeAgo;

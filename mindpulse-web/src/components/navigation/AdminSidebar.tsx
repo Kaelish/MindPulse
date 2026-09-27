@@ -4,7 +4,7 @@ import '../../views/admin/admin-theme.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings';
+  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings' | 'notifications';
   onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
 }
 

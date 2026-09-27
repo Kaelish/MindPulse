@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FeedNotification, fetchFeedNotifications, notificationTimeAgo } from '../services/notifications';
+import {
+  FeedNotification,
+  fetchFeedNotifications,
+  notificationCategoryForPath,
+  notificationTimeAgo,
+} from '../services/notifications';
 import './NotificationPanel.css';
 
 interface NotificationPanelProps {
@@ -29,6 +34,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
       .catch((e) => setError(e instanceof Error ? e.message : 'Unable to load notifications.'))
       .finally(() => setIsLoading(false));
   }, []);
+
+  const handleShowMore = () => {
+    if (document.querySelector('.admin-scope')) {
+      const category = notificationCategoryForPath(window.location.pathname);
+      window.history.pushState({}, '', `/notifications?category=${category}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
+    setShowAll((expanded) => !expanded);
+  };
 
   useEffect(() => {
     load();
@@ -69,7 +84,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           className="notification-show-more"
           type="button"
           aria-expanded={showAll}
-          onClick={() => setShowAll((expanded) => !expanded)}
+          onClick={handleShowMore}
         >
           {showAll ? 'Show less' : 'Show more'}
         </button>
