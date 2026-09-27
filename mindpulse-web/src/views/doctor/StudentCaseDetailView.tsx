@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StudentCase } from './StudentCasesView';
-import { NotificationBell } from '../../components/NotificationBell';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 import './StudentCaseDetailView.css';
 import {
   fetchStudentConsultations,
@@ -159,7 +159,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   return (
     <main className="main-panel student-detail-main">
-      <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></header>
+      <header className="student-detail-topbar"><strong>Student Cases</strong><DoctorNotificationMenu /></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
         <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>

@@ -82,3 +82,38 @@
   color: #94a3b8;
   font-size: 0.62rem;
 }
+
+.notification-show-more {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 0 2px;
+  border: 0;
+  border-top: 1px solid #e8edf3;
+  background: transparent;
+  color: #3b5bdb;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.notification-show-more:hover {
+  color: #2444c4;
+}
+
+.notification-show-more:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.doctor-notification-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.doctor-notification-menu .notification-panel {
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(350px, calc(100vw - 32px));
+}

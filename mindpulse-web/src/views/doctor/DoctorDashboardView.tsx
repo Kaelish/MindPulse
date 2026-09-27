@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 import { fetchDoctorDashboard, DoctorDashboardData } from '../../services/doctorDashboard';
 import { WebConsultationItem, fetchWebConsultations } from '../../services/consultations';
 
@@ -86,6 +87,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onSign
         </div>
 
         <div className="header-actions">
+          <DoctorNotificationMenu />
           <button type="button" className="ghost-button" onClick={onSignOut}>Sign out</button>
         </div>
       </header>

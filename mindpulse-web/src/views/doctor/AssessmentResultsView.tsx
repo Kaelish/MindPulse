@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 import { AdminResultRow, bandForScore, fetchVisibleStressResults } from '../../services/admin';
 
 const BAND_LABELS: Record<'low' | 'moderate' | 'high', string> = { low: 'Low', moderate: 'Moderate', high: 'High' };
@@ -88,7 +89,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
   };
 
   return <main className="main-panel assessment-results-main">
-    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv}>Export</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div></header>
+    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv}>Export</button><DoctorNotificationMenu /></div></header>
     <section className="assessment-summary-grid">
       <Summary label="Total Assessments" value={String(results.length)} change="" tone="green" />
       <Summary label="High Risk" value={String(highRisk)} change="" tone="red" />

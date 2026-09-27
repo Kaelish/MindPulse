@@ -1,4 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 import {
   createRecommendation,
   DoctorRecommendation,
@@ -121,7 +122,7 @@ export const RecommendationsView: React.FC = () => {
   const hasStudents = students.length > 0;
 
   return <main className="main-panel recommendations-main">
-    <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
+    <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><DoctorNotificationMenu /></header>
     <div className="recommendations-toolbar">
       <div className="recommendation-filters">{(['All', 'Active', 'Completed'] as const).map((filter) => <button type="button" key={filter} className={activeFilter === filter ? 'active' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>)}</div>
       <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd}>+ Add Recommendations</button>

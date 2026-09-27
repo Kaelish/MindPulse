@@ -13,6 +13,7 @@ interface NotificationPanelProps {
  */
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default' }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [hiddenCount, setHiddenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,7 +53,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
       )}
       {!isLoading && !error && notifications.length > 0 && (
         <ul className="notification-list">
-          {notifications.map((row) => (
+          {(showAll ? notifications : notifications.slice(0, 2)).map((row) => (
             <li key={row.id} className={`notification-item ${row.read ? '' : 'unread'}`}>
               <div className="notification-item-head">
                 <span className="notification-item-title">{row.title}</span>
@@ -62,6 +63,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
             </li>
           ))}
         </ul>
+      )}
+      {!isLoading && !error && notifications.length > 0 && (
+        <button
+          className="notification-show-more"
+          type="button"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((expanded) => !expanded)}
+        >
+          {showAll ? 'Show less' : 'Show more'}
+        </button>
       )}
       {!isLoading && !error && hiddenCount > 0 && (
         <p className="notification-panel-note">
