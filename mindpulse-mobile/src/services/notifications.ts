@@ -37,11 +37,20 @@ const mapVisible = async (rows: NotificationRow[]): Promise<FeedNotification[]> 
   return rows.filter((row) => isNotificationEnabled(row, prefs)).map(toFeedNotification);
 };
 
+/**
+ * The signed-in account. RLS lets staff read every notification row, so each
+ * query is additionally pinned to this id: doctors, admins and students each
+ * only ever load their own feed.
+ */
+const requireViewerId = async (): Promise<string> => requireUserId();
+
 /** Latest handful of notifications, newest first (header badge feed). */
 export const fetchRecentNotifications = async (limit = 5): Promise<FeedNotification[]> => {
+  const userId = await requireViewerId();
   const { data, error } = await supabase
     .from('notifications')
     .select(SELECT_COLUMNS)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -50,9 +59,11 @@ export const fetchRecentNotifications = async (limit = 5): Promise<FeedNotificat
 
 /** Complete history for the "See all" sheet: past → recent, no limit. */
 export const fetchAllNotifications = async (): Promise<FeedNotification[]> => {
+  const userId = await requireViewerId();
   const { data, error } = await supabase
     .from('notifications')
     .select(SELECT_COLUMNS)
+    .eq('user_id', userId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return mapVisible((data ?? []) as NotificationRow[]);
@@ -61,9 +72,11 @@ export const fetchAllNotifications = async (): Promise<FeedNotification[]> => {
 /** Unread badge count; silent failure keeps the bell usable offline. */
 export const fetchUnreadNotificationCount = async (): Promise<number> => {
   try {
+    const userId = await requireViewerId();
     const { count, error } = await supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
       .eq('read', false);
     if (error) throw new Error(error.message);
     return count ?? 0;

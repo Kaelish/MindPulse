@@ -4,6 +4,17 @@ import { AdminSystemSettings, feedNotificationEnabled, loadAdminSettings } from 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
 
+/**
+ * The signed-in account. Every read/write below is pinned to it so each role
+ * only ever touches its own notifications, even when RLS would allow more.
+ */
+const requireViewerId = async (): Promise<string> => {
+  if (!supabase) throw notConfigured();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error('Your session has expired. Please sign in again.');
+  return data.user.id;
+};
+
 export interface FeedNotification {
   id: string;
   userId: string;
@@ -94,20 +105,23 @@ export const adminPathForNotificationCategory = (category: NotificationCategory 
 };
 
 /**
- * Notifications for the bell panel. RLS decides visibility (administrators
- * see every row, per notifications_select); the saved Settings → Notification
- * preferences then filter disabled categories — rows hidden by settings are
- * returned as `hiddenCount` so the UI can say so.
+ * Notifications for the bell panel. RLS lets administrators read every row,
+ * so the query additionally pins `user_id` to the signed-in account: admins,
+ * doctors and students each get their own feed. The saved Settings →
+ * Notification preferences then filter disabled categories — rows hidden by
+ * settings are returned as `hiddenCount` so the UI can say so.
  */
 export const fetchFeedNotifications = async (
   limit = 15,
   settings: AdminSystemSettings = loadAdminSettings(),
 ): Promise<{ notifications: FeedNotification[]; hiddenCount: number }> => {
   if (!supabase) throw notConfigured();
+  const viewerId = await requireViewerId();
 
   const { data, error } = await supabase
     .from('notifications')
     .select('id, user_id, title, message, type, read, created_at')
+    .eq('user_id', viewerId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -134,10 +148,12 @@ export const fetchFeedNotifications = async (
 
 export const markFeedNotificationRead = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
+  const viewerId = await requireViewerId();
   const { error } = await supabase
     .from('notifications')
     .update({ read: true })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', viewerId);
   if (error) throw new Error(error.message);
 };
 
@@ -168,10 +184,12 @@ export const fetchAllNotifications = async (
   settings: AdminSystemSettings = loadAdminSettings(),
 ): Promise<{ notifications: FeedNotification[]; hiddenCount: number }> => {
   if (!supabase) throw notConfigured();
+  const viewerId = await requireViewerId();
 
   const { data, error } = await supabase
     .from('notifications')
     .select('id, user_id, title, message, type, read, created_at')
+    .eq('user_id', viewerId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { DoctorNotifications } from './DoctorChrome';
+import { DOCTOR_NAVIGATE_EVENT } from '../NotificationHistorySheet';
 import {
   FeedNotification,
   fetchAllNotifications,
@@ -17,6 +18,7 @@ jest.mock('../../services/notifications', () => ({
   fetchAllNotifications: jest.fn(),
   fetchUnreadNotificationCount: jest.fn(),
   markAllNotificationsRead: jest.fn(),
+  markFeedNotificationRead: jest.fn(),
   notificationCategoryForPath: jest.fn(),
   notificationTimeAgo: jest.fn(),
   notificationFullTime: jest.fn(),
@@ -117,4 +119,26 @@ test('closes the full history on Escape without dropping the dropdown badge', as
 
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(screen.getByRole('button', { name: 'Notifications, 1 unread' })).toBeTruthy();
+});
+
+test('clicking a row opens its detail and View details jumps the portal', async () => {
+  const jump = jest.fn();
+  window.addEventListener(DOCTOR_NAVIGATE_EVENT, jump);
+
+  render(<DoctorNotifications />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+  fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
+
+  const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
+  fireEvent.click(within(dialog).getByRole('button', { name: /High stress alert/ }));
+
+  expect(await within(screen.getByRole('dialog')).findByText('Liberty Lair scored 85% stress.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /View details/ }));
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(jump).toHaveBeenCalledTimes(1);
+  expect(jump.mock.calls[0][0]).toMatchObject({ detail: 'assessment-results' });
+  window.removeEventListener(DOCTOR_NAVIGATE_EVENT, jump);
 });

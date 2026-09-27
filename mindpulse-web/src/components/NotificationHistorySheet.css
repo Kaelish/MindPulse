@@ -1,0 +1,553 @@
+/* Shared "See all" popup. Portalled to <body>, so it carries its own tokens
+   (values mirror doctor-theme.css for scope=doctor, admin palette for
+   scope=admin) instead of relying on .doctor-scope ancestor rules. */
+.notif-hs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(9, 20, 28, 0.55);
+  backdrop-filter: blur(2px);
+  font-family: Inter, 'Segoe UI', sans-serif;
+
+  --hs-accent: #0f8298;
+  --hs-accent-ink: #ffffff;
+  --hs-accent-soft: #e7f7fb;
+  --hs-panel: #ffffff;
+  --hs-ink: #0e1c26;
+  --hs-muted: #5d7381;
+  --hs-line: #e4edf2;
+  --hs-soft: #f4f8fa;
+  --hs-danger: #d64550;
+}
+
+.notif-hs-overlay.notif-hs--admin {
+  --hs-accent: #0e8291;
+  --hs-accent-soft: #e6f4f5;
+  --hs-ink: #17212b;
+  --hs-muted: #6b7280;
+  --hs-line: #e5e7eb;
+  --hs-soft: #f1f3f4;
+}
+
+.notif-hs-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: min(84vh, 760px);
+  background: var(--hs-panel);
+  color: var(--hs-ink);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(6, 18, 26, 0.32);
+  outline: none;
+  overflow: hidden;
+  animation: notif-hs-pop 180ms ease-out;
+}
+
+@keyframes notif-hs-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.notif-hs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--hs-line);
+}
+
+.notif-hs-heading {
+  min-width: 0;
+}
+
+.notif-hs-title {
+  margin: 0;
+  font-size: 1.14rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.notif-hs-sub {
+  margin: 4px 0 0;
+  color: var(--hs-muted);
+  font-size: 0.8rem;
+}
+
+.notif-hs-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.notif-hs-markall {
+  padding: 7px 13px;
+  border: 1px solid var(--hs-line);
+  border-radius: 999px;
+  background: var(--hs-soft);
+  color: var(--hs-ink);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notif-hs-markall:hover:not(:disabled) {
+  background: var(--hs-accent-soft);
+  border-color: var(--hs-accent);
+}
+
+.notif-hs-markall:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.notif-hs-close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--hs-line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--hs-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.notif-hs-close:hover {
+  background: var(--hs-soft);
+  color: var(--hs-ink);
+}
+
+.notif-hs-action-error {
+  margin: 10px 22px -4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fdeced;
+  color: var(--hs-danger);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.notif-hs-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Admin body embeds the full AdminNotificationsView: strip its page frame. */
+.notif-hs--admin .admin-notifications-main {
+  min-height: 0;
+  padding: 18px 22px 8px;
+  background: transparent;
+  color: inherit;
+}
+
+.notif-hs--admin .admin-notifications-header {
+  margin-bottom: 12px;
+}
+
+.notif-hs--admin .admin-notifications-back {
+  display: none;
+}
+
+.notif-hs--admin .admin-notifications-title h1 {
+  font-size: 1.14rem;
+}
+
+.notif-hs--admin .admin-notifications-card {
+  cursor: pointer;
+}
+
+.notif-hs-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 22px 18px;
+  border-top: 1px solid var(--hs-line);
+}
+
+.notif-hs-fullpage {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--hs-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notif-hs-fullpage:hover {
+  text-decoration: underline;
+}
+
+/* ---- doctor list ---- */
+
+.notif-hs-list {
+  padding: 6px 14px 16px;
+}
+
+.notif-hs-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notif-hs-row + .notif-hs-row {
+  border-top: 1px solid var(--hs-line);
+}
+
+.notif-hs-row-hit {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 13px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notif-hs-row-hit:hover {
+  background: var(--hs-soft);
+}
+
+.notif-hs-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--hs-accent);
+  flex-shrink: 0;
+}
+
+.notif-hs-row.is-info .notif-hs-dot {
+  background: #3b82f6;
+}
+.notif-hs-row.is-alert .notif-hs-dot {
+  background: var(--hs-danger);
+}
+.notif-hs-row.is-success .notif-hs-dot,
+.notif-hs-row.is-appointment .notif-hs-dot {
+  background: #16a34a;
+}
+.notif-hs-row.is-warning .notif-hs-dot {
+  background: #d97706;
+}
+
+.notif-hs-row.is-unread .notif-hs-dot {
+  box-shadow: 0 0 0 4px var(--hs-accent-soft);
+}
+
+.notif-hs-row-body {
+  min-width: 0;
+  flex: 1;
+  display: block;
+}
+
+.notif-hs-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notif-hs-row-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.notif-hs-time {
+  flex-shrink: 0;
+  color: var(--hs-muted);
+  font-size: 0.7rem;
+}
+
+.notif-hs-row-msg {
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--hs-muted);
+  font-size: 0.79rem;
+  line-height: 1.5;
+}
+
+.notif-hs-unread-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--hs-accent-soft);
+  color: var(--hs-accent);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notif-hs-note {
+  margin: 10px 8px 0;
+  color: var(--hs-muted);
+  font-size: 0.74rem;
+}
+
+/* ---- doctor detail pane ---- */
+
+.notif-hs-detail {
+  padding: 16px 22px 22px;
+}
+
+.notif-hs-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--hs-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notif-hs-back:hover {
+  text-decoration: underline;
+}
+
+.notif-hs-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.notif-hs-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--hs-soft);
+  color: var(--hs-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.notif-hs-chip.is-alert {
+  background: #fdeced;
+  color: var(--hs-danger);
+}
+.notif-hs-chip.is-appointment {
+  background: #e9f7ee;
+  color: #16a34a;
+}
+
+.notif-hs-detail-title {
+  margin: 0;
+  font-size: 1.06rem;
+  line-height: 1.35;
+}
+
+.notif-hs-detail-time {
+  display: block;
+  margin-top: 5px;
+  color: var(--hs-muted);
+  font-size: 0.75rem;
+}
+
+.notif-hs-detail-msg {
+  margin: 14px 0 0;
+  color: var(--hs-ink);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.notif-hs-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hs-line);
+}
+
+.notif-hs-primary,
+.notif-hs-secondary,
+.notif-hs-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notif-hs-primary {
+  border: 1px solid transparent;
+  background: var(--hs-accent);
+  color: var(--hs-accent-ink);
+}
+
+.notif-hs-primary:hover {
+  filter: brightness(1.06);
+}
+
+.notif-hs-secondary,
+.notif-hs-retry {
+  border: 1px solid var(--hs-line);
+  background: transparent;
+  color: var(--hs-ink);
+}
+
+.notif-hs-secondary:hover:not(:disabled),
+.notif-hs-retry:hover {
+  background: var(--hs-soft);
+}
+
+.notif-hs-secondary:disabled {
+  color: var(--hs-muted);
+  cursor: default;
+}
+
+/* ---- states ---- */
+
+.notif-hs-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  text-align: center;
+  color: var(--hs-muted);
+  font-size: 0.84rem;
+}
+
+.notif-hs-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--hs-line);
+  border-top-color: var(--hs-accent);
+  border-radius: 50%;
+  animation: notif-hs-spin 720ms linear infinite;
+}
+
+@keyframes notif-hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.notif-hs-empty-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--hs-accent-soft);
+}
+
+.notif-hs-empty-title {
+  margin: 0;
+  color: var(--hs-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.notif-hs-empty-text {
+  margin: 0;
+  max-width: 320px;
+  font-size: 0.79rem;
+  line-height: 1.55;
+}
+
+/* Doctor dark mode: mirror html[data-doctor-theme='dark'] doctor tokens. */
+html[data-doctor-theme='dark'] .notif-hs-overlay.notif-hs--doctor {
+  --hs-accent: #23a5ba;
+  --hs-accent-ink: #04171d;
+  --hs-accent-soft: #102b33;
+  --hs-panel: #111e26;
+  --hs-ink: #e8f1f5;
+  --hs-muted: #92a8b4;
+  --hs-line: #1e323d;
+  --hs-soft: #182a34;
+  --hs-danger: #ef8a92;
+  background: rgba(3, 10, 14, 0.62);
+  box-shadow: none;
+}
+
+html[data-doctor-theme='dark'] .notif-hs--doctor .notif-hs-sheet {
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+html[data-doctor-theme='dark'] .notif-hs--doctor .notif-hs-chip.is-alert {
+  background: #2c1a1d;
+}
+
+html[data-doctor-theme='dark'] .notif-hs--doctor .notif-hs-chip.is-appointment {
+  background: #12291f;
+}
+
+@media (max-width: 640px) {
+  .notif-hs-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .notif-hs-sheet {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    animation-name: notif-hs-rise;
+  }
+
+  @keyframes notif-hs-rise {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  .notif-hs-head {
+    padding: 16px 16px 12px;
+  }
+
+  .notif-hs-list,
+  .notif-hs-detail,
+  .notif-hs--admin .admin-notifications-main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .notif-hs-foot {
+    padding: 10px 16px 16px;
+  }
+}

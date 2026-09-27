@@ -15,6 +15,8 @@ type CategoryFilter = NotificationCategory | 'all';
 
 interface AdminNotificationsViewProps {
   onNavigate: (pathname: string) => void;
+  /** Rendered inside the "See all" popup: drop the page chrome, keep filters. */
+  embedded?: boolean;
 }
 
 const readCategory = (): CategoryFilter => {
@@ -28,9 +30,9 @@ const categoryLabel = (category: CategoryFilter) =>
     ? 'All Notifications'
     : NOTIFICATION_CATEGORIES.find((option) => option.value === category)?.label ?? 'All Notifications';
 
-export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ onNavigate }) => {
+export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ onNavigate, embedded = false }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
-  const [category, setCategory] = useState<CategoryFilter>(readCategory);
+  const [category, setCategory] = useState<CategoryFilter>(() => (embedded ? 'all' : readCategory()));
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,13 +53,15 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (embedded) return;
     const syncCategory = () => setCategory(readCategory());
     window.addEventListener('popstate', syncCategory);
     return () => window.removeEventListener('popstate', syncCategory);
-  }, []);
+  }, [embedded]);
 
   const updateCategory = (nextCategory: CategoryFilter) => {
     setCategory(nextCategory);
+    if (embedded) return;
     const query = new URLSearchParams(window.location.search);
     query.set('category', nextCategory);
     window.history.replaceState({}, '', `/notifications?${query.toString()}`);
@@ -102,19 +106,21 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   };
 
   return (
-    <main className="admin-notifications-main">
-      <header className="admin-notifications-header">
-        <button type="button" className="admin-notifications-back" onClick={goBack}>
-          <span aria-hidden="true">←</span> Back
-        </button>
-        <div className="admin-notifications-title">
-          <span className="admin-notifications-bell"><NotificationBell /></span>
-          <div>
-            <h1>View Notifications</h1>
-            <p>Stay updated with important alerts and updates</p>
+    <main className={`admin-notifications-main${embedded ? ' is-embedded' : ''}`}>
+      {!embedded && (
+        <header className="admin-notifications-header">
+          <button type="button" className="admin-notifications-back" onClick={goBack}>
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <div className="admin-notifications-title">
+            <span className="admin-notifications-bell"><NotificationBell /></span>
+            <div>
+              <h1>View Notifications</h1>
+              <p>Stay updated with important alerts and updates</p>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <section className="admin-notifications-toolbar" aria-label="Notification filters">
         <div className="admin-notification-tabs" role="tablist" aria-label="Read status">
@@ -167,7 +173,13 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
       {!isLoading && !error && filteredNotifications.length > 0 && (
         <section className="admin-notification-cards" aria-label={`${categoryLabel(category)} feed`}>
           {filteredNotifications.map((notification) => (
-            <article key={notification.id} className={`admin-notification-card ${notification.read ? 'is-read' : 'is-unread'}`}>
+            <article
+              key={notification.id}
+              className={`admin-notification-card ${notification.read ? 'is-read' : 'is-unread'}`}
+              onClick={embedded
+                ? () => onNavigate(adminPathForNotificationCategory(notification.category))
+                : undefined}
+            >
               <span className={`admin-notification-icon ${notification.type === 'alert' ? 'is-alert' : ''}`} aria-hidden="true">
                 {notification.type === 'alert' ? '!' : 'i'}
               </span>
@@ -178,7 +190,10 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                 </div>
                 <p>{notification.message}</p>
                 <span className="admin-notification-category-label">{categoryLabel(notification.category)}</span>
-                <div className="admin-notification-actions">
+                <div
+                  className="admin-notification-actions"
+                  onClick={embedded ? (event) => event.stopPropagation() : undefined}
+                >
                   <button
                     type="button"
                     className="admin-notification-mark-read"

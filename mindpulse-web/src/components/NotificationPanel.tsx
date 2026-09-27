@@ -6,25 +6,28 @@ import {
   notificationTimeAgo,
 } from '../services/notifications';
 import { NotificationBell } from './NotificationBell';
+import { NotificationHistorySheet } from './NotificationHistorySheet';
 import './NotificationPanel.css';
 
 interface NotificationPanelProps {
   variant?: 'default' | 'dashboard';
-  /** Rendered as the panel footer; opens the complete past → recent list. */
-  onSeeAll?: () => void;
+  /** Opens the complete past → recent popup; receives the row to preview. */
+  onSeeAll?: (initialId?: string) => void;
 }
 
 /**
  * The bell dropdown used across the admin views: fetches the real
- * notifications table (RLS-gated) and honours the preferences saved in
- * Settings → Profile → Notifications.
+ * notifications table (RLS-gated + pinned to the signed-in account) and
+ * honours the preferences saved in Settings → Profile → Notifications.
+ * Rows and the "See all" link both open the shared history popup.
  */
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default', onSeeAll }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
-  const [showAll, setShowAll] = useState(false);
   const [hiddenCount, setHiddenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyId, setHistoryId] = useState<string | null>(null);
   const activeCategory = notificationCategoryForPath(window.location.pathname);
   const activeCategoryLabel = activeCategory === 'all'
     ? 'Dashboard'
@@ -34,6 +37,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
   const contextualNotifications = notifications.filter((notification) =>
     activeCategory === 'all' || notification.category === activeCategory,
   );
+  const scope = document.querySelector('.admin-scope') ? 'admin' : 'doctor';
 
   const load = useCallback(() => {
     setIsLoading(true);
@@ -47,15 +51,20 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
       .finally(() => setIsLoading(false));
   }, []);
 
-  const handleShowMore = () => {
-    if (document.querySelector('.admin-scope')) {
-      const category = notificationCategoryForPath(window.location.pathname);
-      const query = new URLSearchParams({ category, from: window.location.pathname });
-      window.history.pushState({}, '', `/notifications?${query.toString()}`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+  const openHistory = (initialId?: string) => {
+    if (onSeeAll) {
+      onSeeAll(initialId);
       return;
     }
-    setShowAll((expanded) => !expanded);
+    setHistoryId(initialId ?? null);
+    setHistoryOpen(true);
+  };
+
+  const openFromKeyboard = (event: React.KeyboardEvent<HTMLLIElement>, id: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openHistory(id);
+    }
   };
 
   useEffect(() => {
@@ -81,8 +90,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
       )}
       {!isLoading && !error && contextualNotifications.length > 0 && (
         <ul className="notification-list">
-          {(showAll ? contextualNotifications : contextualNotifications.slice(0, 2)).map((row) => (
-            <li key={row.id} className={`notification-item ${row.read ? '' : 'unread'}`}>
+          {contextualNotifications.slice(0, 5).map((row) => (
+            <li
+              key={row.id}
+              className={`notification-item ${row.read ? '' : 'unread'} is-clickable`}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open notification: ${row.title}`}
+              onClick={() => openHistory(row.id)}
+              onKeyDown={(event) => openFromKeyboard(event, row.id)}
+            >
               <div className="notification-item-head">
                 <span className="notification-item-title">{row.title}</span>
                 <span className="notification-item-time">{notificationTimeAgo(row.createdAt)}</span>
@@ -92,23 +109,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           ))}
         </ul>
       )}
-      {!isLoading && !error && contextualNotifications.length > 0 && (
-        <button
-          className="notification-show-more"
-          type="button"
-          aria-expanded={showAll}
-          onClick={handleShowMore}
-        >
-          {showAll ? 'Show less' : 'Show more'}
-        </button>
-      )}
       {!isLoading && !error && hiddenCount > 0 && (
         <p className="notification-panel-note">
           {hiddenCount} hidden by your notification settings.
         </p>
       )}
-      {!isLoading && !error && notifications.length > 0 && onSeeAll && (
-        <button type="button" className="notification-see-all" onClick={onSeeAll}>
+      {!isLoading && !error && contextualNotifications.length > 0 && (
+        <button type="button" className="notification-see-all" onClick={() => openHistory()}>
           See all
           <span aria-hidden="true">→</span>
         </button>
@@ -116,8 +123,18 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
     </>
   );
 
-  if (variant === 'dashboard') {
-    return <div className="admin-dashboard-notification-panel">{body}</div>;
-  }
-  return <aside className="notification-panel">{body}</aside>;
+  return (
+    <>
+      {variant === 'dashboard'
+        ? <div className="admin-dashboard-notification-panel">{body}</div>
+        : <aside className="notification-panel">{body}</aside>}
+      {historyOpen && (
+        <NotificationHistorySheet
+          scope={scope}
+          initialId={historyId ?? undefined}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+    </>
+  );
 };

@@ -36,6 +36,19 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+.notification-item.is-clickable {
+  margin: 0 -6px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notification-item.is-clickable:hover,
+.notification-item.is-clickable:focus-visible {
+  background: #f1f5f9;
+  outline: none;
+}
+
 .notification-item:last-child {
   border-bottom: none;
 }

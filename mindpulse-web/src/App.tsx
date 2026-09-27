@@ -4,6 +4,7 @@ import { getCurrentUserRole } from './services/session';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
 import { applyDoctorSettings, loadDoctorSettings } from './services/doctorSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
+import { DOCTOR_NAVIGATE_EVENT } from './components/NotificationHistorySheet';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
 import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
@@ -23,6 +24,16 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>(() => loadDoctorSettings().landingView);
   const [selectedStudent, setSelectedStudent] = useState<StudentCase | null>(null);
+
+  // A notification's "View details" jumps straight to the matching section.
+  useEffect(() => {
+    const handleNotificationJump = (event: Event) => {
+      const target = (event as CustomEvent<DoctorView>).detail;
+      if (target) setActiveView(target);
+    };
+    window.addEventListener(DOCTOR_NAVIGATE_EVENT, handleNotificationJump);
+    return () => window.removeEventListener(DOCTOR_NAVIGATE_EVENT, handleNotificationJump);
+  }, []);
 
   const renderActiveView = () => {
     switch (activeView) {
