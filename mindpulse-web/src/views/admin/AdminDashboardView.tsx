@@ -11,7 +11,8 @@ import { AdminGenerateReportsView } from './AdminGenerateReportsView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminNotificationsView } from './AdminNotificationsView';
-import { AdminOverviewStats, fetchAdminOverview } from '../../services/admin';
+import { AdminDashboardCharts, AdminOverviewStats, fetchAdminDashboardCharts, fetchAdminOverview } from '../../services/admin';
+import { ActivityLineChart, AppointmentStatusDonut } from './AdminDashboardCharts';
 import './AdminDashboardView.css';
 
 interface AdminDashboardViewProps {
@@ -62,6 +63,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   const [activeView, setActiveView] = useState<AdminView>(() => viewFromPath(window.location.pathname));
   const [showNotifications, setShowNotifications] = useState(false);
   const [stats, setStats] = useState<AdminOverviewStats | null>(null);
+  const [charts, setCharts] = useState<AdminDashboardCharts | null>(null);
+  const [chartsError, setChartsError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
@@ -82,12 +85,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
     let active = true;
     setIsLoading(true);
     setLoadError('');
+    setChartsError('');
+    setCharts(null);
+    fetchAdminDashboardCharts()
+      .then((chartData) => {
+        if (active) setCharts(chartData);
+      })
+      .catch((error) => {
+        if (active) setChartsError(error instanceof Error ? error.message : 'Unable to load the charts.');
+      });
     fetchAdminOverview()
       .then((data) => {
         if (active) setStats(data);
       })
       .catch((error) => {
-        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load the dashboard overview.');
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : 'Unable to load the dashboard overview.');
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -200,8 +213,28 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
                 )}
               </article>
               <article className="admin-dashboard-panel">
+                <h2>Appointments by Status</h2>
+                {charts ? (
+                  <AppointmentStatusDonut statuses={charts.statuses} />
+                ) : chartsError ? (
+                  <p className="admin-chart-empty">{chartsError}</p>
+                ) : (
+                  <div className="loading-state"><span className="spinner" /></div>
+                )}
+              </article>
+              <article className="admin-dashboard-panel admin-dashboard-panel--wide">
+                <h2>Activity</h2>
+                {charts ? (
+                  <ActivityLineChart weeks={charts.weeks} />
+                ) : chartsError ? (
+                  <p className="admin-chart-empty">{chartsError}</p>
+                ) : (
+                  <div className="loading-state"><span className="spinner" /></div>
+                )}
+              </article>
+              <article className="admin-dashboard-panel admin-dashboard-panel--wide">
                 <h2>Account Overview</h2>
-                <div className="admin-dashboard-legend">
+                <div className="admin-dashboard-legend admin-dashboard-legend--chips">
                   <div><i /><span>Students: {stats.students}</span></div>
                   <div><i className="moderate" /><span>Doctors: {stats.doctors}</span></div>
                   <div><i className="high" /><span>Admins: {stats.admins}</span></div>

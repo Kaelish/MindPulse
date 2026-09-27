@@ -36,6 +36,10 @@
 .admin-dashboard-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #33bd91; }
 .admin-dashboard-legend i.moderate { background: #ff9f16; }
 .admin-dashboard-legend i.high { background: #ff414b; }
+.admin-dashboard-panel--wide { grid-column: 1 / -1; }
+.admin-dashboard-legend--chips { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; }
+.admin-dashboard-legend--chips div { display: inline-flex; align-items: center; gap: 6px; }
+.admin-dashboard-legend--chips span { display: inline; margin-bottom: 0; }
 
 @media (max-width: 760px) {
   .admin-dashboard-main { padding: 18px; }

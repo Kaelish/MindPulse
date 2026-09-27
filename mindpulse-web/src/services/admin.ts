@@ -96,6 +96,100 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
   };
 };
 
+export interface AppointmentStatusCount {
+  status: string;
+  label: string;
+  count: number;
+}
+
+export interface AdminActivityWeek {
+  label: string;
+  bookings: number;
+  assessments: number;
+}
+
+export interface AdminDashboardCharts {
+  statuses: AppointmentStatusCount[];
+  weeks: AdminActivityWeek[];
+}
+
+const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: 'Awaiting approval',
+  awaiting_payment: 'Awaiting payment',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  declined: 'Declined',
+  cancelled: 'Cancelled',
+};
+
+const APPOINTMENT_STATUS_ORDER = [
+  'awaiting_payment',
+  'scheduled',
+  'confirmed',
+  'completed',
+  'declined',
+  'cancelled',
+];
+
+const startOfUtcWeek = (value: Date | string) => {
+  const d = new Date(value);
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  return monday;
+};
+
+export const fetchAdminDashboardCharts = async (): Promise<AdminDashboardCharts> => {
+  if (!supabase) throw notConfigured();
+
+  const [appointmentsResult, sessionsResult] = await Promise.all([
+    supabase.from('appointments').select('created_at, status'),
+    supabase.from('stress_sessions').select('created_at'),
+  ]);
+  if (appointmentsResult.error) throw appointmentsResult.error;
+  if (sessionsResult.error) throw sessionsResult.error;
+
+  const appointmentRows = (appointmentsResult.data ?? []) as { created_at: string; status: string | null }[];
+  const sessionRows = (sessionsResult.data ?? []) as { created_at: string }[];
+
+  const counts = new Map<string, number>();
+  appointmentRows.forEach((row) => {
+    const status = row.status ?? 'scheduled';
+    counts.set(status, (counts.get(status) ?? 0) + 1);
+  });
+  const statuses: AppointmentStatusCount[] = APPOINTMENT_STATUS_ORDER.map((status) => ({
+    status,
+    label: APPOINTMENT_STATUS_LABELS[status] ?? status,
+    count: counts.get(status) ?? 0,
+  }));
+
+  const now = new Date();
+  const firstMonday = startOfUtcWeek(now);
+  firstMonday.setUTCDate(firstMonday.getUTCDate() - 7 * 11);
+  const weekCount = 12;
+  const weeks: AdminActivityWeek[] = Array.from({ length: weekCount }, (_, index) => {
+    const start = new Date(firstMonday);
+    start.setUTCDate(start.getUTCDate() + 7 * index);
+    return {
+      label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+      bookings: 0,
+      assessments: 0,
+    };
+  });
+
+  const bucketOf = (value: string) => Math.floor((startOfUtcWeek(value).getTime() - firstMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+  appointmentRows.forEach((row) => {
+    const index = bucketOf(row.created_at);
+    if (index >= 0 && index < weekCount) weeks[index].bookings += 1;
+  });
+  sessionRows.forEach((row) => {
+    const index = bucketOf(row.created_at);
+    if (index >= 0 && index < weekCount) weeks[index].assessments += 1;
+  });
+
+  return { statuses, weeks };
+};
+
 export interface AdminAccountRow {
   id: string;
   name: string;

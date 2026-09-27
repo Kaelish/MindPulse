@@ -88,7 +88,10 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
   // Past → recent reading, so land on the newest entry.
   useEffect(() => {
     if (isLoading || rows.length === 0) return;
-    const timer = setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }), 80);
+    const timer = setTimeout(() => {
+      const list = listRef.current;
+      if (list && typeof list.scrollTo === 'function') list.scrollTo({ top: list.scrollHeight });
+    }, 80);
     return () => clearTimeout(timer);
   }, [isLoading, rows]);
 

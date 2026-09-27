@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../../supabase/client';
 import { fetchOwnProfile } from '../../services/profile';
 import './AdminSidebar.css';
 import '../../views/admin/admin-theme.css';
@@ -27,15 +28,27 @@ const NAV_ENTRIES: NavEntry[] = [
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
   const [avatarUrl, setAvatarUrl] = useState(() => window.localStorage.getItem('mindpulse.profileAvatarUrl'));
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
 
   useEffect(() => {
     let active = true;
     fetchOwnProfile().then((profile) => {
-      if (active) {
-        setAvatarUrl(profile.avatar_url);
-        if (profile.avatar_url) window.localStorage.setItem('mindpulse.profileAvatarUrl', profile.avatar_url);
-      }
-    }).catch(() => {});
+      if (!active) return;
+      setAvatarUrl(profile.avatar_url);
+      if (profile.avatar_url) window.localStorage.setItem('mindpulse.profileAvatarUrl', profile.avatar_url);
+      const name = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
+      setProfileName(name);
+      setProfileEmail(profile.email ?? '');
+    }).catch(() => {
+      // Profile row missing: fall back to the auth account so the card is never stale.
+      void supabase?.auth.getUser().then(({ data }) => {
+        if (!active || !data.user) return;
+        setProfileEmail(data.user.email ?? '');
+        const metadataName = `${data.user.user_metadata?.first_name ?? ''} ${data.user.user_metadata?.last_name ?? ''}`.trim();
+        setProfileName(metadataName);
+      });
+    });
     const updateAvatar = (event: Event) => {
       const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
       setAvatarUrl(detail?.avatarUrl ?? null);
@@ -46,6 +59,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       window.removeEventListener('mindpulse:avatar-updated', updateAvatar);
     };
   }, []);
+
+  const displayName = profileName || 'Administrator';
+  const displayEmail = profileEmail || 'No email on file';
 
   return (
     <aside className="admin-sidebar">
@@ -81,8 +97,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
             {avatarUrl ? <img src={avatarUrl} alt="" /> : 'A'}
           </span>
           <span>
-            <strong>Admin User</strong>
-            <small>admin@mindpulse.com</small>
+            <strong>{displayName}</strong>
+            <small>{displayEmail}</small>
           </span>
         </div>
         <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>
