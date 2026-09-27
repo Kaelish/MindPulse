@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StudentCase } from './StudentCasesView';
+<<<<<<< HEAD
 import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
+=======
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
 import './StudentCaseDetailView.css';
 import {
   fetchStudentConsultations,
@@ -167,7 +171,11 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   return (
     <main className="main-panel student-detail-main">
+<<<<<<< HEAD
       <header className="student-detail-topbar"><strong>Student Cases</strong><DoctorNotifications /></header>
+=======
+      <header className="student-detail-topbar"><strong>Student Cases</strong><DoctorNotificationMenu /></header>
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
         <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>

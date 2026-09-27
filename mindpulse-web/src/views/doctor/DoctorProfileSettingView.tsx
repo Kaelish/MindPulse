@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
+=======
+import React, { FormEvent, useEffect, useState } from 'react';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
 import { supabase } from '../../supabase/client';
 import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../services/doctorProfile';
 import { DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
@@ -134,7 +139,11 @@ export const DoctorProfileSettingView: React.FC = () => {
   }
 
   return <main className="main-panel doctor-profile-main">
+<<<<<<< HEAD
     <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotifications /></header>
+=======
+    <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotificationMenu /></header>
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
     <section className="doctor-profile-card"><div className="doctor-avatar-large">{`${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}</div><div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>{(activeTab === 'personal' || activeTab === 'credentials') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : 'Edit Profile'}</button>}</section>
     <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
     {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}

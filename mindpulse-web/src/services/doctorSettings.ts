@@ -31,7 +31,7 @@ const LANDING_VIEWS: DoctorLandingView[] = [
 
 export const defaultDoctorSettings = (): DoctorPortalSettings => ({
   darkMode: false,
-  landingView: 'consultations',
+  landingView: 'dashboard',
 });
 
 export const loadDoctorSettings = (): DoctorPortalSettings => {

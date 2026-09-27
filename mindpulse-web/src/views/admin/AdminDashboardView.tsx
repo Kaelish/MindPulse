@@ -10,6 +10,7 @@ import { AdminRecordsView } from './AdminRecordsView';
 import { AdminGenerateReportsView } from './AdminGenerateReportsView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
+import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminOverviewStats, fetchAdminOverview } from '../../services/admin';
 import './AdminDashboardView.css';
 
@@ -17,23 +18,65 @@ interface AdminDashboardViewProps {
   onSignOut: () => void;
 }
 
+type AdminView =
+  | 'dashboard'
+  | 'users'
+  | 'assessment'
+  | 'results'
+  | 'records'
+  | 'reports'
+  | 'analytics'
+  | 'profile'
+  | 'settings'
+  | 'notifications';
+
+const viewFromPath = (pathname: string): AdminView => {
+  switch (pathname.replace(/\/+$/, '').split('/').pop()?.toLowerCase()) {
+    case 'users': return 'users';
+    case 'assessment-tools': return 'assessment';
+    case 'results': return 'results';
+    case 'records': return 'records';
+    case 'analytics': return 'analytics';
+    case 'settings': return 'settings';
+    case 'notifications': return 'notifications';
+    default: return 'dashboard';
+  }
+};
+
+const pathForView = (view: AdminView): string => {
+  switch (view) {
+    case 'users': return '/users';
+    case 'assessment': return '/assessment-tools';
+    case 'results': return '/results';
+    case 'records': return '/records';
+    case 'reports':
+    case 'analytics': return '/analytics';
+    case 'profile':
+    case 'settings': return '/settings';
+    case 'notifications': return '/notifications';
+    default: return '/dashboard';
+  }
+};
+
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOut }) => {
-  const [activeView, setActiveView] = useState<
-    | 'dashboard'
-    | 'users'
-    | 'assessment'
-    | 'results'
-    | 'records'
-    | 'reports'
-    | 'analytics'
-    | 'profile'
-    | 'settings'
-  >('dashboard');
+  const [activeView, setActiveView] = useState<AdminView>(() => viewFromPath(window.location.pathname));
   const [showNotifications, setShowNotifications] = useState(false);
   const [stats, setStats] = useState<AdminOverviewStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+
+  const navigateAdminView = (view: AdminView) => {
+    const pathname = pathForView(view);
+    if (window.location.pathname !== pathname) window.history.pushState({}, '', pathname);
+    setActiveView(view);
+  };
+
+  useEffect(() => {
+    const syncViewWithLocation = () => setActiveView(viewFromPath(window.location.pathname));
+    window.addEventListener('popstate', syncViewWithLocation);
+    return () => window.removeEventListener('popstate', syncViewWithLocation);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -55,15 +98,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   }, [reloadKey]);
 
   if (activeView === 'analytics') {
-    return <AdminAnalyticsView onSignOut={onSignOut} onNavigate={setActiveView} />;
+    return <AdminAnalyticsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   }
-  if (activeView === 'users') return <AdminUsersView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'assessment') return <AdminAssessmentView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'results') return <AdminResultsView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'records') return <AdminRecordsView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'reports') return <AdminGenerateReportsView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'profile') return <AdminProfileSettingsView onSignOut={onSignOut} onNavigate={setActiveView} />;
-  if (activeView === 'settings') return <AdminSystemSettingsView onSignOut={onSignOut} onNavigate={setActiveView} />;
+  if (activeView === 'users') return <AdminUsersView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'assessment') return <AdminAssessmentView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'results') return <AdminResultsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'records') return <AdminRecordsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'reports') return <AdminGenerateReportsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'profile') return <AdminProfileSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'settings') return <AdminSystemSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+
+  if (activeView === 'notifications') {
+    return (
+      <div className="doctor-shell admin-scope">
+        <AdminSidebar onSignOut={onSignOut} activeView="notifications" onNavigate={navigateAdminView} />
+        <AdminNotificationsView onNavigate={(pathname) => {
+          const destination = viewFromPath(pathname);
+          navigateAdminView(destination);
+        }} />
+      </div>
+    );
+  }
 
   const assessed = stats ? stats.assessed : 0;
   const share = (count: number) => (assessed ? Math.round((count / assessed) * 100) : 0);
@@ -77,7 +132,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
 
   return (
     <div className="doctor-shell admin-scope">
-      <AdminSidebar onSignOut={onSignOut} activeView={activeView} onNavigate={setActiveView} />
+      <AdminSidebar onSignOut={onSignOut} activeView={activeView} onNavigate={navigateAdminView} />
 
       <main className="admin-dashboard-main">
         <header className="admin-dashboard-header">

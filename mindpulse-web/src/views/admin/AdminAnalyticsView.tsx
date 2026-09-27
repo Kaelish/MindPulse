@@ -121,7 +121,6 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
             <button type="button" className="analytics-export-button" onClick={exportReport} disabled={exporting}>
               {exporting ? 'Exporting…' : '⇩ Export Report'}
             </button>
-            <button type="button" className="analytics-signout-button" onClick={onSignOut}>Sign Out</button>
           </div>
         </header>
 

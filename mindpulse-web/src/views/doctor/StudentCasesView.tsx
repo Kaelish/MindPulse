@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchStudentCases, StudentCaseRecord } from '../../services/studentCases';
 import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications, DoctorResultCount } from '../../components/doctor/DoctorChrome';
+=======
+import React, { useEffect, useMemo, useState } from 'react';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
+import { fetchStudentCases, StudentCaseRecord } from '../../services/studentCases';
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
 import './StudentCasesView.css';
 
 interface StudentCasesViewProps {
@@ -86,9 +92,34 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
   return (
     <main className="main-panel student-cases-main">
       <header className="topbar student-cases-topbar">
+<<<<<<< HEAD
         <div>
           <h1>Student Cases</h1>
           <p className="page-subtitle">Manage and review all assigned student cases</p>
+=======
+        <div><h1>Student Cases</h1><p className="page-subtitle">Manage and review all assigned student cases</p></div>
+        <div className="header-actions"><button type="button" className="export-report-button">Export Report</button><DoctorNotificationMenu /></div>
+      </header>
+      <section className="case-summary-grid"><Summary label="Total Cases" value={String(loadedStudents.length)} /><Summary label="High Risk" value={String(loadedStudents.filter((student) => student.status === 'High Risk').length)} /><Summary label="Moderate Risk" value={String(loadedStudents.filter((student) => student.status === 'Moderate Risk').length)} /><Summary label="Low Risk" value={String(loadedStudents.filter((student) => student.status === 'Low Risk').length)} /></section>
+      <section className="case-filter-bar"><label className="case-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, ID, or program" /></label><select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status"><option>All Status</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select></section>
+      <section className="case-table-panel">
+        {isLoading && <p className="case-loading">Loading student cases...</p>}
+        {loadError && <p className="case-load-error">{loadError}</p>}
+        <div className="case-table-wrap">
+          <table className="case-table">
+            <thead><tr><th>Student</th><th>Program</th><th>Status</th><th>Last Assessment</th><th>Stress Level</th><th>Trend</th><th>Actions</th></tr></thead>
+            <tbody>{filteredStudents.map((student) => (
+              <tr key={student.id}>
+                <td><div className="case-student"><span className="case-avatar">{student.initials}</span><strong>{student.name}</strong></div></td>
+                <td><span>{student.program}</span><small>Age: {student.age}</small></td>
+                <td><span className={`case-status ${student.status.toLowerCase().replace(' ', '-')}`}>{student.status}</span></td>
+                <td className="case-muted">{student.lastAssessment}</td><td>{student.score}</td>
+                <td><span className={`case-trend ${student.trend.toLowerCase()}`}>{student.trend}</span></td>
+                <td><button type="button" className="view-details-button" onClick={() => onViewDetails?.(student)}>View Details</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
         </div>
         <div className="header-actions">
           <button

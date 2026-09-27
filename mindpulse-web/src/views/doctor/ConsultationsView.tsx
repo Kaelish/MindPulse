@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
+import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 import {
   DoctorAvailability,
   WebChatMessage,
@@ -588,7 +589,11 @@ export const ConsultationsView: React.FC = () => {
         </div>
 
         <div className="consultations-header-actions">
+<<<<<<< HEAD
           <DoctorNotifications />
+=======
+          <DoctorNotificationMenu />
+>>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
           <button type="button" className="schedule-btn" onClick={openAvailabilityModal}>
             ⚙ Fee &amp; Slots
           </button>
