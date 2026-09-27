@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { resolveProfileAvatarUrl } from './profileAvatar';
 
 export interface DoctorProfileData {
   userId: string;
@@ -15,6 +16,7 @@ export interface DoctorProfileData {
   dob: string;
   gender: string;
   streetAddress: string;
+  avatarUrl: string | null;
   isVerified?: boolean;
 }
 
@@ -32,6 +34,7 @@ const emptyProfile = (userId: string): DoctorProfileData => ({
   dob: '',
   gender: '',
   streetAddress: '',
+  avatarUrl: null,
   isVerified: false,
 });
 
@@ -53,6 +56,7 @@ export async function fetchDoctorProfile(): Promise<DoctorProfileData> {
     throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
   }
   const userId = await requireUserId();
+  const { data: authData } = await supabase.auth.getUser();
 
   const { data: profileRow, error: profileError } = await supabase
     .from('profiles')
@@ -85,6 +89,7 @@ export async function fetchDoctorProfile(): Promise<DoctorProfileData> {
     dob: extras.dob || '',
     gender: extras.gender || '',
     streetAddress: extras.streetAddress || '',
+    avatarUrl: await resolveProfileAvatarUrl(authData.user?.user_metadata),
     isVerified: doctorRow?.is_verified ?? false,
   };
 }

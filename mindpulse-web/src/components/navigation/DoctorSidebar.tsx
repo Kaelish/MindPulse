@@ -23,6 +23,7 @@ interface SidebarIdentity {
   email: string;
   role: string;
   initials: string;
+  avatarUrl: string | null;
 }
 
 const initialsOf = (first: string, last: string): string => {
@@ -40,6 +41,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     email: '',
     role: 'Psychologist',
     initials: 'D',
+    avatarUrl: null,
   });
 
   useEffect(() => {
@@ -55,13 +57,20 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
           email: profile.email.trim(),
           role: profile.specialty.trim() || profile.department.trim() || 'Psychologist',
           initials: initialsOf(first, last),
+          avatarUrl: profile.avatarUrl,
         });
       })
       .catch(() => {
         // Signed out, offline, or Supabase not configured — keep the fallback.
       });
+    const updateAvatar = (event: Event) => {
+      const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
+      setIdentity((current) => ({ ...current, avatarUrl: detail?.avatarUrl ?? null }));
+    };
+    window.addEventListener('mindpulse:avatar-updated', updateAvatar);
     return () => {
       cancelled = true;
+      window.removeEventListener('mindpulse:avatar-updated', updateAvatar);
     };
   }, []);
 
@@ -106,7 +115,9 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
           onClick={() => setActiveView('profile-setting')}
         >
           <div className="sidebar-profile-top">
-            <div className="sidebar-doctor-avatar">{identity.initials}</div>
+            <div className="sidebar-doctor-avatar">
+              {identity.avatarUrl ? <img src={identity.avatarUrl} alt="" /> : identity.initials}
+            </div>
             <div className="sidebar-doctor-info">
               <div className="sidebar-doctor-name">{identity.name}</div>
               {identity.email && <div className="sidebar-doctor-email">{identity.email}</div>}

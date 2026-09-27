@@ -32,6 +32,8 @@ const TABS: { key: SettingsTab; label: string }[] = [
 export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = ({ onSignOut, onNavigate }) => {
   const [tab, setTab] = useState<SettingsTab>('general');
   const [draft, setDraft] = useState<AdminSystemSettings>(() => loadAdminSettings());
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(loadAdminSettings()));
+  const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [exportState, setExportState] = useState('');
@@ -48,7 +50,11 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
         setDraft((current) =>
           current.notification.primaryEmail
             ? current
-            : { ...current, notification: { ...current.notification, primaryEmail: profile.email! } },
+            : (() => {
+                const next = { ...current, notification: { ...current.notification, primaryEmail: profile.email! } };
+                setSavedSnapshot(JSON.stringify(next));
+                return next;
+              })(),
         );
       })
       .catch(() => {});
@@ -72,11 +78,13 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     setSaved('');
   };
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(loadAdminSettings());
+  const dirty = JSON.stringify(draft) !== savedSnapshot;
 
   const save = () => {
     saveAdminSettings(draft);
     applyAdminSettings(draft);
+    setSavedSnapshot(JSON.stringify(draft));
+    setEditing(false);
     setSaved('Settings saved.');
     clearTimeout(savedTimer.current);
     savedTimer.current = setTimeout(() => setSaved(''), 3000);
@@ -84,6 +92,12 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
 
   const resetToDefault = () => {
     setDraft(JSON.parse(JSON.stringify(DEFAULT_ADMIN_SETTINGS)) as AdminSystemSettings);
+    setSaved('');
+  };
+
+  const cancelEditing = () => {
+    setDraft(JSON.parse(savedSnapshot) as AdminSystemSettings);
+    setEditing(false);
     setSaved('');
   };
 
@@ -105,15 +119,20 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
 
   const saveButton = (
     <div className="settings-actions">
-      {dirty && <span className="settings-dirty">Unsaved changes</span>}
+      {editing && dirty && <span className="settings-dirty">Unsaved changes</span>}
       {saved && <span className="settings-saved">{saved}</span>}
-      {tab === 'general' && (
+      {editing && tab === 'general' && (
         <button type="button" className="settings-button secondary" onClick={resetToDefault}>
           Reset to Default
         </button>
       )}
-      <button type="button" className="settings-button primary" onClick={save}>
-        ▣ Save Changes
+      {editing && dirty && <button type="button" className="settings-button secondary" onClick={cancelEditing}>Cancel</button>}
+      <button
+        type="button"
+        className="settings-button primary"
+        onClick={() => editing ? save() : setEditing(true)}
+      >
+        {editing ? '▣ Save Changes' : 'Edit Settings'}
       </button>
     </div>
   );
@@ -160,16 +179,16 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
             <div className="settings-grid-2">
               <label className="settings-field">
                 <span>System Name</span>
-                <input value={draft.general.systemName} onChange={(e) => setField('general', 'systemName', e.target.value)} />
+                <input disabled={!editing} value={draft.general.systemName} onChange={(e) => setField('general', 'systemName', e.target.value)} />
               </label>
               <label className="settings-field">
                 <span>Version</span>
-                <input value={SYSTEM_VERSION} readOnly className="readonly" />
+                <input disabled value={SYSTEM_VERSION} readOnly className="readonly" />
               </label>
             </div>
             <label className="settings-field">
               <span>System Description</span>
-              <input value={draft.general.description} onChange={(e) => setField('general', 'description', e.target.value)} />
+              <input disabled={!editing} value={draft.general.description} onChange={(e) => setField('general', 'description', e.target.value)} />
             </label>
 
             <div className="settings-divider" />
@@ -181,12 +200,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Dark Mode"
               subtitle="Enable dark theme for the interface"
               checked={draft.general.darkMode}
+              disabled={!editing}
               onChange={(value) => setField('general', 'darkMode', value)}
             />
             <Toggle
               title="Compact View"
               subtitle="Use compact layout for data tables"
               checked={draft.general.compactView}
+              disabled={!editing}
               onChange={(value) => setField('general', 'compactView', value)}
             />
             {saveButton}
@@ -207,12 +228,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               label="Detection Sensitivity"
               value={draft.detection.sensitivity}
               hint="Higher sensitivity may increase false positives"
+              disabled={!editing}
               onChange={(value) => setField('detection', 'sensitivity', value)}
             />
             <Slider
               label="Confidence Threshold"
               value={draft.detection.confidenceThreshold}
               hint="Minimum confidence level to record a detection"
+              disabled={!editing}
               onChange={(value) => setField('detection', 'confidenceThreshold', value)}
             />
 
@@ -220,12 +243,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               label="AI Model Version"
               value={draft.detection.modelVersion}
               options={['v2.4 (Latest - Recommended)', 'v2.3', 'v2.1']}
+              disabled={!editing}
               onChange={(value) => setField('detection', 'modelVersion', value)}
             />
             <SelectRow
               label="Scan Interval"
               value={draft.detection.scanInterval}
               options={['1 second', '5 seconds', '10 seconds', '30 seconds']}
+              disabled={!editing}
               onChange={(value) => setField('detection', 'scanInterval', value)}
             />
 
@@ -235,12 +260,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Enable Real-time Processing"
               subtitle="Process facial data in real-time"
               checked={draft.detection.realTimeProcessing}
+              disabled={!editing}
               onChange={(value) => setField('detection', 'realTimeProcessing', value)}
             />
             <Toggle
               title="Multi-face Detection"
               subtitle="Detect multiple faces in a single frame"
               checked={draft.detection.multiFaceDetection}
+              disabled={!editing}
               onChange={(value) => setField('detection', 'multiFaceDetection', value)}
             />
             {saveButton}
@@ -262,18 +289,21 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="High Stress Alerts"
               subtitle="Notify when high stress is detected"
               checked={draft.notification.highStressAlerts}
+              disabled={!editing}
               onChange={(value) => setField('notification', 'highStressAlerts', value)}
             />
             <Toggle
               title="System Performance Alerts"
               subtitle="Notify on system performance issues"
               checked={draft.notification.systemPerformanceAlerts}
+              disabled={!editing}
               onChange={(value) => setField('notification', 'systemPerformanceAlerts', value)}
             />
             <Toggle
               title="Daily Summary Reports"
               subtitle="Receive daily summary via email"
               checked={draft.notification.dailySummaryReports}
+              disabled={!editing}
               onChange={(value) => setField('notification', 'dailySummaryReports', value)}
             />
 
@@ -285,6 +315,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
                 <span aria-hidden="true">✉</span>
                 <input
                   type="email"
+                  disabled={!editing}
                   value={draft.notification.primaryEmail}
                   placeholder="admin@mindpulse.ai"
                   onChange={(e) => setField('notification', 'primaryEmail', e.target.value)}
@@ -295,6 +326,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               label="Notification Frequency"
               value={draft.notification.notificationFrequency}
               options={['Immediate', 'Hourly', 'Daily digest']}
+              disabled={!editing}
               onChange={(value) => setField('notification', 'notificationFrequency', value)}
             />
             {saveButton}
@@ -316,18 +348,21 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Two-Factor Authentication"
               subtitle="Require 2FA for admin access"
               checked={draft.security.twoFactor}
+              disabled={!editing}
               onChange={(value) => setField('security', 'twoFactor', value)}
             />
             <Toggle
               title="IP Whitelisting"
               subtitle="Restrict access to approved IP addresses"
               checked={draft.security.ipWhitelisting}
+              disabled={!editing}
               onChange={(value) => setField('security', 'ipWhitelisting', value)}
             />
             <Toggle
               title="Session Timeout"
               subtitle="Auto-logout after 30 minutes of inactivity"
               checked={draft.security.sessionTimeout}
+              disabled={!editing}
               onChange={(value) => setField('security', 'sessionTimeout', value)}
             />
 
@@ -337,12 +372,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               label="Minimum Password Length"
               value={draft.security.minPasswordLength}
               options={['8 characters', '12 characters', '16 characters']}
+              disabled={!editing}
               onChange={(value) => setField('security', 'minPasswordLength', value)}
             />
             <Toggle
               title="Require Special Characters"
               subtitle="Passwords must include special characters"
               checked={draft.security.requireSpecialChars}
+              disabled={!editing}
               onChange={(value) => setField('security', 'requireSpecialChars', value)}
             />
 
@@ -353,7 +390,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
                 <strong>Production API Key</strong>
                 <code>sb_publishable_••••••••••••••••</code>
               </div>
-              <button type="button" className="settings-button secondary" onClick={regenerateKey}>
+              <button type="button" className="settings-button secondary" onClick={regenerateKey} disabled={!editing}>
                 Regenerate
               </button>
             </div>
@@ -376,6 +413,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               label="Scan Data Retention Period"
               value={draft.dataPrivacy.retentionPeriod}
               options={['30 days', '60 days', '90 days', '1 year', 'Forever']}
+              disabled={!editing}
               onChange={(value) => setField('dataPrivacy', 'retentionPeriod', value)}
               hint="Automatically delete scan data after this period"
             />
@@ -386,18 +424,21 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Anonymize User Data"
               subtitle="Remove personally identifiable information"
               checked={draft.dataPrivacy.anonymizeUserData}
+              disabled={!editing}
               onChange={(value) => setField('dataPrivacy', 'anonymizeUserData', value)}
             />
             <Toggle
               title="Store Facial Images"
               subtitle="Save original facial images with scan data"
               checked={draft.dataPrivacy.storeFacialImages}
+              disabled={!editing}
               onChange={(value) => setField('dataPrivacy', 'storeFacialImages', value)}
             />
             <Toggle
               title="GDPR Compliance Mode"
               subtitle="Enable GDPR-compliant data handling"
               checked={draft.dataPrivacy.gdprCompliance}
+              disabled={!editing}
               onChange={(value) => setField('dataPrivacy', 'gdprCompliance', value)}
             />
 
@@ -409,7 +450,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               </div>
             </div>
             <div className="settings-export-row">
-              <button type="button" className="settings-button primary" onClick={() => void runExport()}>
+              <button type="button" className="settings-button primary" onClick={() => void runExport()} disabled={!editing}>
                 ⇩ Export Data
               </button>
               {exportState && <span className="settings-export-state">{exportState}</span>}
@@ -422,31 +463,33 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
   );
 };
 
-const Toggle: React.FC<{ title: string; subtitle: string; checked: boolean; onChange: (value: boolean) => void }> = ({
+const Toggle: React.FC<{ title: string; subtitle: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }> = ({
   title,
   subtitle,
   checked,
   onChange,
+  disabled = false,
 }) => (
   <label className="settings-toggle-row">
     <span className="settings-toggle-info">
       <strong>{title}</strong>
       <span>{subtitle}</span>
     </span>
-    <input type="checkbox" className="settings-switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <input type="checkbox" className="settings-switch" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
   </label>
 );
 
-const Slider: React.FC<{ label: string; value: number; hint: string; onChange: (value: number) => void }> = ({
+const Slider: React.FC<{ label: string; value: number; hint: string; onChange: (value: number) => void; disabled?: boolean }> = ({
   label,
   value,
   hint,
   onChange,
+  disabled = false,
 }) => (
   <div className="settings-slider">
     <span className="settings-slider-label">{label}</span>
     <div className="settings-slider-row">
-      <input type="range" min={0} max={100} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <input type="range" min={0} max={100} value={value} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))} />
       <strong>{value}%</strong>
     </div>
     <p>{hint}</p>
@@ -459,11 +502,12 @@ const SelectRow: React.FC<{
   options: string[];
   onChange: (value: string) => void;
   hint?: string;
-}> = ({ label, value, options, onChange, hint }) => (
+  disabled?: boolean;
+}> = ({ label, value, options, onChange, hint, disabled = false }) => (
   <div className="settings-select-row">
     <div className="settings-select-head">
       <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
         {options.map((option) => (
           <option key={option} value={option}>
             {option}

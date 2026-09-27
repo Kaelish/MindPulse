@@ -72,6 +72,19 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
     (category === 'all' || notification.category === category) && !notification.read,
   ).length;
 
+  const goBack = () => {
+    const from = new URLSearchParams(window.location.search).get('from');
+    if (from?.startsWith('/') && !from.startsWith('//') && from !== '/notifications') {
+      onNavigate(from);
+      return;
+    }
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    onNavigate('/dashboard');
+  };
+
   const markAsRead = async (notification: FeedNotification) => {
     if (notification.read) return;
     setMarkingId(notification.id);
@@ -91,6 +104,9 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   return (
     <main className="admin-notifications-main">
       <header className="admin-notifications-header">
+        <button type="button" className="admin-notifications-back" onClick={goBack}>
+          <span aria-hidden="true">←</span> Back
+        </button>
         <div className="admin-notifications-title">
           <span className="admin-notifications-bell"><NotificationBell /></span>
           <div>

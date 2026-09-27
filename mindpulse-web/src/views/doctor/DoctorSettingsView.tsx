@@ -53,12 +53,17 @@ const NOTIFICATION_ROWS: { key: keyof NotificationPrefs; label: string; descript
 export const DoctorSettingsView: React.FC = () => {
   const [draft, setDraft] = useState<DoctorPortalSettings>(() => defaultDoctorSettings());
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotifPrefs);
+  const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(loadDoctorSettings()));
+  const [savedNotifPrefs, setSavedNotifPrefs] = useState(() => JSON.stringify(loadNotifPrefs()));
+  const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(loadDoctorSettings());
     setNotifPrefs(loadNotifPrefs());
+    setSavedDraft(JSON.stringify(loadDoctorSettings()));
+    setSavedNotifPrefs(JSON.stringify(loadNotifPrefs()));
   }, []);
 
   const update = <K extends keyof DoctorPortalSettings>(key: K, value: DoctorPortalSettings[K]) => {
@@ -73,18 +78,31 @@ export const DoctorSettingsView: React.FC = () => {
     setError(null);
   };
 
+  const dirty = JSON.stringify(draft) !== savedDraft || JSON.stringify(notifPrefs) !== savedNotifPrefs;
+
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     try {
       saveDoctorSettings(draft);
       applyDoctorSettings(draft);
       window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(notifPrefs));
+      setSavedDraft(JSON.stringify(draft));
+      setSavedNotifPrefs(JSON.stringify(notifPrefs));
+      setEditing(false);
       setSaved(true);
       setError(null);
       window.setTimeout(() => setSaved(false), 2500);
     } catch {
       setError('Settings could not be saved in this browser.');
     }
+  };
+
+  const cancelEditing = () => {
+    setDraft(JSON.parse(savedDraft) as DoctorPortalSettings);
+    setNotifPrefs(JSON.parse(savedNotifPrefs) as NotificationPrefs);
+    setEditing(false);
+    setSaved(false);
+    setError(null);
   };
 
   return (
@@ -114,6 +132,7 @@ export const DoctorSettingsView: React.FC = () => {
               role="switch"
               aria-checked={draft.darkMode}
               className={`doc-switch ${draft.darkMode ? 'is-on' : ''}`}
+              disabled={!editing}
               onClick={() => update('darkMode', !draft.darkMode)}
             >
               <span className="doc-switch-knob" />
@@ -134,6 +153,7 @@ export const DoctorSettingsView: React.FC = () => {
             </div>
             <select
               className="doc-settings-select"
+              disabled={!editing}
               value={draft.landingView}
               onChange={(event) => update('landingView', event.target.value as DoctorLandingView)}
             >
@@ -161,6 +181,7 @@ export const DoctorSettingsView: React.FC = () => {
                 role="switch"
                 aria-checked={notifPrefs[row.key]}
                 className={`doc-switch ${notifPrefs[row.key] ? 'is-on' : ''}`}
+                disabled={!editing}
                 onClick={() => setNotif(row.key)}
               >
                 <span className="doc-switch-knob" />
@@ -173,7 +194,15 @@ export const DoctorSettingsView: React.FC = () => {
         {saved && <div className="profile-save-banner">Settings saved.</div>}
 
         <div className="doc-settings-actions">
-          <button type="submit" className="primary-button">Save Changes</button>
+          {editing && dirty && <span className="doc-settings-unsaved">Unsaved changes</span>}
+          {editing && dirty && <button type="button" className="doc-settings-cancel" onClick={cancelEditing}>Cancel</button>}
+          <button
+            type={editing ? 'submit' : 'button'}
+            className="primary-button"
+            onClick={!editing ? () => setEditing(true) : undefined}
+          >
+            {editing ? 'Save Changes' : 'Edit Settings'}
+          </button>
         </div>
       </form>
     </main>

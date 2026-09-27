@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NotificationPanel } from './NotificationPanel';
+import { AdminNotificationsView } from '../views/admin/AdminNotificationsView';
 import { categoryForNotification, FeedNotification, fetchFeedNotifications } from '../services/notifications';
 
 jest.mock('../services/notifications', () => ({
@@ -59,7 +60,7 @@ test('shows a contextual empty state and keeps Show more available', async () =>
 
   await waitFor(() => {
     expect(window.location.pathname).toBe('/notifications');
-    expect(window.location.search).toBe('?category=results');
+    expect(window.location.search).toBe('?category=results&from=%2Fresults');
   });
 });
 
@@ -77,4 +78,15 @@ test('classifies assessment form edits as Assessment Tools', () => {
     message: 'Assessment form changes are available.',
     type: 'info',
   })).toBe('assessment-tools');
+});
+
+test('returns from notifications to the source route', async () => {
+  window.history.pushState({}, '', '/notifications?category=results&from=%2Fresults');
+  mockFetchFeedNotifications.mockResolvedValue({ notifications: [], hiddenCount: 0 });
+  const onNavigate = jest.fn();
+
+  render(<AdminNotificationsView onNavigate={onNavigate} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+
+  expect(onNavigate).toHaveBeenCalledWith('/results');
 });
