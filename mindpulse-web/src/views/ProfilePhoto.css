@@ -1,0 +1,108 @@
+.admin-avatar-wrap,
+.doctor-avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.admin-avatar-large img,
+.doctor-avatar-large img,
+.admin-account-avatar img,
+.sidebar-doctor-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.profile-photo-input {
+  display: none;
+}
+
+.profile-photo-trigger {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #0e8291;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.profile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.profile-header-actions .small-profile-button {
+  margin-top: 0;
+}
+
+.profile-header-actions .profile-edit-button {
+  margin-left: 0;
+}
+
+.doctor-scope .profile-photo-trigger {
+  border-color: var(--doc-panel);
+  background: var(--primary-strong);
+}
+
+.admin-scope .admin-account-avatar {
+  overflow: hidden;
+}
+
+.doctor-scope .sidebar-doctor-avatar {
+  overflow: hidden;
+}
+
+.admin-scope .admin-avatar-large,
+.doctor-scope .doctor-avatar-large {
+  overflow: hidden;
+}
+
+.doctor-scope .doc-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.doctor-scope .doc-settings-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.doctor-scope .doc-settings-actions {
+  align-items: center;
+  gap: 12px;
+}
+
+.doctor-scope .doc-settings-unsaved {
+  color: var(--doc-muted);
+  font-size: 0.82rem;
+}
+
+.doctor-scope .doc-settings-cancel {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-scope .settings-card input:disabled,
+.admin-scope .settings-card select:disabled,
+.admin-scope .settings-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}

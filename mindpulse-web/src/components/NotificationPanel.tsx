@@ -50,7 +50,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
   const handleShowMore = () => {
     if (document.querySelector('.admin-scope')) {
       const category = notificationCategoryForPath(window.location.pathname);
-      window.history.pushState({}, '', `/notifications?category=${category}`);
+      const query = new URLSearchParams({ category, from: window.location.pathname });
+      window.history.pushState({}, '', `/notifications?${query.toString()}`);
       window.dispatchEvent(new PopStateEvent('popstate'));
       return;
     }
@@ -91,7 +92,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           ))}
         </ul>
       )}
-      {!isLoading && !error && (
+      {!isLoading && !error && contextualNotifications.length > 0 && (
         <button
           className="notification-show-more"
           type="button"

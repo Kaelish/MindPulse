@@ -1,9 +1,11 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { OwnProfile, OwnProfilePatch, changeOwnPassword, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
 import { passwordPolicyError } from '../../services/adminSettings';
+import { uploadProfileAvatar } from '../../services/profileAvatar';
+import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'professional' | 'security';
 
@@ -64,6 +66,9 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -74,6 +79,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
         if (active) {
           setProfile(data);
           setDraft(toDraft(data));
+          setAvatarPreview(data.avatar_url);
         }
       })
       .catch((error) => {
@@ -86,6 +92,10 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       active = false;
     };
   }, [reloadKey]);
+
+  useEffect(() => () => {
+    if (avatarPreview?.startsWith('blob:')) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
 
   const updateDraft = (field: EditableField, value: string) => setDraft((current) => ({ ...current, [field]: value }));
 
@@ -128,13 +138,18 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       }
     });
     if (Object.keys(patch).length === 0) {
-      setSaved('No changes to save.');
-      return;
+      if (!avatarFile) {
+        setSaved('No changes to save.');
+        return;
+      }
     }
     setSaving(true);
     try {
-      await updateOwnProfile(patch);
-      setProfile((current) => (current ? { ...current, ...patch } : current));
+      if (Object.keys(patch).length > 0) await updateOwnProfile(patch);
+      const avatarUrl = avatarFile ? await uploadProfileAvatar(avatarFile) : profile.avatar_url;
+      setProfile((current) => (current ? { ...current, ...patch, avatar_url: avatarUrl } : current));
+      setAvatarFile(null);
+      setAvatarPreview(avatarUrl);
       setEditing(false);
       setSaved('Changes saved successfully.');
     } catch (error) {
@@ -142,6 +157,25 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     } finally {
       setSaving(false);
     }
+  };
+
+  const cancelProfileEdit = () => {
+    if (profile) setDraft(toDraft(profile));
+    setAvatarFile(null);
+    setAvatarPreview(profile?.avatar_url ?? null);
+    setEditing(false);
+    setSaved('');
+    setSaveError('');
+  };
+
+  const selectAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setSaved('');
+    setSaveError('');
+    event.target.value = '';
   };
 
   const header = (
@@ -191,11 +225,26 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
     <main className="admin-main admin-profile-main">
       {header}
-      <section className="admin-profile-card"><div className="admin-avatar-large">●</div><div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>{(activeTab === 'personal' || activeTab === 'professional') && <button type="button" className="profile-edit-button" onClick={() => { setEditing((value) => !value); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel Edit' : '✎ Edit Profile'}</button>}</section>
+      <section className="admin-profile-card">
+        <div className="admin-avatar-wrap">
+          <div className="admin-avatar-large">
+            {avatarPreview ? <img src={avatarPreview} alt={`${identityName} profile`} /> : identityName.charAt(0).toUpperCase()}
+          </div>
+          {editing && (activeTab === 'personal' || activeTab === 'professional') && (
+            <button type="button" className="profile-photo-trigger" onClick={() => photoInput.current?.click()} aria-label="Change profile photo">📷</button>
+          )}
+          <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
+        </div>
+        <div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>
+        {(activeTab === 'personal' || activeTab === 'professional') && <div className="profile-header-actions">
+          <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => { setEditing(true); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel' : '✎ Edit Profile'}</button>
+          {editing && <button type="submit" form="admin-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
+        </div>}
+      </section>
       <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">{saved}</div>}
       {saveError && <div className="error-inline">{saveError}</div>}
-      <form className="admin-profile-form" onSubmit={save}>
+      <form id="admin-profile-form" className="admin-profile-form" onSubmit={save}>
         {activeTab === 'personal' && <ProfileSection title="Personal Information">
           <Field label="First Name" value={draft.first_name} editing={editing} onChange={(value) => updateDraft('first_name', value)} />
           <Field label="Last Name" value={draft.last_name} editing={editing} onChange={(value) => updateDraft('last_name', value)} />
@@ -217,7 +266,6 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
           <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
         </ProfileSection>}
-        {(activeTab === 'personal' || activeTab === 'professional') && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : '▣ Save Changes'}</button>}
         {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
       </form>
     </main>

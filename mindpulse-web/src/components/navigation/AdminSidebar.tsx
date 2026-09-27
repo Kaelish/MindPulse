@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { fetchOwnProfile } from '../../services/profile';
 import './AdminSidebar.css';
 import '../../views/admin/admin-theme.css';
 
@@ -25,6 +26,27 @@ const NAV_ENTRIES: NavEntry[] = [
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
+  const [avatarUrl, setAvatarUrl] = useState(() => window.localStorage.getItem('mindpulse.profileAvatarUrl'));
+
+  useEffect(() => {
+    let active = true;
+    fetchOwnProfile().then((profile) => {
+      if (active) {
+        setAvatarUrl(profile.avatar_url);
+        if (profile.avatar_url) window.localStorage.setItem('mindpulse.profileAvatarUrl', profile.avatar_url);
+      }
+    }).catch(() => {});
+    const updateAvatar = (event: Event) => {
+      const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
+      setAvatarUrl(detail?.avatarUrl ?? null);
+    };
+    window.addEventListener('mindpulse:avatar-updated', updateAvatar);
+    return () => {
+      active = false;
+      window.removeEventListener('mindpulse:avatar-updated', updateAvatar);
+    };
+  }, []);
+
   return (
     <aside className="admin-sidebar">
       <div className="brand-block">
@@ -55,7 +77,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
           tabIndex={0}
           onClick={() => onNavigate?.('profile')}
         >
-          <span className="admin-account-avatar">A</span>
+          <span className="admin-account-avatar">
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : 'A'}
+          </span>
           <span>
             <strong>Admin User</strong>
             <small>admin@mindpulse.com</small>

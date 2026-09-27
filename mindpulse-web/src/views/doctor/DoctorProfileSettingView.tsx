@@ -1,12 +1,21 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 =======
 import React, { FormEvent, useEffect, useState } from 'react';
+=======
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
+>>>>>>> 9ecbcd0ef0e11cc7d6bd2c36398b314aa2fa3125
 import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
 >>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
 import { supabase } from '../../supabase/client';
 import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../services/doctorProfile';
+<<<<<<< HEAD
 import { DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
+=======
+import { uploadProfileAvatar } from '../../services/profileAvatar';
+import '../ProfilePhoto.css';
+>>>>>>> 9ecbcd0ef0e11cc7d6bd2c36398b314aa2fa3125
 
 type ProfileTab = 'personal' | 'credentials' | 'security';
 
@@ -19,6 +28,10 @@ export const DoctorProfileSettingView: React.FC = () => {
   const [saved, setSaved] = useState<string | null>(null);
   const [savedTone, setSavedTone] = useState<'ok' | 'error'>('ok');
   const [profile, setProfile] = useState<DoctorProfileData | null>(null);
+  const [savedProfile, setSavedProfile] = useState<DoctorProfileData | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,8 +47,17 @@ export const DoctorProfileSettingView: React.FC = () => {
     setLoadError(null);
     fetchDoctorProfile()
       .then((data) => {
+<<<<<<< HEAD
         setProfile(data);
         setLoading(false);
+=======
+        if (mounted) {
+          setProfile(data);
+          setSavedProfile(data);
+          setAvatarPreview(data.avatarUrl);
+          setLoading(false);
+        }
+>>>>>>> 9ecbcd0ef0e11cc7d6bd2c36398b314aa2fa3125
       })
       .catch((error: unknown) => {
         setLoadError(error instanceof Error ? error.message : 'Unable to load your profile.');
@@ -43,9 +65,15 @@ export const DoctorProfileSettingView: React.FC = () => {
       });
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+=======
+  useEffect(() => () => {
+    if (avatarPreview?.startsWith('blob:')) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
+>>>>>>> 9ecbcd0ef0e11cc7d6bd2c36398b314aa2fa3125
 
   const update = (key: keyof DoctorProfileData, value: string) =>
     setProfile((current) => (current ? { ...current, [key]: value } : current));
@@ -55,13 +83,40 @@ export const DoctorProfileSettingView: React.FC = () => {
     if (!profile) return;
     setSaving(true);
     const result = await saveDoctorProfile(profile);
-    setSaving(false);
     if (result.success) {
-      setEditing(false);
-      flashSaved('Changes saved successfully.');
+      try {
+        const avatarUrl = avatarFile ? await uploadProfileAvatar(avatarFile) : profile.avatarUrl;
+        const updatedProfile = { ...profile, avatarUrl };
+        setProfile(updatedProfile);
+        setSavedProfile(updatedProfile);
+        setAvatarFile(null);
+        setAvatarPreview(avatarUrl);
+        setEditing(false);
+        flashSaved('Changes saved successfully.');
+      } catch (error) {
+        flashSaved(`Profile saved, but the photo could not be uploaded: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } else {
       flashSaved(`Failed to save: ${result.message}`, 'error');
     }
+    setSaving(false);
+  };
+
+  const cancelProfileEdit = () => {
+    setProfile(savedProfile);
+    setAvatarFile(null);
+    setAvatarPreview(savedProfile?.avatarUrl ?? null);
+    setEditing(false);
+    setSaved(null);
+  };
+
+  const selectAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setSaved(null);
+    event.target.value = '';
   };
 
   const changePassword = async () => {
@@ -143,16 +198,38 @@ export const DoctorProfileSettingView: React.FC = () => {
     <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotifications /></header>
 =======
     <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotificationMenu /></header>
+<<<<<<< HEAD
 >>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
     <section className="doctor-profile-card"><div className="doctor-avatar-large">{`${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}</div><div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>{(activeTab === 'personal' || activeTab === 'credentials') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : 'Edit Profile'}</button>}</section>
     <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
     {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}
     <form className="doctor-profile-form" onSubmit={saveProfile}>
+=======
+    <section className="doctor-profile-card">
+      <div className="doctor-avatar-wrap">
+        <div className="doctor-avatar-large">
+          {avatarPreview
+            ? <img src={avatarPreview} alt={`Dr. ${profile.firstName} ${profile.lastName} profile`} />
+            : `${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}
+        </div>
+        {editing && (activeTab === 'personal' || activeTab === 'credentials') && (
+          <button type="button" className="profile-photo-trigger" onClick={() => photoInput.current?.click()} aria-label="Change profile photo">📷</button>
+        )}
+        <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
+      </div>
+      <div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>
+      {(activeTab === 'personal' || activeTab === 'credentials') && <div className="profile-header-actions">
+        <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => setEditing(true)}>{editing ? 'Cancel' : 'Edit Profile'}</button>
+        {editing && <button type="submit" form="doctor-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
+      </div>}
+    </section>
+    <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
+    {saved && <div className="profile-save-banner">{saved}</div>}
+    <form id="doctor-profile-form" className="doctor-profile-form" onSubmit={saveProfile}>
+>>>>>>> 9ecbcd0ef0e11cc7d6bd2c36398b314aa2fa3125
       {activeTab === 'personal' && <ProfileSection title="Personal Information"><Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} /><Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} /><Field label="Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" /><Field label="Phone Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} /><Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} /><Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} /><Field label="Street Address" value={profile.streetAddress} editing={editing} onChange={(value) => update('streetAddress', value)} full /></ProfileSection>}
       {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><Field label="Position" value={profile.specialty} editing={editing} onChange={(value) => update('specialty', value)} /><Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}
       {activeTab === 'security' && <ProfileSection title="Security"><Field label="Current Password" value={currentPassword} editing onChange={setCurrentPassword} type="password" placeholder="Enter current password" /><Field label="New Password" value={newPassword} editing onChange={setNewPassword} type="password" placeholder="Enter new password (min 8 characters)" /><Field label="Confirm New Password" value={confirmPassword} editing onChange={setConfirmPassword} type="password" placeholder="Confirm new password" /></ProfileSection>}
-      {activeTab === 'personal' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>}
-      {activeTab === 'credentials' && editing && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>}
       {activeTab === 'security' && <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : 'Change Password'}</button>}
     </form>
   </main>;

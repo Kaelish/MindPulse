@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { resolveProfileAvatarUrl } from './profileAvatar';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -17,6 +18,7 @@ export interface OwnProfile {
   sex: string | null;
   birth_date: string | null;
   living_situation: string | null;
+  avatar_url: string | null;
   onboarding_complete: boolean;
   created_at: string;
 }
@@ -32,6 +34,7 @@ export type OwnProfilePatch = Partial<
 export const fetchOwnProfile = async (): Promise<OwnProfile> => {
   if (!supabase) throw notConfigured();
   const userId = await requireUserId();
+  const { data: authData } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from('profiles')
@@ -42,7 +45,10 @@ export const fetchOwnProfile = async (): Promise<OwnProfile> => {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error('Your profile row does not exist yet. Sign out and in again, or contact an administrator.');
-  return data as OwnProfile;
+  return {
+    ...data,
+    avatar_url: await resolveProfileAvatarUrl(authData.user?.user_metadata),
+  } as OwnProfile;
 };
 
 export const updateOwnProfile = async (patch: OwnProfilePatch): Promise<void> => {
