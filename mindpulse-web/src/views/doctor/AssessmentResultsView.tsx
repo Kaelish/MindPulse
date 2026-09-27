@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminResultRow, bandForScore, fetchVisibleStressResults } from '../../services/admin';
+import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications, DoctorResultCount } from '../../components/doctor/DoctorChrome';
 
 const BAND_LABELS: Record<'low' | 'moderate' | 'high', string> = { low: 'Low', moderate: 'Moderate', high: 'High' };
 
@@ -87,8 +88,10 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
     URL.revokeObjectURL(url);
   };
 
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+
   return <main className="main-panel assessment-results-main">
-    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv}>Export</button><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></div></header>
+    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv} disabled={isLoading || !!loadError || visibleResults.length === 0} title={visibleResults.length === 0 ? 'There are no results to export yet' : undefined}>Export</button><DoctorNotifications /></div></header>
     <section className="assessment-summary-grid">
       <Summary label="Total Assessments" value={String(results.length)} change="" tone="green" />
       <Summary label="High Risk" value={String(highRisk)} change="" tone="red" />
@@ -99,12 +102,13 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
       <label className="assessment-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label>
       <select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter assessment level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select>
       <select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter assessment emotion"><option>All Emotions</option>{emotionOptions.map((value) => <option key={value}>{value}</option>)}</select>
+      <DoctorResultCount shown={visibleResults.length} total={results.length} noun="results" />
     </section>
     <section className="assessment-list-panel">
-      {isLoading && <p className="case-loading">Loading assessment results…</p>}
-      {!isLoading && loadError && <p className="case-load-error">{loadError} <button type="button" className="text-button" onClick={() => setReloadKey((key) => key + 1)}>Retry</button></p>}
+      {isLoading && <DoctorLoading label="Loading assessment results…" variant="skeleton" rows={4} />}
+      {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
       {!isLoading && !loadError && <>
-        <div className="assessment-list">{visibleResults.map((result) => {
+        {visibleResults.length > 0 && <div className="assessment-list">{visibleResults.map((result) => {
           const band = bandOf(result);
           const riskLabel = result.stressLevel ?? (band ? BAND_LABELS[band] : '—');
           const riskClass = (result.stressLevel ?? band ?? '').toLowerCase();
@@ -124,8 +128,14 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
             </div>
             <button type="button" className={`review-button ${isReviewed ? 'reviewed' : ''}`} onClick={() => toggleReviewed(result.id)}>{isReviewed ? 'Reviewed' : 'Mark as Reviewed'}</button>
           </article>;
-        })}</div>
-        {visibleResults.length === 0 && <p className="empty-table">No assessment results match your filters.</p>}
+        })}</div>}
+        {visibleResults.length === 0 && (results.length === 0
+          ? <DoctorEmpty title="No assessment results yet" description="Results appear here as soon as students complete a stress assessment." />
+          : <DoctorEmpty
+              title="No results match your filters"
+              description="Try another search term or reset the level and emotion filters."
+              action={<button type="button" className="ghost-button" onClick={() => { setSearch(''); setLevel('All Levels'); setEmotion('All Emotions'); }}>Clear filters</button>}
+            />)}
       </>}
     </section>
   </main>;

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StudentCase } from './StudentCasesView';
-import { NotificationBell } from '../../components/NotificationBell';
+import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import './StudentCaseDetailView.css';
 import {
   fetchStudentConsultations,
@@ -77,6 +77,12 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       active = false;
     };
   }, [student.userId, reloadKey]);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
 
   const contactTimes = useMemo(() => {
     const times: number[] = [];
@@ -157,17 +163,19 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
     setSaveError('');
   };
 
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+
   return (
     <main className="main-panel student-detail-main">
-      <header className="student-detail-topbar"><strong>Student Cases</strong><button type="button" className="notification-button" aria-label="Notifications"><NotificationBell /></button></header>
+      <header className="student-detail-topbar"><strong>Student Cases</strong><DoctorNotifications /></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
         <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
         <div className="student-contact-row"><span>{student.email}</span><span>{student.phone}</span><span>{student.location}</span></div>
       </section>
-      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
-      {isLoading && <p className="case-loading">Loading case data…</p>}
-      {!isLoading && loadError && <p className="case-load-error">{loadError} <button type="button" className="text-button" onClick={() => setReloadKey((key) => key + 1)}>Retry</button></p>}
+      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
+      {isLoading && <DoctorLoading label="Loading case data…" />}
+      {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
       {!isLoading && !loadError && <>
         {activeTab === 'Overview' && <div className="student-detail-content">
           <div className="detail-stat-grid">
@@ -231,7 +239,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           </div>
         </div>}
         {activeTab === 'Assessment Results' && <div className="student-detail-content">
-          {sessions.length === 0 && <p className="empty-table">No assessment results yet.</p>}
+          {sessions.length === 0 && <DoctorEmpty title="No assessment results yet" description="Completed stress assessments for this student will be listed here." />}
           {sessions.map((session) => {
             const band = session.score == null ? null : bandForScore(session.score);
             const riskLabel = session.stressLevel ?? (session.score == null ? '—' : bandLabel(session.score));
@@ -251,7 +259,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           })}
         </div>}
         {activeTab === 'Consultations' && <div className="student-detail-content">
-          {consultations.length === 0 && <p className="empty-table">No consultations booked yet.</p>}
+          {consultations.length === 0 && <DoctorEmpty title="No consultations booked yet" description="Booked sessions with this student will appear here with their status and notes." />}
           {consultations.map((consultation) => {
             const statusLabel = consultation.status ? consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1) : 'Scheduled';
             const pillClass = consultation.status === 'completed'
@@ -282,7 +290,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
               <button type="button" className="ghost-button" onClick={clearForm}>Clear</button>
               {saved && <span className="save-confirmation">Saved</span>}
             </div>
-            {saveError && <p className="case-load-error">{saveError}</p>}
+            {saveError && <p className="case-load-error is-error" role="alert">{saveError}</p>}
           </section>
         </div>}
       </>}

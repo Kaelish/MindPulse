@@ -29,9 +29,24 @@ export interface DoctorDashboardStats {
   riskAlerts: number;
 }
 
+export type MetricTone = 'positive' | 'warning' | 'danger' | 'neutral';
+
+export interface DashboardMetric {
+  value: number;
+  note: { text: string; tone: MetricTone };
+}
+
+export interface DoctorDashboardMetrics {
+  activeCases: DashboardMetric;
+  pendingReviews: DashboardMetric;
+  highRiskStudents: DashboardMetric;
+  completedThisWeek: DashboardMetric;
+}
+
 export interface DoctorDashboardData {
   doctorName: string;
   stats: DoctorDashboardStats;
+  metrics: DoctorDashboardMetrics;
   patients: DoctorPatientRow[];
   schedule: DoctorScheduleItem[];
 }
@@ -42,6 +57,7 @@ interface AppointmentRow {
   scheduled_for: string | null;
   status: string;
   created_at: string;
+  updated_at: string | null;
 }
 
 interface ProfileRow {
@@ -49,6 +65,7 @@ interface ProfileRow {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  created_at: string;
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -72,6 +89,23 @@ const statusForScore = (score: number | null): DoctorPatientStatus => {
   if (score > 60) return 'Critical';
   if (score > 30) return 'Watch';
   return 'Stable';
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const timeOf = (value: string | null | undefined): number => {
+  const at = new Date(value || '').getTime();
+  return Number.isNaN(at) ? 0 : at;
+};
+
+const countBetween = (timestamps: number[], from: number, to: number) =>
+  timestamps.filter((at) => at >= from && at < to).length;
+
+const trendNote = (current: number, previous: number, emptyText: string) => {
+  if (current > previous) return { text: `+${current - previous} vs last week`, tone: 'positive' as const };
+  if (current < previous) return { text: `${current - previous} vs last week`, tone: 'warning' as const };
+  if (current === 0) return { text: emptyText, tone: 'neutral' as const };
+  return { text: 'Same as last week', tone: 'neutral' as const };
 };
 
 const dayLabelFor = (date: Date): string => {
@@ -105,7 +139,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
 
   const { data: appointments, error } = await supabase
     .from('appointments')
-    .select('id, patient_id, scheduled_for, status, created_at')
+    .select('id, patient_id, scheduled_for, status, created_at, updated_at')
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -126,7 +160,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
   if (patientIds.length) {
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name, email, created_at')
       .in('id', patientIds);
     if (profilesError) throw new Error(profilesError.message);
     profileRows = (profiles ?? []) as ProfileRow[];
@@ -188,6 +222,44 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
   );
   const riskAlerts = patients.filter((patient) => patient.status === 'Critical').length;
 
+  const now = Date.now();
+  const weekAgo = now - 7 * DAY_MS;
+  const twoWeeksAgo = now - 14 * DAY_MS;
+  const caseTimes = profileRows.map((row) => timeOf(row.created_at));
+  const completedTimes = appointmentRows
+    .filter((row) => row.status === 'completed')
+    .map((row) => timeOf(row.updated_at) || timeOf(row.created_at));
+  const pendingReviews = appointmentRows.filter((row) => row.status === 'scheduled').length;
+
+  const metrics: DoctorDashboardMetrics = {
+    activeCases: {
+      value: patients.length,
+      note: trendNote(countBetween(caseTimes, weekAgo, now), countBetween(caseTimes, twoWeeksAgo, weekAgo), 'No new cases this week'),
+    },
+    pendingReviews: {
+      value: pendingReviews,
+      note:
+        pendingReviews > 0
+          ? { text: 'Requires attention', tone: 'warning' }
+          : { text: 'All caught up', tone: 'positive' },
+    },
+    highRiskStudents: {
+      value: riskAlerts,
+      note:
+        riskAlerts === 0
+          ? { text: 'No students at high risk', tone: 'positive' }
+          : { text: `${riskAlerts} need${riskAlerts === 1 ? 's' : ''} immediate review`, tone: 'danger' },
+    },
+    completedThisWeek: {
+      value: countBetween(completedTimes, weekAgo, now),
+      note: trendNote(
+        countBetween(completedTimes, weekAgo, now),
+        countBetween(completedTimes, twoWeeksAgo, weekAgo),
+        'No sessions completed yet',
+      ),
+    },
+  };
+
   return {
     doctorName,
     stats: {
@@ -197,6 +269,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
       videoCalls,
       riskAlerts,
     },
+    metrics,
     patients,
     schedule,
   };

@@ -14,10 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import {
+  DashboardMetric,
   DoctorDashboardData,
   DoctorScheduleItem,
+  MetricTone,
   fetchDoctorDashboard,
 } from '../../services/doctorDashboard';
+import { DoctorNotifications } from '../../components/DoctorNotifications';
 
 interface DoctorDashboardScreenProps {
   onNavigate?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
@@ -42,13 +45,41 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: Colors.divider, text: Colors.textHint },
 };
 
-const StatCard = ({ label, value, icon, color }: { label: string; value: number; icon: keyof typeof Ionicons.glyphMap; color: string }) => (
+const TONE_COLORS: Record<MetricTone, string> = {
+  positive: Colors.tagGreenText,
+  warning: Colors.tagYellowText,
+  danger: Colors.tagRedText,
+  neutral: Colors.textSecondary,
+};
+
+const METRIC_CARDS: { key: keyof DoctorDashboardData['metrics']; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { key: 'activeCases', label: 'Active Cases', icon: 'people-outline', color: '#5B6EF5' },
+  { key: 'pendingReviews', label: 'Pending Reviews', icon: 'clipboard-outline', color: '#DB8D62' },
+  { key: 'highRiskStudents', label: 'High Risk Students', icon: 'warning-outline', color: '#E05C5C' },
+  { key: 'completedThisWeek', label: 'Completed this week', icon: 'checkmark-done-outline', color: '#27AE60' },
+];
+
+const statusBadge = (status: string) =>
+  status === 'Critical'
+    ? { bg: Colors.tagRedBg, text: Colors.tagRedText }
+    : status === 'Watch'
+      ? { bg: Colors.tagYellowBg, text: Colors.tagYellowText }
+      : status === 'Stable'
+        ? { bg: Colors.tagGreenBg, text: Colors.tagGreenText }
+        : { bg: Colors.divider, text: Colors.textHint };
+
+const MetricCard = ({ label, metric, icon, color }: { label: string; metric: DashboardMetric; icon: keyof typeof Ionicons.glyphMap; color: string }) => (
   <View style={styles.statCard}>
-    <View style={[styles.statIconWrap, { backgroundColor: `${color}1A` }]}>
-      <Ionicons name={icon} size={17} color={color} />
+    <View style={styles.statTop}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <View style={[styles.statIconWrap, { backgroundColor: `${color}1A` }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
     </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{metric.value.toLocaleString()}</Text>
+    <Text style={[styles.statNote, { color: TONE_COLORS[metric.note.tone] }]} numberOfLines={1}>
+      {metric.note.text}
+    </Text>
   </View>
 );
 
@@ -92,13 +123,16 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
     );
   }
 
-  const stats = data?.stats;
+  const metrics = data?.metrics;
   const schedule = data?.schedule ?? [];
   const nextCall =
     schedule.find(
       (item) => item.rawStatus === 'confirmed' && (!item.startsAt || item.startsAt.getTime() >= Date.now() - 60 * 60 * 1000),
     ) ?? schedule.find((item) => item.rawStatus === 'confirmed');
   const upcomingSchedule = schedule.filter((item) => item.rawStatus !== 'completed').slice(0, 6);
+  const recentCases = [...(data?.patients ?? [])]
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    .slice(0, 5);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -119,9 +153,12 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                 <Text style={styles.headerName}>{data?.doctorName ?? 'Doctor'}</Text>
                 <Text style={styles.headerDate}>{today}</Text>
               </View>
-              <View style={styles.roleBadge}>
-                <Ionicons name="medkit-outline" size={14} color={Colors.white} />
-                <Text style={styles.roleBadgeText}>Doctor</Text>
+              <View style={styles.headerActions}>
+                <DoctorNotifications variant="onGradient" />
+                <View style={styles.roleBadge}>
+                  <Ionicons name="medkit-outline" size={14} color={Colors.white} />
+                  <Text style={styles.roleBadgeText}>Doctor</Text>
+                </View>
               </View>
             </View>
           </SafeAreaView>
@@ -137,13 +174,27 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
             </View>
           )}
 
-          {/* Stats */}
-          <View style={styles.statsGrid}>
-            <StatCard label="Patients" value={stats?.patients ?? 0} icon="people-outline" color="#5B6EF5" />
-            <StatCard label="Appointments" value={stats?.appointments ?? 0} icon="calendar-outline" color="#DB8D62" />
-            <StatCard label="Upcoming" value={stats?.upcoming ?? 0} icon="time-outline" color="#27AE60" />
-            <StatCard label="Risk Alerts" value={stats?.riskAlerts ?? 0} icon="warning-outline" color="#E05C5C" />
-          </View>
+          {error && !!data && (
+            <View style={styles.staleBanner}>
+              <Ionicons name="cloud-offline-outline" size={15} color={Colors.tagYellowText} />
+              <Text style={styles.staleBannerText}>Couldn’t refresh — showing saved data.</Text>
+            </View>
+          )}
+
+          {/* Summary metrics */}
+          {metrics && (
+            <View style={styles.statsGrid}>
+              {METRIC_CARDS.map((card) => (
+                <MetricCard
+                  key={card.key}
+                  label={card.label}
+                  metric={metrics[card.key]}
+                  icon={card.icon}
+                  color={card.color}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Next confirmed call */}
           {nextCall && (
@@ -152,7 +203,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                 <View style={styles.nextCallIcon}>
                   <Ionicons name="videocam" size={20} color={Colors.white} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.nextCallBody}>
                   <Text style={styles.nextCallLabel}>Next video call</Text>
                   <Text style={styles.nextCallPatient}>{nextCall.patientName}</Text>
                   <Text style={styles.nextCallTime}>
@@ -171,9 +222,63 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
             </View>
           )}
 
-          {/* Schedule */}
+          {/* Recent cases */}
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Upcoming Schedule</Text>
+            <Text style={styles.sectionTitle}>Recent Cases</Text>
+            <TouchableOpacity onPress={() => onNavigate?.('clinics')}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.patientsCard}>
+            {recentCases.length === 0 && (
+              <Text style={styles.emptyText}>
+                Student cases appear here once they book a consultation with you.
+              </Text>
+            )}
+            {recentCases.map((patient, index, arr) => {
+              const badge = statusBadge(patient.status);
+              const fill = patient.score == null ? 0 : Math.max(0, Math.min(100, patient.score));
+              return (
+                <View
+                  key={patient.id}
+                  style={[styles.patientRow, index === arr.length - 1 && styles.rowLast]}
+                >
+                  <View style={styles.patientAvatar}>
+                    <Text style={styles.patientAvatarText}>{patient.initials}</Text>
+                  </View>
+                  <View style={styles.patientBody}>
+                    <Text style={styles.patientName} numberOfLines={1}>
+                      {patient.name}
+                    </Text>
+                    <Text style={styles.patientScore}>
+                      {patient.score != null ? (
+                        <>
+                          Stress: <Text style={styles.patientScoreStrong}>{patient.score}%</Text>
+                        </>
+                      ) : (
+                        'No assessment yet'
+                      )}
+                    </Text>
+                    <View style={styles.riskTrack}>
+                      <View
+                        style={[
+                          styles.riskFill,
+                          { width: `${fill}%`, backgroundColor: badge.text },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.statusPill, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.statusPillText, { color: badge.text }]}>{patient.status}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Consultations */}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Upcoming Consultations</Text>
             <TouchableOpacity onPress={() => onNavigate?.('clinics')}>
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
@@ -181,7 +286,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
           <View style={styles.scheduleCard}>
             {upcomingSchedule.length === 0 && (
               <Text style={styles.emptyText}>
-                No upcoming appointments. Patients who book with you will appear here.
+                No consultations scheduled. Approved bookings show up here with their date and session type.
               </Text>
             )}
             {upcomingSchedule.map((item: DoctorScheduleItem, index) => {
@@ -189,7 +294,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.scheduleRow, index === upcomingSchedule.length - 1 && { borderBottomWidth: 0 }]}
+                  style={[styles.scheduleRow, index === upcomingSchedule.length - 1 && styles.rowLast]}
                   activeOpacity={0.7}
                   onPress={() => onNavigate?.('clinics')}
                 >
@@ -212,45 +317,6 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
               );
             })}
           </View>
-
-          {/* Patients */}
-          <Text style={styles.sectionTitle}>My Patients</Text>
-          <View style={styles.patientsCard}>
-            {(data?.patients ?? []).length === 0 && (
-              <Text style={styles.emptyText}>Patients appear here once they book a consultation with you.</Text>
-            )}
-            {(data?.patients ?? []).slice(0, 5).map((patient, index, arr) => {
-              const badge =
-                patient.status === 'Critical'
-                  ? { bg: Colors.tagRedBg, text: Colors.tagRedText }
-                  : patient.status === 'Watch'
-                    ? { bg: Colors.tagYellowBg, text: Colors.tagYellowText }
-                    : patient.status === 'Stable'
-                      ? { bg: Colors.tagGreenBg, text: Colors.tagGreenText }
-                      : { bg: Colors.divider, text: Colors.textHint };
-              return (
-                <View
-                  key={patient.id}
-                  style={[styles.patientRow, index === arr.length - 1 && { borderBottomWidth: 0 }]}
-                >
-                  <View style={styles.patientAvatar}>
-                    <Text style={styles.patientAvatarText}>{patient.initials}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.patientName} numberOfLines={1}>
-                      {patient.name}
-                    </Text>
-                    <Text style={styles.patientScore}>
-                      {patient.score != null ? `Latest stress score ${patient.score}` : 'No assessments yet'}
-                    </Text>
-                  </View>
-                  <View style={[styles.statusPill, { backgroundColor: badge.bg }]}>
-                    <Text style={[styles.statusPillText, { color: badge.text }]}>{patient.status}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -269,6 +335,7 @@ const styles = StyleSheet.create({
   headerEyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '600' },
   headerName: { color: Colors.white, fontSize: 26, fontWeight: '900', marginTop: 2 },
   headerDate: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4, fontWeight: '500' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,6 +362,17 @@ const styles = StyleSheet.create({
   retryBtn: { alignSelf: 'flex-start', backgroundColor: Colors.btnBlue, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18 },
   retryText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
 
+  staleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.tagYellowBg,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+  },
+  staleBannerText: { color: Colors.tagYellowText, fontSize: 12, fontWeight: '700', flex: 1 },
+
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   statCard: {
     flexGrow: 1,
@@ -306,9 +384,11 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     gap: 2,
   },
-  statIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  statValue: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary },
-  statLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  statTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
+  statIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  statValue: { fontSize: 26, fontWeight: '900', color: Colors.textPrimary },
+  statLabel: { flex: 1, fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  statNote: { fontSize: 11, fontWeight: '700', marginTop: 2 },
 
   nextCallCard: {
     backgroundColor: '#5B6EF5',
@@ -319,6 +399,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   nextCallLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  nextCallBody: { flex: 1 },
   nextCallIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   nextCallLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   nextCallPatient: { color: Colors.white, fontSize: 15, fontWeight: '800', marginTop: 1 },
@@ -361,6 +442,7 @@ const styles = StyleSheet.create({
   statusPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
   statusPillText: { fontSize: 10.5, fontWeight: '800' },
   emptyText: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 18, fontStyle: 'italic', paddingHorizontal: 8 },
+  rowLast: { borderBottomWidth: 0 },
 
   patientsCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md },
   patientRow: {
@@ -373,6 +455,10 @@ const styles = StyleSheet.create({
   },
   patientAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E8ECFA', alignItems: 'center', justifyContent: 'center' },
   patientAvatarText: { fontSize: 13, fontWeight: '800', color: '#5B6EF5' },
+  patientBody: { flex: 1, gap: 3 },
   patientName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  patientScore: { fontSize: 11.5, color: Colors.textSecondary, marginTop: 2 },
+  patientScore: { fontSize: 11.5, color: Colors.textSecondary },
+  patientScoreStrong: { fontWeight: '800', color: Colors.textPrimary },
+  riskTrack: { height: 5, borderRadius: 3, backgroundColor: Colors.divider, overflow: 'hidden', marginTop: 3 },
+  riskFill: { height: 5, borderRadius: 3 },
 });

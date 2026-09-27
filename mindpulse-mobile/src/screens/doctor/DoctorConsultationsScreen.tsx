@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
+import { DoctorNotifications } from '../../components/DoctorNotifications';
 import {
   DoctorAvailability,
   DoctorChatMessage,
@@ -485,9 +486,12 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
             <Text style={styles.headerTitle}>Consultations</Text>
             <Text style={styles.headerSub}>Approve, reschedule, and talk to your patients</Text>
           </View>
-          <TouchableOpacity style={styles.gearBtn} onPress={() => void openAvailability()}>
-            <Ionicons name="options-outline" size={20} color={Colors.primaryDark} />
-          </TouchableOpacity>
+          <View style={styles.headerBtns}>
+            <DoctorNotifications />
+            <TouchableOpacity style={styles.gearBtn} onPress={() => void openAvailability()}>
+              <Ionicons name="options-outline" size={20} color={Colors.primaryDark} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.tabRow}>
           <TabPill label={`Upcoming${upcoming.length ? ` (${upcoming.length})` : ''}`} active={consultTab === 'upcoming'} onPress={() => setConsultTab('upcoming')} />
@@ -925,6 +929,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '900', color: Colors.textPrimary },
   headerSub: { fontSize: 11.5, color: Colors.textSecondary, marginTop: 2 },
+  headerBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gearBtn: {
     width: 40,
     height: 40,

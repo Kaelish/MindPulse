@@ -48,7 +48,6 @@ export interface DoctorDashboardOverview {
   pendingReviews: DashboardMetric;
   highRiskStudents: DashboardMetric;
   completedThisWeek: DashboardMetric;
-  unreadNotifications: number;
   recentCases: DashboardRecentCase[];
   upcoming: DashboardConsultation[];
 }
@@ -303,17 +302,6 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   const newCasesPrevWeek = countSince(profiles, twoWeeksAgo, weekAgo);
 
   const highRiskCount = cases.filter((item) => item.risk === 'High Risk').length;
-  let unreadNotifications = 0;
-  try {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', doctorId)
-      .eq('read', false);
-    if (!error && typeof count === 'number') unreadNotifications = count;
-  } catch {
-    // The bell badge is decorative — never fail the dashboard over it.
-  }
 
   return {
     activeCases: {
@@ -340,7 +328,6 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       value: completedWeek.length,
       note: trendNote(completedWeek.length, completedPrevWeek.length, 'No sessions completed yet'),
     },
-    unreadNotifications,
     recentCases: cases.slice(0, 5),
     upcoming,
   };

@@ -1,6 +1,7 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../services/doctorProfile';
+import { DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 
 type ProfileTab = 'personal' | 'credentials' | 'security';
 
@@ -11,35 +12,35 @@ export const DoctorProfileSettingView: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  const [savedTone, setSavedTone] = useState<'ok' | 'error'>('ok');
   const [profile, setProfile] = useState<DoctorProfileData | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const flashSaved = (message: string) => {
+  const flashSaved = (message: string, tone: 'ok' | 'error' = 'ok') => {
+    setSavedTone(tone);
     setSaved(message);
     window.setTimeout(() => setSaved(null), 4000);
   };
 
-  useEffect(() => {
-    let mounted = true;
+  const loadProfile = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     fetchDoctorProfile()
       .then((data) => {
-        if (mounted) {
-          setProfile(data);
-          setLoading(false);
-        }
+        setProfile(data);
+        setLoading(false);
       })
       .catch((error: unknown) => {
-        if (mounted) {
-          setLoadError(error instanceof Error ? error.message : 'Unable to load your profile.');
-          setLoading(false);
-        }
+        setLoadError(error instanceof Error ? error.message : 'Unable to load your profile.');
+        setLoading(false);
       });
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const update = (key: keyof DoctorProfileData, value: string) =>
     setProfile((current) => (current ? { ...current, [key]: value } : current));
@@ -54,25 +55,25 @@ export const DoctorProfileSettingView: React.FC = () => {
       setEditing(false);
       flashSaved('Changes saved successfully.');
     } else {
-      flashSaved(`Failed to save: ${result.message}`);
+      flashSaved(`Failed to save: ${result.message}`, 'error');
     }
   };
 
   const changePassword = async () => {
     if (!supabase) {
-      flashSaved('Supabase is not configured.');
+      flashSaved('Supabase is not configured.', 'error');
       return;
     }
     if (!currentPassword) {
-      flashSaved('Enter your current password.');
+      flashSaved('Enter your current password.', 'error');
       return;
     }
     if (newPassword.length < 8) {
-      flashSaved('New password must be at least 8 characters.');
+      flashSaved('New password must be at least 8 characters.', 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
-      flashSaved('The new passwords do not match.');
+      flashSaved('The new passwords do not match.', 'error');
       return;
     }
 
@@ -96,7 +97,7 @@ export const DoctorProfileSettingView: React.FC = () => {
       setConfirmPassword('');
       flashSaved('Password updated successfully.');
     } catch (error) {
-      flashSaved(`Failed to update password: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      flashSaved(`Failed to update password: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -110,8 +111,9 @@ export const DoctorProfileSettingView: React.FC = () => {
             <h1>Profile Setting</h1>
             <p>Manage your personal and professional information</p>
           </div>
+          <DoctorNotifications />
         </header>
-        <div className="doctor-profile-loading">Loading your profile…</div>
+        <DoctorLoading label="Loading your profile…" />
       </main>
     );
   }
@@ -124,36 +126,18 @@ export const DoctorProfileSettingView: React.FC = () => {
             <h1>Profile Setting</h1>
             <p>Manage your personal and professional information</p>
           </div>
+          <DoctorNotifications />
         </header>
-        <div className="profile-save-banner">{loadError ?? 'Your profile could not be loaded.'}</div>
-        <button
-          type="button"
-          className="small-profile-button"
-          onClick={() => {
-            setLoading(true);
-            setLoadError(null);
-            fetchDoctorProfile()
-              .then((data) => {
-                setProfile(data);
-                setLoading(false);
-              })
-              .catch((error: unknown) => {
-                setLoadError(error instanceof Error ? error.message : 'Unable to load your profile.');
-                setLoading(false);
-              });
-          }}
-        >
-          Retry
-        </button>
+        <DoctorError message={loadError ?? 'Your profile could not be loaded.'} onRetry={loadProfile} />
       </main>
     );
   }
 
   return <main className="main-panel doctor-profile-main">
-    <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
+    <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotifications /></header>
     <section className="doctor-profile-card"><div className="doctor-avatar-large">{`${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}</div><div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>{(activeTab === 'personal' || activeTab === 'credentials') && <button type="button" className="profile-edit-button" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel Edit' : 'Edit Profile'}</button>}</section>
     <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(null); }}>{label}</button>)}</nav>
-    {saved && <div className="profile-save-banner">{saved}</div>}
+    {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}
     <form className="doctor-profile-form" onSubmit={saveProfile}>
       {activeTab === 'personal' && <ProfileSection title="Personal Information"><Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} /><Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} /><Field label="Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" /><Field label="Phone Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} /><Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} /><Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} /><Field label="Street Address" value={profile.streetAddress} editing={editing} onChange={(value) => update('streetAddress', value)} full /></ProfileSection>}
       {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><Field label="Position" value={profile.specialty} editing={editing} onChange={(value) => update('specialty', value)} /><Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}

@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { NotificationBell } from '../../components/NotificationBell';
-import { NotificationPanel } from '../../components/NotificationPanel';
+import React, { useCallback, useEffect, useState } from 'react';
+import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
 import {
   DashboardMetric,
@@ -88,20 +87,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [nextCall, setNextCall] = useState<WebConsultationItem | null>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [openingCase, setOpeningCase] = useState<string | null>(null);
-  const bellRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!showNotifications) return;
-    const handlePointerDown = (event: MouseEvent) => {
-      if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [showNotifications]);
 
   useEffect(() => {
     let active = true;
@@ -171,42 +157,14 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
         </div>
 
         <div className="header-actions">
-          <div className="doc-bell-wrap" ref={bellRef}>
-            <button
-              type="button"
-              className="notification-button"
-              aria-label="Notifications"
-              aria-expanded={showNotifications}
-              onClick={() => setShowNotifications((open) => !open)}
-            >
-              <NotificationBell />
-              {data && data.unreadNotifications > 0 && (
-                <span className="doc-bell-badge">
-                  {data.unreadNotifications > 9 ? '9+' : data.unreadNotifications}
-                </span>
-              )}
-            </button>
-            {showNotifications && (
-              <div className="doc-bell-pop">
-                <NotificationPanel />
-              </div>
-            )}
-          </div>
+          <DoctorNotifications />
         </div>
       </header>
 
-      {isLoading && (
-        <div className="loading-state" role="status">
-          <div className="spinner" />
-          <p>Loading dashboard…</p>
-        </div>
-      )}
+      {isLoading && <DoctorLoading label="Loading dashboard…" />}
 
       {!isLoading && loadError && (
-        <div className="error-state" role="alert">
-          <p>{loadError}</p>
-          <button type="button" className="ghost-button" onClick={() => setReloadKey((key) => key + 1)}>Retry</button>
-        </div>
+        <DoctorError message={loadError} onRetry={() => setReloadKey((key) => key + 1)} />
       )}
 
       {!isLoading && !loadError && data && (
@@ -276,11 +234,10 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
                 ))}
 
                 {data.recentCases.length === 0 && (
-                  <div className="dash-empty">
-                    <span className="dash-empty-mark" aria-hidden="true" />
-                    <p className="dash-empty-title">No student cases yet</p>
-                    <p className="dash-empty-text">Cases appear here as soon as students register and book a session.</p>
-                  </div>
+                  <DoctorEmpty
+                    title="No student cases yet"
+                    description="Cases appear here as soon as students register and book a session."
+                  />
                 )}
               </div>
             </article>
@@ -312,11 +269,10 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
                 ))}
 
                 {data.upcoming.length === 0 && (
-                  <div className="dash-empty">
-                    <span className="dash-empty-mark" aria-hidden="true" />
-                    <p className="dash-empty-title">No consultations scheduled</p>
-                    <p className="dash-empty-text">Approved bookings show up here with their date and session type.</p>
-                  </div>
+                  <DoctorEmpty
+                    title="No consultations scheduled"
+                    description="Approved bookings show up here with their date and session type."
+                  />
                 )}
               </div>
             </article>

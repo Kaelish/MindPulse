@@ -2824,8 +2824,24 @@ html[data-theme='dark'] .doctor-scope .notification-item {
 }
 
 /* notification bell ------------------------------------------------------- */
+/* The bell sits inside the page header, so the header itself must own a
+   stacking context: without it the popup (z-index 40) is trapped in the
+   header's context and page sections that are mid entrance-animation
+   (transform) paint straight over it. */
+.doctor-scope .topbar,
+.doctor-scope .student-detail-topbar,
+.doctor-scope .doctor-profile-header,
+.doctor-scope .consultations-header,
+.doctor-scope .student-cases-topbar,
+.doctor-scope .assessment-results-topbar,
+.doctor-scope .recommendations-topbar {
+  position: relative;
+  z-index: 60;
+}
+
 .doctor-scope .doc-bell-wrap {
   position: relative;
+  z-index: 70;
 }
 
 .doctor-scope .notification-button {
@@ -2854,7 +2870,7 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  z-index: 40;
+  z-index: 200;
   width: 322px;
   max-width: calc(100vw - 32px);
   padding: 16px;
@@ -2886,6 +2902,21 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   background: var(--doc-panel);
   border-color: var(--doc-line-strong);
   color: var(--primary-strong);
+}
+
+.doctor-scope .doc-bell-pop .notification-see-all {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--doc-line);
+  border-radius: 10px;
+  background: var(--doc-soft);
+  color: var(--primary-strong);
+  font-size: 0.7rem;
+}
+
+.doctor-scope .doc-bell-pop .notification-see-all:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
 }
 
 /* metric cards ------------------------------------------------------------ */
@@ -3164,53 +3195,6 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   background: var(--doc-line-strong);
 }
 
-/* empty states ------------------------------------------------------------ */
-.doctor-scope .dash-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 30px 18px;
-  text-align: center;
-}
-
-.doctor-scope .dash-empty-mark {
-  position: relative;
-  width: 46px;
-  height: 46px;
-  margin-bottom: 6px;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  border: 1px dashed var(--primary);
-}
-
-.doctor-scope .dash-empty-mark::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--primary);
-  opacity: 0.55;
-}
-
-.doctor-scope .dash-empty-title {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: var(--doc-ink);
-}
-
-.doctor-scope .dash-empty-text {
-  margin: 0;
-  max-width: 34ch;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--doc-muted);
-}
-
 /* upcoming consultations -------------------------------------------------- */
 .doctor-scope .dash-consult-list {
   display: flex;
@@ -3334,5 +3318,520 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   .doctor-scope .doc-bell-pop {
     right: -4px;
     width: min(322px, calc(100vw - 40px));
+  }
+}
+
+/* =========================================================================
+   Portal UX layer - motion, skeletons, empty states, scrollbars
+   ========================================================================= */
+@keyframes doc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes doc-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.doctor-scope .main-panel > *,
+.doctor-scope .consultations-page > * {
+  animation: doc-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.doctor-scope .main-panel > *:not(.modal-backdrop):nth-child(2),
+.doctor-scope .consultations-page > *:not(.modal-backdrop):nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.doctor-scope .main-panel > *:not(.modal-backdrop):nth-child(3),
+.doctor-scope .consultations-page > *:not(.modal-backdrop):nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+.doctor-scope .main-panel > *:not(.modal-backdrop):nth-child(4),
+.doctor-scope .consultations-page > *:not(.modal-backdrop):nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+.doctor-scope .main-panel > *:not(.modal-backdrop):nth-child(5),
+.doctor-scope .consultations-page > *:not(.modal-backdrop):nth-child(5) {
+  animation-delay: 0.2s;
+}
+
+.doctor-scope .main-panel > *:not(.modal-backdrop):nth-child(n + 6),
+.doctor-scope .consultations-page > *:not(.modal-backdrop):nth-child(n + 6) {
+  animation-delay: 0.25s;
+}
+
+.doctor-scope .main-panel > .modal-backdrop,
+.doctor-scope .consultations-page > .modal-backdrop,
+.doctor-scope .consultations-page > .web-chat-modal-overlay {
+  animation: none;
+}
+
+/* page depth ------------------------------------------------------------ */
+html[data-doctor-theme='dark'] .doctor-scope .main-panel,
+html[data-theme='dark'] .doctor-scope .main-panel,
+.doctor-scope .main-panel {
+  background:
+    radial-gradient(1000px 430px at 100% -14%, rgba(83, 199, 215, 0.14), transparent 62%),
+    radial-gradient(780px 380px at -8% 2%, rgba(15, 130, 152, 0.08), transparent 58%),
+    var(--doc-bg);
+}
+
+.doctor-scope .consultations-page {
+  background:
+    radial-gradient(1000px 430px at 100% -14%, rgba(83, 199, 215, 0.12), transparent 62%),
+    var(--doc-bg);
+}
+
+/* skeleton loading ------------------------------------------------------ */
+.doctor-scope .doc-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.doctor-scope .doc-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: var(--doc-panel-2);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+}
+
+.doctor-scope .doc-skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: var(--doc-soft);
+  border-radius: 8px;
+}
+
+.doctor-scope .doc-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: doc-shimmer 1.4s infinite;
+}
+
+.doctor-scope .doc-skeleton-avatar {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.doctor-scope .doc-skeleton-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.doctor-scope .doc-skeleton-line {
+  height: 11px;
+}
+
+.doctor-scope .doc-skeleton-line.is-wide {
+  width: 58%;
+}
+
+.doctor-scope .doc-skeleton-line.is-narrow {
+  width: 34%;
+}
+
+.doctor-scope .doc-skeleton-pill {
+  flex: 0 0 auto;
+  width: 92px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.doctor-scope .doc-skeleton-caption {
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--doc-muted);
+}
+
+/* shared empty state ---------------------------------------------------- */
+.doctor-scope .doc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 34px 18px;
+  text-align: center;
+}
+
+.doctor-scope .doc-empty-mark {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  border: 1px dashed var(--primary);
+}
+
+.doctor-scope .doc-empty-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.55;
+}
+
+.doctor-scope .doc-empty-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doc-empty-text {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .doc-empty > *:not(.doc-empty-mark):not(.doc-empty-title):not(.doc-empty-text) {
+  margin-top: 8px;
+}
+
+/* filter result counter ------------------------------------------------- */
+.doctor-scope .doc-result-count {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--doc-muted);
+}
+
+.doctor-scope .doc-result-count strong {
+  font-weight: 800;
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .case-filter-bar .doc-result-count,
+.doctor-scope .assessment-filter-bar .doc-result-count {
+  margin-left: auto;
+}
+
+/* error-flavoured banners ---------------------------------------------- */
+.doctor-scope .profile-save-banner.is-error,
+.doctor-scope .save-confirmation.is-error,
+.doctor-scope .recommendation-save-banner.is-error,
+.doctor-scope .case-load-error.is-error {
+  background: var(--doc-danger-soft);
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+/* scrollbars ------------------------------------------------------------ */
+.doctor-scope {
+  scrollbar-width: thin;
+  scrollbar-color: var(--doc-line-strong) transparent;
+}
+
+.doctor-scope ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.doctor-scope ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.doctor-scope ::-webkit-scrollbar-thumb {
+  background: var(--doc-line-strong);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+.doctor-scope ::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  background-clip: padding-box;
+}
+
+/* press feedback -------------------------------------------------------- */
+.doctor-scope button:not(:disabled):not(.doc-switch):active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doctor-scope *,
+  .doctor-scope *::before,
+  .doctor-scope *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ------------------------------------------------- notifications "See all"
+   The overlay + sheet are portalled to <body> and carry `.doctor-scope`
+   themselves, so they inherit the tokens (light and dark) while living on
+   the top layer where no page element can paint over them.               */
+@keyframes doc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.doc-notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 22, 30, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--doc-ink);
+  animation: doc-fade 160ms ease-out both;
+}
+
+.doc-notif-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(580px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg);
+  box-shadow: var(--doc-shadow-lg);
+  outline: none;
+  overflow: hidden;
+  animation: doc-rise 220ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.doc-notif-sheet:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.doc-notif-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--doc-line);
+  background: var(--doc-panel-2);
+}
+
+.doc-notif-sheet-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--doc-ink);
+}
+
+.doc-notif-sheet-sub {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--doc-muted);
+}
+
+.doc-notif-sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-notif-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--doc-line);
+  border-radius: 10px;
+  background: var(--doc-soft);
+  color: var(--doc-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.doc-notif-close:hover {
+  background: var(--doc-line);
+  border-color: var(--doc-line-strong);
+  color: var(--doc-ink);
+}
+
+.doc-notif-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 180px;
+  padding: 16px 18px 20px;
+  overflow-y: auto;
+}
+
+.doc-notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doc-notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius);
+  background: var(--doc-panel-2);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.doc-notif-row:hover {
+  background: var(--doc-soft);
+  border-color: var(--doc-line-strong);
+}
+
+.doc-notif-row.is-unread {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.doc-notif-row.is-unread:hover {
+  background: var(--primary-soft);
+}
+
+.doc-notif-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: var(--doc-line-strong);
+}
+
+.doc-notif-row.is-unread .doc-notif-dot {
+  background: var(--primary-strong);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.doc-notif-row.is-alert .doc-notif-dot {
+  background: var(--doc-danger);
+}
+
+.doc-notif-row.is-alert.is-unread .doc-notif-dot {
+  box-shadow: 0 0 0 4px var(--doc-danger-soft);
+}
+
+.doc-notif-row.is-appointment .doc-notif-dot {
+  background: var(--primary);
+}
+
+.doc-notif-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-notif-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doc-notif-row-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--doc-ink);
+}
+
+.doc-notif-row.is-unread .doc-notif-row-title {
+  font-weight: 800;
+}
+
+.doc-notif-row-msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--doc-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-notif-time {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--doc-muted);
+  white-space: nowrap;
+}
+
+.doc-notif-unread-tag {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--primary-strong);
+  color: var(--primary-contrast);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.doc-notif-overlay .notification-panel-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--doc-muted);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .doc-notif-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .doc-notif-sheet {
+    max-height: 88vh;
+    border-radius: var(--doc-radius-lg) var(--doc-radius-lg) 0 0;
   }
 }

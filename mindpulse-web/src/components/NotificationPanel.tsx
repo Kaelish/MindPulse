@@ -4,6 +4,8 @@ import './NotificationPanel.css';
 
 interface NotificationPanelProps {
   variant?: 'default' | 'dashboard';
+  /** Rendered as the panel footer; opens the complete past → recent list. */
+  onSeeAll?: () => void;
 }
 
 /**
@@ -11,7 +13,7 @@ interface NotificationPanelProps {
  * notifications table (RLS-gated) and honours the preferences saved in
  * Settings → Profile → Notifications.
  */
-export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default' }) => {
+export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default', onSeeAll }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +69,12 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
         <p className="notification-panel-note">
           {hiddenCount} hidden by your notification settings.
         </p>
+      )}
+      {!isLoading && !error && notifications.length > 0 && onSeeAll && (
+        <button type="button" className="notification-see-all" onClick={onSeeAll}>
+          See all
+          <span aria-hidden="true">→</span>
+        </button>
       )}
     </>
   );

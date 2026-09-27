@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createRecommendation,
   DoctorRecommendation,
@@ -6,6 +6,7 @@ import {
   fetchDoctorRecommendations,
   updateRecommendation,
 } from '../../services/recommendations';
+import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import type { RecommendationPriority } from '../../types/supabase';
 
 type AppointmentStudent = { id: string; first_name: string | null; last_name: string | null; email: string | null; student_no: string | null };
@@ -36,6 +37,22 @@ export const RecommendationsView: React.FC = () => {
   const [formError, setFormError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const backdropRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
+
+  useEffect(() => {
+    if (!showForm) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowForm(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showForm]);
 
   useEffect(() => {
     let active = true;
@@ -119,17 +136,18 @@ export const RecommendationsView: React.FC = () => {
 
   const editing = editingId ? recommendations.find((item) => item.id === editingId) : undefined;
   const hasStudents = students.length > 0;
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   return <main className="main-panel recommendations-main">
-    <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><button type="button" className="notification-button" aria-label="Notifications"><span className="bell-icon" /></button></header>
+    <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><DoctorNotifications /></header>
     <div className="recommendations-toolbar">
       <div className="recommendation-filters">{(['All', 'Active', 'Completed'] as const).map((filter) => <button type="button" key={filter} className={activeFilter === filter ? 'active' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>)}</div>
-      <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd}>+ Add Recommendations</button>
+      <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd} title={hasStudents ? undefined : 'Book a consultation before giving recommendations.'}>+ Add Recommendations</button>
     </div>
-    {saved && <div className="recommendation-save-banner">Recommendation saved successfully.</div>}
-    {actionError && <p className="case-load-error">{actionError}</p>}
-    {isLoading && <p className="case-loading">Loading recommendations…</p>}
-    {!isLoading && loadError && <p className="case-load-error">{loadError} <button type="button" className="text-button" onClick={() => setReloadKey((key) => key + 1)}>Retry</button></p>}
+    {saved && <div className="recommendation-save-banner" role="status">Recommendation saved successfully.</div>}
+    {actionError && <div className="recommendation-save-banner is-error" role="alert">{actionError}</div>}
+    {isLoading && <DoctorLoading label="Loading recommendations…" variant="skeleton" rows={3} />}
+    {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
     {!isLoading && !loadError && <>
       <section className="recommendation-list">{visibleRecommendations.map((item) => <article className="recommendation-card" key={item.id}>
         <div className="recommendation-card-content">
@@ -140,10 +158,18 @@ export const RecommendationsView: React.FC = () => {
         </div>
         <div className="recommendation-student-id"><span>Student ID</span><strong>{item.studentNo}</strong></div>
       </article>)}</section>
-      {visibleRecommendations.length === 0 && <p className="empty-table">{hasStudents ? 'No recommendations in this category.' : 'Book a consultation before giving recommendations.'}</p>}
+      {visibleRecommendations.length === 0 && (hasStudents
+        ? <DoctorEmpty title="No recommendations yet" description="Create a recommendation to give students a clear next step after their session." action={<button type="button" className="ghost-button" onClick={openAdd}>Add recommendation</button>} />
+        : <DoctorEmpty title="Book a consultation first" description="Recommendations become available once a student has a session booked with you." />)}
       {!hasStudents && visibleRecommendations.length > 0 && <p className="empty-table">Book a consultation before giving recommendations.</p>}
     </>}
-    {showForm && <div className="modal-backdrop"><form className="recommendation-modal" onSubmit={saveRecommendation}>
+    {showForm && <div
+      className="modal-backdrop"
+      ref={backdropRef}
+      onMouseDown={(event) => {
+        if (event.target === backdropRef.current) setShowForm(false);
+      }}
+    ><form className="recommendation-modal" onSubmit={saveRecommendation}>
       <div className="modal-heading"><div><span className="eyebrow">Care plan</span><h2>{editing ? 'Edit Recommendation' : 'Add Recommendation'}</h2></div><button type="button" className="modal-close" onClick={() => setShowForm(false)} aria-label="Close">×</button></div>
       {!editing && <label>Student<select name="studentId" required defaultValue=""><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{studentLabel(student)}</option>)}</select></label>}
       <label>Category<select name="category" defaultValue={editing?.category ?? 'General'}>{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>

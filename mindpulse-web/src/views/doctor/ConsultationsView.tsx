@@ -19,6 +19,7 @@ import {
   sendWebChatMessage,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
+import { DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 
 const FALLBACK_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM',
@@ -467,7 +468,7 @@ export const ConsultationsView: React.FC = () => {
           <button
             type="button"
             className="decide-btn decide-btn-decline"
-            disabled={busy}
+            disabled={busy || declineBusy}
             onClick={() => openDeclineModal(item)}
           >
             ✕ Decline
@@ -572,8 +573,7 @@ export const ConsultationsView: React.FC = () => {
   if (loading) {
     return (
       <div className="consultations-page" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div className="spinner" />
-        <p style={{ color: 'var(--doc-muted)' }}>Loading Consultations...</p>
+        <DoctorLoading label="Loading consultations…" />
       </div>
     );
   }
@@ -588,9 +588,7 @@ export const ConsultationsView: React.FC = () => {
         </div>
 
         <div className="consultations-header-actions">
-          <button type="button" className="bell-btn" title="Notifications">
-            <span className="bell-icon" />
-          </button>
+          <DoctorNotifications />
           <button type="button" className="schedule-btn" onClick={openAvailabilityModal}>
             ⚙ Fee &amp; Slots
           </button>
@@ -881,6 +879,7 @@ export const ConsultationsView: React.FC = () => {
                     </span>
                     <button
                       type="button"
+                      aria-label="Remove attachment"
                       onClick={() => setPendingFile(null)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
                     >
@@ -983,6 +982,7 @@ export const ConsultationsView: React.FC = () => {
               </div>
               <button
                 type="button"
+                aria-label="Close decline dialog"
                 style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setDeclineTarget(null)}
               >
@@ -1043,6 +1043,7 @@ export const ConsultationsView: React.FC = () => {
               </div>
               <button
                 type="button"
+                aria-label="Close edit time dialog"
                 style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setEditTarget(null)}
               >
@@ -1157,6 +1158,7 @@ export const ConsultationsView: React.FC = () => {
               </div>
               <button
                 type="button"
+                aria-label="Close fee and slots dialog"
                 style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setShowAvailabilityModal(false)}
               >
@@ -1274,6 +1276,7 @@ export const ConsultationsView: React.FC = () => {
               </div>
               <button
                 type="button"
+                aria-label="Close schedule dialog"
                 style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                 onClick={() => setShowScheduleModal(false)}
               >
@@ -1474,7 +1477,7 @@ export const ConsultationsView: React.FC = () => {
                       cursor: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    Confirm & Forward to Supabase
+                    Confirm booking
                   </button>
                 </div>
               </form>
@@ -1510,6 +1513,7 @@ export const ConsultationsView: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  aria-label="Close consultation panel"
                   style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--doc-muted)' }}
                   onClick={() => {
                     setActiveSessionItem(null);
@@ -1589,6 +1593,7 @@ export const ConsultationsView: React.FC = () => {
                     </span>
                     <button
                       type="button"
+                      aria-label="Remove attachment"
                       onClick={() => setPendingFile(null)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
                     >

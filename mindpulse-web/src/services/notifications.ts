@@ -71,3 +71,82 @@ export const fetchFeedNotifications = async (
 };
 
 export const notificationTimeAgo = timeAgo;
+
+const toFeedNotification = (row: NotificationRow): FeedNotification => ({
+  id: String(row.id),
+  userId: row.user_id,
+  title: row.title,
+  message: row.message,
+  type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+  read: Boolean(row.read),
+  createdAt: row.created_at,
+});
+
+/**
+ * Complete history behind the "See all" view: every notification the signed-in
+ * user can see, ordered oldest first so the list reads past → recent. No limit,
+ * and the settings filter is applied after the full fetch because it decides
+ * visibility rather than page size.
+ */
+export const fetchAllNotifications = async (
+  settings: AdminSystemSettings = loadAdminSettings(),
+): Promise<{ notifications: FeedNotification[]; hiddenCount: number }> => {
+  if (!supabase) throw notConfigured();
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, user_id, title, message, type, read, created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const mapped = ((data ?? []) as NotificationRow[]).map(toFeedNotification);
+  const visible = mapped.filter((row) => feedNotificationEnabled(row, settings));
+  return { notifications: visible, hiddenCount: mapped.length - visible.length };
+};
+
+/** Marks every unread notification as read and returns the new unread count. */
+export const markAllNotificationsRead = async (): Promise<number> => {
+  if (!supabase) return 0;
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return 0;
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', data.user.id)
+      .eq('read', false);
+    if (error) throw new Error(error.message);
+    return 0;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('Unable to mark notifications as read.');
+  }
+};
+
+/** Absolute timestamp for the full-history rows, e.g. "Sep 26, 2026, 4:45 PM". */
+export const notificationFullTime = (iso: string): string => {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+/**
+ * Unread badge for the doctor portal bell. Decorative by design: any failure
+ * resolves to 0 so a missing count never breaks the page it sits on.
+ */
+export const fetchUnreadNotificationCount = async (): Promise<number> => {
+  if (!supabase) return 0;
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return 0;
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', data.user.id)
+      .eq('read', false);
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+};

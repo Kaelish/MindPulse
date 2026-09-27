@@ -7,6 +7,7 @@ import {
   loadDoctorSettings,
   saveDoctorSettings,
 } from '../../services/doctorSettings';
+import { DoctorNotifications } from '../../components/doctor/DoctorChrome';
 
 const LANDING_OPTIONS: { value: DoctorLandingView; label: string }[] = [
   { value: 'consultations', label: 'Consultations' },
@@ -94,6 +95,9 @@ export const DoctorSettingsView: React.FC = () => {
           <span className="eyebrow">Doctor Portal</span>
           <h1>Settings</h1>
           <p className="page-subtitle">General preferences for your workspace</p>
+        </div>
+        <div className="header-actions">
+          <DoctorNotifications />
         </div>
       </header>
 

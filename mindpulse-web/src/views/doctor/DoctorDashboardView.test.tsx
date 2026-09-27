@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { DoctorDashboardView } from './DoctorDashboardView';
 import { fetchDoctorDashboardOverview, DoctorDashboardOverview } from '../../services/doctorDashboard';
 import { fetchWebConsultations } from '../../services/consultations';
+import { fetchUnreadNotificationCount } from '../../services/notifications';
 
 jest.mock('../../services/doctorDashboard', () => ({
   fetchDoctorDashboardOverview: jest.fn(),
@@ -16,12 +17,15 @@ jest.mock('../../components/NotificationPanel', () => ({
   NotificationPanel: () => null,
 }));
 
+jest.mock('../../services/notifications', () => ({
+  fetchUnreadNotificationCount: jest.fn(),
+}));
+
 const overview: DoctorDashboardOverview = {
   activeCases: { value: 1, note: { text: 'No new cases this week', tone: 'neutral' } },
   pendingReviews: { value: 1, note: { text: 'Requires attention', tone: 'warning' } },
   highRiskStudents: { value: 0, note: { text: 'No students at high risk', tone: 'positive' } },
   completedThisWeek: { value: 0, note: { text: 'No sessions completed yet', tone: 'neutral' } },
-  unreadNotifications: 1,
   recentCases: [
     {
       id: 'bd57192f',
@@ -63,13 +67,13 @@ const emptyOverview: DoctorDashboardOverview = {
   pendingReviews: { value: 0, note: { text: 'All caught up', tone: 'positive' } },
   highRiskStudents: { value: 0, note: { text: 'No students at high risk', tone: 'positive' } },
   completedThisWeek: { value: 0, note: { text: 'No sessions completed yet', tone: 'neutral' } },
-  unreadNotifications: 0,
   recentCases: [],
   upcoming: [],
 };
 
 beforeEach(() => {
   (fetchWebConsultations as jest.Mock).mockResolvedValue([]);
+  (fetchUnreadNotificationCount as jest.Mock).mockResolvedValue(1);
 });
 
 test('renders live metrics, recent cases and upcoming consultations', async () => {

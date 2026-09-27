@@ -20,6 +20,7 @@ import {
   fetchDoctorProfile,
   saveDoctorProfile,
 } from '../../services/doctorProfile';
+import { DoctorNotifications } from '../../components/DoctorNotifications';
 
 interface DoctorProfileScreenProps {
   onSignOut?: () => void;
@@ -174,12 +175,15 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
       <SafeAreaView edges={['top']} style={{ backgroundColor: Colors.surface }}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Doctor Profile</Text>
-          {profile.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="shield-checkmark" size={13} color={Colors.tagGreenText} />
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
-          )}
+          <View style={styles.headerActions}>
+            {profile.isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="shield-checkmark" size={13} color={Colors.tagGreenText} />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
+            <DoctorNotifications />
+          </View>
         </View>
       </SafeAreaView>
 
@@ -261,6 +265,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 20, fontWeight: '900', color: Colors.textPrimary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
