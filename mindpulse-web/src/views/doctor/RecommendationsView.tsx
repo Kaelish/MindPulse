@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-=======
-import React, { FormEvent, useEffect, useMemo, useState } from 'react';
-import { DoctorNotificationMenu } from '../../components/DoctorNotificationMenu';
->>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
 import {
   createRecommendation,
   DoctorRecommendation,
@@ -144,11 +139,7 @@ export const RecommendationsView: React.FC = () => {
   const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   return <main className="main-panel recommendations-main">
-<<<<<<< HEAD
     <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><DoctorNotifications /></header>
-=======
-    <header className="topbar recommendations-topbar"><div><h1>Give Recommendations</h1><p className="page-subtitle">Create and manage student recommendations and action plans</p></div><DoctorNotificationMenu /></header>
->>>>>>> ce566a6076c4bcd63c885297ca60078416fc1544
     <div className="recommendations-toolbar">
       <div className="recommendation-filters">{(['All', 'Active', 'Completed'] as const).map((filter) => <button type="button" key={filter} className={activeFilter === filter ? 'active' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>)}</div>
       <button type="button" className="add-recommendation-button" disabled={!hasStudents || isLoading} onClick={openAdd} title={hasStudents ? undefined : 'Book a consultation before giving recommendations.'}>+ Add Recommendations</button>

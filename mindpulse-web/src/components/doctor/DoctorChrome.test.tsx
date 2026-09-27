@@ -7,6 +7,7 @@ import {
   fetchFeedNotifications,
   fetchUnreadNotificationCount,
   markAllNotificationsRead,
+  notificationCategoryForPath,
   notificationFullTime,
   notificationTimeAgo,
 } from '../../services/notifications';
@@ -16,6 +17,7 @@ jest.mock('../../services/notifications', () => ({
   fetchAllNotifications: jest.fn(),
   fetchUnreadNotificationCount: jest.fn(),
   markAllNotificationsRead: jest.fn(),
+  notificationCategoryForPath: jest.fn(),
   notificationTimeAgo: jest.fn(),
   notificationFullTime: jest.fn(),
 }));
@@ -27,6 +29,7 @@ const feed: FeedNotification[] = [
     title: 'Appointment confirmed',
     message: 'test student confirmed your consultation.',
     type: 'appointment',
+    category: 'settings',
     read: false,
     createdAt: '2026-09-26T16:45:00Z',
   },
@@ -39,6 +42,7 @@ const history: FeedNotification[] = [
     title: 'Weekly digest',
     message: 'Your week at a glance.',
     type: 'info',
+    category: 'settings',
     read: true,
     createdAt: '2026-09-01T09:00:00Z',
   },
@@ -48,6 +52,7 @@ const history: FeedNotification[] = [
     title: 'High stress alert',
     message: 'Liberty Lair scored 85% stress.',
     type: 'alert',
+    category: 'settings',
     read: false,
     createdAt: '2026-09-26T16:45:00Z',
   },
@@ -58,6 +63,7 @@ beforeEach(() => {
   (fetchAllNotifications as jest.Mock).mockResolvedValue({ notifications: history, hiddenCount: 0 });
   (markAllNotificationsRead as jest.Mock).mockResolvedValue(0);
   (fetchUnreadNotificationCount as jest.Mock).mockResolvedValue(1);
+  (notificationCategoryForPath as jest.Mock).mockReturnValue('all');
   (notificationTimeAgo as jest.Mock).mockReturnValue('just now');
   (notificationFullTime as jest.Mock).mockImplementation((iso: string) =>
     iso.startsWith('2026-09-01') ? 'Sep 1, 2026, 9:00 AM' : 'Sep 26, 2026, 4:45 PM',

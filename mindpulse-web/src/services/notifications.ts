@@ -149,6 +149,11 @@ const toFeedNotification = (row: NotificationRow): FeedNotification => ({
   title: row.title,
   message: row.message,
   type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+  category: categoryForNotification({
+    title: row.title,
+    message: row.message,
+    type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
+  }),
   read: Boolean(row.read),
   createdAt: row.created_at,
 });
