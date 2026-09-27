@@ -27,7 +27,15 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DoctorDashboardView onSignOut={onSignOut} />;
+        return (
+          <DoctorDashboardView
+            onViewCase={(student) => {
+              setSelectedStudent(student);
+              setActiveView('student-case-detail');
+            }}
+            onViewAllCases={() => setActiveView('student-cases')}
+          />
+        );
       case 'student-cases':
         return <StudentCasesView onViewDetails={(student) => { setSelectedStudent(student); setActiveView('student-case-detail'); }} />;
       case 'student-case-detail':
