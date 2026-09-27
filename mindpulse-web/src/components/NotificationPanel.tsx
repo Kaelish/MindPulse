@@ -5,6 +5,7 @@ import {
   notificationCategoryForPath,
   notificationTimeAgo,
 } from '../services/notifications';
+import { NotificationBell } from './NotificationBell';
 import './NotificationPanel.css';
 
 interface NotificationPanelProps {
@@ -22,6 +23,15 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
   const [hiddenCount, setHiddenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const activeCategory = notificationCategoryForPath(window.location.pathname);
+  const activeCategoryLabel = activeCategory === 'all'
+    ? 'Dashboard'
+    : activeCategory === 'assessment-tools'
+      ? 'Assessment Tools'
+      : activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1);
+  const contextualNotifications = notifications.filter((notification) =>
+    activeCategory === 'all' || notification.category === activeCategory,
+  );
 
   const load = useCallback(() => {
     setIsLoading(true);
@@ -59,16 +69,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           <button type="button" onClick={load}>Retry</button>
         </div>
       )}
-      {!isLoading && !error && notifications.length === 0 && (
-        <p className="empty-notifications">
-          {hiddenCount > 0
-            ? 'All notifications are hidden by your settings.'
-            : 'No notifications yet'}
-        </p>
+      {!isLoading && !error && contextualNotifications.length === 0 && (
+        <div className="notification-empty-state">
+          <NotificationBell />
+          <strong>No notifications for {activeCategoryLabel}</strong>
+          <span>You're all caught up for this section.</span>
+        </div>
       )}
-      {!isLoading && !error && notifications.length > 0 && (
+      {!isLoading && !error && contextualNotifications.length > 0 && (
         <ul className="notification-list">
-          {(showAll ? notifications : notifications.slice(0, 2)).map((row) => (
+          {(showAll ? contextualNotifications : contextualNotifications.slice(0, 2)).map((row) => (
             <li key={row.id} className={`notification-item ${row.read ? '' : 'unread'}`}>
               <div className="notification-item-head">
                 <span className="notification-item-title">{row.title}</span>
@@ -79,7 +89,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           ))}
         </ul>
       )}
-      {!isLoading && !error && notifications.length > 0 && (
+      {!isLoading && !error && (
         <button
           className="notification-show-more"
           type="button"

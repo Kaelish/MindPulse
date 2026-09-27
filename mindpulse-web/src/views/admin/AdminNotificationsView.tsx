@@ -123,8 +123,11 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
         </div>
 
         <label className="admin-notification-category-filter">
-          <span>Category</span>
-          <select value={category} onChange={(event) => updateCategory(event.target.value as CategoryFilter)}>
+          <select
+            aria-label="Notification category"
+            value={category}
+            onChange={(event) => updateCategory(event.target.value as CategoryFilter)}
+          >
             <option value="all">All Notifications</option>
             {NOTIFICATION_CATEGORIES.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>

@@ -58,9 +58,9 @@ export const categoryForNotification = (
   notification: Pick<FeedNotification, 'title' | 'message' | 'type'>,
 ): NotificationCategory => {
   const content = `${notification.title} ${notification.message}`.toLowerCase();
+  if (/assessment tool|assessment-tools|\btool\b|form (edits?|updates?|changes?)|tool performance/.test(content)) return 'assessment-tools';
+  if (/stress|score|risk|critical scan|assessment result|\bscan\b|\bresults?\b/.test(content)) return 'results';
   if (notification.type === 'appointment' || /appointment|capacity|registration|account|\buser\b|\bdoctor\b/.test(content)) return 'users';
-  if (/assessment tool|assessment-tools|\btool\b/.test(content)) return 'assessment-tools';
-  if (/stress|score|risk|critical|assessment result/.test(content)) return 'results';
   if (/record|archive|backup/.test(content)) return 'records';
   if (/analytics|analytic|report|trend/.test(content)) return 'analytics';
   if (/setting|preference|configuration/.test(content)) return 'settings';
