@@ -13,6 +13,8 @@ interface NotificationPanelProps {
   variant?: 'default' | 'dashboard';
   /** Opens the complete past → recent popup; receives the row to preview. */
   onSeeAll?: (initialId?: string) => void;
+  /** Fires when anything inside the popup marks rows read (badge refresh). */
+  onChanged?: () => void;
 }
 
 /**
@@ -21,7 +23,7 @@ interface NotificationPanelProps {
  * honours the preferences saved in Settings → Profile → Notifications.
  * Rows and the "See all" link both open the shared history popup.
  */
-export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default', onSeeAll }) => {
+export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 'default', onSeeAll, onChanged }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +135,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ variant = 
           scope={scope}
           initialId={historyId ?? undefined}
           onClose={() => setHistoryOpen(false)}
+          onChanged={onChanged}
         />
       )}
     </>

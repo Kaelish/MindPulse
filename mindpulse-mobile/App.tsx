@@ -19,10 +19,10 @@ import { PatientDashboardScreen } from './src/screens/patient/PatientDashboardSc
 import { PatientProfileScreen } from './src/screens/patient/PatientProfileScreen';
 import { PlantProgressScreen } from './src/screens/patient/PlantProgressScreen';
 import { DoctorDashboardScreen } from './src/screens/doctor/DoctorDashboardScreen';
-import { DoctorConsultationsScreen } from './src/screens/doctor/DoctorConsultationsScreen';
+import { DoctorConsultationsScreen, ConsultTabRequest } from './src/screens/doctor/DoctorConsultationsScreen';
 import { DoctorProfileScreen } from './src/screens/doctor/DoctorProfileScreen';
 import { AssessmentNavigator } from './src/screens/assessment/AssessmentNavigator';
-import { AppointmentBookingScreen } from './src/screens/appointments/AppointmentBookingScreen';
+import { AppointmentBookingScreen, ClinicTabRequest } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
 import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
 import { FinalStressScoreScreen } from './src/screens/results/FinalStressScoreScreen';
@@ -131,6 +131,9 @@ function App() {
   const [userRole, setUserRole] = useState<AppRole>(null);
   const [callDoctorId, setCallDoctorId] = useState<string | null>(null);
   const [callAppointmentId, setCallAppointmentId] = useState<string | null>(null);
+  // One-shot sub-tab intents raised by tapping a chat notification.
+  const [consultTabReq, setConsultTabReq] = useState<ConsultTabRequest | null>(null);
+  const [clinicTabReq, setClinicTabReq] = useState<ClinicTabRequest | null>(null);
 
   /* Splash → Onboarding after 3 s */
   useEffect(() => {
@@ -164,6 +167,26 @@ function App() {
     setCurrentTab(tab);
     changeScreen('main');
   };
+
+  /* Chat notification taps: open the Messages thread of the right portal */
+  const openDoctorMessages = () => {
+    setConsultTabReq((current) => ({ tab: 'messages', nonce: (current?.nonce ?? 0) + 1 }));
+    handleTabNavigate('clinics');
+  };
+
+  const openPatientMessages = () => {
+    setClinicTabReq((current) => ({ tab: 'messages', nonce: (current?.nonce ?? 0) + 1 }));
+    handleTabNavigate('clinics');
+  };
+
+  // Dropped as soon as the Clinics tab is left, so returning to it later
+  // starts on the default sub-tab instead of replaying the notification.
+  useEffect(() => {
+    if (currentTab !== 'clinics') {
+      setConsultTabReq(null);
+      setClinicTabReq(null);
+    }
+  }, [currentTab]);
 
   const handleBack = () => {
     if (screenMode === 'healthSetup') {
@@ -389,9 +412,10 @@ function App() {
         {screenMode === 'main' && userRole === 'doctor' && (
           <View style={styles.mainWrapper}>
             <View style={styles.tabViewArea}>
-              {currentTab === 'profile' && <DoctorProfileScreen onSignOut={handlePortalSignOut} />}
+              {currentTab === 'profile' && <DoctorProfileScreen onSignOut={handlePortalSignOut} onOpenMessages={openDoctorMessages} />}
               {currentTab === 'clinics' && (
                 <DoctorConsultationsScreen
+                  openTabRequest={consultTabReq}
                   onStartVideoCall={(appointmentId) => {
                     setCallDoctorId(null);
                     setCallAppointmentId(appointmentId);
@@ -402,6 +426,7 @@ function App() {
               {currentTab !== 'profile' && currentTab !== 'clinics' && (
                 <DoctorDashboardScreen
                   onNavigate={handleTabNavigate}
+                  onOpenMessages={openDoctorMessages}
                   onStartVideoCall={(appointmentId) => {
                     setCallDoctorId(null);
                     setCallAppointmentId(appointmentId);
@@ -434,6 +459,7 @@ function App() {
                 <PatientDashboardScreen
                   activeTab={currentTab}
                   onNavigate={handleTabNavigate}
+                  onOpenMessages={openPatientMessages}
                   onStartVideoCall={(doctorId) => {
                         setCallDoctorId(doctorId ?? null);
                         setCallAppointmentId(null);
@@ -468,6 +494,7 @@ function App() {
                   <View style={styles.subScreenWrap}>
                     <AppointmentBookingScreen
                       onNavigateTab={handleTabNavigate}
+                      openTabRequest={clinicTabReq}
                       onStartVideoCall={(doctorId, appointmentId) => {
                         setCallDoctorId(doctorId ?? null);
                         setCallAppointmentId(appointmentId ?? null);

@@ -5,6 +5,7 @@ import { DoctorView } from './navigation/DoctorSidebar';
 import {
   FeedNotification,
   fetchAllNotifications,
+  isMessageNotification,
   markAllNotificationsRead,
   markFeedNotificationRead,
   notificationFullTime,
@@ -16,6 +17,12 @@ export type NotificationSheetScope = 'doctor' | 'admin';
 /** App.tsx listens for this so a notification can jump the doctor portal. */
 export const DOCTOR_NAVIGATE_EVENT = 'mindpulse:doctor-navigate';
 
+export interface DoctorNavigateDetail {
+  view: DoctorView;
+  /** Consultations has its own sub-tabs; message rows open "Messages". */
+  tab?: 'upcoming' | 'history' | 'messages';
+}
+
 interface NotificationHistorySheetProps {
   scope: NotificationSheetScope;
   onClose: () => void;
@@ -25,15 +32,18 @@ interface NotificationHistorySheetProps {
   onChanged?: () => void;
 }
 
-const doctorTargetFor = (notification: FeedNotification): DoctorView => {
+const doctorTargetFor = (notification: FeedNotification): DoctorNavigateDetail => {
   const text = `${notification.title} ${notification.message}`.toLowerCase();
+  if (isMessageNotification(notification)) return { view: 'consultations', tab: 'messages' };
   if (notification.type === 'appointment' || /appointment|consultation|session|booking|reschedul/.test(text)) {
-    return 'consultations';
+    return { view: 'consultations' };
   }
-  if (/recommend|action plan|suggestion/.test(text)) return 'recommendations';
-  if (notification.type === 'alert' || /stress|assessment|score|result|risk/.test(text)) return 'assessment-results';
-  if (/student|case/.test(text)) return 'student-cases';
-  return 'dashboard';
+  if (/recommend|action plan|suggestion/.test(text)) return { view: 'recommendations' };
+  if (notification.type === 'alert' || /stress|assessment|score|result|risk/.test(text)) {
+    return { view: 'assessment-results' };
+  }
+  if (/student|case/.test(text)) return { view: 'student-cases' };
+  return { view: 'dashboard' };
 };
 
 /**
@@ -132,6 +142,26 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
     }
   };
 
+  /**
+   * Opening a notification is the act of reading it, so a tap both shows the
+   * detail and clears the unread state behind it.
+   */
+  const openNotification = (notification: FeedNotification) => {
+    setSelectedId(notification.id);
+    if (!notification.read) void markOne(notification);
+  };
+
+  // Arriving from a bell row ("See all" with an id) counts as reading it too.
+  const didAutoOpen = useRef(false);
+  useEffect(() => {
+    if (didAutoOpen.current || !initialId || isLoading) return;
+    const target = rows.find((row) => row.id === initialId);
+    if (!target) return;
+    didAutoOpen.current = true;
+    openNotification(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialId, isLoading, rows]);
+
   const navigateTo = useCallback(
     (pathname: string) => {
       onClose();
@@ -142,9 +172,12 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
   );
 
   const jumpToDoctorView = (notification: FeedNotification) => {
+    void markOne(notification);
     onClose();
     window.dispatchEvent(
-      new CustomEvent(DOCTOR_NAVIGATE_EVENT, { detail: doctorTargetFor(notification) }),
+      new CustomEvent<DoctorNavigateDetail>(DOCTOR_NAVIGATE_EVENT, {
+        detail: doctorTargetFor(notification),
+      }),
     );
   };
 
@@ -195,7 +228,14 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
 
         <div className="notif-hs-body">
           {scope === 'admin' ? (
-            <AdminNotificationsView embedded onNavigate={(pathname) => navigateTo(pathname)} />
+            <AdminNotificationsView
+              embedded
+              onNavigate={(pathname) => navigateTo(pathname)}
+              onChanged={() => {
+                onChanged?.();
+                setReloadKey((key) => key + 1);
+              }}
+            />
           ) : (
             <>
               {isLoading && (
@@ -232,7 +272,7 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
                         <button
                           type="button"
                           className="notif-hs-row-hit"
-                          onClick={() => setSelectedId(row.id)}
+                          onClick={() => openNotification(row)}
                         >
                           <span className="notif-hs-dot" aria-hidden="true" />
                           <span className="notif-hs-row-body">

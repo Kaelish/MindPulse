@@ -24,6 +24,8 @@ import { DoctorNotifications } from '../../components/DoctorNotifications';
 
 interface DoctorProfileScreenProps {
   onSignOut?: () => void;
+  /** Chat rows in the bell sheet land on the Messages thread. */
+  onOpenMessages?: () => void;
 }
 
 const Field = ({
@@ -56,7 +58,7 @@ const Field = ({
   </View>
 );
 
-export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSignOut }) => {
+export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSignOut, onOpenMessages }) => {
   const [profile, setProfile] = useState<DoctorProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -182,7 +184,7 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
                 <Text style={styles.verifiedText}>Verified</Text>
               </View>
             )}
-            <DoctorNotifications />
+            <DoctorNotifications onOpenMessages={onOpenMessages} />
           </View>
         </View>
       </SafeAreaView>

@@ -46,11 +46,19 @@ import {
   previewLabelFor,
 } from '../../services/chat';
 
-interface DoctorConsultationsScreenProps {
-  onStartVideoCall?: (appointmentId: string) => void;
+type ConsultTab = 'upcoming' | 'history' | 'messages';
+
+/** Set by App.tsx when a notification routes into a specific sub-tab. */
+export interface ConsultTabRequest {
+  tab: ConsultTab;
+  /** Bumped per request so the same tab can be asked for twice in a row. */
+  nonce: number;
 }
 
-type ConsultTab = 'upcoming' | 'history' | 'messages';
+interface DoctorConsultationsScreenProps {
+  onStartVideoCall?: (appointmentId: string) => void;
+  openTabRequest?: ConsultTabRequest | null;
+}
 
 const UPCOMING_STATUSES = ['scheduled', 'awaiting_payment', 'confirmed'] as const;
 const HISTORY_STATUSES = ['declined', 'completed', 'cancelled'] as const;
@@ -81,13 +89,19 @@ const TabPill = ({ label, active, onPress }: { label: string; active: boolean; o
 
 export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps> = ({
   onStartVideoCall,
+  openTabRequest = null,
 }) => {
   const [items, setItems] = useState<DoctorConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [consultTab, setConsultTab] = useState<ConsultTab>('upcoming');
+  const [consultTab, setConsultTab] = useState<ConsultTab>(openTabRequest?.tab ?? 'upcoming');
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // A notification can ask for a specific sub-tab ("Messages" for chat rows).
+  useEffect(() => {
+    if (openTabRequest) setConsultTab(openTabRequest.tab);
+  }, [openTabRequest]);
 
   // Decline modal
   const [declineTarget, setDeclineTarget] = useState<DoctorConsultation | null>(null);
@@ -487,7 +501,7 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
             <Text style={styles.headerSub}>Approve, reschedule, and talk to your patients</Text>
           </View>
           <View style={styles.headerBtns}>
-            <DoctorNotifications />
+            <DoctorNotifications onOpenMessages={() => setConsultTab('messages')} />
             <TouchableOpacity style={styles.gearBtn} onPress={() => void openAvailability()}>
               <Ionicons name="options-outline" size={20} color={Colors.primaryDark} />
             </TouchableOpacity>

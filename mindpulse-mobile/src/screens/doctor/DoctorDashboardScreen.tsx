@@ -25,6 +25,8 @@ import { DoctorNotifications } from '../../components/DoctorNotifications';
 interface DoctorDashboardScreenProps {
   onNavigate?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
   onStartVideoCall?: (appointmentId: string) => void;
+  /** Chat rows in the bell sheet land on the Messages thread. */
+  onOpenMessages?: () => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -86,6 +88,7 @@ const MetricCard = ({ label, metric, icon, color }: { label: string; metric: Das
 export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
   onNavigate,
   onStartVideoCall,
+  onOpenMessages,
 }) => {
   const [data, setData] = useState<DoctorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +157,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                 <Text style={styles.headerDate}>{today}</Text>
               </View>
               <View style={styles.headerActions}>
-                <DoctorNotifications variant="onGradient" />
+                <DoctorNotifications variant="onGradient" onOpenMessages={onOpenMessages} />
                 <View style={styles.roleBadge}>
                   <Ionicons name="medkit-outline" size={14} color={Colors.white} />
                   <Text style={styles.roleBadgeText}>Doctor</Text>

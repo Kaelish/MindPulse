@@ -225,21 +225,35 @@ export const notificationFullTime = (iso: string): string => {
 };
 
 /**
- * Unread badge for the doctor portal bell. Decorative by design: any failure
- * resolves to 0 so a missing count never breaks the page it sits on.
+ * True for the rows produced by the chat trigger (`New message from <name>`),
+ * which the portals route to the message thread instead of a generic view.
  */
-export const fetchUnreadNotificationCount = async (): Promise<number> => {
+export const isMessageNotification = (notification: { title: string; message?: string }): boolean =>
+  /^new message from\b/i.test(notification.title.trim()) ||
+  /\bsent you a message\b/i.test(`${notification.title} ${notification.message ?? ''}`);
+
+/**
+ * Unread badge for the bells. Decorative by design: any failure resolves to 0
+ * so a missing count never breaks the page it sits on. The count is filtered
+ * with the same Settings → Notification preferences as the list itself, so a
+ * badge never promises rows the feed would hide.
+ */
+export const fetchUnreadNotificationCount = async (
+  settings: AdminSystemSettings = loadAdminSettings(),
+): Promise<number> => {
   if (!supabase) return 0;
   try {
     const { data } = await supabase.auth.getUser();
     if (!data.user) return 0;
-    const { count, error } = await supabase
+    const { data: rows, error } = await supabase
       .from('notifications')
-      .select('id', { count: 'exact', head: true })
+      .select('id, title, message, type, read')
       .eq('user_id', data.user.id)
       .eq('read', false);
     if (error) return 0;
-    return count ?? 0;
+    return ((rows ?? []) as { type: string | null }[]).filter((row) =>
+      feedNotificationEnabled(row, settings),
+    ).length;
   } catch {
     return 0;
   }

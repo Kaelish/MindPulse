@@ -28,9 +28,20 @@ const FALLBACK_SLOTS = [
 
 const UPCOMING_STATUSES = ['scheduled', 'awaiting_payment', 'confirmed'] as const;
 
-export const ConsultationsView: React.FC = () => {
+/** Set by App.tsx when a notification routes into a specific Consultations tab. */
+export interface ConsultationsTabRequest {
+  tab: 'upcoming' | 'history' | 'messages';
+  /** Bumped per request so the same tab can be asked for twice in a row. */
+  nonce: number;
+}
+
+interface ConsultationsViewProps {
+  openTabRequest?: ConsultationsTabRequest | null;
+}
+
+export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabRequest = null }) => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
-  const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>('upcoming');
+  const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>(openTabRequest?.tab ?? 'upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
@@ -113,6 +124,11 @@ export const ConsultationsView: React.FC = () => {
 
   const threadFor = (patientId: string): WebThreadSummary | undefined =>
     webThreads.find((row) => row.otherId === patientId);
+
+  // A notification can ask for a specific sub-tab ("Messages" for chat rows).
+  useEffect(() => {
+    if (openTabRequest) setConsultTab(openTabRequest.tab);
+  }, [openTabRequest]);
 
   useEffect(() => {
     let isActive = true;

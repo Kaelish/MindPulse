@@ -8,6 +8,7 @@ import {
   fetchFeedNotifications,
   fetchUnreadNotificationCount,
   markAllNotificationsRead,
+  markFeedNotificationRead,
   notificationCategoryForPath,
   notificationFullTime,
   notificationTimeAgo,
@@ -22,6 +23,8 @@ jest.mock('../../services/notifications', () => ({
   notificationCategoryForPath: jest.fn(),
   notificationTimeAgo: jest.fn(),
   notificationFullTime: jest.fn(),
+  isMessageNotification: (notification: { title: string }) =>
+    /^new message from\b/i.test(notification.title.trim()),
 }));
 
 const feed: FeedNotification[] = [
@@ -139,6 +142,54 @@ test('clicking a row opens its detail and View details jumps the portal', async 
 
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(jump).toHaveBeenCalledTimes(1);
-  expect(jump.mock.calls[0][0]).toMatchObject({ detail: 'assessment-results' });
+  expect(jump.mock.calls[0][0]).toMatchObject({ detail: { view: 'assessment-results' } });
+  window.removeEventListener(DOCTOR_NAVIGATE_EVENT, jump);
+});
+
+test('tapping an unread row marks it read', async () => {
+  render(<DoctorNotifications />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+  fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
+
+  const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
+  fireEvent.click(within(dialog).getByRole('button', { name: /High stress alert/ }));
+
+  await waitFor(() => expect(markFeedNotificationRead).toHaveBeenCalledWith('n-new'));
+  expect(within(screen.getByRole('dialog')).queryByText('Unread')).toBeNull();
+});
+
+test('a message notification jumps to the Messages tab of Consultations', async () => {
+  (fetchAllNotifications as jest.Mock).mockResolvedValue({
+    notifications: [
+      {
+        id: 'n-chat',
+        userId: 'doctor',
+        title: 'New message from Dr. Sam',
+        message: 'Running five minutes late.',
+        type: 'info',
+        category: 'settings',
+        read: false,
+        createdAt: '2026-09-26T16:45:00Z',
+      },
+    ],
+    hiddenCount: 0,
+  });
+  const jump = jest.fn();
+  window.addEventListener(DOCTOR_NAVIGATE_EVENT, jump);
+
+  render(<DoctorNotifications />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+  fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
+
+  const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
+  fireEvent.click(within(dialog).getByRole('button', { name: /New message from/ }));
+  fireEvent.click(await screen.findByRole('button', { name: /View details/ }));
+
+  await waitFor(() => expect(jump).toHaveBeenCalledTimes(1));
+  expect(jump.mock.calls[0][0]).toMatchObject({
+    detail: { view: 'consultations', tab: 'messages' },
+  });
   window.removeEventListener(DOCTOR_NAVIGATE_EVENT, jump);
 });

@@ -16,13 +16,17 @@ import {
   FeedNotification,
   fetchAllNotifications,
   fetchUnreadNotificationCount,
+  isMessageNotification,
   markAllNotificationsRead,
+  markNotificationRead,
   notificationFullTime,
 } from '../services/notifications';
 
 interface DoctorNotificationsProps {
   /** onGradient sits on the purple dashboard header, onLight on white headers. */
   variant?: 'onGradient' | 'onLight';
+  /** Chat rows hand off here so the app can land on the Messages thread. */
+  onOpenMessages?: () => void;
 }
 
 const DOT_COLORS: Record<FeedNotification['type'], string> = {
@@ -35,7 +39,7 @@ const DOT_COLORS: Record<FeedNotification['type'], string> = {
  * Doctor bell + full notification history (past → recent), mirroring the web
  * portal: tap the bell to open the complete list, mark everything as read.
  */
-export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ variant = 'onLight' }) => {
+export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ variant = 'onLight', onOpenMessages }) => {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<FeedNotification[]>([]);
@@ -100,6 +104,26 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
       setActionError(e?.message || 'Could not mark notifications as read.');
     } finally {
       setMarking(false);
+    }
+  };
+
+  /**
+   * Opening a notification is the act of reading it: clear the dot, then hand
+   * chat rows straight to the message thread.
+   */
+  const openNotification = (row: FeedNotification) => {
+    const wasUnread = !row.read;
+    if (wasUnread) {
+      setRows((current) => current.map((item) => (item.id === row.id ? { ...item, read: true } : item)));
+      setUnread((count) => Math.max(0, count - 1));
+      void markNotificationRead(row.id).catch(() => {
+        setRows((current) => current.map((item) => (item.id === row.id ? { ...item, read: false } : item)));
+        setUnread((count) => count + 1);
+      });
+    }
+    if (isMessageNotification(row)) {
+      close();
+      onOpenMessages?.();
     }
   };
 
@@ -194,8 +218,12 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
                   contentContainerStyle={styles.listContent}
                 >
                   {rows.map((row) => (
-                    <View
+                    <TouchableOpacity
                       key={row.id}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open notification: ${row.title}`}
+                      onPress={() => openNotification(row)}
                       style={[styles.row, !row.read && styles.rowUnread, !row.read && { borderColor: DOT_COLORS[row.type] }]}
                     >
                       <View
@@ -220,7 +248,10 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
                           <Text style={styles.unreadTagText}>Unread</Text>
                         </View>
                       )}
-                    </View>
+                      {isMessageNotification(row) && (
+                        <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
+                      )}
+                    </TouchableOpacity>
                   ))}
                 </ScrollView>
               )}

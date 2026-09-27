@@ -4,12 +4,12 @@ import { getCurrentUserRole } from './services/session';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
 import { applyDoctorSettings, loadDoctorSettings } from './services/doctorSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
-import { DOCTOR_NAVIGATE_EVENT } from './components/NotificationHistorySheet';
+import { DOCTOR_NAVIGATE_EVENT, DoctorNavigateDetail } from './components/NotificationHistorySheet';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
 import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
-import { ConsultationsView } from './views/doctor/ConsultationsView';
+import { ConsultationsView, ConsultationsTabRequest } from './views/doctor/ConsultationsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
 import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
 import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
@@ -24,16 +24,29 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>(() => loadDoctorSettings().landingView);
   const [selectedStudent, setSelectedStudent] = useState<StudentCase | null>(null);
+  const [consultTabReq, setConsultTabReq] = useState<ConsultationsTabRequest | null>(null);
 
   // A notification's "View details" jumps straight to the matching section.
   useEffect(() => {
     const handleNotificationJump = (event: Event) => {
-      const target = (event as CustomEvent<DoctorView>).detail;
-      if (target) setActiveView(target);
+      const detail = (event as CustomEvent<DoctorView | DoctorNavigateDetail>).detail;
+      if (!detail) return;
+      const view = typeof detail === 'string' ? detail : detail.view;
+      const tab = typeof detail === 'string' ? undefined : detail.tab;
+      setActiveView(view);
+      if (view === 'consultations' && tab) {
+        setConsultTabReq((current) => ({ tab, nonce: (current?.nonce ?? 0) + 1 }));
+      }
     };
     window.addEventListener(DOCTOR_NAVIGATE_EVENT, handleNotificationJump);
     return () => window.removeEventListener(DOCTOR_NAVIGATE_EVENT, handleNotificationJump);
   }, []);
+
+  // Consumed after ConsultationsView has applied it, so a later visit to the
+  // section through the sidebar starts on the default tab again.
+  useEffect(() => {
+    if (consultTabReq) setConsultTabReq(null);
+  }, [consultTabReq]);
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -54,7 +67,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
       case 'assessment-results':
         return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':
-        return <ConsultationsView />;
+        return <ConsultationsView openTabRequest={consultTabReq} />;
       case 'recommendations':
         return <RecommendationsView />;
       case 'profile-setting':
@@ -62,7 +75,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
       case 'settings':
         return <DoctorSettingsView />;
       default:
-        return <ConsultationsView />;
+        return <ConsultationsView openTabRequest={consultTabReq} />;
     }
   };
 

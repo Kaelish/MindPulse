@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminUsersView } from './AdminUsersView';
@@ -12,6 +12,7 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminDashboardCharts, AdminOverviewStats, fetchAdminDashboardCharts, fetchAdminOverview } from '../../services/admin';
+import { fetchUnreadNotificationCount } from '../../services/notifications';
 import { ActivityLineChart, AppointmentStatusDonut } from './AdminDashboardCharts';
 import './AdminDashboardView.css';
 
@@ -68,6 +69,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const refreshUnread = useCallback(() => {
+    fetchUnreadNotificationCount()
+      .then(setUnreadNotifications)
+      .catch(() => setUnreadNotifications(0));
+  }, []);
+
+  useEffect(() => {
+    refreshUnread();
+  }, [refreshUnread]);
 
   const navigateAdminView = (view: AdminView) => {
     const pathname = pathForView(view);
@@ -155,8 +167,19 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
           </div>
           <div className="admin-dashboard-actions">
             <div className="admin-dashboard-notification-wrap">
-              <button type="button" className="admin-dashboard-notification" aria-label="Notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /><span /></button>
-              {showNotifications && <NotificationPanel variant="dashboard" />}
+              <button
+                type="button"
+                className="admin-dashboard-notification"
+                aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
+                onClick={() => {
+                  setShowNotifications((open) => !open);
+                  refreshUnread();
+                }}
+              >
+                <NotificationBell />
+                {unreadNotifications > 0 && <span />}
+              </button>
+              {showNotifications && <NotificationPanel variant="dashboard" onChanged={refreshUnread} />}
             </div>
           </div>
         </header>

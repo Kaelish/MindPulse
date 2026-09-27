@@ -45,9 +45,19 @@ import {
   pickImageAttachment,
 } from '../../services/chat';
 
+type ClinicTab = 'clinicians' | 'bookings' | 'messages' | 'support';
+
+/** Set by App.tsx when a notification routes into a specific sub-tab. */
+export interface ClinicTabRequest {
+  tab: ClinicTab;
+  /** Bumped per request so the same tab can be asked for twice in a row. */
+  nonce: number;
+}
+
 interface AppointmentBookingScreenProps {
   onStartVideoCall?: (doctorId?: string, appointmentId?: string) => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
+  openTabRequest?: ClinicTabRequest | null;
 }
 
 const TIME_SLOTS = [
@@ -314,8 +324,14 @@ const ChatBubble = ({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
   onStartVideoCall,
+  openTabRequest = null,
 }) => {
-  const [activeTab, setActiveTab] = useState<'clinicians' | 'bookings' | 'messages' | 'support'>('clinicians');
+  const [activeTab, setActiveTab] = useState<ClinicTab>(openTabRequest?.tab ?? 'clinicians');
+
+  // A notification can ask for a specific sub-tab ("Messages" for chat rows).
+  useEffect(() => {
+    if (openTabRequest) setActiveTab(openTabRequest.tab);
+  }, [openTabRequest]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);

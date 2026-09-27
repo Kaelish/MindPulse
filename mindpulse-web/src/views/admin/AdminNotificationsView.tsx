@@ -17,6 +17,8 @@ interface AdminNotificationsViewProps {
   onNavigate: (pathname: string) => void;
   /** Rendered inside the "See all" popup: drop the page chrome, keep filters. */
   embedded?: boolean;
+  /** Fires after a row is marked read so the surrounding badge can refresh. */
+  onChanged?: () => void;
 }
 
 const readCategory = (): CategoryFilter => {
@@ -30,7 +32,7 @@ const categoryLabel = (category: CategoryFilter) =>
     ? 'All Notifications'
     : NOTIFICATION_CATEGORIES.find((option) => option.value === category)?.label ?? 'All Notifications';
 
-export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ onNavigate, embedded = false }) => {
+export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ onNavigate, embedded = false, onChanged }) => {
   const [notifications, setNotifications] = useState<FeedNotification[]>([]);
   const [category, setCategory] = useState<CategoryFilter>(() => (embedded ? 'all' : readCategory()));
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -98,11 +100,24 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
       setNotifications((current) => current.map((row) =>
         row.id === notification.id ? { ...row, read: true } : row,
       ));
+      onChanged?.();
     } catch (markError) {
       setActionError(markError instanceof Error ? markError.message : 'Unable to mark this notification as read.');
     } finally {
       setMarkingId(null);
     }
+  };
+
+  /** Tapping the card counts as reading it, then hands off to the category. */
+  const openCard = (notification: FeedNotification) => {
+    void markAsRead(notification);
+    if (embedded) onNavigate(adminPathForNotificationCategory(notification.category));
+  };
+
+  /** "View Details" always leaves the feed for the matching admin section. */
+  const viewDetails = (notification: FeedNotification) => {
+    void markAsRead(notification);
+    onNavigate(adminPathForNotificationCategory(notification.category));
   };
 
   return (
@@ -176,9 +191,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
             <article
               key={notification.id}
               className={`admin-notification-card ${notification.read ? 'is-read' : 'is-unread'}`}
-              onClick={embedded
-                ? () => onNavigate(adminPathForNotificationCategory(notification.category))
-                : undefined}
+              onClick={() => openCard(notification)}
             >
               <span className={`admin-notification-icon ${notification.type === 'alert' ? 'is-alert' : ''}`} aria-hidden="true">
                 {notification.type === 'alert' ? '!' : 'i'}
@@ -192,7 +205,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                 <span className="admin-notification-category-label">{categoryLabel(notification.category)}</span>
                 <div
                   className="admin-notification-actions"
-                  onClick={embedded ? (event) => event.stopPropagation() : undefined}
+                  onClick={(event) => event.stopPropagation()}
                 >
                   <button
                     type="button"
@@ -205,7 +218,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                   <button
                     type="button"
                     className="admin-notification-view-details"
-                    onClick={() => onNavigate(adminPathForNotificationCategory(notification.category))}
+                    onClick={() => viewDetails(notification)}
                   >
                     View Details
                   </button>

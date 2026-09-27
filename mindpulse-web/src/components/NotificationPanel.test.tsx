@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NotificationPanel } from './NotificationPanel';
 import { AdminNotificationsView } from '../views/admin/AdminNotificationsView';
 import {
@@ -7,12 +7,14 @@ import {
   FeedNotification,
   fetchAllNotifications,
   fetchFeedNotifications,
+  markFeedNotificationRead,
 } from '../services/notifications';
 
 jest.mock('../services/notifications', () => ({
   ...jest.requireActual('../services/notifications'),
   fetchFeedNotifications: jest.fn(),
   fetchAllNotifications: jest.fn(),
+  markFeedNotificationRead: jest.fn(),
 }));
 
 const sampleNotifications: FeedNotification[] = [
@@ -45,6 +47,7 @@ beforeEach(() => {
   window.history.pushState({}, '', '/users');
   mockFetchFeedNotifications.mockReset();
   mockFetchAllNotifications.mockReset();
+  mockFetchFeedNotifications.mockResolvedValue({ notifications: sampleNotifications, hiddenCount: 0 });
   mockFetchAllNotifications.mockResolvedValue({ notifications: sampleNotifications, hiddenCount: 0 });
 });
 
@@ -118,4 +121,28 @@ test('returns from notifications to the source route', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
 
   expect(onNavigate).toHaveBeenCalledWith('/results');
+});
+
+test('tapping an admin notification marks it read and tells the caller', async () => {
+  (markFeedNotificationRead as jest.Mock).mockResolvedValue(undefined);
+  const onNavigate = jest.fn();
+  const onChanged = jest.fn();
+
+  render(<AdminNotificationsView onNavigate={onNavigate} embedded onChanged={onChanged} />);
+  fireEvent.click(await screen.findByRole('heading', { name: 'Doctor Capacity Reached' }));
+
+  await waitFor(() => expect(markFeedNotificationRead).toHaveBeenCalledWith('user-alert'));
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  expect(onNavigate).toHaveBeenCalledWith('/users');
+});
+
+test('the full notifications page marks a tapped card read too', async () => {
+  (markFeedNotificationRead as jest.Mock).mockResolvedValue(undefined);
+  const onChanged = jest.fn();
+
+  render(<AdminNotificationsView onNavigate={jest.fn()} onChanged={onChanged} />);
+  fireEvent.click(await screen.findByRole('heading', { name: 'Doctor Capacity Reached' }));
+
+  await waitFor(() => expect(markFeedNotificationRead).toHaveBeenCalledWith('user-alert'));
+  expect(onChanged).toHaveBeenCalledTimes(1);
 });

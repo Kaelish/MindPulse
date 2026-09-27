@@ -20,6 +20,7 @@ import {
   StressSessionItem,
   fetchDashboardData,
 } from '../../services/dashboard';
+import { isMessageNotification, markNotificationRead } from '../../services/notifications';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -30,6 +31,8 @@ interface PatientDashboardScreenProps {
   onRunSurvey?: () => void;
   onRunFaceScan?: () => void;
   onRunDailyCheck?: () => void;
+  /** Chat rows in the notifications sheet land on the Messages thread. */
+  onOpenMessages?: () => void;
 }
 
 /* ─── Quick Action Card ─── */
@@ -81,6 +84,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   onRunSurvey,
   onRunFaceScan,
   onRunDailyCheck,
+  onOpenMessages,
 }) => {
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +134,32 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
   const { userName, greetingDate, metrics, recentSessions, notifications } = data;
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  /**
+   * Opening a notification is the act of reading it: clear the bell dot, then
+   * hand chat rows straight to the message thread.
+   */
+  const openNotification = (item: { id: string; read: boolean; title: string; message: string }) => {
+    if (!item.read) {
+      const patch = (read: boolean) => setData((current) =>
+        current
+          ? {
+              ...current,
+              notifications: current.notifications.map((row) =>
+                row.id === item.id ? { ...row, read } : row,
+              ),
+            }
+          : current,
+      );
+      patch(true);
+      void markNotificationRead(item.id).catch(() => patch(false));
+    }
+    if (isMessageNotification(item)) {
+      setShowNotificationsModal(false);
+      onOpenMessages?.();
+    }
+  };
+
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
@@ -288,11 +318,18 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                   <Text style={styles.notifEmpty}>No notifications yet.</Text>
                 )}
                 {notifications.map(n => (
-                  <View key={n.id} style={modalStyles.notifItem}>
+                  <TouchableOpacity
+                    key={n.id}
+                    style={modalStyles.notifItem}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open notification: ${n.title}`}
+                    onPress={() => openNotification(n)}
+                  >
                     <Text style={modalStyles.notifTitle}>{n.title}</Text>
                     <Text style={modalStyles.notifBody}>{n.message}</Text>
                     <Text style={modalStyles.notifTime}>{n.time}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
               <TouchableOpacity style={modalStyles.closeBtn} onPress={() => setShowNotificationsModal(false)}>

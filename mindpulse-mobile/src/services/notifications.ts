@@ -96,6 +96,25 @@ export const markAllNotificationsRead = async (): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
+/** Clears a single row's unread dot; pinned to the signed-in account. */
+export const markNotificationRead = async (id: string): Promise<void> => {
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * True for the rows produced by the chat trigger (`New message from <name>`),
+ * which the app routes to the message thread instead of a generic view.
+ */
+export const isMessageNotification = (notification: { title: string; message?: string }): boolean =>
+  /^new message from\b/i.test((notification.title || '').trim()) ||
+  /\bsent you a message\b/i.test(`${notification.title || ''} ${notification.message || ''}`);
+
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
