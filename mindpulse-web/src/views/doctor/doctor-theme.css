@@ -2185,6 +2185,15 @@
   word-break: break-word;
 }
 
+.doctor-scope .doctor-profile-identity p.doctor-profile-contact {
+  gap: 8px 20px;
+}
+
+.doctor-scope .doctor-profile-identity p.doctor-profile-contact .doctor-profile-contact-item {
+  font-size: inherit;
+  color: inherit;
+}
+
 .doctor-scope .profile-edit-button {
   padding: 10px 16px;
   border: 1px solid var(--doc-line-strong);

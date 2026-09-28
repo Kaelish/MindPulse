@@ -186,7 +186,7 @@ export const DoctorProfileSettingView: React.FC = () => {
         )}
         <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
       </div>
-      <div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p>{profile.email}{profile.phone ? ' ' + profile.phone : ''}{profile.licenseId ? ' License ' + profile.licenseId : ''}</p></div>
+      <div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p className="doctor-profile-contact"><span className="doctor-profile-contact-item">{profile.email}</span>{profile.phone && <span className="doctor-profile-contact-item">{profile.phone}</span>}{profile.licenseId && <span className="doctor-profile-contact-item">{'License ' + profile.licenseId}</span>}</p></div>
       {(activeTab === 'personal' || activeTab === 'credentials') && <div className="profile-header-actions">
         <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => setEditing(true)}>{editing ? 'Cancel' : 'Edit Profile'}</button>
         {editing && <button type="submit" form="doctor-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
