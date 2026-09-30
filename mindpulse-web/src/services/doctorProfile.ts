@@ -143,7 +143,6 @@ export async function saveDoctorProfile(
           yearsExperience: profile.yearsExperience,
           startDate: profile.startDate,
         }),
-        is_verified: profile.isVerified ?? false,
       },
       { onConflict: 'user_id' },
     );

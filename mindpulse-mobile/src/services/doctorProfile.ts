@@ -80,7 +80,6 @@ export const saveDoctorProfile = async (
         specialization: profile.specialty.trim() || null,
         contact_number: profile.phone.trim() || null,
         license_no: profile.licenseId.trim() || null,
-        is_verified: profile.isVerified ?? false,
       },
       { onConflict: 'user_id' },
     );
