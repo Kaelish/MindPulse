@@ -1,6 +1,7 @@
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../services/doctorProfile';
+import { OTHER_SPECIALIZATION, SPECIALIZATION_GROUPS, isSpecializationOption } from '../../services/specializations';
 import { DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import { uploadProfileAvatar } from '../../services/profileAvatar';
 import '../ProfilePhoto.css';
@@ -17,6 +18,8 @@ export const DoctorProfileSettingView: React.FC = () => {
   const [savedTone, setSavedTone] = useState<'ok' | 'error'>('ok');
   const [profile, setProfile] = useState<DoctorProfileData | null>(null);
   const [savedProfile, setSavedProfile] = useState<DoctorProfileData | null>(null);
+  const [specialtyChoice, setSpecialtyChoice] = useState('');
+  const [customSpecialty, setCustomSpecialty] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement | null>(null);
@@ -30,6 +33,12 @@ export const DoctorProfileSettingView: React.FC = () => {
     window.setTimeout(() => setSaved(null), 4000);
   };
 
+  const seedSpecialtyControls = useCallback((specialty: string) => {
+    const listed = isSpecializationOption(specialty);
+    setSpecialtyChoice(specialty ? (listed ? specialty : OTHER_SPECIALIZATION) : '');
+    setCustomSpecialty(listed ? '' : specialty);
+  }, []);
+
   const loadProfile = useCallback(() => {
     setLoading(true);
     setLoadError(null);
@@ -38,13 +47,14 @@ export const DoctorProfileSettingView: React.FC = () => {
         setProfile(data);
         setSavedProfile(data);
         setAvatarPreview(data.avatarUrl);
+        seedSpecialtyControls(data.specialty);
         setLoading(false);
       })
       .catch((error: unknown) => {
         setLoadError(error instanceof Error ? error.message : 'Unable to load your profile.');
         setLoading(false);
       });
-  }, []);
+  }, [seedSpecialtyControls]);
 
   useEffect(() => {
     loadProfile();
@@ -83,6 +93,16 @@ export const DoctorProfileSettingView: React.FC = () => {
   const update = (key: keyof DoctorProfileData, value: string) =>
     setProfile((current) => (current ? { ...current, [key]: value } : current));
 
+  const handleSpecialtyChoice = (value: string) => {
+    setSpecialtyChoice(value);
+    update('specialty', value === OTHER_SPECIALIZATION ? customSpecialty : value);
+  };
+
+  const handleCustomSpecialty = (value: string) => {
+    setCustomSpecialty(value);
+    update('specialty', value);
+  };
+
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!profile) return;
@@ -94,6 +114,7 @@ export const DoctorProfileSettingView: React.FC = () => {
         const updatedProfile = { ...profile, avatarUrl };
         setProfile(updatedProfile);
         setSavedProfile(updatedProfile);
+        seedSpecialtyControls(updatedProfile.specialty);
         setAvatarFile(null);
         setAvatarPreview(avatarUrl);
         setEditing(false);
@@ -109,6 +130,7 @@ export const DoctorProfileSettingView: React.FC = () => {
 
   const cancelProfileEdit = () => {
     setProfile(savedProfile);
+    if (savedProfile) seedSpecialtyControls(savedProfile.specialty);
     setAvatarFile(null);
     setAvatarPreview(savedProfile?.avatarUrl ?? null);
     setEditing(false);
@@ -223,7 +245,15 @@ export const DoctorProfileSettingView: React.FC = () => {
     {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}
     <form id="doctor-profile-form" className="doctor-profile-form" onSubmit={saveProfile} onKeyDown={blockImplicitSave}>
       {activeTab === 'personal' && <ProfileSection title="Personal Information"><Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} /><Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} /><Field label="Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" /><Field label="Phone Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} /><Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} /><Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} /><Field label="Street Address" value={profile.streetAddress} editing={editing} onChange={(value) => update('streetAddress', value)} full /></ProfileSection>}
-      {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><Field label="Position" value={profile.specialty} editing={editing} onChange={(value) => update('specialty', value)} /><Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}
+      {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><label className="doctor-profile-field"><span>Position</span>{editing
+        ? <select value={specialtyChoice} onChange={(event) => handleSpecialtyChoice(event.target.value)}>
+            <option value="" disabled>Select a specialization</option>
+            {SPECIALIZATION_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.options.map((option) => <option key={option} value={option}>{option}</option>)}</optgroup>)}
+            <option value={OTHER_SPECIALIZATION}>{OTHER_SPECIALIZATION}</option>
+          </select>
+        : <input value={profile.specialty} readOnly />}</label>
+        {editing && specialtyChoice === OTHER_SPECIALIZATION && <label className="doctor-profile-field full"><span>Other specialization</span><input value={customSpecialty} placeholder="Type your specialization" onChange={(event) => handleCustomSpecialty(event.target.value)} /></label>}
+        <Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}
       {activeTab === 'security' && <ProfileSection title="Security"><Field label="Current Password" value={currentPassword} editing onChange={setCurrentPassword} type="password" placeholder="Enter current password" /><Field label="New Password" value={newPassword} editing onChange={setNewPassword} type="password" placeholder="Enter new password (min 8 characters)" /><Field label="Confirm New Password" value={confirmPassword} editing onChange={setConfirmPassword} type="password" placeholder="Confirm new password" /></ProfileSection>}
       {activeTab === 'security' && <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : 'Change Password'}</button>}
     </form>

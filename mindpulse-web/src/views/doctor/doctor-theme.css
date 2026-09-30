@@ -2073,6 +2073,7 @@
 }
 
 .doctor-scope .modal-backdrop {
+  z-index: 300;
   background: rgba(8, 22, 30, 0.55);
   backdrop-filter: blur(3px);
 }
@@ -2246,7 +2247,8 @@
   color: var(--doc-muted);
 }
 
-.doctor-scope .doctor-profile-field input {
+.doctor-scope .doctor-profile-field input,
+.doctor-scope .doctor-profile-field select {
   padding: 12px 14px;
   font-size: 0.94rem;
 }

@@ -883,7 +883,8 @@ button {
   color: #1f2937;
 }
 
-.auth-form input {
+.auth-form input,
+.auth-form select {
   width: 100%;
   min-height: 46px;
   border: 1px solid #dfe5ee;
@@ -894,7 +895,8 @@ button {
   color: #0f172a;
 }
 
-.auth-form input:focus {
+.auth-form input:focus,
+.auth-form select:focus {
   border-color: #3b82f6;
   outline: none;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);

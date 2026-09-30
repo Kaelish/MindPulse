@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { passwordPolicyError } from '../../services/adminSettings';
+import { OTHER_SPECIALIZATION, SPECIALIZATION_GROUPS } from '../../services/specializations';
 
 export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm' | 'pending';
 
@@ -9,28 +10,88 @@ interface WebAuthProps {
   setScreen: (screen: AuthScreen) => void;
 }
 
+interface PasswordInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  visible: boolean;
+  onToggle: () => void;
+  toggleLabel: string;
+}
+
+const PasswordInput: React.FC<PasswordInputProps> = ({ value, onChange, placeholder, visible, onToggle, toggleLabel }) => (
+  <span className="auth-password-field">
+    <input
+      type={visible ? 'text' : 'password'}
+      placeholder={placeholder}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+    <button
+      className="auth-password-toggle"
+      type="button"
+      aria-label={`${visible ? 'Hide' : 'Show'} ${toggleLabel}`}
+      aria-pressed={visible}
+      onClick={onToggle}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+        {!visible && <path d="m4 4 16 16" />}
+      </svg>
+    </button>
+  </span>
+);
+
+const SpecializationSelect: React.FC<{ value: string; onChange: (value: string) => void }> = ({ value, onChange }) => (
+  <select value={value} onChange={(event) => onChange(event.target.value)}>
+    <option value="" disabled>Select a specialization</option>
+    {SPECIALIZATION_GROUPS.map((group) => (
+      <optgroup key={group.label} label={group.label}>
+        {group.options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </optgroup>
+    ))}
+    <option value={OTHER_SPECIALIZATION}>{OTHER_SPECIALIZATION}</option>
+  </select>
+);
+
 export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [licenseNo, setLicenseNo] = useState('');
   const [specialization, setSpecialization] = useState('');
+  const [customSpecialization, setCustomSpecialization] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [bio, setBio] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  }, [screen]);
+
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
     setInfoMessage('');
 
+    const finalSpecialization = specialization === OTHER_SPECIALIZATION
+      ? customSpecialization.trim()
+      : specialization.trim();
+
+    if (specialization === OTHER_SPECIALIZATION && !finalSpecialization) {
+      setErrorMessage('Tell us your specialization, or pick one from the list.');
+      return;
+    }
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()
-      || !licenseNo.trim() || !specialization.trim() || !contactNumber.trim()) {
+      || !licenseNo.trim() || !finalSpecialization || !contactNumber.trim()) {
       setErrorMessage('Please complete all required fields to create your doctor account.');
       return;
     }
@@ -63,7 +124,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
             last_name: lastName.trim(),
             full_name: fullName,
             license_no: licenseNo.trim(),
-            specialization: specialization.trim(),
+            specialization: finalSpecialization,
             contact_number: contactNumber.trim(),
             bio: bio.trim(),
           },
@@ -286,11 +347,25 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
                 <>
                   <label>
                     <span>New Password</span>
-                    <input type="password" placeholder="Enter your new password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <PasswordInput
+                      value={password}
+                      onChange={setPassword}
+                      placeholder="Enter your new password"
+                      visible={showPassword}
+                      onToggle={() => setShowPassword((visible) => !visible)}
+                      toggleLabel="new password"
+                    />
                   </label>
                   <label>
                     <span>Confirm New Password</span>
-                    <input type="password" placeholder="Re-enter your new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <PasswordInput
+                      value={confirmPassword}
+                      onChange={setConfirmPassword}
+                      placeholder="Re-enter your new password"
+                      visible={showConfirmPassword}
+                      onToggle={() => setShowConfirmPassword((visible) => !visible)}
+                      toggleLabel="confirm new password"
+                    />
                   </label>
                 </>
               ) : (
@@ -402,8 +477,18 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
               </label>
               <label>
                 <span>Specialization</span>
-                <input placeholder="e.g. Clinical Psychologist" value={specialization} onChange={(e) => setSpecialization(e.target.value)} />
+                <SpecializationSelect value={specialization} onChange={setSpecialization} />
               </label>
+              {specialization === OTHER_SPECIALIZATION && (
+                <label>
+                  <span>Other specialization</span>
+                  <input
+                    placeholder="e.g. Registered Guidance Counselor"
+                    value={customSpecialization}
+                    onChange={(e) => setCustomSpecialization(e.target.value)}
+                  />
+                </label>
+              )}
               <label>
                 <span>Contact number</span>
                 <input placeholder="09XXXXXXXXX" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
@@ -414,11 +499,25 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
               </label>
               <label>
                 <span>Password</span>
-                <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <PasswordInput
+                  value={password}
+                  onChange={setPassword}
+                  placeholder="Create a password"
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((visible) => !visible)}
+                  toggleLabel="password"
+                />
               </label>
               <label>
                 <span>Confirm password</span>
-                <input type="password" placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  placeholder="Re-enter your password"
+                  visible={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword((visible) => !visible)}
+                  toggleLabel="confirm password"
+                />
               </label>
               {errorMessage && <p className="auth-error">{errorMessage}</p>}
               {infoMessage && <p className="auth-error">{infoMessage}</p>}
@@ -465,22 +564,14 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
             </label>
             <label>
               <span>Password</span>
-              <span className="auth-password-field">
-                <input type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button
-                  className="auth-password-toggle"
-                  type="button"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((visible) => !visible)}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                    {!showPassword && <path d="m4 4 16 16" />}
-                  </svg>
-                </button>
-              </span>
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                placeholder="Enter your password"
+                visible={showPassword}
+                onToggle={() => setShowPassword((visible) => !visible)}
+                toggleLabel="password"
+              />
             </label>
             {errorMessage && <p className="auth-error">{errorMessage}</p>}
             {infoMessage && <p className="auth-error">{infoMessage}</p>}
