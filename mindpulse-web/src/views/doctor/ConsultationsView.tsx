@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
 import {
+  ALL_WEEKDAY_KEYS,
   DoctorAvailability,
   WebChatMessage,
   WebConsultationItem,
   WebThreadSummary,
+  WEEKDAY_KEYS,
   approveAppointment,
   declineAppointment,
   editAppointmentTime,
@@ -13,10 +15,14 @@ import {
   fetchWebChatMessages,
   fetchWebChatThreads,
   fetchWebConsultations,
+  isDateUnavailable,
   markWebThreadRead,
+  normalizeWeekdays,
+  parseDisplayDate,
   saveDoctorAvailability,
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
+  toIsoDate,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
 import { DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
@@ -25,6 +31,22 @@ const FALLBACK_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM',
   '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM',
 ];
+
+const DAY_LABELS: Record<string, string> = {
+  mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
+  fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
+};
+
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-10-05" → "Mon, Oct 5" for the day-off chips. */
+const dayOffLabel = (iso: string) => {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return iso;
+  const date = new Date(year, month - 1, day);
+  return `${SHORT_DAYS[date.getDay()]}, ${SHORT_MONTHS[month - 1]} ${day}`;
+};
 
 const UPCOMING_STATUSES = ['scheduled', 'awaiting_payment', 'confirmed'] as const;
 
@@ -64,6 +86,9 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [availFee, setAvailFee] = useState('');
   const [availSlots, setAvailSlots] = useState<string[]>([]);
   const [availSlotDraft, setAvailSlotDraft] = useState('');
+  const [availDays, setAvailDays] = useState<string[]>([...ALL_WEEKDAY_KEYS]);
+  const [availBlockedDates, setAvailBlockedDates] = useState<string[]>([]);
+  const [availBlockDraft, setAvailBlockDraft] = useState('');
   const [availError, setAvailError] = useState<string | null>(null);
   const [availBusy, setAvailBusy] = useState(false);
 
@@ -98,7 +123,9 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    for (let i = 0; i < 6; i++) {
+    // 7 days so every weekday is reachable even for a doctor who works
+    // a single day of the week.
+    for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : daysOfWeek[d.getDay()];
@@ -114,6 +141,21 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   }, []);
 
   const timeSlots = availability?.slots?.length ? availability.slots : FALLBACK_SLOTS;
+
+  // Saved availability — falls back to "open every day, nothing blocked" so a
+  // missing/legacy profile row never locks patients out of booking.
+  const availabilityDays = availability?.days?.length ? availability.days : ALL_WEEKDAY_KEYS;
+  const availabilityBlockedDates = availability?.blockedDates ?? [];
+
+  /** True when patients must not pick this date (not a working day / day off). */
+  const isDayOff = (dateStr: string) => isDateUnavailable(dateStr, availabilityDays, availabilityBlockedDates);
+
+  /** How many of this doctor's appointments already sit on a blocked date. */
+  const bookedCountOnIso = (iso: string) =>
+    consultations.filter((row) => {
+      const date = parseDisplayDate(row.scheduledTime.split(' at ')[0]);
+      return date ? toIsoDate(date) === iso : false;
+    }).length;
 
   const selectedConsultation = selectedPatientId
     ? consultations.find((row) => row.patientId === selectedPatientId) ?? null
@@ -342,6 +384,11 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       setEditError('Pick both a date and a time slot.');
       return;
     }
+    const currentDate = (editTarget.scheduledTime.split(' at ')[0] || '').trim();
+    if (editDate !== currentDate && isDayOff(editDate)) {
+      setEditError('That date is a day off for you — pick another date.');
+      return;
+    }
     setEditBusy(true);
     setEditError(null);
     try {
@@ -363,6 +410,9 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     setAvailFee(availability ? String(availability.fee) : '500');
     setAvailSlots(availability ? [...availability.slots] : [...FALLBACK_SLOTS]);
     setAvailSlotDraft('');
+    setAvailDays(availability ? [...availability.days] : [...ALL_WEEKDAY_KEYS]);
+    setAvailBlockedDates(availability ? [...availability.blockedDates] : []);
+    setAvailBlockDraft('');
     setAvailError(null);
     setShowAvailabilityModal(true);
   };
@@ -377,17 +427,54 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       setAvailError('Offer at least one time slot.');
       return;
     }
+    if (availDays.length === 0) {
+      setAvailError('Pick at least one working day.');
+      return;
+    }
     setAvailBusy(true);
     setAvailError(null);
     try {
-      await saveDoctorAvailability({ fee, slots: availSlots });
-      setAvailability({ fee, slots: availSlots });
+      const next: DoctorAvailability = {
+        fee,
+        slots: availSlots,
+        days: normalizeWeekdays(availDays),
+        blockedDates: availBlockedDates,
+      };
+      await saveDoctorAvailability(next);
+      setAvailability(next);
       setShowAvailabilityModal(false);
     } catch (err) {
       setAvailError(err instanceof Error ? err.message : 'Unable to save your availability.');
     } finally {
       setAvailBusy(false);
     }
+  };
+
+  /** Adds/removes a weekday; at least one working day must stay ticked. */
+  const toggleAvailDay = (day: string) => {
+    const next = availDays.includes(day) ? availDays.filter((d) => d !== day) : [...availDays, day];
+    if (next.length === 0) {
+      setAvailError('Keep at least one working day.');
+      return;
+    }
+    setAvailDays(WEEKDAY_KEYS.filter((d) => next.includes(d)));
+    setAvailError(null);
+  };
+
+  /** Marks a specific calendar date as a day off (vacation, holiday, …). */
+  const addAvailBlockDate = () => {
+    const iso = availBlockDraft.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setAvailError('Pick a valid date to block.');
+      return;
+    }
+    if (availBlockedDates.includes(iso)) {
+      setAvailError('That date is already a day off.');
+      return;
+    }
+    setAvailBlockedDates((prev) => [...prev, iso].sort());
+    setAvailBlockDraft('');
+    setAvailError(null);
   };
 
   const addAvailabilitySlot = () => {
@@ -413,6 +500,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     const slotKey = `${selectedDate}_${selectedTime}`;
     if (bookedSlotKeys.has(slotKey)) {
       setScheduleError('That time slot is already booked. Pick another one.');
+      return;
+    }
+    if (isDayOff(selectedDate)) {
+      setScheduleError('That date is a day off — pick another date.');
       return;
     }
 
@@ -1072,29 +1163,39 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                 Date *
               </label>
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
-                {realLifeDates.map((d) => (
-                  <button
-                    key={d.label}
-                    type="button"
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      border: editDate === d.dateStr ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
-                      background: editDate === d.dateStr ? 'var(--primary-soft)' : 'var(--doc-panel)',
-                      color: editDate === d.dateStr ? 'var(--primary-strong)' : 'var(--doc-ink)',
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onClick={() => {
-                      setEditDate(d.dateStr);
-                      setEditTime('');
-                    }}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+                {realLifeDates.map((d) => {
+                  const isOff = isDayOff(d.dateStr);
+                  const isCurrent = editDate === d.dateStr;
+                  const disabled = isOff && !isCurrent;
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      disabled={disabled}
+                      title={disabled ? 'Day off — blocked in Fee & Slots' : undefined}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: !disabled && isCurrent ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                        background: !disabled && isCurrent ? 'var(--primary-soft)' : 'var(--doc-panel)',
+                        color: disabled ? 'var(--doc-muted)' : isCurrent ? 'var(--primary-strong)' : 'var(--doc-ink)',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.55 : 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                      onClick={() => {
+                        if (disabled) return;
+                        setEditDate(d.dateStr);
+                        setEditTime('');
+                      }}
+                    >
+                      {d.label}
+                      {disabled ? ' · Day off' : ''}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1250,6 +1351,108 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               </button>
             </div>
 
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', margin: '16px 0 6px' }}>
+              Working days *
+            </label>
+            <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--doc-muted)' }}>
+              Patients can only pick dates that fall on one of these weekdays.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {WEEKDAY_KEYS.map((day) => {
+                const active = availDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={`${DAY_LABELS[day]} ${active ? 'working' : 'off'}`}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: active ? '1px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                      background: active ? 'var(--primary-strong)' : 'var(--doc-panel)',
+                      color: active ? '#ffffff' : 'var(--doc-muted)',
+                    }}
+                    onClick={() => toggleAvailDay(day)}
+                  >
+                    {DAY_LABELS[day]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', margin: '16px 0 6px' }}>
+              Days off
+            </label>
+            <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--doc-muted)' }}>
+              Block specific dates (vacation, holiday). Patients can&apos;t book them; appointments you already have on
+              those dates stay on your schedule.
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="date"
+                aria-label="Date to block"
+                min={toIsoDate(new Date())}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.85rem', outline: 'none', background: 'var(--doc-panel)', color: 'var(--doc-ink)' }}
+                value={availBlockDraft}
+                onChange={(e) => setAvailBlockDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addAvailBlockDate();
+                  }
+                }}
+              />
+              <button type="button" className="view-case-btn" onClick={addAvailBlockDate}>
+                + Add Day Off
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+              {availBlockedDates.map((iso) => {
+                const booked = bookedCountOnIso(iso);
+                return (
+                  <span
+                    key={iso}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: booked > 0 ? 'var(--danger-soft)' : 'var(--doc-soft)',
+                      color: booked > 0 ? '#b91c1c' : 'var(--doc-ink-2)',
+                      border: '1px solid var(--doc-line)',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {dayOffLabel(iso)}
+                    {booked > 0 && (
+                      <span style={{ fontWeight: 800, fontSize: '0.72rem' }}>
+                        {booked} booked
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`Remove day off ${dayOffLabel(iso)}`}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', padding: 0 }}
+                      onClick={() => setAvailBlockedDates((prev) => prev.filter((d) => d !== iso))}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+              {availBlockedDates.length === 0 && (
+                <span style={{ fontSize: '0.8rem', color: 'var(--doc-muted)' }}>
+                  No days off yet — you&apos;re bookable on every working day.
+                </span>
+              )}
+            </div>
+
             {availError && (
               <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: '#b91c1c', fontSize: '0.85rem', fontWeight: 600 }}>
                 {availError}
@@ -1396,26 +1599,36 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     Select Real-Life Booking Date *
                   </label>
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
-                    {realLifeDates.map((d) => (
-                      <button
-                        key={d.label}
-                        type="button"
-                        style={{
-                          padding: '8px 14px',
-                          borderRadius: '8px',
-                          border: selectedDate === d.dateStr ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
-                          background: selectedDate === d.dateStr ? 'var(--primary-soft)' : 'var(--doc-panel)',
-                          color: selectedDate === d.dateStr ? 'var(--primary-strong)' : 'var(--doc-ink)',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                        onClick={() => setSelectedDate(d.dateStr)}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
+                    {realLifeDates.map((d) => {
+                      const disabled = isDayOff(d.dateStr);
+                      return (
+                        <button
+                          key={d.label}
+                          type="button"
+                          disabled={disabled}
+                          title={disabled ? 'Day off — blocked in Fee & Slots' : undefined}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: !disabled && selectedDate === d.dateStr ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                            background: !disabled && selectedDate === d.dateStr ? 'var(--primary-soft)' : 'var(--doc-panel)',
+                            color: disabled ? 'var(--doc-muted)' : selectedDate === d.dateStr ? 'var(--primary-strong)' : 'var(--doc-ink)',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            opacity: disabled ? 0.55 : 1,
+                            whiteSpace: 'nowrap',
+                          }}
+                          onClick={() => {
+                            if (disabled) return;
+                            setSelectedDate(d.dateStr);
+                          }}
+                        >
+                          {d.label}
+                          {disabled ? ' · Day off' : ''}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

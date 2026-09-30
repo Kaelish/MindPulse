@@ -18,7 +18,74 @@ export interface WebConsultationItem {
 export interface DoctorAvailability {
   fee: number;
   slots: string[];
+  /** Weekday keys ('mon' … 'sun') this doctor accepts bookings on. */
+  days: string[];
+  /** Specific dates (YYYY-MM-DD) the doctor has off. */
+  blockedDates: string[];
 }
+
+/** Canonical weekday keys stored in doctor_profiles.available_days. */
+export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export const ALL_WEEKDAY_KEYS: string[] = [...WEEKDAY_KEYS];
+
+const MONTH_INDEX: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DISPLAY_DATE_RE = /^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/;
+
+/** Keeps only valid weekday keys, de-duplicated, in canonical order. */
+export const normalizeWeekdays = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return [...ALL_WEEKDAY_KEYS];
+  const present = new Set(
+    raw.map((day) => String(day).trim().toLowerCase()).filter((day) => (WEEKDAY_KEYS as readonly string[]).includes(day)),
+  );
+  return WEEKDAY_KEYS.filter((day) => present.has(day));
+};
+
+/** Parses the display format used everywhere ("Aug 31, 2026") into a local Date. */
+export const parseDisplayDate = (dateStr: string): Date | null => {
+  const match = DISPLAY_DATE_RE.exec(dateStr.trim());
+  if (!match) return null;
+  const month = MONTH_INDEX[match[1].toLowerCase()];
+  if (month === undefined) return null;
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  if (!Number.isFinite(day) || !Number.isFinite(year)) return null;
+  return new Date(year, month, day);
+};
+
+/** Local-time "YYYY-MM-DD" for a Date (never UTC — would shift day boundaries). */
+export const toIsoDate = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/** Weekday key ('mon' … 'sun') for a display date, or null when unparseable. */
+export const weekdayKeyFor = (dateStr: string): string | null => {
+  const date = parseDisplayDate(dateStr);
+  return date ? WEEKDAY_KEYS[(date.getDay() + 6) % 7] : null;
+};
+
+/**
+ * True when patients must not be offered this date: either the weekday is not
+ * a working day or the date is one of the doctor's blocked dates (day off).
+ * Unparseable dates are treated as available so a format change never locks
+ * everyone out of booking.
+ */
+export const isDateUnavailable = (
+  dateStr: string,
+  days: string[],
+  blockedDates: string[],
+): boolean => {
+  const weekday = weekdayKeyFor(dateStr);
+  if (weekday && !days.includes(weekday)) return true;
+  const date = parseDisplayDate(dateStr);
+  if (!date) return false;
+  return blockedDates.includes(toIsoDate(date));
+};
 
 export type PaymentMethod = 'card' | 'gcash' | 'maya';
 
@@ -483,14 +550,14 @@ const DEFAULT_SLOTS = [
   '4:45 PM', '5:30 PM',
 ];
 
-/** This doctor's consultation fee and offered time slots. */
+/** This doctor's consultation fee, offered time slots and working days. */
 export const fetchDoctorAvailability = async (): Promise<DoctorAvailability> => {
-  if (!supabase) return { fee: 500, slots: [...DEFAULT_SLOTS] };
+  if (!supabase) return { fee: 500, slots: [...DEFAULT_SLOTS], days: [...ALL_WEEKDAY_KEYS], blockedDates: [] };
   const doctorId = await requireUserId();
 
   const { data, error } = await supabase
     .from('doctor_profiles')
-    .select('consultation_fee, available_slots')
+    .select('consultation_fee, available_slots, available_days, blocked_dates')
     .eq('user_id', doctorId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -501,10 +568,14 @@ export const fetchDoctorAvailability = async (): Promise<DoctorAvailability> => 
       Array.isArray(data?.available_slots) && (data!.available_slots as string[]).length > 0
         ? (data!.available_slots as string[])
         : [...DEFAULT_SLOTS],
+    days: normalizeWeekdays(data?.available_days),
+    blockedDates: Array.isArray(data?.blocked_dates)
+      ? (data!.blocked_dates as string[]).map((d) => String(d).trim()).filter((d) => ISO_DATE_RE.test(d))
+      : [],
   };
 };
 
-/** Doctor updates their fee and offered slots; the mobile booking grid reads both. */
+/** Doctor updates their fee, offered slots and availability; the mobile booking grid reads all four. */
 export const saveDoctorAvailability = async (availability: DoctorAvailability): Promise<void> => {
   if (!supabase) throw new Error('Supabase is not configured.');
   const doctorId = await requireUserId();
@@ -512,6 +583,15 @@ export const saveDoctorAvailability = async (availability: DoctorAvailability): 
   if (!Number.isFinite(fee) || fee < 0) throw new Error('Enter a valid consultation fee.');
   const slots = availability.slots.map((slot) => slot.trim()).filter(Boolean);
   if (slots.length === 0) throw new Error('Offer at least one time slot.');
+  const days = normalizeWeekdays(availability.days);
+  if (days.length === 0) throw new Error('Pick at least one working day.');
+  const blockedDates = Array.from(
+    new Set(
+      (availability.blockedDates ?? [])
+        .map((date) => String(date).trim())
+        .filter((date) => ISO_DATE_RE.test(date)),
+    ),
+  ).sort();
 
   const { data: existing, error: lookupError } = await supabase
     .from('doctor_profiles')
@@ -520,7 +600,12 @@ export const saveDoctorAvailability = async (availability: DoctorAvailability): 
     .maybeSingle();
   if (lookupError) throw new Error(lookupError.message);
 
-  const payload = { consultation_fee: fee, available_slots: slots };
+  const payload = {
+    consultation_fee: fee,
+    available_slots: slots,
+    available_days: days,
+    blocked_dates: blockedDates,
+  };
   const { error } = existing
     ? await supabase.from('doctor_profiles').update(payload).eq('user_id', doctorId)
     : await supabase.from('doctor_profiles').insert({ user_id: doctorId, ...payload });

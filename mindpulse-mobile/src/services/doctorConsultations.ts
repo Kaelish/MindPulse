@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { normalizeWeekdays } from './appointments';
 import {
   ChatAttachment,
   ChatMessageBase,
@@ -28,6 +29,10 @@ export interface DoctorConsultation {
 export interface DoctorAvailability {
   fee: number;
   slots: string[];
+  /** Weekday keys ('mon' … 'sun') this doctor accepts bookings on. */
+  days: string[];
+  /** Specific dates (YYYY-MM-DD) blocked as a day off. */
+  blockedDates: string[];
 }
 
 export interface DoctorChatMessage extends ChatMessageBase {}
@@ -207,13 +212,13 @@ export const editAppointmentTime = async (
   return scheduledFor;
 };
 
-/** This doctor's consultation fee and offered time slots. */
+/** This doctor's consultation fee, offered time slots, and availability. */
 export const fetchDoctorAvailability = async (): Promise<DoctorAvailability> => {
   const doctorId = await requireUserId();
 
   const { data, error } = await supabase
     .from('doctor_profiles')
-    .select('consultation_fee, available_slots')
+    .select('consultation_fee, available_slots, available_days, blocked_dates')
     .eq('user_id', doctorId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -224,16 +229,26 @@ export const fetchDoctorAvailability = async (): Promise<DoctorAvailability> => 
       Array.isArray(data?.available_slots) && (data!.available_slots as string[]).length > 0
         ? (data!.available_slots as string[])
         : [...DEFAULT_SLOTS],
+    days: normalizeWeekdays(data?.available_days),
+    blockedDates: Array.isArray(data?.blocked_dates)
+      ? (data!.blocked_dates as string[]).map((d) => String(d).trim()).filter(Boolean)
+      : [],
   };
 };
 
-/** Doctor updates their fee and offered slots; the patient booking grid reads both. */
+/** Doctor updates fee, slots, working days, and days off; patients read all four. */
 export const saveDoctorAvailability = async (availability: DoctorAvailability): Promise<void> => {
   const doctorId = await requireUserId();
   const fee = Number(availability.fee);
   if (!Number.isFinite(fee) || fee < 0) throw new Error('Enter a valid consultation fee.');
   const slots = availability.slots.map((slot) => slot.trim()).filter(Boolean);
   if (slots.length === 0) throw new Error('Offer at least one time slot.');
+
+  const days = normalizeWeekdays(availability.days);
+  if (days.length === 0) throw new Error('Keep at least one working day.');
+  const blockedDates = (availability.blockedDates ?? [])
+    .map((date) => date.trim())
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date));
 
   const { data: existing, error: lookupError } = await supabase
     .from('doctor_profiles')
@@ -242,7 +257,12 @@ export const saveDoctorAvailability = async (availability: DoctorAvailability): 
     .maybeSingle();
   if (lookupError) throw new Error(lookupError.message);
 
-  const payload = { consultation_fee: fee, available_slots: slots };
+  const payload = {
+    consultation_fee: fee,
+    available_slots: slots,
+    available_days: days,
+    blocked_dates: blockedDates,
+  };
   const { error } = existing
     ? await supabase.from('doctor_profiles').update(payload).eq('user_id', doctorId)
     : await supabase.from('doctor_profiles').insert({ user_id: doctorId, ...payload });

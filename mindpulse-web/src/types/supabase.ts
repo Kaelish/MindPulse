@@ -36,6 +36,12 @@ export interface DoctorProfile {
   bio: string | null;
   tags: string[];
   availability_notes: string | null;
+  consultation_fee: number | null;
+  available_slots: string[] | null;
+  /** Weekday keys ('mon' … 'sun') the doctor accepts bookings on (0010). */
+  available_days: string[];
+  /** Specific dates (YYYY-MM-DD) blocked as a day off (0010). */
+  blocked_dates: string[];
   created_at: string;
   updated_at: string;
 }

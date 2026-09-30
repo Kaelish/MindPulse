@@ -24,6 +24,10 @@ export interface TelehealthClinician {
   email: string;
   fee: number;
   slots: string[];
+  /** Weekday keys ('mon' … 'sun') the doctor accepts bookings on. */
+  availableDays: string[];
+  /** Specific dates (YYYY-MM-DD) the doctor has blocked as a day off. */
+  blockedDates: string[];
 }
 
 export type AppointmentState =
@@ -86,7 +90,8 @@ export const generateRealLifeDates = (): { label: string; dateStr: string }[] =>
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  for (let i = 0; i < 6; i++) {
+  // 7 days so every weekday shows up even when a doctor only works one day.
+  for (let i = 0; i < 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
 
@@ -129,13 +134,62 @@ export const isSlotInPast = (dateStr: string, time: string, now: Date = new Date
 };
 
 const CLINICIAN_SELECT =
-  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags, is_verified, consultation_fee, available_slots )';
+  'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, bio, tags, is_verified, consultation_fee, available_slots, available_days, blocked_dates )';
 
 const DEFAULT_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM',
   '1:30 PM', '2:15 PM', '3:30 PM',
   '4:45 PM', '5:30 PM',
 ];
+
+const DEFAULT_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+/** Keeps only valid weekday keys, de-duplicated, in canonical order. */
+export const normalizeWeekdays = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return [...DEFAULT_DAYS];
+  const present = new Set(
+    raw.map((day) => String(day).trim().toLowerCase()).filter((day) => (WEEKDAY_KEYS as readonly string[]).includes(day)),
+  );
+  return WEEKDAY_KEYS.filter((day) => present.has(day));
+};
+
+/** Parses the display format used everywhere ("Aug 31, 2026") into a local Date. */
+export const parseDisplayDate = (dateStr: string): Date | null => {
+  const match = /^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/.exec(dateStr.trim());
+  if (!match) return null;
+  const monthIdx = MONTHS_SHORT.indexOf(
+    match[1][0].toUpperCase() + match[1].slice(1, 3).toLowerCase(),
+  );
+  if (monthIdx < 0) return null;
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  if (!Number.isFinite(day) || !Number.isFinite(year)) return null;
+  return new Date(year, monthIdx, day);
+};
+
+/** Local-time "YYYY-MM-DD" for a Date (never UTC — that would shift the day). */
+export const toIsoDate = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/**
+ * True when the patient must not be offered this date: the weekday is not one
+ * of the doctor's working days or the date is one of their blocked days off.
+ * Unparseable dates stay bookable so a format change never locks everyone out.
+ */
+export const isDateUnavailable = (
+  dateStr: string,
+  availableDays: string[],
+  blockedDates: string[],
+): boolean => {
+  const date = parseDisplayDate(dateStr);
+  if (!date) return false;
+  const weekday = WEEKDAY_KEYS[(date.getDay() + 6) % 7];
+  if (availableDays.length > 0 && !availableDays.includes(weekday)) return true;
+  return blockedDates.includes(toIsoDate(date));
+};
 
 const toClinician = (row: any): TelehealthClinician => {
   const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
@@ -165,6 +219,10 @@ const toClinician = (row: any): TelehealthClinician => {
       Array.isArray(embedded?.available_slots) && embedded.available_slots.length > 0
         ? embedded.available_slots
         : [...DEFAULT_SLOTS],
+    availableDays: normalizeWeekdays(embedded?.available_days),
+    blockedDates: Array.isArray(embedded?.blocked_dates)
+      ? (embedded.blocked_dates as string[]).map((d) => String(d).trim()).filter(Boolean)
+      : [],
   };
 };
 

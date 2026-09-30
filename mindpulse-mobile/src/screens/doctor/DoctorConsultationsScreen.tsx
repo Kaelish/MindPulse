@@ -36,7 +36,7 @@ import {
   subscribeToDoctorAppointments,
   subscribeToDoctorMessages,
 } from '../../services/doctorConsultations';
-import { generateRealLifeDates, isSlotInPast } from '../../services/appointments';
+import { generateRealLifeDates, isDateUnavailable, isSlotInPast, WEEKDAY_KEYS } from '../../services/appointments';
 import {
   ChatThreadSummary,
   PickedAttachment,
@@ -81,6 +81,16 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: Colors.divider, text: Colors.textHint },
 };
 
+const WEEKDAY_LABELS: Record<string, string> = {
+  mon: 'Mon',
+  tue: 'Tue',
+  wed: 'Wed',
+  thu: 'Thu',
+  fri: 'Fri',
+  sat: 'Sat',
+  sun: 'Sun',
+};
+
 const TabPill = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
   <TouchableOpacity style={[styles.tabPill, active && styles.tabPillActive]} onPress={onPress} activeOpacity={0.8}>
     <Text style={[styles.tabPillText, active && styles.tabPillTextActive]}>{label}</Text>
@@ -115,11 +125,19 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
   const [editSlots, setEditSlots] = useState<string[]>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  // Working days + days off this doctor has set (loaded with the slots above).
+  const [editAvail, setEditAvail] = useState<{ days: string[]; blockedDates: string[] }>({
+    days: [...WEEKDAY_KEYS],
+    blockedDates: [],
+  });
 
   // Fee & slots modal
   const [availOpen, setAvailOpen] = useState(false);
   const [availFee, setAvailFee] = useState('');
   const [availSlots, setAvailSlots] = useState<string[]>([]);
+  const [availDays, setAvailDays] = useState<string[]>([...WEEKDAY_KEYS]);
+  const [availBlockedDates, setAvailBlockedDates] = useState<string[]>([]);
+  const [availBlockDraft, setAvailBlockDraft] = useState('');
   const [availDraft, setAvailDraft] = useState('');
   const [availBusy, setAvailBusy] = useState(false);
   const [availError, setAvailError] = useState<string | null>(null);
@@ -249,6 +267,8 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     setEditTarget(item);
     setEditError(null);
     setEditTime(null);
+    // Until the fetch lands, assume every day is workable so nothing is hidden.
+    setEditAvail({ days: [...WEEKDAY_KEYS], blockedDates: [] });
     const parts = String(item.scheduledTime).split(' at ');
     const currentDate = parts[0] || '';
     const currentTime = parts[1] || '';
@@ -264,6 +284,7 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
       const slots = [...avail.slots];
       if (currentTime && !slots.includes(currentTime)) slots.unshift(currentTime);
       setEditSlots(slots);
+      setEditAvail({ days: avail.days, blockedDates: avail.blockedDates });
       setEditTime(currentTime || slots[0] || null);
     } catch (e: any) {
       setEditSlots(currentTime ? [currentTime] : []);
@@ -276,6 +297,15 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     if (!editTarget || !editTime || editBusy) return;
     const date = editDates[editDateIdx];
     if (!date) return;
+    // The booked date itself may sit on a day off — changing it may not move one there.
+    const currentScheduledDate = String(editTarget.scheduledTime).split(' at ')[0];
+    if (
+      date.dateStr !== currentScheduledDate &&
+      isDateUnavailable(date.dateStr, editAvail.days, editAvail.blockedDates)
+    ) {
+      setEditError('You are off on that date. Pick another day, or update your working days first.');
+      return;
+    }
     setEditBusy(true);
     setEditError(null);
     try {
@@ -294,12 +324,17 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     setAvailError(null);
     setAvailNotice(null);
     setAvailDraft('');
+    setAvailBlockDraft('');
     setAvailFee('');
     setAvailSlots([]);
+    setAvailDays([...WEEKDAY_KEYS]);
+    setAvailBlockedDates([]);
     try {
       const avail = await fetchDoctorAvailability();
       setAvailFee(String(avail.fee));
       setAvailSlots(avail.slots);
+      setAvailDays(avail.days.length > 0 ? avail.days : [...WEEKDAY_KEYS]);
+      setAvailBlockedDates(avail.blockedDates);
     } catch (e: any) {
       setAvailError(e?.message || 'Could not load your fee and slots.');
     }
@@ -307,13 +342,22 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
 
   const handleAvailSave = async () => {
     if (availBusy) return;
+    if (availDays.length === 0) {
+      setAvailError('Keep at least one working day.');
+      return;
+    }
     setAvailBusy(true);
     setAvailError(null);
     setAvailNotice(null);
     try {
-      const next: DoctorAvailability = { fee: Number(availFee), slots: availSlots };
+      const next: DoctorAvailability = {
+        fee: Number(availFee),
+        slots: availSlots,
+        days: availDays,
+        blockedDates: availBlockedDates,
+      };
       await saveDoctorAvailability(next);
-      setAvailNotice('Saved. Patients now see your new fee and time slots.');
+      setAvailNotice('Saved. Patients now see your new fee, slots, and days off.');
     } catch (e: any) {
       setAvailError(e?.message || 'Could not save your fee and slots.');
     } finally {
@@ -330,6 +374,36 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     }
     setAvailSlots((prev) => [...prev, value]);
     setAvailDraft('');
+    setAvailError(null);
+  };
+
+  const toggleAvailDay = (day: string) => {
+    const has = availDays.includes(day);
+    if (has && availDays.length === 1) {
+      setAvailError('Keep at least one working day.');
+      return;
+    }
+    setAvailDays(
+      has
+        ? availDays.filter((d) => d !== day)
+        : WEEKDAY_KEYS.filter((d) => availDays.includes(d) || d === day),
+    );
+    setAvailError(null);
+  };
+
+  const addAvailBlockDate = () => {
+    const value = availBlockDraft.trim();
+    if (!value) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      setAvailError('Use the YYYY-MM-DD format, e.g. 2026-10-05.');
+      return;
+    }
+    if (availBlockedDates.includes(value)) {
+      setAvailError('That date is already marked as a day off.');
+      return;
+    }
+    setAvailBlockedDates((prev) => [...prev, value].sort());
+    setAvailBlockDraft('');
     setAvailError(null);
   };
 
@@ -785,23 +859,49 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
             <Text style={styles.fieldLabel}>Day</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {editDates.map((d, i) => (
-                  <TouchableOpacity
-                    key={`${d.dateStr}-${i}`}
-                    style={[styles.dateChip, editDateIdx === i && styles.dateChipActive]}
-                    onPress={() => {
-                      setEditDateIdx(i);
-                      setEditTime(null);
-                    }}
-                  >
-                    <Text style={[styles.dateChipLabel, editDateIdx === i && { color: Colors.white }]}>
-                      {d.label}
-                    </Text>
-                    <Text style={[styles.dateChipDate, editDateIdx === i && { color: 'rgba(255,255,255,0.85)' }]}>
-                      {d.dateStr.split(',')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {editDates.map((d, i) => {
+                  // The appointment's own date stays selectable even if it now falls on a day off.
+                  const isBookedDate =
+                    d.dateStr === String(editTarget?.scheduledTime || '').split(' at ')[0];
+                  const off =
+                    !isBookedDate &&
+                    isDateUnavailable(d.dateStr, editAvail.days, editAvail.blockedDates);
+                  return (
+                    <TouchableOpacity
+                      key={`${d.dateStr}-${i}`}
+                      style={[
+                        styles.dateChip,
+                        editDateIdx === i && styles.dateChipActive,
+                        off && styles.dateChipDisabled,
+                      ]}
+                      onPress={() => {
+                        if (off) return;
+                        setEditDateIdx(i);
+                        setEditTime(null);
+                      }}
+                      disabled={off}
+                    >
+                      <Text
+                        style={[
+                          styles.dateChipLabel,
+                          editDateIdx === i && { color: Colors.white },
+                          off && { color: Colors.textHint },
+                        ]}
+                      >
+                        {d.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateChipDate,
+                          editDateIdx === i && { color: 'rgba(255,255,255,0.85)' },
+                          off && { color: Colors.textHint },
+                        ]}
+                      >
+                        {off ? 'Day off' : d.dateStr.split(',')[0]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
 
@@ -901,6 +1001,56 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
                   <Ionicons name="add" size={18} color={Colors.white} />
                   <Text style={styles.addBtnText}>Add</Text>
                 </TouchableOpacity>
+              </View>
+
+              <Text style={styles.fieldLabel}>Working days</Text>
+              <View style={styles.slotGrid}>
+                {WEEKDAY_KEYS.map((day) => {
+                  const active = availDays.includes(day);
+                  return (
+                    <TouchableOpacity
+                      key={day}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                      onPress={() => toggleAvailDay(day)}
+                    >
+                      <Text style={[styles.dayChipText, active && { color: Colors.white }]}>
+                        {WEEKDAY_LABELS[day]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Days off (specific dates)</Text>
+              <View style={styles.addRow}>
+                <TextInput
+                  style={[styles.textInput, { flex: 1 }]}
+                  placeholder="YYYY-MM-DD, e.g. 2026-10-05"
+                  placeholderTextColor={Colors.textHint}
+                  value={availBlockDraft}
+                  onChangeText={setAvailBlockDraft}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity style={styles.addBtn} onPress={addAvailBlockDate}>
+                  <Ionicons name="add" size={18} color={Colors.white} />
+                  <Text style={styles.addBtnText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.slotGrid}>
+                {availBlockedDates.map((d) => (
+                  <View key={d} style={styles.slotTag}>
+                    <Text style={styles.slotTagText}>{d}</Text>
+                    <TouchableOpacity
+                      onPress={() => setAvailBlockedDates((prev) => prev.filter((x) => x !== d))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="close-circle" size={15} color={Colors.textHint} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {availBlockedDates.length === 0 && (
+                  <Text style={styles.emptyText}>No specific days off yet.</Text>
+                )}
               </View>
 
               {availError && <Text style={styles.modalError}>{availError}</Text>}
@@ -1207,6 +1357,7 @@ const styles = StyleSheet.create({
     minWidth: 74,
   },
   dateChipActive: { backgroundColor: Colors.primary },
+  dateChipDisabled: { opacity: 0.45 },
   dateChipLabel: { fontSize: 11.5, fontWeight: '800', color: Colors.textPrimary },
   dateChipDate: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
 
@@ -1233,6 +1384,17 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   slotTagText: { fontSize: 12.5, fontWeight: '700', color: Colors.primaryDark },
+
+  dayChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.divider,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dayChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  dayChipText: { fontSize: 12.5, fontWeight: '800', color: Colors.textPrimary },
 
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   addBtn: {

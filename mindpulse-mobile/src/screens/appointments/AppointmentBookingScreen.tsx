@@ -30,6 +30,7 @@ import {
   fetchPatientConversations,
   formatConversationTime,
   generateRealLifeDates,
+  isDateUnavailable,
   isSlotInPast,
   markConversationRead,
   payForAppointment,
@@ -375,6 +376,19 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const dates = generateRealLifeDates();
   const slotOptions = selectedClinician?.slots?.length ? selectedClinician.slots : TIME_SLOTS;
 
+  // Dates this doctor won't accept: not a working day or a blocked day off.
+  const isDayOff = (dateStr: string) =>
+    selectedClinician
+      ? isDateUnavailable(
+          dateStr,
+          selectedClinician.availableDays ?? [],
+          selectedClinician.blockedDates ?? [],
+        )
+      : false;
+
+  const firstAvailableDateIdx = dates.findIndex(d => !isDayOff(d.dateStr));
+  const hasAvailableDate = firstAvailableDateIdx >= 0;
+
   const openPayment = (booking: MyBooking) => {
     setPayTarget(booking);
     setPayMethod(null);
@@ -544,7 +558,11 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
   const handleConnect = async (c: TelehealthClinician) => {
     setSelectedClinician(c);
-    setSelectedDateIdx(0);
+    // Land on the first date this doctor actually works (they may have days off).
+    const firstOpen = dates.findIndex(
+      d => isDateUnavailable(d.dateStr, c.availableDays ?? [], c.blockedDates ?? []),
+    );
+    setSelectedDateIdx(firstOpen >= 0 ? firstOpen : 0);
     setSelectedTime(null);
     try {
       // Availability must be fresh before offering times.
@@ -558,6 +576,10 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const handleConfirm = async () => {
     if (!selectedClinician || !selectedTime || bookingSaving) return;
     const date = dates[selectedDateIdx];
+    if (isDayOff(date.dateStr)) {
+      Alert.alert('Doctor unavailable', 'The doctor is off on that date. Please pick another day.');
+      return;
+    }
     if (isSlotInPast(date.dateStr, selectedTime)) {
       Alert.alert('Time already passed', 'That time has already passed. Please pick a later slot.');
       return;
@@ -1084,25 +1106,53 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             <Text style={styles.modalSectionLabel}>Select Day</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {dates.map((d, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.dateChip, selectedDateIdx === i && styles.dateChipActive]}
-                    onPress={() => {
-                      setSelectedDateIdx(i);
-                      setSelectedTime(null);
-                    }}
-                  >
-                    <Text style={[styles.dateChipDay, selectedDateIdx === i && { color: '#FFF' }]}>
-                      {d.label}
-                    </Text>
-                    <Text style={[styles.dateChipDate, selectedDateIdx === i && { color: 'rgba(255,255,255,0.8)' }]}>
-                      {d.dateStr.split(',')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {dates.map((d, i) => {
+                  const off = isDayOff(d.dateStr);
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.dateChip,
+                        selectedDateIdx === i && styles.dateChipActive,
+                        off && styles.dateChipDisabled,
+                      ]}
+                      onPress={() => {
+                        if (off) return;
+                        setSelectedDateIdx(i);
+                        setSelectedTime(null);
+                      }}
+                      disabled={off}
+                    >
+                      <Text
+                        style={[
+                          styles.dateChipDay,
+                          selectedDateIdx === i && { color: '#FFF' },
+                          off && { color: Colors.textHint },
+                        ]}
+                      >
+                        {d.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateChipDate,
+                          selectedDateIdx === i && { color: 'rgba(255,255,255,0.8)' },
+                          off && { color: Colors.textHint },
+                        ]}
+                      >
+                        {off ? 'Day off' : d.dateStr.split(',')[0]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
+
+            {!hasAvailableDate && (
+              <Text style={styles.timeGridHint}>
+                {selectedClinician?.name ?? 'This doctor'} isn&apos;t accepting bookings in the next 7 days. Please
+                check back later.
+              </Text>
+            )}
 
             <Text style={styles.modalSectionLabel}>Select Time</Text>
             <View style={styles.timeGrid}>
@@ -1150,9 +1200,12 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </View>
 
             <TouchableOpacity
-              style={[styles.confirmBtn, (!selectedTime || bookingSaving) && styles.confirmBtnDisabled]}
+              style={[
+                styles.confirmBtn,
+                (!selectedTime || bookingSaving || !hasAvailableDate) && styles.confirmBtnDisabled,
+              ]}
               onPress={() => void handleConfirm()}
-              disabled={!selectedTime || bookingSaving}
+              disabled={!selectedTime || bookingSaving || !hasAvailableDate}
             >
               <Text style={styles.confirmBtnText}>
                 {bookingSaving ? 'Sending Request…' : 'Request Appointment'}
@@ -1674,6 +1727,7 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   dateChipActive: { backgroundColor: ACCENT },
+  dateChipDisabled: { opacity: 0.5, borderStyle: 'dashed', borderColor: Colors.border },
   dateChipDay: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
   dateChipDate: { fontSize: 10, color: Colors.textSecondary, marginTop: 2 },
 
