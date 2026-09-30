@@ -1115,8 +1115,6 @@
 }
 
 .admin-scope .notification-item {
-  gap: 11px;
-  padding: 14px 2px;
   border-bottom: 1px solid var(--adm-border);
   color: var(--adm-text-2);
   font-size: 0.9rem;
