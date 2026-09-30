@@ -56,7 +56,6 @@ export interface ConsultTabRequest {
 }
 
 interface DoctorConsultationsScreenProps {
-  onStartVideoCall?: (appointmentId: string) => void;
   openTabRequest?: ConsultTabRequest | null;
 }
 
@@ -98,7 +97,6 @@ const TabPill = ({ label, active, onPress }: { label: string; active: boolean; o
 );
 
 export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps> = ({
-  onStartVideoCall,
   openTabRequest = null,
 }) => {
   const [items, setItems] = useState<DoctorConsultation[]>([]);
@@ -549,13 +547,12 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
 
         {!showHistory && item.rawStatus === 'confirmed' && (
           <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.joinBtn]}
-              onPress={() => onStartVideoCall?.(item.id)}
-            >
-              <Ionicons name="videocam" size={15} color={Colors.white} />
-              <Text style={styles.joinBtnText}>Join Call</Text>
-            </TouchableOpacity>
+            <View style={styles.webNotice}>
+              <Ionicons name="globe-outline" size={14} color={Colors.tagBlueText} />
+              <Text style={styles.webNoticeText}>
+                Join from the web — log in to the MindPulse website to start this call.
+              </Text>
+            </View>
             <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => void openEdit(item)}>
               <Ionicons name="time-outline" size={15} color={Colors.btnBlue} />
               <Text style={styles.editBtnText}>Edit time</Text>
@@ -1185,8 +1182,18 @@ const styles = StyleSheet.create({
   declineBtnText: { color: Colors.tagRedText, fontWeight: '800', fontSize: 12.5 },
   editBtn: { backgroundColor: Colors.primaryLight },
   editBtnText: { color: Colors.btnBlue, fontWeight: '800', fontSize: 12.5 },
-  joinBtn: { backgroundColor: '#5B6EF5' },
-  joinBtnText: { color: Colors.white, fontWeight: '800', fontSize: 12.5 },
+  webNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    minWidth: 230,
+    backgroundColor: Colors.tagBlueBg,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+  },
+  webNoticeText: { flex: 1, color: Colors.tagBlueText, fontWeight: '700', fontSize: 11.5, lineHeight: 16 },
   waitingBadge: {
     flexDirection: 'row',
     alignItems: 'center',

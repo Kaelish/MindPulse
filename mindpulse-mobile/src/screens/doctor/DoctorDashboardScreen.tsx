@@ -24,7 +24,6 @@ import { DoctorNotifications } from '../../components/DoctorNotifications';
 
 interface DoctorDashboardScreenProps {
   onNavigate?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
-  onStartVideoCall?: (appointmentId: string) => void;
   /** Chat rows in the bell sheet land on the Messages thread. */
   onOpenMessages?: () => void;
 }
@@ -87,7 +86,6 @@ const MetricCard = ({ label, metric, icon, color }: { label: string; metric: Das
 
 export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
   onNavigate,
-  onStartVideoCall,
   onOpenMessages,
 }) => {
   const [data, setData] = useState<DoctorDashboardData | null>(null);
@@ -202,26 +200,27 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
           {/* Next confirmed call */}
           {nextCall && (
             <View style={styles.nextCallCard}>
-              <View style={styles.nextCallLeft}>
-                <View style={styles.nextCallIcon}>
-                  <Ionicons name="videocam" size={20} color={Colors.white} />
+              <View style={styles.nextCallRow}>
+                <View style={styles.nextCallLeft}>
+                  <View style={styles.nextCallIcon}>
+                    <Ionicons name="videocam" size={20} color={Colors.white} />
+                  </View>
+                  <View style={styles.nextCallBody}>
+                    <Text style={styles.nextCallLabel}>Next video call</Text>
+                    <Text style={styles.nextCallPatient}>{nextCall.patientName}</Text>
+                    <Text style={styles.nextCallTime}>
+                      {nextCall.dayLabel} · {nextCall.timeLabel}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.nextCallBody}>
-                  <Text style={styles.nextCallLabel}>Next video call</Text>
-                  <Text style={styles.nextCallPatient}>{nextCall.patientName}</Text>
-                  <Text style={styles.nextCallTime}>
-                    {nextCall.dayLabel} · {nextCall.timeLabel}
-                  </Text>
+                <View style={styles.webOnlyPill}>
+                  <Ionicons name="globe-outline" size={13} color="#5B6EF5" />
+                  <Text style={styles.webOnlyPillText}>Join on the web</Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.joinBtn}
-                onPress={() => onStartVideoCall?.(nextCall.id)}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="videocam" size={15} color={Colors.white} />
-                <Text style={styles.joinBtnText}>Join</Text>
-              </TouchableOpacity>
+              <Text style={styles.webOnlyHint}>
+                Log in to the MindPulse website to join this video call.
+              </Text>
             </View>
           )}
 
@@ -397,26 +396,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#5B6EF5',
     borderRadius: Radius.lg,
     padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
+  nextCallRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   nextCallLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   nextCallBody: { flex: 1 },
   nextCallIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   nextCallLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   nextCallPatient: { color: Colors.white, fontSize: 15, fontWeight: '800', marginTop: 1 },
   nextCallTime: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1 },
-  joinBtn: {
+  webOnlyPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: Radius.full,
   },
-  joinBtnText: { color: '#5B6EF5', fontWeight: '800', fontSize: 13 },
+  webOnlyPillText: { color: '#5B6EF5', fontWeight: '800', fontSize: 12 },
+  webOnlyHint: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, lineHeight: 16 },
 
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { color: Colors.textPrimary, ...Typography.h3 },

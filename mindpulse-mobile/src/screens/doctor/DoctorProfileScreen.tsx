@@ -21,6 +21,7 @@ import {
   saveDoctorProfile,
 } from '../../services/doctorProfile';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
+import { DoctorNotificationsSettings } from './DoctorNotificationsSettings';
 
 interface DoctorProfileScreenProps {
   onSignOut?: () => void;
@@ -69,6 +70,7 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwdBusy, setPwdBusy] = useState(false);
+  const [notifSettingsOpen, setNotifSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -240,10 +242,32 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
         </TouchableOpacity>
       </View>
 
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Preferences</Text>
+        <TouchableOpacity
+          style={styles.settingsRow}
+          onPress={() => setNotifSettingsOpen(true)}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open notification settings"
+        >
+          <View style={styles.settingsIcon}>
+            <Ionicons name="notifications-outline" size={18} color={Colors.btnBlue} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingsLabel}>Notifications</Text>
+            <Text style={styles.settingsSub}>Choose which alerts appear in your bell</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Ionicons name="log-out-outline" size={18} color={Colors.tagRedText} />
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
+
+      <DoctorNotificationsSettings visible={notifSettingsOpen} onClose={() => setNotifSettingsOpen(false)} />
     </ScrollView>
   );
 };
@@ -329,6 +353,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveBtnText: { color: Colors.white, fontWeight: '800', fontSize: 14 },
+
+  settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  settingsIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsLabel: { fontSize: 13.5, fontWeight: '800', color: Colors.textPrimary },
+  settingsSub: { fontSize: 11.5, color: Colors.textSecondary, marginTop: 1, lineHeight: 16 },
 
   signOutBtn: {
     flexDirection: 'row',

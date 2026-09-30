@@ -73,13 +73,15 @@ export const fetchAllNotifications = async (): Promise<FeedNotification[]> => {
 export const fetchUnreadNotificationCount = async (): Promise<number> => {
   try {
     const userId = await requireViewerId();
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
-      .select('id', { count: 'exact', head: true })
+      .select('id, title, message, type, read')
       .eq('user_id', userId)
       .eq('read', false);
     if (error) throw new Error(error.message);
-    return count ?? 0;
+    // Same settings filter as the list, so the badge never promises a hidden row.
+    const prefs = await loadNotificationPrefs();
+    return ((data ?? []) as NotificationRow[]).filter((row) => isNotificationEnabled(row, prefs)).length;
   } catch {
     return 0;
   }

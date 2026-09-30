@@ -416,22 +416,12 @@ function App() {
               {currentTab === 'clinics' && (
                 <DoctorConsultationsScreen
                   openTabRequest={consultTabReq}
-                  onStartVideoCall={(appointmentId) => {
-                    setCallDoctorId(null);
-                    setCallAppointmentId(appointmentId);
-                    changeScreen('call');
-                  }}
                 />
               )}
               {currentTab !== 'profile' && currentTab !== 'clinics' && (
                 <DoctorDashboardScreen
                   onNavigate={handleTabNavigate}
                   onOpenMessages={openDoctorMessages}
-                  onStartVideoCall={(appointmentId) => {
-                    setCallDoctorId(null);
-                    setCallAppointmentId(appointmentId);
-                    changeScreen('call');
-                  }}
                 />
               )}
             </View>

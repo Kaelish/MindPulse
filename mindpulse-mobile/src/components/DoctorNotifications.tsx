@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  DeviceEventEmitter,
   Modal,
   Pressable,
   ScrollView,
@@ -12,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
+import { NOTIFICATION_PREFS_CHANGED_EVENT } from '../services/notificationPrefs';
 import {
   FeedNotification,
   fetchAllNotifications,
@@ -58,6 +60,15 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
 
   useEffect(() => {
     refreshUnread();
+  }, [refreshUnread]);
+
+  // Settings changes rebuild the badge (and the open list) right away.
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener(NOTIFICATION_PREFS_CHANGED_EVENT, () => {
+      refreshUnread();
+      setReloadKey((key) => key + 1);
+    });
+    return () => subscription.remove();
   }, [refreshUnread]);
 
   useEffect(() => {

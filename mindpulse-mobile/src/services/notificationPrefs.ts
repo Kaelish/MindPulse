@@ -1,6 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DeviceEventEmitter } from 'react-native';
 
 export const NOTIFICATION_PREFS_STORAGE_KEY = 'mindpulse.notificationPrefs';
+
+/**
+ * Fired after the preferences are saved so every open bell can rebuild its
+ * list and unread badge instead of waiting for a remount.
+ */
+export const NOTIFICATION_PREFS_CHANGED_EVENT = 'mindpulse:notification-prefs-changed';
 
 export interface NotificationPrefs {
   dailyReminders: boolean;
@@ -75,4 +82,5 @@ export const saveNotificationPrefs = async (prefs: NotificationPrefs): Promise<v
   } catch {
     // Best effort: the toggle still reflects the new state on screen.
   }
+  DeviceEventEmitter.emit(NOTIFICATION_PREFS_CHANGED_EVENT, prefs);
 };
