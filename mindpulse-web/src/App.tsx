@@ -249,6 +249,15 @@ function App() {
     applyDoctorSettings(loadDoctorSettings());
   }, []);
 
+  // The tab/window title follows the portal. The admin System Name setting only
+  // belongs on the admin portal — otherwise a doctor's tab reads "Admin Portal".
+  useEffect(() => {
+    document.title =
+      portal === 'admin' ? loadAdminSettings().general.systemName
+      : portal === 'doctor' ? 'MindPulse Doctor Portal'
+      : 'MindPulse';
+  }, [portal]);
+
   // Security → Session Timeout: auto sign-out after 30 minutes of inactivity.
   useEffect(() => {
     if (portal !== 'admin' || !loadAdminSettings().security.sessionTimeout) return;

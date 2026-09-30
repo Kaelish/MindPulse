@@ -121,8 +121,7 @@ test('register form supports Others specialization and password visibility toggl
   });
 });
 
-test('pending screen: Continue re-checks approval and Sign out returns to login', async () => {
-  mockedAuth.getSession?.mockResolvedValue({
+test('pending screen: Continue re-checks approval and Sign out returns to login', async () => {  mockedAuth.getSession?.mockResolvedValue({
     data: { session: { access_token: 'token', user: { id: 'doc-1' } } },
   });
   const mockedSignOut = mockedAuth.signOut ?? jest.fn();
@@ -134,6 +133,7 @@ test('pending screen: Continue re-checks approval and Sign out returns to login'
   render(<App />);
 
   expect(await screen.findByRole('heading', { name: 'Your registration is pending' })).toBeInTheDocument();
+  expect(document.title).toBe('MindPulse');
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   expect(await screen.findByRole('status')).toHaveTextContent(/still awaiting approval/i);
@@ -142,4 +142,19 @@ test('pending screen: Continue re-checks approval and Sign out returns to login'
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
   expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
   expect(mockedSignOut).toHaveBeenCalledTimes(1);
+});
+
+test('tab title follows the portal instead of always showing the admin name', async () => {
+  const { unmount } = render(<App />);
+  await screen.findByRole('button', { name: 'Register as a doctor' });
+  expect(document.title).toBe('MindPulse');
+  unmount();
+
+  mockedAuth.getSession?.mockResolvedValue({ data: { session: { access_token: 'token' } } });
+  const mockedRole = getCurrentUserRole as jest.Mock;
+  mockedRole.mockReset();
+  mockedRole.mockResolvedValue('doctor');
+
+  render(<App />);
+  await waitFor(() => expect(document.title).toBe('MindPulse Doctor Portal'));
 });
