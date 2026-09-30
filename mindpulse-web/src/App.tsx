@@ -119,13 +119,21 @@ function UnauthorizedView({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; onRecheck: () => Promise<void> }) {
+function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; onRecheck: () => Promise<Portal> }) {
   const [isChecking, setIsChecking] = useState(false);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
 
   const recheck = async () => {
     setIsChecking(true);
-    await onRecheck();
-    setIsChecking(false);
+    setStatusNote(null);
+    try {
+      const next = await onRecheck();
+      if (next === 'pending') {
+        setStatusNote('Still awaiting approval — try again in a moment.');
+      }
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   return (
@@ -146,12 +154,15 @@ function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; 
             approve your registration — you will get full portal access as soon as that
             happens. If you were approved just now, continue below.
           </p>
-          <button className="primary-button" type="button" onClick={recheck} disabled={isChecking}>
-            {isChecking ? 'Checking…' : 'Continue'}
-          </button>
-          <button className="primary-button" type="button" onClick={onSignOut}>
-            Sign out
-          </button>
+          <div className="auth-form">
+            <button className="primary-button" type="button" onClick={recheck} disabled={isChecking}>
+              {isChecking ? 'Checking…' : 'Continue'}
+            </button>
+            <button className="primary-button" type="button" onClick={onSignOut}>
+              Sign out
+            </button>
+          </div>
+          {statusNote && <p role="status">{statusNote}</p>}
         </div>
       </div>
     </div>
@@ -165,14 +176,15 @@ function App() {
     () => Boolean(supabase && typeof supabase.auth.getSession === 'function'),
   );
 
-  const routeToPortal = async () => {
+  const routeToPortal = async (): Promise<Portal> => {
     const role = await getCurrentUserRole();
-    setPortal(
+    const next: Portal =
       role === 'doctor' ? 'doctor'
       : role === 'admin' ? 'admin'
       : role === 'pending' ? 'pending'
-      : 'unauthorized',
-    );
+      : 'unauthorized';
+    setPortal(next);
+    return next;
   };
 
   useEffect(() => {
