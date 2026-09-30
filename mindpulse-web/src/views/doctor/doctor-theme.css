@@ -1699,7 +1699,7 @@
 
 .doctor-scope .consult-item-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
   padding: 16px 18px;
