@@ -135,9 +135,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     const dob = new Date(`${regDob}T00:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    // Round-trip catches impossible dates such as 2004-02-31, which the Date
-    // constructor would otherwise silently roll over to March.
-    if (Number.isNaN(dob.getTime()) || dob.toISOString().slice(0, 10) !== regDob) {
+    // Round-trip in LOCAL time catches impossible dates such as 2004-02-31,
+    // which the Date constructor would otherwise silently roll over to March.
+    // (toISOString() would compare in UTC and reject every valid date for
+    // users east of UTC, e.g. "That birth date does not exist" on any pick.)
+    const [dobYear, dobMonth, dobDay] = regDob.split('-').map(Number);
+    if (
+      Number.isNaN(dob.getTime()) ||
+      dob.getFullYear() !== dobYear ||
+      dob.getMonth() !== dobMonth - 1 ||
+      dob.getDate() !== dobDay
+    ) {
       return 'That birth date does not exist. Please check it.';
     }
     if (dob > today || dob.getFullYear() < 1900) {
@@ -304,6 +312,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               phone: regPhone.trim(),
               sex: regGender,
               birth_date: regDob,
+              mi: mi.trim() || null,
             },
             { onConflict: 'id', ignoreDuplicates: true },
           );

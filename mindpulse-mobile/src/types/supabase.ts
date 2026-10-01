@@ -17,6 +17,8 @@ export interface Profile {
   department: string | null;
   birth_date: string | null;
   sex: string | null;
+  phone: string | null;
+  mi: string | null;
   mental_conditions: string[];
   physical_conditions: string[];
   lifestyle_habits: string[];
