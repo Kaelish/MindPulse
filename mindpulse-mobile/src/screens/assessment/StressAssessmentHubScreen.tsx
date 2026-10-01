@@ -11,7 +11,7 @@ import {
 } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
-export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed';
+export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed' | 'skipped';
 
 export interface AssessmentState {
   survey: AssessmentStepStatus;
@@ -67,6 +67,7 @@ interface StepCardProps {
 const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, weight }: StepCardProps) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
+  const isSkipped = status === 'skipped';
 
   return (
     <TouchableOpacity
@@ -96,6 +97,11 @@ const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, w
         {isLocked && <Ionicons name="lock-closed-outline" size={20} color={Colors.textHint} />}
         {isCompleted && <Ionicons name="checkmark-circle" size={24} color={tone('#4CAF50')} />}
         {status === 'unlocked' && <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />}
+        {isSkipped && (
+          <View style={styles.skippedPill}>
+            <Text style={styles.skippedPillText}>Skipped</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -161,7 +167,14 @@ export const StressAssessmentHubScreen = ({
     );
   }
 
-  const completedCount = Object.values(state).filter(s => s === 'completed').length;
+  const completedCount = [state.survey, state.faceScan, state.heartRate, state.reaction]
+    .filter(s => s === 'completed').length;
+  // The face scan is a demo excluded from scoring, so it never blocks results —
+  // only the three scored steps (survey, heart rate, reaction) are required.
+  const canViewResults =
+    state.survey === 'completed' &&
+    state.heartRate === 'completed' &&
+    state.reaction === 'completed';
 
   return (
     <View style={styles.root}>
@@ -255,7 +268,7 @@ export const StressAssessmentHubScreen = ({
           </Text>
         </View>
 
-        {completedCount === 4 && (
+        {canViewResults && (
           <TouchableOpacity 
             style={styles.viewResultsBtn}
             onPress={() => onNavigate('Results')}
@@ -336,7 +349,9 @@ const makeStyles = () => StyleSheet.create({
   stepTitle: { ...Typography.h3, color: Colors.textPrimary, marginBottom: 2 },
   stepTitleLocked: { color: Colors.textSecondary },
   stepSubtitle: { ...Typography.body2, color: Colors.textSecondary, fontSize: 13 },
-  statusIndicator: { width: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  statusIndicator: { minWidth: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  skippedPill: { backgroundColor: toneBg('#F1F5F9'), borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  skippedPillText: { color: Colors.textHint, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.3 },
 
   tipBox: {
     flexDirection: 'row',

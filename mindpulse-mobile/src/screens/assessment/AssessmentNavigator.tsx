@@ -19,9 +19,17 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
   const handleFaceScanComplete = async (data: any) => {
     const state = await loadAssessmentState();
     state.faceScan = 'completed';
-    state.heartRate = 'unlocked';
+    if (state.heartRate === 'locked') state.heartRate = 'unlocked';
     // Demo scan result (data) is intentionally not persisted — it is excluded from scoring
     void data;
+    await saveAssessmentState(state);
+    setScreen('hub');
+  };
+
+  const handleFaceScanSkip = async () => {
+    const state = await loadAssessmentState();
+    if (state.faceScan !== 'completed') state.faceScan = 'skipped';
+    if (state.heartRate === 'locked') state.heartRate = 'unlocked';
     await saveAssessmentState(state);
     setScreen('hub');
   };
@@ -30,7 +38,7 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
     const state = await loadAssessmentState();
     state.heartRate = 'completed';
     state.heartRateBpm = bpm;
-    state.reaction = 'unlocked';
+    if (state.reaction === 'locked') state.reaction = 'unlocked';
     await saveAssessmentState(state);
     setScreen('hub');
   };
@@ -86,6 +94,7 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
           <FaceScanNavigator
             onBack={() => setScreen('hub')}
             onFinishScan={handleFaceScanComplete}
+            onSkip={handleFaceScanSkip}
           />
         );
       case 'heartRate':

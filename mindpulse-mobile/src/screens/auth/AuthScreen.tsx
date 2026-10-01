@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
 import { CalendarDatePicker } from '../../components/CalendarDatePicker';
+import {
+  clearRememberedLogin,
+  loadRememberedEmail,
+  saveRememberedLogin,
+} from '../../services/rememberMe';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
@@ -98,6 +103,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regConfirm, setRegConfirm] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
   const [showRegPw2, setShowRegPw2] = useState(false);
+
+  /* Prefill the e-mail (and tick the box) from the last "Remember me" sign-in. */
+  useEffect(() => {
+    let cancelled = false;
+    loadRememberedEmail().then((email) => {
+      if (cancelled || !email) return;
+      setLoginEmail(email);
+      setRememberMe(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Returns a human message, or null when the form is good to send. */
   const validateRegistration = (email: string): string | null => {
@@ -190,6 +208,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           return;
         }
         throw new Error(describeAuthError(error));
+      }
+      if (rememberMe) {
+        await saveRememberedLogin(email);
+      } else {
+        await clearRememberedLogin();
       }
       onAuthSuccess(false);
     } catch (err: any) {
@@ -288,6 +311,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           // the same row, so a failed profile write must not block the user.
           void profileError;
         }
+        // Registering is not an opt-in to "Remember me" — start fresh.
+        await clearRememberedLogin();
         onAuthSuccess(true);
         return;
       }

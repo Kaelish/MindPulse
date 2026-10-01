@@ -32,6 +32,7 @@ import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { recordPlantSession } from './src/services/plantProgress';
 import { AppRole, getCurrentUserRole } from './src/services/session';
+import { isRememberMeEnabled } from './src/services/rememberMe';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
 import { loadThemeMode, registerThemeStyles, tone, toneBg, useThemeMode } from './src/theme/theme';
@@ -47,6 +48,16 @@ type ScreenMode =
   | 'finalResults'
   | 'call'
   | 'plantProgress';
+
+/** Rejects if the promise has not settled in time (keeps the splash from hanging). */
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Timed out')), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
 
 /* ─────────── Splash Screen ─────────── */
 const SplashScreen = () => {
@@ -145,11 +156,38 @@ function App() {
     void loadThemeMode();
   }, []);
 
-  /* Splash → Onboarding after 3 s */
+  /* Splash → Onboarding after 3 s. With "Remember me" opted in and a still
+     valid session, the user is taken straight back into the app instead. */
   useEffect(() => {
     if (screenMode !== 'splash') return;
-    const timer = setTimeout(() => changeScreen('onboarding'), 3000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      let hasSession = false;
+      try {
+        if (await isRememberMeEnabled()) {
+          const { data, error } = await withTimeout(supabase.auth.getUser(), 6000);
+          hasSession = !error && !!data.user;
+        }
+      } catch (e) {
+        console.warn('Remember-me session check failed', e);
+      }
+      if (cancelled) return;
+      if (hasSession) {
+        try {
+          await handleAuthSuccess(false);
+        } catch (e) {
+          console.warn('Session restore failed', e);
+          if (!cancelled) changeScreen('onboarding');
+        }
+        return;
+      }
+      changeScreen('onboarding');
+    }, 3000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenMode]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;

@@ -25,6 +25,8 @@ import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 interface Props {
   onBack?: () => void;
   onReady: () => void;
+  /** Optional: continue the assessment without facial analysis. */
+  onSkip?: () => void;
 }
 
 /* ─── Preparation Checklist Items (Step 1) ─── */
@@ -127,7 +129,7 @@ const CameraPreview = () => (
 );
 
 /* ─── Main Screen ─── */
-export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady }) => {
+export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, onSkip }) => {
   const [sheetStep, setSheetStep] = useState<0 | 1 | 2>(0); // 0 = hidden, 1 = checklist, 2 = privacy
 
   const handleStartPress = () => setSheetStep(1);
@@ -156,6 +158,12 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
             <Ionicons name="camera-outline" size={22} color={tone('#FFF')} />
             <Text style={styles.startBtnText}>Start Face Scan</Text>
           </TouchableOpacity>
+
+          {onSkip && (
+            <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.7}>
+              <Text style={styles.skipBtnText}>Skip Facial Analysis</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
 
@@ -394,6 +402,17 @@ const makeStyles = () => StyleSheet.create({
     elevation: 8,
   },
   startBtnText: { color: Colors.white, ...Typography.button, fontSize: 17 },
+  skipBtn: {
+    height: 46,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: toneBg('#DDE3EC'),
+    backgroundColor: toneBg('#FFFFFF'),
+  },
+  skipBtnText: { color: Colors.textSecondary, fontSize: 14, fontWeight: '700' },
 });
 
 let styles = makeStyles();

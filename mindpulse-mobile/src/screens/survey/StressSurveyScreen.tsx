@@ -115,7 +115,10 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
         // Finished survey completely
         const state = await loadAssessmentState();
         state.survey = 'completed';
-        state.faceScan = 'unlocked';
+        // The face scan stays optional: heart rate unlocks right after the
+        // survey so the user can continue without facial analysis.
+        if (state.faceScan === 'locked') state.faceScan = 'unlocked';
+        if (state.heartRate === 'locked') state.heartRate = 'unlocked';
         
         // Score 0-100 (higher = more stress): PSS-10 with reverse-keyed items
         // (4,5,7,8) on a 0-40 scale + Part 2 on a 0-24 scale → max 64.

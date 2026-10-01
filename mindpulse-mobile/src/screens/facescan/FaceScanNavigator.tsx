@@ -10,9 +10,11 @@ export type FaceScanStep = 'instructions' | 'camera' | 'result';
 interface Props {
   onBack: () => void;
   onFinishScan: (sessionData: { expression: string, score: number }) => void;
+  /** Optional: marks the scan as skipped and continues the assessment flow. */
+  onSkip?: () => void;
 }
 
-export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan }) => {
+export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan, onSkip }) => {
   const [step, setStep] = useState<FaceScanStep>('instructions');
   
   // Results
@@ -32,6 +34,7 @@ export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan }) => 
           <FaceScanInstructionsScreen
             onBack={onBack}
             onReady={() => setStep('camera')}
+            onSkip={onSkip}
           />
         );
       case 'camera':
