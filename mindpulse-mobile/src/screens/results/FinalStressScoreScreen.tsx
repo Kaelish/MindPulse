@@ -146,7 +146,7 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
               color={level.color}
             />
             <Text style={[styles.guidanceTitle, { color: level.color }]}>
-              {level.isHigh ? 'Your stress indicators are elevated' : 'You seem relaxed today.'}
+              {level.isHigh ? 'Your stress indicators may be elevated' : 'You seem relaxed today.'}
             </Text>
           </View>
           <Text style={styles.guidanceBody}>{level.message}</Text>

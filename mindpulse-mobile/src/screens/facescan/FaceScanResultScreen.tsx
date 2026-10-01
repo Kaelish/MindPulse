@@ -51,7 +51,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
           <Text style={styles.emojiDisplay}>{emoji}</Text>
           
           <View style={styles.resultPill}>
-            <Text style={styles.resultPillText}>Sample · {expressionLabel} · {confidencePercent}%</Text>
+            <Text style={styles.resultPillText}>Sample · Likely {expressionLabel} · {confidencePercent}%</Text>
           </View>
         </View>
 
@@ -73,7 +73,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
             <Text style={styles.blueBoxHighlight}>No camera analysis was performed</Text>
             
             <View style={styles.blueBoxRow}>
-              <Text style={styles.blueBoxLabel}>Expression:</Text>
+              <Text style={styles.blueBoxLabel}>Possible expression:</Text>
               <Text style={styles.blueBoxValueOrange}>{expressionLabel}</Text>
             </View>
             <View style={styles.blueBoxRow}>
@@ -190,7 +190,7 @@ const makeStyles = () => StyleSheet.create({
   blueBoxTitle: { color: tone('#1B5E20'), fontSize: 12, fontWeight: '800', marginBottom: 4 },
   blueBoxHighlight: { color: tone('#4AA0E6'), fontSize: 14, fontWeight: '800', marginBottom: 16 },
   blueBoxRow: { flexDirection: 'row', marginBottom: 4 },
-  blueBoxLabel: { color: tone('#888'), fontSize: 12, width: 110 },
+  blueBoxLabel: { color: tone('#888'), fontSize: 12, width: 135 },
   blueBoxValue: { color: tone('#4AA0E6'), fontSize: 12, fontWeight: '800' },
   blueBoxValueOrange: { color: tone('#E87522'), fontSize: 12, fontWeight: '800' },
 

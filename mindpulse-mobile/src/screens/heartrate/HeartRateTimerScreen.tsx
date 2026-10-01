@@ -20,21 +20,23 @@ export const HeartRateTimerScreen: React.FC<Props> = ({ onBack, onComplete }) =>
   const [secondsLeft, setSecondsLeft] = useState(PREPARATION_SECONDS);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsLeft(current => {
-        if (current > 1) return current - 1;
-        if (phase === 'preparing') {
-          setPhase('counting');
-          return COUNT_SECONDS;
-        }
-        clearInterval(timer);
+    if (secondsLeft <= 0) return;
+    const timer = setTimeout(() => {
+      if (secondsLeft > 1) {
+        setSecondsLeft(secondsLeft - 1);
+        return;
+      }
+      // Last second of this phase: transition instead of hitting 0.
+      if (phase === 'preparing') {
+        setPhase('counting');
+        setSecondsLeft(COUNT_SECONDS);
+      } else {
+        setSecondsLeft(0);
         onComplete();
-        return 0;
-      });
+      }
     }, 1000);
-
-    return () => clearInterval(timer);
-  }, [onComplete, phase]);
+    return () => clearTimeout(timer);
+  }, [secondsLeft, phase, onComplete]);
 
   const isPreparing = phase === 'preparing';
 

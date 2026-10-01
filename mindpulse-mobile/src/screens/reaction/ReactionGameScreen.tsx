@@ -80,7 +80,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
               <View style={styles.tipBox}>
                 <Ionicons name="warning" size={16} color={tone('#B8860B')} />
                 <Text style={styles.tipText}>
-                  Because sometimes stress slows reaction time — higher reaction time can indicate fatigue, cognitive stress, or reduced attention.
+                  Because sometimes stress slows reaction time — higher reaction times may suggest fatigue, cognitive stress, or reduced attention.
                 </Text>
               </View>
             </View>
@@ -160,7 +160,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
               <Ionicons name="flash" size={16} color={tone('#D32F2F')} />
               <View style={{ marginLeft: 8 }}>
                 <Text style={styles.summaryTitle}>Average: {average}ms</Text>
-                <Text style={styles.summarySub}>{isSlow ? 'Slower than average - possible stress' : 'Normal reaction time'}</Text>
+                <Text style={styles.summarySub}>{isSlow ? 'Slower than average — may suggest stress' : 'Normal reaction time'}</Text>
               </View>
             </View>
           </View>

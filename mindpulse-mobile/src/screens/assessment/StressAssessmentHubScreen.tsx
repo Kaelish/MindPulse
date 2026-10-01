@@ -62,9 +62,11 @@ interface StepCardProps {
   status: AssessmentStepStatus;
   onPress: () => void;
   weight: string;
+  /** Short hint pill: Required steps gate the results, Skippable ones do not. */
+  flag?: 'required' | 'skippable';
 }
 
-const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, weight }: StepCardProps) => {
+const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag }: StepCardProps) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
   const isSkipped = status === 'skipped';
@@ -91,6 +93,15 @@ const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, w
       <View style={styles.stepTextContent}>
         <Text style={[styles.stepTitle, isLocked && styles.stepTitleLocked]}>{title}</Text>
         <Text style={styles.stepSubtitle}>{subtitle}</Text>
+        {flag && (
+          <View style={[styles.flagPill, flag === 'required' ? styles.flagRequired : styles.flagSkippable]}>
+            <Text
+              style={[styles.flagText, flag === 'required' ? styles.flagTextRequired : styles.flagTextSkippable]}
+            >
+              {flag === 'required' ? 'Required' : 'Skippable'}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.statusIndicator}>
@@ -226,6 +237,7 @@ export const StressAssessmentHubScreen = ({
             iconBg="#EEF0FD"
             status={state.survey}
             weight="50%"
+            flag="required"
             onPress={() => onNavigate('StressSurvey')}
           />
           <StepCard
@@ -236,6 +248,7 @@ export const StressAssessmentHubScreen = ({
             iconBg="#E4F7FC"
             status={state.faceScan}
             weight="20%"
+            flag="skippable"
             onPress={() => onNavigate('FaceScan')}
           />
           <StepCard
@@ -246,6 +259,7 @@ export const StressAssessmentHubScreen = ({
             iconBg="#FCE9EC"
             status={state.heartRate}
             weight="20%"
+            flag="required"
             onPress={() => onNavigate('HeartRate')}
           />
           <StepCard
@@ -256,6 +270,7 @@ export const StressAssessmentHubScreen = ({
             iconBg="#FEF6DB"
             status={state.reaction}
             weight="20%"
+            flag="required"
             onPress={() => onNavigate('ReactionGame')}
           />
         </View>
@@ -349,6 +364,12 @@ const makeStyles = () => StyleSheet.create({
   stepTitle: { ...Typography.h3, color: Colors.textPrimary, marginBottom: 2 },
   stepTitleLocked: { color: Colors.textSecondary },
   stepSubtitle: { ...Typography.body2, color: Colors.textSecondary, fontSize: 13 },
+  flagPill: { alignSelf: 'flex-start', borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 2, marginTop: 5 },
+  flagRequired: { backgroundColor: toneBg('#EEF0FD') },
+  flagSkippable: { backgroundColor: toneBg('#FFF3E0') },
+  flagText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
+  flagTextRequired: { color: tone('#4C5EE5') },
+  flagTextSkippable: { color: tone('#E08A00') },
   statusIndicator: { minWidth: 32, alignItems: 'flex-end', justifyContent: 'center' },
   skippedPill: { backgroundColor: toneBg('#F1F5F9'), borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
   skippedPillText: { color: Colors.textHint, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.3 },

@@ -210,7 +210,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
         <View style={[styles.advisoryCard, { backgroundColor: toneBg('#FDECE6') }]}>
           <View style={styles.advisoryHeader}>
             <Ionicons name="warning-outline" size={28} color={tone('#D32F2F')} />
-            <Text style={[styles.advisoryTitle, { color: tone('#D32F2F') }]}>Your stress indicators are elevated</Text>
+            <Text style={[styles.advisoryTitle, { color: tone('#D32F2F') }]}>Your stress indicators may be elevated</Text>
           </View>
           <Text style={styles.advisoryBody}>
             Try resting or practicing relaxation techniques. Consider reaching out to a mental health professional for support.

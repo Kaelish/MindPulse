@@ -38,20 +38,20 @@ const getStatus = (bpm: number): BPMStatus => {
 const makeStatusMap = (): Record<BPMStatus, StatusConfig> => ({
   normal: {
     label: 'Normal',
-    interpretation: 'Your heart rate is within the normal resting range.',
+    interpretation: 'Your heart rate appears to be within the normal resting range.',
     pillBg: Colors.badgeNormalBg,
     pillText: Colors.badgeNormalText,
   },
   elevated: {
     label: 'Slightly Elevated',
-    interpretation: 'Your heart rate is mildly above the resting range.',
+    interpretation: 'Your heart rate may be mildly above the resting range.',
     pillBg: Colors.badgeElevatedBg,
     pillText: Colors.badgeElevatedText,
   },
   high: {
     label: 'Possible Stress',
     interpretation:
-      'Your heart rate suggests elevated stress. Breathe slowly before continuing.',
+      'Your heart rate may suggest elevated stress. Breathe slowly before continuing.',
     pillBg: Colors.badgeHighBg,
     pillText: Colors.badgeHighText,
   },

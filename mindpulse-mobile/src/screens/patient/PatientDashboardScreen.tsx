@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +19,7 @@ import {
   StressSessionItem,
   fetchDashboardData,
 } from '../../services/dashboard';
-import { isMessageNotification, markNotificationRead } from '../../services/notifications';
+import { PatientNotifications } from '../../components/PatientNotifications';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
@@ -92,7 +91,6 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<StressSessionItem | null>(null);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
 
   const loadData = async () => {
@@ -134,33 +132,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
     );
   }
 
-  const { userName, greetingDate, metrics, recentSessions, notifications } = data;
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  /**
-   * Opening a notification is the act of reading it: clear the bell dot, then
-   * hand chat rows straight to the message thread.
-   */
-  const openNotification = (item: { id: string; read: boolean; title: string; message: string }) => {
-    if (!item.read) {
-      const patch = (read: boolean) => setData((current) =>
-        current
-          ? {
-              ...current,
-              notifications: current.notifications.map((row) =>
-                row.id === item.id ? { ...row, read } : row,
-              ),
-            }
-          : current,
-      );
-      patch(true);
-      void markNotificationRead(item.id).catch(() => patch(false));
-    }
-    if (isMessageNotification(item)) {
-      setShowNotificationsModal(false);
-      onOpenMessages?.();
-    }
-  };
+  const { userName, greetingDate, metrics, recentSessions } = data;
 
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
   const hour = new Date().getHours();
@@ -185,10 +157,11 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                 </View>
                 <Text style={styles.dateText}>{greetingDate}</Text>
               </View>
-              <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotificationsModal(true)}>
-                <Ionicons name="notifications-outline" size={24} color={Colors.white} />
-                {unreadCount > 0 && <View style={styles.bellBadge} />}
-              </TouchableOpacity>
+              <PatientNotifications
+                variant="onGradient"
+                onOpenMessages={onOpenMessages}
+                onNavigateTab={onNavigate}
+              />
             </View>
           </SafeAreaView>
         </LinearGradient>
@@ -292,39 +265,6 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
         session={selectedSession}
         onClose={() => setSelectedSession(null)}
       />
-
-      {/* Notifications Modal */}
-      {showNotificationsModal && (
-        <Modal visible transparent animationType="slide" onRequestClose={() => setShowNotificationsModal(false)}>
-          <View style={modalStyles.overlay}>
-            <View style={modalStyles.box}>
-              <Text style={modalStyles.title}>Notifications</Text>
-              <ScrollView style={{ maxHeight: 260, marginVertical: 12 }}>
-                {notifications.length === 0 && (
-                  <Text style={styles.notifEmpty}>No notifications yet.</Text>
-                )}
-                {notifications.map(n => (
-                  <TouchableOpacity
-                    key={n.id}
-                    style={modalStyles.notifItem}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open notification: ${n.title}`}
-                    onPress={() => openNotification(n)}
-                  >
-                    <Text style={modalStyles.notifTitle}>{n.title}</Text>
-                    <Text style={modalStyles.notifBody}>{n.message}</Text>
-                    <Text style={modalStyles.notifTime}>{n.time}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity style={modalStyles.closeBtn} onPress={() => setShowNotificationsModal(false)}>
-                <Text style={modalStyles.closeBtnText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
     </View>
   );
 };
@@ -336,7 +276,6 @@ const makeStyles = () => StyleSheet.create({
   loadingText: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center' },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: Colors.btnBlue },
   retryText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
-  notifEmpty: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 16 },
   sessionsEmpty: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 14, fontStyle: 'italic' },
 
   scroll: { flex: 1 },
@@ -350,9 +289,6 @@ const makeStyles = () => StyleSheet.create({
   greetingName: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
   waveEmoji: { fontSize: 22, marginLeft: 8 },
   dateText: { color: 'rgba(30,50,30,0.55)', fontSize: 13, marginTop: 4, fontWeight: '500' },
-  bellBtn: { width: 48, height: 48, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
-  bellIcon: { fontSize: 20 },
-  bellBadge: { position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: toneBg('#E05C5C'), borderWidth: 1.5, borderColor: Colors.white },
 
   /* Body */
   body: { backgroundColor: Colors.pageBg, borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -24, paddingHorizontal: Spacing.md, paddingTop: Spacing.lg, gap: Spacing.md },
@@ -414,18 +350,3 @@ const makeStyles = () => StyleSheet.create({
 
 let styles = makeStyles();
 registerThemeStyles(() => { styles = makeStyles(); });
-
-const makeModalStyles = () => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
-  box: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.lg, width: '100%' },
-  title: { color: Colors.textPrimary, ...Typography.h3, marginBottom: 12 },
-  closeBtn: { marginTop: 20, height: 52, borderRadius: Radius.md, backgroundColor: Colors.btnBlue, alignItems: 'center', justifyContent: 'center' },
-  closeBtnText: { color: Colors.white, fontWeight: '800', fontSize: 16 },
-  notifItem: { borderBottomWidth: 1, borderBottomColor: Colors.divider, paddingVertical: 12 },
-  notifTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 14 },
-  notifBody: { color: Colors.textSecondary, fontSize: 13, marginTop: 2 },
-  notifTime: { color: Colors.textHint, fontSize: 11, marginTop: 4 },
-});
-
-let modalStyles = makeModalStyles();
-registerThemeStyles(() => { modalStyles = makeModalStyles(); });
