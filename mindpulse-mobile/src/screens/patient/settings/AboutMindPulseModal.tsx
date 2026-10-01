@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
+import { supabase } from '../../../supabase/client';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AboutMindPulseModalProps {
@@ -36,19 +38,33 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const handleSendReport = () => {
+  const handleSendReport = async () => {
     if (!problemDesc.trim()) {
       Alert.alert('Validation Error', 'Please describe the issue before submitting.');
       return;
     }
 
     setSubmittingReport(true);
-    setTimeout(() => {
-      setSubmittingReport(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const sender = user?.email ?? '';
+      const subject = encodeURIComponent(`[MindPulse Report] ${problemCategory}`);
+      const body = encodeURIComponent(
+        `Category: ${problemCategory}\nReported by: ${sender || 'Unknown account'}\n\n${problemDesc.trim()}`,
+      );
+      // Open the device's email app with the report prefilled for the admin.
+      await Linking.openURL(`mailto:altheaolivetrecta@gmail.com?subject=${subject}&body=${body}`);
       setShowReportModal(false);
       setProblemDesc('');
-      showToast('Problem report submitted to KOSE Labs support team.');
-    }, 1000);
+      showToast('Opening your email app to send the report…');
+    } catch (e: any) {
+      Alert.alert(
+        'Could Not Open Email',
+        e?.message || 'Please make sure an email app is set up on this device.',
+      );
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   return (

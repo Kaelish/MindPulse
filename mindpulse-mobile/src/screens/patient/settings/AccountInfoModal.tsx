@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
+import { getAvatarUrl, pickProfilePhoto, uploadProfilePhoto } from '../../../services/profileAvatar';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AccountInfoModalProps {
@@ -39,6 +41,8 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
   const [savedLiving, setSavedLiving] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const chipsTouched = useRef(false);
 
   // Load the real profile values every time the sheet opens — nothing here is
@@ -52,6 +56,9 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        getAvatarUrl()
+          .then((url) => { if (active) setAvatarUrl(url); })
+          .catch(() => {});
         const { data } = await supabase
           .from('profiles')
           .select('year_level, living_situation')
@@ -144,7 +151,29 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
     }
   };
 
+  /** Pick a square photo from the gallery, upload it, and refresh the sheet. */
+  const handleChangePhoto = async () => {
+    if (photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      const photo = await pickProfilePhoto();
+      if (!photo) return;
+      const url = await uploadProfilePhoto(photo);
+      setAvatarUrl(url);
+      showToast('Profile photo updated!');
+      onProfileUpdated?.();
+    } catch (e: any) {
+      Alert.alert('Photo Update Failed', e.message || 'Could not update your profile photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const handleUpdatePassword = async () => {
+    if (!currentPassword) {
+      Alert.alert('Validation Error', 'Please enter your current password.');
+      return;
+    }
     if (!newPassword) {
       Alert.alert('Validation Error', 'Please enter a new password.');
       return;
@@ -160,6 +189,21 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 
     setSavingPassword(true);
     try {
+      // Re-authenticate first so the "Current Password" field is enforced
+      // (Supabase otherwise trusts the active session and ignores it).
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error('Your session has expired. Please sign in again.');
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (reauthError) {
+        if (/invalid login credentials/i.test(reauthError.message)) {
+          throw new Error('Your current password is incorrect.');
+        }
+        throw new Error(reauthError.message);
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
@@ -208,13 +252,26 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
             {/* ── PROFILE PICTURE / INITIALS ── */}
             <View style={styles.avatarSection}>
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>
-                  {fullName ? fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'MP'}
-                </Text>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarInitials}>
+                    {fullName ? fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'MP'}
+                  </Text>
+                )}
               </View>
-              <TouchableOpacity style={styles.changeAvatarBtn} activeOpacity={0.8}>
-                <Ionicons name="camera-outline" size={14} color={tone('#5B6EF5')} />
-                <Text style={styles.changeAvatarText}>Change Photo</Text>
+              <TouchableOpacity
+                style={[styles.changeAvatarBtn, photoBusy && styles.btnDisabled]}
+                activeOpacity={0.8}
+                onPress={() => void handleChangePhoto()}
+                disabled={photoBusy}
+              >
+                {photoBusy ? (
+                  <ActivityIndicator size="small" color={tone('#5B6EF5')} />
+                ) : (
+                  <Ionicons name="camera-outline" size={14} color={tone('#5B6EF5')} />
+                )}
+                <Text style={styles.changeAvatarText}>{photoBusy ? 'Uploading…' : 'Change Photo'}</Text>
               </TouchableOpacity>
             </View>
 
@@ -433,7 +490,8 @@ const makeStyles = () => StyleSheet.create({
 
   /* Avatar */
   avatarSection: { alignItems: 'center', marginVertical: 12, gap: 8 },
-  avatarCircle: { width: 72, height: 72, borderRadius: 24, backgroundColor: toneBg('#F5A623'), alignItems: 'center', justifyContent: 'center' },
+  avatarCircle: { width: 72, height: 72, borderRadius: 24, backgroundColor: toneBg('#F5A623'), alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
   avatarInitials: { fontSize: 26, fontWeight: '800', color: tone('#FFF') },
   changeAvatarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: toneBg('#EEEDFE'), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   changeAvatarText: { fontSize: 12, fontWeight: '700', color: tone('#5B6EF5') },

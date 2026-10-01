@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   Switch,
   StyleSheet,
@@ -24,6 +25,7 @@ import {
   fetchPlantProgress,
 } from '../../services/plantProgress';
 import { AccountInfoModal } from './settings/AccountInfoModal';
+import { getAvatarUrl } from '../../services/profileAvatar';
 import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
@@ -209,6 +211,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [detailSession, setDetailSession] = useState<StressSessionItem | null>(null);
   const [plant, setPlant] = useState<PlantProgress | null>(null);
   const [plantError, setPlantError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Settings Modal states
   const [showAccountInfo, setShowAccountInfo] = useState(false);
@@ -233,6 +236,9 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
     fetchPlantProgress()
       .then(p => { setPlant(p); setPlantError(null); })
       .catch((e: any) => setPlantError(e?.message || 'Could not load plant progress.'));
+    getAvatarUrl()
+      .then(url => setAvatarUrl(url))
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -289,7 +295,11 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         {/* Avatar + Name + Email */}
         <View style={styles.headerRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userInitials}</Text>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{userInitials}</Text>
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>{userName}</Text>
@@ -577,6 +587,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         onProfileUpdated={() => {
           // The update already succeeded; keep current data if the refresh fails.
           fetchDashboardData().then(res => setData(res)).catch(() => {});
+          getAvatarUrl().then(url => setAvatarUrl(url)).catch(() => {});
         }}
       />
       <NotificationsModal
@@ -619,7 +630,9 @@ const makeStyles = () => StyleSheet.create({
     backgroundColor: toneBg('#F5A623'),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 20, fontWeight: '800', color: tone('#FFF') },
   userName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   userEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },

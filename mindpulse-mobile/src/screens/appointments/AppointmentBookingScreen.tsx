@@ -242,7 +242,7 @@ const ClinicianCard = ({
       </View>
     </View>
     <TouchableOpacity style={styles.connectBtn} onPress={onConnect}>
-      <Text style={styles.connectBtnText}>Connect</Text>
+      <Text style={styles.connectBtnText}>Book</Text>
     </TouchableOpacity>
   </View>
 );
@@ -663,7 +663,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
         <View style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>TeleHealth</Text>
-            <Text style={styles.headerSub}>Connect with mental health professionals</Text>
+            <Text style={styles.headerSub}>Book with mental health professionals</Text>
           </View>
         </View>
 
