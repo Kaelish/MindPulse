@@ -24,6 +24,8 @@ import {
   markNotificationRead,
   notificationFullTime,
 } from '../services/notifications';
+import { StressBand, stressBandFor } from '../services/selfCareTips';
+import { SelfCareModal } from './SelfCareModal';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 
 export type PatientNotificationTab = 'home' | 'analysis' | 'clinics' | 'profile';
@@ -86,21 +88,31 @@ const visualFor = (row: FeedNotification): RowVisual => {
   };
 };
 
-/** Rows that lead somewhere once opened; plain info rows only get marked read. */
-const notificationRoute = (row: FeedNotification): PatientNotificationTab | 'messages' | null => {
+/**
+ * Where a tap leads. Stress alerts follow their band: HIGH routes to Clinics
+ * (reach out to a professional), LOW/MODERATE opens the self-care suggestion
+ * popup, and unparseable alerts keep the old Analysis behaviour.
+ */
+type NotificationDestination = PatientNotificationTab | 'messages' | 'suggestions' | null;
+
+const notificationRoute = (row: FeedNotification): NotificationDestination => {
   if (isMessageNotification(row)) return 'messages';
   if (row.type === 'appointment') return 'clinics';
-  if (row.type === 'alert') return 'analysis';
+  if (row.type === 'alert') {
+    const band = stressBandFor(row.title, row.message);
+    if (band === 'high') return 'clinics';
+    if (band === 'moderate' || band === 'low') return 'suggestions';
+    return 'analysis';
+  }
   return null;
 };
 
 const isRoutable = (row: FeedNotification) => notificationRoute(row) !== null;
 
 /**
- * Patient bell + notification sheet: a colourful, type-coded feed with a
- * "Mark as read" action and a "See all" toggle between the five newest
- * entries and the complete history. Tapping a row opens the screen it
- * belongs to (messages thread, appointments, analysis).
+ * Patient bell + notification sheet: a centred popup with a colourful,
+ * type-coded feed, always-visible "Mark as read" and "See all" actions, and
+ * band-aware routing (high → professionals, low/moderate → self-care tips).
  */
 export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   variant = 'onLight',
@@ -116,6 +128,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [suggestBand, setSuggestBand] = useState<StressBand>(null);
 
   const refreshUnread = useCallback(() => {
     fetchUnreadNotificationCount()
@@ -184,7 +197,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
 
   /**
    * Opening a notification is the act of reading it: clear the dot, then hand
-   * the row to the screen it belongs to.
+   * the row to the screen (or suggestion popup) it belongs to.
    */
   const openNotification = (row: FeedNotification) => {
     const wasUnread = !row.read;
@@ -197,6 +210,11 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
       });
     }
     const route = notificationRoute(row);
+    if (route === 'suggestions') {
+      close();
+      setSuggestBand(stressBandFor(row.title, row.message));
+      return;
+    }
     if (route) {
       close();
       if (route === 'messages') onOpenMessages?.();
@@ -209,7 +227,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   const total = rows.length;
   // Newest first; collapsed shows only the latest few until "See all".
   const visible = (expanded ? rows : rows.slice(-RECENT_LIMIT)).slice().reverse();
-  const canExpand = total > RECENT_LIMIT;
+  const hasUnread = unreadCount > 0;
 
   return (
     <>
@@ -235,8 +253,8 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close notifications" />
-          <View style={styles.sheet}>
-            {/* ── Gradient header with the two actions ── */}
+          <View style={styles.dialog}>
+            {/* ── Gradient header ── */}
             <LinearGradient
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -249,25 +267,9 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
               <View style={{ flex: 1 }}>
                 <Text style={styles.sheetTitle}>Notifications</Text>
                 <Text style={styles.sheetSub}>
-                  {unreadCount > 0 ? `${unreadCount} unread · ` : ''}{total} total
+                  {hasUnread ? `${unreadCount} unread · ` : ''}{total} total
                 </Text>
               </View>
-              {!loading && !error && unreadCount > 0 && (
-                <TouchableOpacity
-                  style={styles.markBtn}
-                  onPress={() => void markAll()}
-                  disabled={marking}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Mark all notifications as read"
-                >
-                  {marking ? (
-                    <ActivityIndicator size="small" color="#5B6EF5" />
-                  ) : (
-                    <Text style={styles.markBtnText}>Mark as read</Text>
-                  )}
-                </TouchableOpacity>
-              )}
               <Pressable
                 onPress={close}
                 style={styles.closeBtn}
@@ -375,28 +377,51 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
               )}
             </View>
 
-            {/* ── See all / Show less toggle ── */}
-            {!loading && !error && canExpand && (
-              <TouchableOpacity
-                style={[styles.seeAllBtn, expanded && styles.seeAllBtnGhost]}
-                onPress={() => setExpanded((value) => !value)}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={expanded ? 'Show recent notifications only' : `See all ${total} notifications`}
-              >
-                <Text style={[styles.seeAllText, expanded && styles.seeAllTextGhost]}>
-                  {expanded ? 'Show recent only' : `See all (${total})`}
-                </Text>
-                <Ionicons
-                  name={expanded ? 'chevron-up' : 'chevron-down'}
-                  size={15}
-                  color={expanded ? tone('#5B6EF5') : '#FFFFFF'}
-                />
-              </TouchableOpacity>
+            {/* ── Always-visible actions ── */}
+            {!loading && !error && total > 0 && (
+              <View style={styles.footerRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, hasUnread ? styles.markBtnFill : styles.markBtnGhost]}
+                  onPress={() => void markAll()}
+                  disabled={marking}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark all notifications as read"
+                >
+                  {marking ? (
+                    <ActivityIndicator size="small" color={hasUnread ? '#FFFFFF' : '#5B6EF5'} />
+                  ) : (
+                    <Text style={[styles.actionText, hasUnread ? styles.actionTextFill : styles.actionTextGhost]}>
+                      Mark as read
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.seeAllBtn]}
+                  onPress={() => setExpanded((value) => !value)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={expanded ? 'Show recent notifications only' : `See all ${total} notifications`}
+                >
+                  <Text style={[styles.actionText, styles.actionTextGhost]}>
+                    {expanded ? 'Show recent' : `See all (${total})`}
+                  </Text>
+                  <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={tone('#5B6EF5')} />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
       </Modal>
+
+      {/* ── Self-care suggestions for low/moderate stress alerts ── */}
+      <SelfCareModal
+        visible={suggestBand !== null}
+        band={suggestBand}
+        onClose={() => setSuggestBand(null)}
+        onOpenAnalysis={() => onNavigateTab?.('analysis')}
+        onOpenClinics={() => onNavigateTab?.('clinics')}
+      />
     </>
   );
 };
@@ -428,24 +453,29 @@ const makeStyles = () => StyleSheet.create({
   },
   bellBadgeText: { color: Colors.white, fontSize: 9.5, fontWeight: '900' },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    maxHeight: '88%',
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+  },
+  dialog: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '86%',
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    paddingBottom: 16,
+    borderRadius: 24,
     overflow: 'hidden',
+    paddingBottom: 14,
   },
   sheetHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
   },
   headIcon: {
     width: 34,
@@ -457,15 +487,6 @@ const makeStyles = () => StyleSheet.create({
   },
   sheetTitle: { fontSize: 16.5, fontWeight: '900', color: '#FFFFFF' },
   sheetSub: { fontSize: 11.5, color: 'rgba(255,255,255,0.85)', marginTop: 2, fontWeight: '600' },
-  markBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: Radius.full,
-    minWidth: 96,
-    alignItems: 'center',
-  },
-  markBtnText: { color: '#5B6EF5', fontSize: 12, fontWeight: '900' },
   closeBtn: {
     width: 32,
     height: 32,
@@ -484,10 +505,10 @@ const makeStyles = () => StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  listScroll: { maxHeight: 400 },
+  listScroll: { maxHeight: 340 },
   listContent: { gap: 9, paddingBottom: 4 },
 
-  stateBox: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 30, paddingHorizontal: 16 },
+  stateBox: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 26, paddingHorizontal: 16 },
   stateTitle: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   stateText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
   emptyIcon: {
@@ -553,24 +574,35 @@ const makeStyles = () => StyleSheet.create({
   },
   unreadTagText: { color: Colors.white, fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
 
-  seeAllBtn: {
+  footerRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    marginHorizontal: 14,
-    marginTop: 10,
-    backgroundColor: '#5B6EF5',
+    gap: 5,
     paddingVertical: 12,
     borderRadius: Radius.full,
   },
-  seeAllBtnGhost: {
+  markBtnFill: { backgroundColor: '#5B6EF5' },
+  markBtnGhost: {
     backgroundColor: Colors.surface,
     borderWidth: 1.5,
     borderColor: tone('#5B6EF5'),
   },
-  seeAllText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF' },
-  seeAllTextGhost: { color: tone('#5B6EF5') },
+  seeAllBtn: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: tone('#5B6EF5'),
+  },
+  actionText: { fontSize: 13, fontWeight: '900' },
+  actionTextFill: { color: '#FFFFFF' },
+  actionTextGhost: { color: tone('#5B6EF5') },
 });
 
 let styles = makeStyles();

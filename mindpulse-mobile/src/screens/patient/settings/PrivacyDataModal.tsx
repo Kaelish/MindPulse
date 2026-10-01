@@ -293,7 +293,18 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1, backgroundColor: toneBg('#0F172A'), borderRadius: 12, padding: 12, marginVertical: 10 }}>
+            {/* Bounded height: flex:1 collapses to zero in this auto-height
+                sheet, which made the exported JSON invisible. */}
+            <ScrollView
+              style={{
+                maxHeight: 380,
+                backgroundColor: toneBg('#0F172A'),
+                borderRadius: 12,
+                marginVertical: 10,
+              }}
+              contentContainerStyle={{ padding: 12 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11, color: tone('#38BDF8') }}>
                 {exportDataJson}
               </Text>

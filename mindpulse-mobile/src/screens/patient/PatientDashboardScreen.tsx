@@ -20,7 +20,9 @@ import {
   fetchDashboardData,
 } from '../../services/dashboard';
 import { PatientNotifications } from '../../components/PatientNotifications';
+import { SelfCareModal } from '../../components/SelfCareModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
+import { StressBand, bandLabel, previewTipsFor } from '../../services/selfCareTips';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
@@ -92,6 +94,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<StressSessionItem | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
+  const [showSelfCare, setShowSelfCare] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -137,6 +140,17 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+
+  // Self-care card follows the latest assessment band (low/moderate/high).
+  const latestBand: StressBand = metrics.latestLevel
+    ? (metrics.latestLevel.toLowerCase() as StressBand)
+    : null;
+  const carePalette = latestBand === 'high'
+    ? { bg: '#FFF1F0', accent: '#E05C5C' }
+    : latestBand === 'low'
+      ? { bg: '#EFFAF3', accent: '#27AE60' }
+      : { bg: '#FFF9EC', accent: '#E08A00' };
+  const careTips = latestBand ? previewTipsFor(latestBand, metrics.latestScore ?? 0) : [];
 
   return (
     <View style={styles.root}>
@@ -239,6 +253,42 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
             </TouchableOpacity>
           </View>
 
+          {/* Self-Care Ideas (band-aware) */}
+          {latestBand && (
+            <TouchableOpacity
+              style={[styles.careCard, { backgroundColor: tone(carePalette.bg) }]}
+              activeOpacity={0.85}
+              onPress={() => setShowSelfCare(true)}
+            >
+              <View style={[styles.careIconBox, { backgroundColor: Colors.white }]}>
+                <Ionicons
+                  name={latestBand === 'high' ? 'people' : 'bulb'}
+                  size={20}
+                  color={tone(carePalette.accent)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.careTitle}>
+                  {latestBand === 'high' ? 'Consider reaching out' : 'Self-care ideas'}
+                </Text>
+                <Text style={styles.careSub}>Based on your latest {bandLabel(latestBand).toLowerCase()} result</Text>
+                <View style={styles.carePreviewRow}>
+                  {careTips.map(tip => (
+                    <View key={tip.title} style={[styles.carePip, { borderColor: tone(carePalette.accent) }]}>
+                      {tip.material ? (
+                        <MaterialCommunityIcons name={tip.icon as any} size={13} color={tone(carePalette.accent)} />
+                      ) : (
+                        <Ionicons name={tip.icon as any} size={13} color={tone(carePalette.accent)} />
+                      )}
+                    </View>
+                  ))}
+                  <Text style={[styles.careMore, { color: tone(carePalette.accent) }]}>Tap to see all</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={tone(carePalette.accent)} />
+            </TouchableOpacity>
+          )}
+
           {/* Recent Sessions */}
           <View style={styles.sessionsHeaderRow}>
             <Text style={styles.sectionTitle}>Recent Sessions</Text>
@@ -264,6 +314,21 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
         visible={selectedSession !== null}
         session={selectedSession}
         onClose={() => setSelectedSession(null)}
+      />
+
+      {/* Self-care suggestions for the latest stress band */}
+      <SelfCareModal
+        visible={showSelfCare}
+        band={latestBand}
+        onClose={() => setShowSelfCare(false)}
+        onOpenAnalysis={() => {
+          setShowSelfCare(false);
+          onNavigate?.('analysis');
+        }}
+        onOpenClinics={() => {
+          setShowSelfCare(false);
+          onNavigate?.('clinics');
+        }}
       />
     </View>
   );
@@ -333,6 +398,23 @@ const makeStyles = () => StyleSheet.create({
   metricNum: { color: Colors.textPrimary, fontSize: 32, fontWeight: '900' },
   metricUnit: { color: Colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 4 },
   metricStatus: { fontSize: 12, fontWeight: '600' },
+
+  /* Self-care card */
+  careCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: Radius.lg, padding: Spacing.md },
+  careIconBox: { width: 44, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  careTitle: { color: Colors.textPrimary, fontSize: 15, fontWeight: '800' },
+  careSub: { color: Colors.textSecondary, fontSize: 11.5, marginTop: 2 },
+  carePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 },
+  carePip: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  careMore: { fontSize: 11, fontWeight: '800', marginLeft: 2 },
 
   /* Sessions */
   sessionsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },

@@ -280,12 +280,28 @@ export const saveNewStressSession = async (
   }
 
   const prefs = await loadNotificationPrefs();
-  if (status === 'High' && prefs.analysisResults) {
+  if (prefs.analysisResults) {
+    // Every band gets a feed row: HIGH routes the student to Clinics (reach
+    // out to a professional), LOW/MODERATE opens the self-care suggestions.
     // Non-critical: a failed notification must not undo a saved assessment.
+    const notice =
+      status === 'High'
+        ? {
+            title: 'High Stress Alert',
+            message: `Your latest stress check recorded a score of ${score}. Consider taking a 5-minute breathing exercise.`,
+          }
+        : status === 'Moderate'
+          ? {
+              title: 'Moderate Stress Check-in',
+              message: `Your latest stress check recorded a score of ${score}. Tap to see self-care ideas to help you unwind.`,
+            }
+          : {
+              title: 'Low Stress Check-in',
+              message: `Your latest stress check recorded a score of ${score}. Tap for ideas to keep your stress low.`,
+            };
     const { error: notificationError } = await supabase.from('notifications').insert({
       user_id: user.id,
-      title: 'High Stress Alert',
-      message: `Your latest stress check recorded a score of ${score}. Consider taking a 5-minute breathing exercise.`,
+      ...notice,
       type: 'alert',
     });
     void notificationError;

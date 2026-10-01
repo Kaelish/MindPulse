@@ -252,12 +252,16 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
             {/* ── PROFILE PICTURE / INITIALS ── */}
             <View style={styles.avatarSection}>
               <View style={styles.avatarCircle}>
-                {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={styles.avatarInitials}>
-                    {fullName ? fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'MP'}
-                  </Text>
+                {/* Initials sit underneath: a broken photo URL falls back to them. */}
+                <Text style={styles.avatarInitials}>
+                  {fullName ? fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'MP'}
+                </Text>
+                {!!avatarUrl && (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                    onError={() => setAvatarUrl(null)}
+                  />
                 )}
               </View>
               <TouchableOpacity
@@ -491,7 +495,7 @@ const makeStyles = () => StyleSheet.create({
   /* Avatar */
   avatarSection: { alignItems: 'center', marginVertical: 12, gap: 8 },
   avatarCircle: { width: 72, height: 72, borderRadius: 24, backgroundColor: toneBg('#F5A623'), alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarImage: { width: '100%', height: '100%' },
+  avatarImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   avatarInitials: { fontSize: 26, fontWeight: '800', color: tone('#FFF') },
   changeAvatarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: toneBg('#EEEDFE'), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   changeAvatarText: { fontSize: 12, fontWeight: '700', color: tone('#5B6EF5') },

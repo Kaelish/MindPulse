@@ -295,10 +295,14 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         {/* Avatar + Name + Email */}
         <View style={styles.headerRow}>
           <View style={styles.avatar}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarText}>{userInitials}</Text>
+            {/* Initials underneath: a broken photo URL falls back to them. */}
+            <Text style={styles.avatarText}>{userInitials}</Text>
+            {!!avatarUrl && (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                onError={() => setAvatarUrl(null)}
+              />
             )}
           </View>
           <View style={{ flex: 1 }}>
@@ -632,7 +636,7 @@ const makeStyles = () => StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImage: { width: '100%', height: '100%' },
+  avatarImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   avatarText: { fontSize: 20, fontWeight: '800', color: tone('#FFF') },
   userName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   userEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },

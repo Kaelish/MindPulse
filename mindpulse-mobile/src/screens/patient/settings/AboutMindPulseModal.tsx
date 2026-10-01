@@ -243,7 +243,13 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1, gap: 12 }}>
+            {/* flex:1 would collapse to zero height inside this auto-height
+                sheet, leaving the form invisible — bound it instead. */}
+            <ScrollView
+              style={{ maxHeight: 400 }}
+              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Category</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {['Camera / Scan Issue', 'Heart Rate Error', 'UI Alignment', 'Other Feedback'].map(cat => (
