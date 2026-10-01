@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
+import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AccountInfoModalProps {
   visible: boolean;
@@ -183,7 +184,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="person-outline" size={20} color="#5B6EF5" />
+                <Ionicons name="person-outline" size={20} color={tone('#5B6EF5')} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>Account Information</Text>
@@ -191,14 +192,14 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748B" />
+              <Ionicons name="close" size={18} color={tone('#64748B')} />
             </Pressable>
           </View>
 
           {/* Toast Alert */}
           {toastMsg && (
             <View style={styles.toast}>
-              <Ionicons name="checkmark-circle" size={18} color="#27AE60" />
+              <Ionicons name="checkmark-circle" size={18} color={tone('#27AE60')} />
               <Text style={styles.toastText}>{toastMsg}</Text>
             </View>
           )}
@@ -212,7 +213,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                 </Text>
               </View>
               <TouchableOpacity style={styles.changeAvatarBtn} activeOpacity={0.8}>
-                <Ionicons name="camera-outline" size={14} color="#5B6EF5" />
+                <Ionicons name="camera-outline" size={14} color={tone('#5B6EF5')} />
                 <Text style={styles.changeAvatarText}>Change Photo</Text>
               </TouchableOpacity>
             </View>
@@ -276,10 +277,10 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} disabled={savingProfile}>
                 {savingProfile ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={tone('#FFF')} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                    <Ionicons name="checkmark" size={16} color={tone('#FFF')} />
                     <Text style={styles.saveBtnText}>Save Profile Changes</Text>
                   </>
                 )}
@@ -306,7 +307,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel={showCurrentPassword ? 'Hide current password' : 'Show current password'}
                   >
-                    <Ionicons name={showCurrentPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
+                    <Ionicons name={showCurrentPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color={tone('#64748B')} />
                   </Pressable>
                 </View>
               </View>
@@ -328,7 +329,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel={showNewPassword ? 'Hide new password' : 'Show new password'}
                   >
-                    <Ionicons name={showNewPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
+                    <Ionicons name={showNewPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color={tone('#64748B')} />
                   </Pressable>
                 </View>
               </View>
@@ -350,7 +351,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                   >
-                    <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#64748B" />
+                    <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color={tone('#64748B')} />
                   </Pressable>
                 </View>
               </View>
@@ -373,15 +374,15 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
               </View>
 
               <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: '#8353E2' }, !isPasswordValid && styles.btnDisabled]}
+                style={[styles.saveBtn, { backgroundColor: toneBg('#8353E2') }, !isPasswordValid && styles.btnDisabled]}
                 onPress={handleUpdatePassword}
                 disabled={savingPassword || !isPasswordValid}
               >
                 {savingPassword ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={tone('#FFF')} />
                 ) : (
                   <>
-                    <Ionicons name="key-outline" size={16} color="#FFF" />
+                    <Ionicons name="key-outline" size={16} color={tone('#FFF')} />
                     <Text style={styles.saveBtnText}>Update Password</Text>
                   </>
                 )}
@@ -396,46 +397,46 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#FAF8F3',
+    backgroundColor: toneBg('#FAF8F3'),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingBottom: 24,
     maxHeight: '92%',
   },
-  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+  handle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#EEEDFE'), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   headerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center' },
 
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#D6F5E3',
-    borderColor: '#27AE60',
+    backgroundColor: toneBg('#D6F5E3'),
+    borderColor: toneBg('#27AE60'),
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
     marginBottom: 12,
   },
-  toastText: { fontSize: 12, fontWeight: '700', color: '#1E7E43' },
+  toastText: { fontSize: 12, fontWeight: '700', color: tone('#1E7E43') },
 
   scroll: { maxHeight: 560 },
 
   /* Avatar */
   avatarSection: { alignItems: 'center', marginVertical: 12, gap: 8 },
-  avatarCircle: { width: 72, height: 72, borderRadius: 24, backgroundColor: '#F5A623', alignItems: 'center', justifyContent: 'center' },
-  avatarInitials: { fontSize: 26, fontWeight: '800', color: '#FFF' },
-  changeAvatarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEEDFE', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  changeAvatarText: { fontSize: 12, fontWeight: '700', color: '#5B6EF5' },
+  avatarCircle: { width: 72, height: 72, borderRadius: 24, backgroundColor: toneBg('#F5A623'), alignItems: 'center', justifyContent: 'center' },
+  avatarInitials: { fontSize: 26, fontWeight: '800', color: tone('#FFF') },
+  changeAvatarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: toneBg('#EEEDFE'), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  changeAvatarText: { fontSize: 12, fontWeight: '700', color: tone('#5B6EF5') },
 
   sectionLabel: { fontSize: 11, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 0.8, marginTop: 10, marginBottom: 8 },
 
@@ -443,26 +444,29 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 12, fontWeight: '700', color: Colors.textPrimary },
   input: { backgroundColor: Colors.pageBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: Colors.textPrimary },
-  inputDisabled: { backgroundColor: '#F1F5F9', color: Colors.textSecondary },
+  inputDisabled: { backgroundColor: toneBg('#F1F5F9'), color: Colors.textSecondary },
   fieldNote: { fontSize: 10, color: Colors.textHint, fontStyle: 'italic' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { backgroundColor: Colors.pageBg, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 10, paddingVertical: 6 },
-  chipActive: { backgroundColor: '#EEEDFE', borderColor: '#5B6EF5' },
+  chipActive: { backgroundColor: toneBg('#EEEDFE'), borderColor: toneBg('#5B6EF5') },
   chipText: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
-  chipTextActive: { color: '#5B6EF5', fontWeight: '700' },
+  chipTextActive: { color: tone('#5B6EF5'), fontWeight: '700' },
 
   passwordWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.pageBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
   passwordInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: Colors.textPrimary },
   eyeBtn: { paddingHorizontal: 12, paddingVertical: 10 },
 
-  reqList: { backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, gap: 6, borderWidth: 1, borderColor: '#E2E8F0' },
-  reqTitle: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
+  reqList: { backgroundColor: toneBg('#F8FAFC'), borderRadius: 10, padding: 10, gap: 6, borderWidth: 1, borderColor: toneBg('#E2E8F0') },
+  reqTitle: { fontSize: 10, fontWeight: '800', color: tone('#94A3B8'), letterSpacing: 0.5 },
   reqRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  reqText: { fontSize: 11, color: '#64748B' },
-  reqTextDone: { color: '#27AE60', fontWeight: '700' },
+  reqText: { fontSize: 11, color: tone('#64748B') },
+  reqTextDone: { color: tone('#27AE60'), fontWeight: '700' },
 
-  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#5B6EF5', borderRadius: 12, paddingVertical: 12, marginTop: 4 },
-  saveBtnText: { fontSize: 13, fontWeight: '800', color: '#FFF' },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: toneBg('#5B6EF5'), borderRadius: 12, paddingVertical: 12, marginTop: 4 },
+  saveBtnText: { fontSize: 13, fontWeight: '800', color: tone('#FFF') },
   btnDisabled: { opacity: 0.4 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

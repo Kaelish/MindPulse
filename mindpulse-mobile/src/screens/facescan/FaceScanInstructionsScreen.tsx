@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   onBack?: () => void;
@@ -119,7 +120,7 @@ const CameraPreview = () => (
     <View style={styles.faceOval} />
     {/* Camera icon */}
     <View style={styles.cameraIconWrap}>
-      <Ionicons name="camera-outline" size={28} color="#FFF" />
+      <Ionicons name="camera-outline" size={28} color={tone('#FFF')} />
     </View>
     <Text style={styles.cameraHint}>Position your face in frame</Text>
   </View>
@@ -152,7 +153,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
         {/* Start Button */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.startBtn} onPress={handleStartPress} activeOpacity={0.88}>
-            <Ionicons name="camera-outline" size={22} color="#FFF" />
+            <Ionicons name="camera-outline" size={22} color={tone('#FFF')} />
             <Text style={styles.startBtnText}>Start Face Scan</Text>
           </TouchableOpacity>
         </View>
@@ -168,8 +169,8 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
             {/* Header */}
             <View style={sheet.header}>
               <View style={sheet.headerLeft}>
-                <View style={[sheet.headerIconWrap, { backgroundColor: '#8353E2' }]}>
-                  <Ionicons name="happy" size={20} color="#FFF" />
+                <View style={[sheet.headerIconWrap, { backgroundColor: toneBg('#8353E2') }]}>
+                  <Ionicons name="happy" size={20} color={tone('#FFF')} />
                 </View>
                 <View>
                   <Text style={sheet.headerTitle}>Preparation Checklist</Text>
@@ -185,7 +186,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
                 </View>
 
                 <Pressable onPress={handleClose} style={sheet.closeBtn}>
-                  <Ionicons name="close" size={16} color="#64748B" />
+                  <Ionicons name="close" size={16} color={tone('#64748B')} />
                 </Pressable>
               </View>
             </View>
@@ -208,10 +209,10 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               {CHECKLIST.map(item => (
                 <View
                   key={item.title}
-                  style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}
+                  style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
                 >
                   <View style={sheet.cardIconBox}>
-                    <Ionicons name={item.iconName} size={20} color={item.iconColor} />
+                    <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
                   </View>
                   <View style={sheet.checkCardText}>
                     <Text style={sheet.checkCardTitle}>{item.title}</Text>
@@ -226,7 +227,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose}>
                 <Text style={sheet.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[sheet.primaryBtn, { backgroundColor: '#8353E2' }]} onPress={handleNext}>
+              <TouchableOpacity style={[sheet.primaryBtn, { backgroundColor: toneBg('#8353E2') }]} onPress={handleNext}>
                 <Text style={sheet.primaryBtnText}>I'm Ready — Next ›</Text>
               </TouchableOpacity>
             </View>
@@ -244,8 +245,8 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
             {/* Header */}
             <View style={sheet.header}>
               <View style={sheet.headerLeft}>
-                <View style={[sheet.headerIconWrap, { backgroundColor: '#0284C7' }]}>
-                  <Ionicons name="shield-checkmark" size={20} color="#FFF" />
+                <View style={[sheet.headerIconWrap, { backgroundColor: toneBg('#0284C7') }]}>
+                  <Ionicons name="shield-checkmark" size={20} color={tone('#FFF')} />
                 </View>
                 <View>
                   <Text style={sheet.headerTitle}>Privacy Notice</Text>
@@ -261,7 +262,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
                 </View>
 
                 <Pressable onPress={handleClose} style={sheet.closeBtn}>
-                  <Ionicons name="close" size={16} color="#64748B" />
+                  <Ionicons name="close" size={16} color={tone('#64748B')} />
                 </Pressable>
               </View>
             </View>
@@ -270,7 +271,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               {/* Callout Privacy Banner */}
               <View style={sheet.privacyCallout}>
                 <View style={sheet.privacyEyeCircle}>
-                  <Ionicons name="eye-off" size={22} color="#FFF" />
+                  <Ionicons name="eye-off" size={22} color={tone('#FFF')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={sheet.privacyCalloutTitle}>No Images or Videos Stored</Text>
@@ -287,10 +288,10 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
               {PRIVACY_ITEMS.map(item => (
                 <View
                   key={item.title}
-                  style={[sheet.checkCard, { backgroundColor: item.bg, borderColor: item.border }]}
+                  style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
                 >
                   <View style={sheet.cardIconBox}>
-                    <Ionicons name={item.iconName} size={20} color={item.iconColor} />
+                    <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
                   </View>
                   <View style={sheet.checkCardText}>
                     <Text style={sheet.checkCardTitle}>{item.title}</Text>
@@ -312,10 +313,10 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
                 <Text style={sheet.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[sheet.primaryBtn, { backgroundColor: '#00A8E8' }]}
+                style={[sheet.primaryBtn, { backgroundColor: toneBg('#00A8E8') }]}
                 onPress={handleContinue}
               >
-                <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Ionicons name="checkmark-circle-outline" size={18} color={tone('#FFF')} style={{ marginRight: 6 }} />
                 <Text style={sheet.primaryBtnText}>I Understand & Continue</Text>
               </TouchableOpacity>
             </View>
@@ -327,7 +328,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady })
 };
 
 /* ─── Page Styles ─── */
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   safeArea: { flex: 1 },
 
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
   cameraPreview: {
     marginHorizontal: Spacing.lg,
     height: 240,
-    backgroundColor: '#0D1B3E',
+    backgroundColor: toneBg('#0D1B3E'),
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -395,8 +396,11 @@ const styles = StyleSheet.create({
   startBtnText: { color: Colors.white, ...Typography.button, fontSize: 17 },
 });
 
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });
+
 /* ─── Bottom Sheet Styles ─── */
-const sheet = StyleSheet.create({
+const makeSheet = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   container: {
     backgroundColor: Colors.white,
@@ -406,39 +410,39 @@ const sheet = StyleSheet.create({
     paddingBottom: 28,
     maxHeight: '90%',
   },
-  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 12 },
+  handle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 12 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIconWrap: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#1E293B', fontSize: 16, fontWeight: '800' },
-  headerStep: { color: '#64748B', fontSize: 11, marginTop: 2 },
+  headerTitle: { color: tone('#1E293B'), fontSize: 16, fontWeight: '800' },
+  headerStep: { color: tone('#64748B'), fontSize: 11, marginTop: 2 },
   
   /* Stepper indicator pill */
-  stepperPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
-  stepActivePill: { width: 22, height: 6, borderRadius: 3, backgroundColor: '#8353E2' },
-  stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#CBD5E1' },
+  stepperPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: toneBg('#F1F5F9'), borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
+  stepActivePill: { width: 22, height: 6, borderRadius: 3, backgroundColor: toneBg('#8353E2') },
+  stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: toneBg('#CBD5E1') },
 
-  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#F1F5F9'), alignItems: 'center', justifyContent: 'center' },
 
   /* Info Banner */
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F3E8FF',
+    backgroundColor: toneBg('#F3E8FF'),
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E9D5FF',
+    borderColor: toneBg('#E9D5FF'),
   },
-  infoYogaBadge: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
-  infoText: { flex: 1, color: '#5B21B6', fontSize: 12.5, lineHeight: 18 },
+  infoYogaBadge: { width: 32, height: 32, borderRadius: 10, backgroundColor: toneBg('#FEF3C7'), alignItems: 'center', justifyContent: 'center' },
+  infoText: { flex: 1, color: tone('#5B21B6'), fontSize: 12.5, lineHeight: 18 },
   infoTextBold: { fontWeight: '800' },
 
-  sectionLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10 },
+  sectionLabel: { color: tone('#94A3B8'), fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10 },
 
   scroll: { maxHeight: 420, marginBottom: 14 },
   checkCard: {
@@ -454,24 +458,24 @@ const sheet = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: toneBg('#FFFFFF'),
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.06)',
   },
   checkCardText: { flex: 1 },
-  checkCardTitle: { color: '#1E293B', fontSize: 13, fontWeight: '800', marginBottom: 3 },
-  checkCardDesc: { color: '#64748B', fontSize: 11.5, lineHeight: 17 },
+  checkCardTitle: { color: tone('#1E293B'), fontSize: 13, fontWeight: '800', marginBottom: 3 },
+  checkCardDesc: { color: tone('#64748B'), fontSize: 11.5, lineHeight: 17 },
 
   /* Privacy Notice Callout */
   privacyCallout: {
     flexDirection: 'row',
     gap: 12,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: toneBg('#E0F2FE'),
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#38BDF8',
+    borderColor: toneBg('#38BDF8'),
     padding: 14,
     marginBottom: 12,
   },
@@ -479,19 +483,19 @@ const sheet = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#0284C7',
+    backgroundColor: toneBg('#0284C7'),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  privacyCalloutTitle: { fontSize: 14, fontWeight: '800', color: '#0369A1', marginBottom: 4 },
-  privacyCalloutText: { fontSize: 11.5, color: '#0284C7', lineHeight: 17 },
+  privacyCalloutTitle: { fontSize: 14, fontWeight: '800', color: tone('#0369A1'), marginBottom: 4 },
+  privacyCalloutText: { fontSize: 11.5, color: tone('#0284C7'), lineHeight: 17 },
 
-  consentText: { color: '#64748B', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: 8 },
-  consentBold: { color: '#0369A1', fontWeight: '800' },
+  consentText: { color: tone('#64748B'), fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: 8 },
+  consentBold: { color: tone('#0369A1'), fontWeight: '800' },
 
   actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },
-  cancelBtn: { height: 48, flex: 1, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  cancelBtnText: { color: '#64748B', fontWeight: '700', fontSize: 14 },
+  cancelBtn: { height: 48, flex: 1, borderRadius: 12, backgroundColor: toneBg('#F1F5F9'), alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { color: tone('#64748B'), fontWeight: '700', fontSize: 14 },
   primaryBtn: {
     height: 48,
     flex: 1.8,
@@ -505,5 +509,8 @@ const sheet = StyleSheet.create({
     }),
     elevation: 4,
   },
-  primaryBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13.5 },
+  primaryBtnText: { color: tone('#FFFFFF'), fontWeight: '800', fontSize: 13.5 },
 });
+
+let sheet = makeSheet();
+registerThemeStyles(() => { sheet = makeSheet(); });

@@ -45,6 +45,7 @@ import {
   pickImageAttachment,
   previewLabelFor,
 } from '../../services/chat';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 type ConsultTab = 'upcoming' | 'history' | 'messages';
 
@@ -71,14 +72,19 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  scheduled: { bg: '#FCECEC', text: '#C05656' },
+const makeStatusColors = (): Record<string, { bg: string; text: string }> => ({
+  scheduled: { bg: toneBg('#FCECEC'), text: tone('#C05656') },
   awaiting_payment: { bg: Colors.tagBlueBg, text: Colors.tagBlueText },
   confirmed: { bg: Colors.tagGreenBg, text: Colors.tagGreenText },
   completed: { bg: Colors.divider, text: Colors.textSecondary },
   declined: { bg: Colors.tagRedBg, text: Colors.tagRedText },
   cancelled: { bg: Colors.divider, text: Colors.textHint },
-};
+});
+
+let STATUS_COLORS = makeStatusColors();
+registerThemeStyles(() => {
+  STATUS_COLORS = makeStatusColors();
+});
 
 const WEEKDAY_LABELS: Record<string, string> = {
   mon: 'Mon',
@@ -1077,7 +1083,7 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   headerSafe: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
   headerRow: {
@@ -1150,8 +1156,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8ECFA', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 13, fontWeight: '800', color: '#5B6EF5' },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#E8ECFA'), alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 13, fontWeight: '800', color: tone('#5B6EF5') },
   cardName: { fontSize: 14.5, fontWeight: '800', color: Colors.textPrimary },
   cardMeta: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   statusPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.full },
@@ -1176,7 +1182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: Radius.full,
   },
-  approveBtn: { backgroundColor: '#27AE60' },
+  approveBtn: { backgroundColor: toneBg('#27AE60') },
   approveBtnText: { color: Colors.white, fontWeight: '800', fontSize: 12.5 },
   declineBtn: { backgroundColor: Colors.tagRedBg },
   declineBtnText: { color: Colors.tagRedText, fontWeight: '800', fontSize: 12.5 },
@@ -1243,7 +1249,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     maxWidth: '82%',
   },
-  bubbleMe: { backgroundColor: '#5B6EF5', borderColor: '#5B6EF5' },
+  bubbleMe: { backgroundColor: toneBg('#5B6EF5'), borderColor: toneBg('#5B6EF5') },
   bubbleText: { fontSize: 13.5, color: Colors.textPrimary, lineHeight: 19 },
   bubbleTime: { fontSize: 10, color: Colors.textHint, marginTop: 3 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
@@ -1264,13 +1270,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#5B6EF5',
+    backgroundColor: toneBg('#5B6EF5'),
     alignItems: 'center',
     justifyContent: 'center',
   },
   bubbleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   receiptText: { fontSize: 10, color: Colors.textHint, fontWeight: '600' },
-  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: '#E4E7EF' },
+  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: toneBg('#E4E7EF') },
   bubbleImagePending: { alignItems: 'center', justifyContent: 'center' },
   docRow: {
     flexDirection: 'row',
@@ -1292,10 +1298,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#EEF1FE',
+    backgroundColor: toneBg('#EEF1FE'),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#D6DEFB',
+    borderColor: toneBg('#D6DEFB'),
   },
   attachmentChipText: { flex: 1, fontSize: 12.5, color: Colors.btnBlue, fontWeight: '600' },
   attachBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
@@ -1306,7 +1312,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     paddingHorizontal: 5,
-    backgroundColor: '#E05C5C',
+    backgroundColor: toneBg('#E05C5C'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1350,7 +1356,7 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 13.5 },
   confirmBtn: { backgroundColor: Colors.btnBlue, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   confirmBtnText: { color: Colors.white, fontWeight: '800', fontSize: 13.5 },
-  confirmDangerBtn: { backgroundColor: '#E05C5C', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+  confirmDangerBtn: { backgroundColor: toneBg('#E05C5C'), paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   confirmDangerBtnText: { color: Colors.white, fontWeight: '800', fontSize: 13.5 },
   modalError: { color: Colors.tagRedText, fontSize: 12, lineHeight: 17 },
   modalNotice: { color: Colors.tagGreenText, fontSize: 12, lineHeight: 17, fontWeight: '600' },
@@ -1415,3 +1421,6 @@ const styles = StyleSheet.create({
   },
   addBtnText: { color: Colors.white, fontWeight: '800', fontSize: 13 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

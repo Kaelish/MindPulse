@@ -4,6 +4,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   expression: string;
@@ -57,11 +58,11 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
         <View style={styles.infoCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <Ionicons name="information-circle-outline" size={20} color="#2C3473" />
+              <Ionicons name="information-circle-outline" size={20} color={tone('#2C3473')} />
               <Text style={styles.cardTitle}>Demo Scan Output</Text>
             </View>
             <View style={styles.analyzedBadge}>
-              <Ionicons name="information-circle-outline" size={14} color="#E08A00" />
+              <Ionicons name="information-circle-outline" size={14} color={tone('#E08A00')} />
               <Text style={styles.analyzedText}>Demo</Text>
             </View>
           </View>
@@ -105,7 +106,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${confidencePercent}%` as `${number}%`, backgroundColor: '#E87522' },
+                    { width: `${confidencePercent}%` as `${number}%`, backgroundColor: toneBg('#E87522') },
                   ]}
                 />
               </View>
@@ -117,12 +118,12 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
         {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.rescanBtn} onPress={onRetry}>
-            <Ionicons name="refresh" size={18} color="#6B79F2" />
+            <Ionicons name="refresh" size={18} color={tone('#6B79F2')} />
             <Text style={styles.rescanText}>Rescan</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.nextBtn} onPress={onFinish}>
             <Text style={styles.nextText}>Analysis</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFF" />
+            <Ionicons name="arrow-forward" size={18} color={tone('#FFF')} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -130,8 +131,8 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FCFBF8' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
   scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
   
   pageHeader: { alignItems: 'center', marginTop: 16, marginBottom: 24 },
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
   heroCard: {
     width: '100%',
     aspectRatio: 1.5,
-    backgroundColor: '#11132B',
+    backgroundColor: toneBg('#11132B'),
     borderRadius: 24,
     overflow: 'hidden',
     position: 'relative',
@@ -150,18 +151,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   gridOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15 },
-  gridLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#6B79F2' },
-  gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#6B79F2' },
+  gridLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: toneBg('#6B79F2') },
+  gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: toneBg('#6B79F2') },
   emojiDisplay: { fontSize: 80, zIndex: 10 },
   resultPill: {
-    backgroundColor: '#FBE9D9',
+    backgroundColor: toneBg('#FBE9D9'),
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: Radius.full,
     marginTop: 16,
     zIndex: 10,
   },
-  resultPillText: { color: '#E87522', fontWeight: '800', fontSize: 14 },
+  resultPillText: { color: tone('#E87522'), fontWeight: '800', fontSize: 14 },
 
   infoCard: {
     backgroundColor: Colors.white,
@@ -169,60 +170,63 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: toneBg('#EFEFEF'),
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A1A', marginLeft: 8 },
-  analyzedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF3E0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full },
-  analyzedText: { color: '#E08A00', fontSize: 11, fontWeight: '800', marginLeft: 4 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: tone('#1A1A1A'), marginLeft: 8 },
+  analyzedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#FFF3E0'), paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full },
+  analyzedText: { color: tone('#E08A00'), fontSize: 11, fontWeight: '800', marginLeft: 4 },
 
   blueBox: {
-    backgroundColor: '#F3F8FF',
-    borderColor: '#4AA0E6',
+    backgroundColor: toneBg('#F3F8FF'),
+    borderColor: toneBg('#4AA0E6'),
     borderWidth: 1,
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginBottom: 24,
   },
-  blueBoxTitle: { color: '#1B5E20', fontSize: 12, fontWeight: '800', marginBottom: 4 },
-  blueBoxHighlight: { color: '#4AA0E6', fontSize: 14, fontWeight: '800', marginBottom: 16 },
+  blueBoxTitle: { color: tone('#1B5E20'), fontSize: 12, fontWeight: '800', marginBottom: 4 },
+  blueBoxHighlight: { color: tone('#4AA0E6'), fontSize: 14, fontWeight: '800', marginBottom: 16 },
   blueBoxRow: { flexDirection: 'row', marginBottom: 4 },
-  blueBoxLabel: { color: '#888', fontSize: 12, width: 110 },
-  blueBoxValue: { color: '#4AA0E6', fontSize: 12, fontWeight: '800' },
-  blueBoxValueOrange: { color: '#E87522', fontSize: 12, fontWeight: '800' },
+  blueBoxLabel: { color: tone('#888'), fontSize: 12, width: 110 },
+  blueBoxValue: { color: tone('#4AA0E6'), fontSize: 12, fontWeight: '800' },
+  blueBoxValueOrange: { color: tone('#E87522'), fontSize: 12, fontWeight: '800' },
 
-  sectionLabel: { color: '#888', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 12 },
+  sectionLabel: { color: tone('#888'), fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 12 },
   bulletItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  bulletDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E87522', marginRight: 8 },
-  bulletText: { color: '#666', fontSize: 13 },
+  bulletDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: toneBg('#E87522'), marginRight: 8 },
+  bulletText: { color: tone('#666'), fontSize: 13 },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   barEmoji: { fontSize: 16, marginRight: 8 },
-  barLabel: { fontSize: 12, fontWeight: '600', color: '#333', width: 60 },
-  barTrack: { flex: 1, height: 6, backgroundColor: '#EFEFEF', borderRadius: 3, marginHorizontal: 12 },
+  barLabel: { fontSize: 12, fontWeight: '600', color: tone('#333'), width: 60 },
+  barTrack: { flex: 1, height: 6, backgroundColor: toneBg('#EFEFEF'), borderRadius: 3, marginHorizontal: 12 },
   barFill: { height: '100%', borderRadius: 3 },
-  barPercent: { fontSize: 12, color: '#888', width: 30, textAlign: 'right' },
+  barPercent: { fontSize: 12, color: tone('#888'), width: 30, textAlign: 'right' },
 
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   rescanBtn: {
     flex: 1,
     flexDirection: 'row',
     height: 52,
-    backgroundColor: '#EEF0FD',
+    backgroundColor: toneBg('#EEF0FD'),
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rescanText: { color: '#6B79F2', fontWeight: '800', fontSize: 15, marginLeft: 8 },
+  rescanText: { color: tone('#6B79F2'), fontWeight: '800', fontSize: 15, marginLeft: 8 },
   nextBtn: {
     flex: 1,
     flexDirection: 'row',
     height: 52,
-    backgroundColor: '#9B90FF',
+    backgroundColor: toneBg('#9B90FF'),
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextText: { color: '#FFF', fontWeight: '800', fontSize: 15, marginRight: 8 },
+  nextText: { color: tone('#FFF'), fontWeight: '800', fontSize: 15, marginRight: 8 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

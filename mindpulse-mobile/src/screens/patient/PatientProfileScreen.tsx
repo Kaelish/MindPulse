@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
+  Switch,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,6 +27,7 @@ import { AccountInfoModal } from './settings/AccountInfoModal';
 import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
+import { registerThemeStyles, setThemeMode, tone, toneBg, useThemeMode } from '../../theme/theme';
 
 export type ProfileTabSegment = 'profile' | 'history' | 'settings';
 
@@ -57,9 +59,9 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
 
 // ── Stress level helpers ──────────────────────────────────────────────────────
 const levelProps = (status: string) => {
-  if (status === 'Low') return { bg: '#D6F5E3', color: '#27AE60', label: 'Low' };
-  if (status === 'Moderate') return { bg: '#FFF3CD', color: '#E08A00', label: 'Moderate' };
-  return { bg: '#FFD6D6', color: '#E05C5C', label: 'High' };
+  if (status === 'Low') return { bg: toneBg('#D6F5E3'), color: tone('#27AE60'), label: 'Low' };
+  if (status === 'Moderate') return { bg: toneBg('#FFF3CD'), color: tone('#E08A00'), label: 'Moderate' };
+  return { bg: toneBg('#FFD6D6'), color: tone('#E05C5C'), label: 'High' };
 };
 
 // ── Simple sparkline chart (using View bars) ──────────────────────────────────
@@ -94,14 +96,17 @@ const LineChart = ({
   );
 };
 
-const lcStyles = StyleSheet.create({
+const makeLcStyles = () => StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'stretch' },
   yAxis: { width: 28, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 },
-  axisLabel: { fontSize: 9, color: '#B0B8C8' },
+  axisLabel: { fontSize: 9, color: tone('#B0B8C8') },
   bars: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   barWrap: { flex: 1, flexDirection: 'column' },
   bar: { borderRadius: 3 },
 });
+
+let lcStyles = makeLcStyles();
+registerThemeStyles(() => { lcStyles = makeLcStyles(); });
 
 // ── Session row ───────────────────────────────────────────────────────────────
 const SessionRow = ({
@@ -127,7 +132,7 @@ const SessionRow = ({
   );
 };
 
-const sessionStyles = StyleSheet.create({
+const makeSessionStyles = () => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -147,23 +152,35 @@ const sessionStyles = StyleSheet.create({
   date: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
 });
 
+let sessionStyles = makeSessionStyles();
+registerThemeStyles(() => { sessionStyles = makeSessionStyles(); });
+
 // ── Settings row ──────────────────────────────────────────────────────────────
 const SettingRow = ({
-  icon, bg, label, sub, onPress, accent = false,
-}: { icon: any; bg: string; label: string; sub?: string; onPress?: () => void; accent?: boolean }) => (
+  icon, bg, label, sub, onPress, accent = false, right,
+}: {
+  icon: any;
+  bg: string;
+  label: string;
+  sub?: string;
+  onPress?: () => void;
+  accent?: boolean;
+  /** Rendered instead of the chevron — used by switch rows. */
+  right?: React.ReactNode;
+}) => (
   <TouchableOpacity style={settingStyles.row} onPress={onPress}>
     <View style={[settingStyles.iconBox, { backgroundColor: bg }]}>
       <Ionicons name={icon} size={16} color={accent ? '#E05C5C' : Colors.textPrimary} />
     </View>
     <View style={{ flex: 1 }}>
-      <Text style={[settingStyles.label, accent && { color: '#E05C5C' }]}>{label}</Text>
+      <Text style={[settingStyles.label, accent && { color: tone('#E05C5C') }]}>{label}</Text>
       {sub && <Text style={settingStyles.sub}>{sub}</Text>}
     </View>
-    {!accent && <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />}
+    {right ?? (!accent && <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />)}
   </TouchableOpacity>
 );
 
-const settingStyles = StyleSheet.create({
+const makeSettingStyles = () => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,6 +193,9 @@ const settingStyles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   sub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
 });
+
+let settingStyles = makeSettingStyles();
+registerThemeStyles(() => { settingStyles = makeSettingStyles(); });
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
@@ -194,6 +214,9 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPrivacyData, setShowPrivacyData] = useState(false);
   const [showAboutMindPulse, setShowAboutMindPulse] = useState(false);
+
+  // Dark mode (device-wide, restored on the next launch)
+  const themeMode = useThemeMode();
 
   const loadAll = async () => {
     setLoading(true);
@@ -278,17 +301,17 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             <Text style={styles.statVal}>{metrics.totalAssessments}</Text>
             <Text style={styles.statLbl}>Assessments</Text>
           </View>
-          <View style={[styles.statPill, { backgroundColor: '#FFF9E6' }]}>
-            <Text style={[styles.statVal, { color: '#B08B28' }]}>
+          <View style={[styles.statPill, { backgroundColor: toneBg('#FFF9E6') }]}>
+            <Text style={[styles.statVal, { color: tone('#B08B28') }]}>
               {metrics.avgStressScore !== null ? `${metrics.avgStressScore}/100` : '—'}
             </Text>
-            <Text style={[styles.statLbl, { color: '#B08B28' }]}>Average Stress</Text>
+            <Text style={[styles.statLbl, { color: tone('#B08B28') }]}>Average Stress</Text>
           </View>
-          <View style={[styles.statPill, { backgroundColor: '#E6F7F5' }]}>
-            <Text style={[styles.statVal, { color: '#2C7A7B' }]}>
+          <View style={[styles.statPill, { backgroundColor: toneBg('#E6F7F5') }]}>
+            <Text style={[styles.statVal, { color: tone('#2C7A7B') }]}>
               {metrics.avgHeartRate !== null ? `${metrics.avgHeartRate} bpm` : '—'}
             </Text>
-            <Text style={[styles.statLbl, { color: '#2C7A7B' }]}>Average HR</Text>
+            <Text style={[styles.statLbl, { color: tone('#2C7A7B') }]}>Average HR</Text>
           </View>
         </View>
 
@@ -349,23 +372,23 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Assessment Overview</Text>
               <View style={styles.statsGrid}>
-                <View style={[styles.gridCell, { backgroundColor: '#EEEDFE' }]}>
-                  <Text style={[styles.gridVal, { color: '#5B6EF5' }]}>{metrics.totalAssessments}</Text>
-                  <Text style={[styles.gridLbl, { color: '#5B6EF5' }]}>Total Sessions</Text>
+                <View style={[styles.gridCell, { backgroundColor: toneBg('#EEEDFE') }]}>
+                  <Text style={[styles.gridVal, { color: tone('#5B6EF5') }]}>{metrics.totalAssessments}</Text>
+                  <Text style={[styles.gridLbl, { color: tone('#5B6EF5') }]}>Total Sessions</Text>
                 </View>
-                <View style={[styles.gridCell, { backgroundColor: '#FFF3CD' }]}>
-                  <Text style={[styles.gridVal, { color: '#E08A00' }]}>{metrics.avgStressScore ?? '—'}</Text>
-                  <Text style={[styles.gridLbl, { color: '#E08A00' }]}>Avg Stress</Text>
+                <View style={[styles.gridCell, { backgroundColor: toneBg('#FFF3CD') }]}>
+                  <Text style={[styles.gridVal, { color: tone('#E08A00') }]}>{metrics.avgStressScore ?? '—'}</Text>
+                  <Text style={[styles.gridLbl, { color: tone('#E08A00') }]}>Avg Stress</Text>
                 </View>
-                <View style={[styles.gridCell, { backgroundColor: '#FFD6D6' }]}>
-                  <Text style={[styles.gridVal, { color: '#E05C5C' }]}>
+                <View style={[styles.gridCell, { backgroundColor: toneBg('#FFD6D6') }]}>
+                  <Text style={[styles.gridVal, { color: tone('#E05C5C') }]}>
                     {metrics.avgHeartRate !== null ? `${metrics.avgHeartRate} bpm` : '—'}
                   </Text>
-                  <Text style={[styles.gridLbl, { color: '#E05C5C' }]}>Avg Heart Rate</Text>
+                  <Text style={[styles.gridLbl, { color: tone('#E05C5C') }]}>Avg Heart Rate</Text>
                 </View>
-                <View style={[styles.gridCell, { backgroundColor: '#D6F5E3' }]}>
-                  <Text style={[styles.gridVal, { color: '#27AE60' }]}>{metrics.latestTrend ?? '—'}</Text>
-                  <Text style={[styles.gridLbl, { color: '#27AE60' }]}>Trend</Text>
+                <View style={[styles.gridCell, { backgroundColor: toneBg('#D6F5E3') }]}>
+                  <Text style={[styles.gridVal, { color: tone('#27AE60') }]}>{metrics.latestTrend ?? '—'}</Text>
+                  <Text style={[styles.gridLbl, { color: tone('#27AE60') }]}>Trend</Text>
                 </View>
               </View>
             </View>
@@ -373,14 +396,14 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             {/* MindPlant — tap to open full progress screen */}
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.card, { backgroundColor: '#F0FBF4' }]}
+              style={[styles.card, { backgroundColor: toneBg('#F0FBF4') }]}
               onPress={onOpenPlantProgress}
             >
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.cardTitle}>🌱 My MindPlant</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.stageLabel}>{currentStage.name}</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#27AE60" />
+                  <Ionicons name="chevron-forward" size={14} color={tone('#27AE60')} />
                 </View>
               </View>
               {/* Plant illustration */}
@@ -423,7 +446,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 <Text style={styles.emptyText}>No sessions yet — complete an assessment to see your trend.</Text>
               ) : (
                 <>
-                  <LineChart data={scoreTrend} color="#5B6EF5" height={90} />
+                  <LineChart data={scoreTrend} color={tone('#5B6EF5')} height={90} />
                   <View style={styles.xLabels}>
                     {recentSessions.slice().reverse().map((s, i) => (
                       <Text key={i} style={styles.xLabel}>
@@ -442,7 +465,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 <Text style={styles.emptyText}>No heart rate readings recorded yet.</Text>
               ) : (
                 <>
-                  <LineChart data={hrTrend} color="#E05C5C" height={90} />
+                  <LineChart data={hrTrend} color={tone('#E05C5C')} height={90} />
                   <View style={styles.xLabels}>
                     {hrSessions.slice().reverse().map((s, i) => (
                       <Text key={i} style={styles.xLabel}>
@@ -494,6 +517,21 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
             <Text style={styles.settingSectionLabel}>APP</Text>
             <View style={styles.card}>
               <SettingRow
+                icon="moon-outline"
+                bg="#E9E7FD"
+                label="Dark mode"
+                sub="Darker surfaces, easier on the eyes"
+                right={
+                  <Switch
+                    value={themeMode === 'dark'}
+                    onValueChange={(value) => setThemeMode(value ? 'dark' : 'light')}
+                    trackColor={{ false: '#CBD5E1', true: '#8353E2' }}
+                    thumbColor="#FFF"
+                    accessibilityLabel="Dark mode"
+                  />
+                }
+              />
+              <SettingRow
                 icon="notifications-outline"
                 bg="#EEEDFE"
                 label="Notifications"
@@ -518,7 +556,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
 
             {/* Sign Out */}
             <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-              <Ionicons name="log-out-outline" size={16} color="#E05C5C" />
+              <Ionicons name="log-out-outline" size={16} color={tone('#E05C5C')} />
               <Text style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
 
@@ -558,7 +596,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
   loaderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
@@ -572,24 +610,24 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#F5A623',
+    backgroundColor: toneBg('#F5A623'),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, fontWeight: '800', color: '#FFF' },
+  avatarText: { fontSize: 20, fontWeight: '800', color: tone('#FFF') },
   userName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   userEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
 
   statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 14 },
   statPill: {
     flex: 1,
-    backgroundColor: '#EEEDFE',
+    backgroundColor: toneBg('#EEEDFE'),
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
-  statVal: { fontSize: 14, fontWeight: '800', color: '#5B6EF5' },
-  statLbl: { fontSize: 9, fontWeight: '600', color: '#5B6EF5', marginTop: 1 },
+  statVal: { fontSize: 14, fontWeight: '800', color: tone('#5B6EF5') },
+  statLbl: { fontSize: 9, fontWeight: '600', color: tone('#5B6EF5'), marginTop: 1 },
 
   /* Segment tabs */
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 0 },
@@ -634,12 +672,12 @@ const styles = StyleSheet.create({
   plantIllustration: { alignItems: 'center', paddingVertical: 12 },
   plantEmoji: { fontSize: 64 },
   plantDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  plantTip: { fontSize: 12, color: '#27AE60', fontStyle: 'italic' },
-  stageLabel: { fontSize: 12, fontWeight: '700', color: '#27AE60', backgroundColor: '#D6F5E3', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  plantTip: { fontSize: 12, color: tone('#27AE60'), fontStyle: 'italic' },
+  stageLabel: { fontSize: 12, fontWeight: '700', color: tone('#27AE60'), backgroundColor: toneBg('#D6F5E3'), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   stageDots: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   stageDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.border },
-  stageDotActive: { backgroundColor: '#27AE60', width: 12, height: 12, borderRadius: 6 },
-  stageDotDone: { backgroundColor: '#8CE072' },
+  stageDotActive: { backgroundColor: toneBg('#27AE60'), width: 12, height: 12, borderRadius: 6 },
+  stageDotDone: { backgroundColor: toneBg('#8CE072') },
   stageNum: { fontSize: 11, color: Colors.textSecondary, marginLeft: 6 },
 
   /* History */
@@ -660,13 +698,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FFF0F0',
+    backgroundColor: toneBg('#FFF0F0'),
     borderRadius: 14,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#FFD6D6',
+    borderColor: toneBg('#FFD6D6'),
   },
-  signOutText: { fontSize: 14, fontWeight: '800', color: '#E05C5C' },
+  signOutText: { fontSize: 14, fontWeight: '800', color: tone('#E05C5C') },
   disclaimer: {
     fontSize: 11,
     color: Colors.textHint,
@@ -675,3 +713,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
+import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AboutMindPulseModalProps {
   visible: boolean;
@@ -60,7 +61,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="information-circle-outline" size={20} color="#5B6EF5" />
+                <Ionicons name="information-circle-outline" size={20} color={tone('#5B6EF5')} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>About MindPulse</Text>
@@ -68,14 +69,14 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748B" />
+              <Ionicons name="close" size={18} color={tone('#64748B')} />
             </Pressable>
           </View>
 
           {/* Toast Alert */}
           {toastMsg && (
             <View style={styles.toast}>
-              <Ionicons name="checkmark-circle" size={18} color="#27AE60" />
+              <Ionicons name="checkmark-circle" size={18} color={tone('#27AE60')} />
               <Text style={styles.toastText}>{toastMsg}</Text>
             </View>
           )}
@@ -84,7 +85,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             {/* ── BRAND HERO ── */}
             <View style={styles.heroSection}>
               <View style={styles.logoBadge}>
-                <Ionicons name="pulse" size={36} color="#8353E2" />
+                <Ionicons name="pulse" size={36} color={tone('#8353E2')} />
               </View>
               <Text style={styles.brandTitle}>MindPulse</Text>
               <Text style={styles.brandTagline}>AI-Based Emotional Stress Detection System Using Facial Analysis</Text>
@@ -96,7 +97,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             {/* ── MEDICAL & ACADEMIC DISCLAIMER (CRITICAL) ── */}
             <View style={styles.disclaimerCard}>
               <View style={styles.disclaimerHeader}>
-                <Ionicons name="warning-outline" size={20} color="#E08A00" />
+                <Ionicons name="warning-outline" size={20} color={tone('#E08A00')} />
                 <Text style={styles.disclaimerTitle}>Medical & Research Disclaimer</Text>
               </View>
               <Text style={styles.disclaimerText}>
@@ -113,8 +114,8 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </Text>
 
               <View style={styles.modalityItem}>
-                <View style={[styles.modIconBox, { backgroundColor: '#EEEDFE' }]}>
-                  <Ionicons name="happy-outline" size={16} color="#5B6EF5" />
+                <View style={[styles.modIconBox, { backgroundColor: toneBg('#EEEDFE') }]}>
+                  <Ionicons name="happy-outline" size={16} color={tone('#5B6EF5')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modTitle}>1. Facial Expression Analysis</Text>
@@ -123,8 +124,8 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
 
               <View style={styles.modalityItem}>
-                <View style={[styles.modIconBox, { backgroundColor: '#FFD6D6' }]}>
-                  <Ionicons name="heart-outline" size={16} color="#E05C5C" />
+                <View style={[styles.modIconBox, { backgroundColor: toneBg('#FFD6D6') }]}>
+                  <Ionicons name="heart-outline" size={16} color={tone('#E05C5C')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modTitle}>2. Photoplethysmography (rPPG)</Text>
@@ -133,8 +134,8 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
 
               <View style={styles.modalityItem}>
-                <View style={[styles.modIconBox, { backgroundColor: '#E6F7F5' }]}>
-                  <Ionicons name="flash-outline" size={16} color="#2C7A7B" />
+                <View style={[styles.modIconBox, { backgroundColor: toneBg('#E6F7F5') }]}>
+                  <Ionicons name="flash-outline" size={16} color={tone('#2C7A7B')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modTitle}>3. Cognitive Reaction-Time Test</Text>
@@ -143,8 +144,8 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
 
               <View style={styles.modalityItem}>
-                <View style={[styles.modIconBox, { backgroundColor: '#FFF3CD' }]}>
-                  <Ionicons name="document-text-outline" size={16} color="#E08A00" />
+                <View style={[styles.modIconBox, { backgroundColor: toneBg('#FFF3CD') }]}>
+                  <Ionicons name="document-text-outline" size={16} color={tone('#E08A00')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modTitle}>4. Psychometric Survey</Text>
@@ -157,15 +158,15 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <Text style={styles.sectionLabel}>KEY FEATURES</Text>
             <View style={styles.card}>
               <View style={styles.featRow}>
-                <Ionicons name="leaf-outline" size={16} color="#27AE60" />
+                <Ionicons name="leaf-outline" size={16} color={tone('#27AE60')} />
                 <Text style={styles.featText}>Interactive MindPlant wellness habit visualizer</Text>
               </View>
               <View style={styles.featRow}>
-                <Ionicons name="videocam-outline" size={16} color="#5B6EF5" />
+                <Ionicons name="videocam-outline" size={16} color={tone('#5B6EF5')} />
                 <Text style={styles.featText}>Student telehealth consultation booking & video call portal</Text>
               </View>
               <View style={styles.featRow}>
-                <Ionicons name="trending-up-outline" size={16} color="#8353E2" />
+                <Ionicons name="trending-up-outline" size={16} color={tone('#8353E2')} />
                 <Text style={styles.featText}>Longitudinal stress score trend charts & historical tracking</Text>
               </View>
             </View>
@@ -175,7 +176,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <View style={styles.card}>
               <View style={styles.teamHeader}>
                 <View style={styles.teamIconBox}>
-                  <Ionicons name="code-slash-outline" size={18} color="#8353E2" />
+                  <Ionicons name="code-slash-outline" size={18} color={tone('#8353E2')} />
                 </View>
                 <View>
                   <Text style={styles.teamName}>KOSE Labs</Text>
@@ -191,21 +192,21 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <Text style={styles.sectionLabel}>SUPPORT & LEGAL</Text>
             <View style={styles.card}>
               <TouchableOpacity style={styles.linkRow} onPress={() => setLegalModalTitle('Privacy Policy')}>
-                <Ionicons name="document-text-outline" size={16} color="#5B6EF5" />
+                <Ionicons name="document-text-outline" size={16} color={tone('#5B6EF5')} />
                 <Text style={styles.linkText}>Privacy Policy</Text>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.linkRow} onPress={() => setLegalModalTitle('Terms of Use')}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#5B6EF5" />
+                <Ionicons name="shield-checkmark-outline" size={16} color={tone('#5B6EF5')} />
                 <Text style={styles.linkText}>Terms of Use</Text>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.linkRow} onPress={() => setShowReportModal(true)}>
-                <Ionicons name="bug-outline" size={16} color="#E05C5C" />
-                <Text style={[styles.linkText, { color: '#E05C5C' }]}>Report a Problem / Send Feedback</Text>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="bug-outline" size={16} color={tone('#E05C5C')} />
+                <Text style={[styles.linkText, { color: tone('#E05C5C') }]}>Report a Problem / Send Feedback</Text>
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
             </View>
 
@@ -222,7 +223,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Report a Problem</Text>
               <Pressable onPress={() => setShowReportModal(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={18} color="#64748B" />
+                <Ionicons name="close" size={18} color={tone('#64748B')} />
               </Pressable>
             </View>
 
@@ -252,8 +253,8 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               />
 
               <TouchableOpacity style={styles.submitReportBtn} onPress={handleSendReport} disabled={submittingReport}>
-                <Ionicons name="send-outline" size={16} color="#FFF" />
-                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>Submit Report</Text>
+                <Ionicons name="send-outline" size={16} color={tone('#FFF')} />
+                <Text style={{ color: tone('#FFF'), fontWeight: '800', fontSize: 13 }}>Submit Report</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -268,7 +269,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <View style={styles.header}>
               <Text style={styles.headerTitle}>{legalModalTitle}</Text>
               <Pressable onPress={() => setLegalModalTitle(null)} style={styles.closeBtn}>
-                <Ionicons name="close" size={18} color="#64748B" />
+                <Ionicons name="close" size={18} color={tone('#64748B')} />
               </Pressable>
             </View>
 
@@ -283,7 +284,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             </ScrollView>
 
             <TouchableOpacity style={[styles.submitReportBtn, { marginTop: 12 }]} onPress={() => setLegalModalTitle(null)}>
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>Close Document</Text>
+              <Text style={{ color: tone('#FFF'), fontWeight: '800', fontSize: 13 }}>Close Document</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -292,53 +293,53 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#FAF8F3',
+    backgroundColor: toneBg('#FAF8F3'),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingBottom: 24,
     maxHeight: '92%',
   },
-  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+  handle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#EEEDFE'), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   headerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center' },
 
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#D6F5E3',
-    borderColor: '#27AE60',
+    backgroundColor: toneBg('#D6F5E3'),
+    borderColor: toneBg('#27AE60'),
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
     marginBottom: 12,
   },
-  toastText: { fontSize: 12, fontWeight: '700', color: '#1E7E43' },
+  toastText: { fontSize: 12, fontWeight: '700', color: tone('#1E7E43') },
 
   scroll: { maxHeight: 540 },
 
   /* Hero */
   heroSection: { alignItems: 'center', marginVertical: 14, gap: 4 },
-  logoBadge: { width: 64, height: 64, borderRadius: 22, backgroundColor: '#F0E8FB', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  logoBadge: { width: 64, height: 64, borderRadius: 22, backgroundColor: toneBg('#F0E8FB'), alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   brandTitle: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary },
   brandTagline: { fontSize: 11.5, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
-  versionBadge: { backgroundColor: '#EEEDFE', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
-  versionText: { fontSize: 11, fontWeight: '700', color: '#5B6EF5' },
+  versionBadge: { backgroundColor: toneBg('#EEEDFE'), borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
+  versionText: { fontSize: 11, fontWeight: '700', color: tone('#5B6EF5') },
 
   /* Disclaimer */
-  disclaimerCard: { backgroundColor: '#FFF3CD', borderRadius: 16, borderWidth: 1, borderColor: '#FFE8B3', padding: 14, gap: 8, marginVertical: 6 },
+  disclaimerCard: { backgroundColor: toneBg('#FFF3CD'), borderRadius: 16, borderWidth: 1, borderColor: toneBg('#FFE8B3'), padding: 14, gap: 8, marginVertical: 6 },
   disclaimerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  disclaimerTitle: { fontSize: 13, fontWeight: '800', color: '#B08B28' },
-  disclaimerText: { fontSize: 11, color: '#8A6D1B', lineHeight: 16 },
+  disclaimerTitle: { fontSize: 13, fontWeight: '800', color: tone('#B08B28') },
+  disclaimerText: { fontSize: 11, color: tone('#8A6D1B'), lineHeight: 16 },
 
   sectionLabel: { fontSize: 11, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 0.8, marginTop: 12, marginBottom: 8 },
 
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
   featText: { fontSize: 12, color: Colors.textPrimary, flex: 1 },
 
   teamHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  teamIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F0E8FB', alignItems: 'center', justifyContent: 'center' },
+  teamIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: toneBg('#F0E8FB'), alignItems: 'center', justifyContent: 'center' },
   teamName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   teamSub: { fontSize: 11, color: Colors.textSecondary },
   teamDesc: { fontSize: 11, color: Colors.textHint, lineHeight: 16 },
@@ -363,11 +364,14 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary, flex: 1 },
 
   catChip: { backgroundColor: Colors.pageBg, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 10, paddingVertical: 6 },
-  catChipActive: { backgroundColor: '#5B6EF5', borderColor: '#5B6EF5' },
+  catChipActive: { backgroundColor: toneBg('#5B6EF5'), borderColor: toneBg('#5B6EF5') },
   catChipText: { fontSize: 11, color: Colors.textSecondary },
-  catChipTextActive: { color: '#FFF', fontWeight: '700' },
+  catChipTextActive: { color: tone('#FFF'), fontWeight: '700' },
 
   textArea: { backgroundColor: Colors.pageBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, padding: 12, fontSize: 13, color: Colors.textPrimary, textAlignVertical: 'top', height: 100 },
 
-  submitReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#5B6EF5', borderRadius: 12, paddingVertical: 12, marginTop: 8 },
+  submitReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: toneBg('#5B6EF5'), borderRadius: 12, paddingVertical: 12, marginTop: 8 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

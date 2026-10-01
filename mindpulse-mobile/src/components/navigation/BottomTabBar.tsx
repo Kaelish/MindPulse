@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native
 import { Colors } from '../../theme/colors';
 
 import { Ionicons } from '@expo/vector-icons';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type BottomNavTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -60,7 +61,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onNavigat
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   bottomNav: {
     flexDirection: 'row',
     height: 70,
@@ -98,8 +99,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   tabLabelActive: {
-    color: '#FFFFFF',
+    color: tone('#FFFFFF'),
     fontWeight: '800',
     fontSize: 10.5,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

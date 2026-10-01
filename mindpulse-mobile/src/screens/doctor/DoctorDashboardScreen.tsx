@@ -21,6 +21,7 @@ import {
   fetchDoctorDashboard,
 } from '../../services/doctorDashboard';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface DoctorDashboardScreenProps {
   onNavigate?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
@@ -37,28 +38,43 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  scheduled: { bg: '#FCECEC', text: '#C05656' },
+const makeStatusColors = (): Record<string, { bg: string; text: string }> => ({
+  scheduled: { bg: toneBg('#FCECEC'), text: tone('#C05656') },
   awaiting_payment: { bg: Colors.tagBlueBg, text: Colors.tagBlueText },
   confirmed: { bg: Colors.tagGreenBg, text: Colors.tagGreenText },
   completed: { bg: Colors.divider, text: Colors.textSecondary },
   declined: { bg: Colors.tagRedBg, text: Colors.tagRedText },
   cancelled: { bg: Colors.divider, text: Colors.textHint },
-};
+});
 
-const TONE_COLORS: Record<MetricTone, string> = {
+let STATUS_COLORS = makeStatusColors();
+
+const makeToneColors = (): Record<MetricTone, string> => ({
   positive: Colors.tagGreenText,
   warning: Colors.tagYellowText,
   danger: Colors.tagRedText,
   neutral: Colors.textSecondary,
-};
+});
 
-const METRIC_CARDS: { key: keyof DoctorDashboardData['metrics']; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { key: 'activeCases', label: 'Active Cases', icon: 'people-outline', color: '#5B6EF5' },
-  { key: 'pendingReviews', label: 'Pending Reviews', icon: 'clipboard-outline', color: '#DB8D62' },
-  { key: 'highRiskStudents', label: 'High Risk Students', icon: 'warning-outline', color: '#E05C5C' },
-  { key: 'completedThisWeek', label: 'Completed this week', icon: 'checkmark-done-outline', color: '#27AE60' },
+let TONE_COLORS = makeToneColors();
+
+registerThemeStyles(() => {
+  STATUS_COLORS = makeStatusColors();
+  TONE_COLORS = makeToneColors();
+});
+
+const makeMetricCards = (): { key: keyof DoctorDashboardData['metrics']; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] => [
+  { key: 'activeCases', label: 'Active Cases', icon: 'people-outline', color: tone('#5B6EF5') },
+  { key: 'pendingReviews', label: 'Pending Reviews', icon: 'clipboard-outline', color: tone('#DB8D62') },
+  { key: 'highRiskStudents', label: 'High Risk Students', icon: 'warning-outline', color: tone('#E05C5C') },
+  { key: 'completedThisWeek', label: 'Completed this week', icon: 'checkmark-done-outline', color: tone('#27AE60') },
 ];
+
+let METRIC_CARDS = makeMetricCards();
+
+registerThemeStyles(() => {
+  METRIC_CARDS = makeMetricCards();
+});
 
 const statusBadge = (status: string) =>
   status === 'Critical'
@@ -214,7 +230,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                   </View>
                 </View>
                 <View style={styles.webOnlyPill}>
-                  <Ionicons name="globe-outline" size={13} color="#5B6EF5" />
+                  <Ionicons name="globe-outline" size={13} color={tone('#5B6EF5')} />
                   <Text style={styles.webOnlyPillText}>Join on the web</Text>
                 </View>
               </View>
@@ -325,7 +341,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: Colors.pageBg },
   loadingText: { color: Colors.textSecondary, ...Typography.body2 },
@@ -393,7 +409,7 @@ const styles = StyleSheet.create({
   statNote: { fontSize: 11, fontWeight: '700', marginTop: 2 },
 
   nextCallCard: {
-    backgroundColor: '#5B6EF5',
+    backgroundColor: toneBg('#5B6EF5'),
     borderRadius: Radius.lg,
     padding: Spacing.md,
     gap: 8,
@@ -414,7 +430,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: Radius.full,
   },
-  webOnlyPillText: { color: '#5B6EF5', fontWeight: '800', fontSize: 12 },
+  webOnlyPillText: { color: tone('#5B6EF5'), fontWeight: '800', fontSize: 12 },
   webOnlyHint: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, lineHeight: 16 },
 
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -455,8 +471,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
-  patientAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E8ECFA', alignItems: 'center', justifyContent: 'center' },
-  patientAvatarText: { fontSize: 13, fontWeight: '800', color: '#5B6EF5' },
+  patientAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: toneBg('#E8ECFA'), alignItems: 'center', justifyContent: 'center' },
+  patientAvatarText: { fontSize: 13, fontWeight: '800', color: tone('#5B6EF5') },
   patientBody: { flex: 1, gap: 3 },
   patientName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   patientScore: { fontSize: 11.5, color: Colors.textSecondary },
@@ -464,3 +480,6 @@ const styles = StyleSheet.create({
   riskTrack: { height: 5, borderRadius: 3, backgroundColor: Colors.divider, overflow: 'hidden', marginTop: 3 },
   riskFill: { height: 5, borderRadius: 3 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

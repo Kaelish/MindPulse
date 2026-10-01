@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
+import { registerThemeStyles } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
@@ -80,7 +81,7 @@ export const HeartRateInstructionsScreen: React.FC<Props> = ({ onBack, onReady }
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const screen = StyleSheet.create({
+const makeScreen = () => StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -144,7 +145,10 @@ const screen = StyleSheet.create({
   },
 });
 
-const row = StyleSheet.create({
+let screen = makeScreen();
+registerThemeStyles(() => { screen = makeScreen(); });
+
+const makeRow = () => StyleSheet.create({
   wrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -163,3 +167,6 @@ const row = StyleSheet.create({
     lineHeight: 22,
   },
 });
+
+let row = makeRow();
+registerThemeStyles(() => { row = makeRow(); });

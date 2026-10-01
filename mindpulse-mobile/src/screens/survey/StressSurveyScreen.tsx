@@ -4,6 +4,7 @@ import { Colors } from '../../theme/colors';
 import { Typography, Radius, Spacing } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { loadAssessmentState, saveAssessmentState } from '../assessment/StressAssessmentHubScreen';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 type SurveyOption = { value: number; label: string };
 type SurveyQuestion = {
@@ -155,7 +156,7 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
               { label: 'Device Use', icon: 'cellphone' }, { label: 'Energy', icon: 'lightning-bolt' }
             ].map((item, idx) => (
               <View key={idx} style={styles.interstitialGridItem}>
-                <MaterialCommunityIcons name={item.icon as any} size={24} color="#558E4C" style={{ marginRight: 8 }} />
+                <MaterialCommunityIcons name={item.icon as any} size={24} color={tone('#558E4C')} style={{ marginRight: 8 }} />
                 <Text style={styles.interstitialGridText}>{item.label}</Text>
               </View>
             ))}
@@ -263,8 +264,8 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FCFBF8' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
   
   header: {
     flexDirection: 'row',
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
 
   progressTrack: {
     height: 6,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: toneBg('#E0E0E0'),
     marginHorizontal: Spacing.lg,
     borderRadius: 3,
     marginBottom: Spacing.xl,
@@ -327,13 +328,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: toneBg('#E0E0E0'),
   },
   optionIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: toneBg('#F0F0F0'),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   nextBtn: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: toneBg('#F0F0F0'),
     flexDirection: 'row',
     height: 56,
     borderRadius: Radius.full,
@@ -372,17 +373,20 @@ const styles = StyleSheet.create({
   },
 
   // Interstitial styles
-  interstitialRoot: { flex: 1, backgroundColor: '#FCFBF8', padding: Spacing.lg, justifyContent: 'center' },
+  interstitialRoot: { flex: 1, backgroundColor: toneBg('#FCFBF8'), padding: Spacing.lg, justifyContent: 'center' },
   interstitialContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  interstitialIconBox: { width: 100, height: 100, borderRadius: 32, backgroundColor: '#6CAE5B', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  interstitialIconBox: { width: 100, height: 100, borderRadius: 32, backgroundColor: toneBg('#6CAE5B'), alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   interstitialTitle: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' },
   interstitialSub: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16, marginBottom: 32 },
   interstitialGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
-  interstitialGridItem: { flexDirection: 'row', alignItems: 'center', width: '45%', padding: 12, borderWidth: 1, borderColor: '#C8E6C9', borderRadius: Radius.full, justifyContent: 'center' },
-  interstitialGridText: { color: '#2E502B', fontSize: 13, fontWeight: '700' },
+  interstitialGridItem: { flexDirection: 'row', alignItems: 'center', width: '45%', padding: 12, borderWidth: 1, borderColor: toneBg('#C8E6C9'), borderRadius: Radius.full, justifyContent: 'center' },
+  interstitialGridText: { color: tone('#2E502B'), fontSize: 13, fontWeight: '700' },
   interstitialFooter: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, paddingBottom: 24 },
-  interstitialBackBtn: { flex: 1, height: 56, backgroundColor: '#E8F5E9', borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
-  interstitialBackText: { color: '#2E502B', fontSize: 16, fontWeight: '700' },
-  interstitialStartBtn: { flex: 1, height: 56, backgroundColor: '#6CAE5B', borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  interstitialBackBtn: { flex: 1, height: 56, backgroundColor: toneBg('#E8F5E9'), borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  interstitialBackText: { color: tone('#2E502B'), fontSize: 16, fontWeight: '700' },
+  interstitialStartBtn: { flex: 1, height: 56, backgroundColor: toneBg('#6CAE5B'), borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   interstitialStartText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

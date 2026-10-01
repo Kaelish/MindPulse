@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { FaceScanInstructionsScreen } from './FaceScanInstructionsScreen';
 import { FaceScanCameraScreen } from './FaceScanCameraScreen';
 import { FaceScanResultScreen } from './FaceScanResultScreen';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type FaceScanStep = 'instructions' | 'camera' | 'result';
 
@@ -55,9 +56,12 @@ export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan }) => 
   return <View style={styles.container}>{renderStep()}</View>;
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: toneBg('#FAF8F4'),
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

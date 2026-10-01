@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
 import { fetchDashboardData, StressSessionItem } from '../../../services/dashboard';
+import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface PrivacyDataModalProps {
   visible: boolean;
@@ -134,7 +135,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="shield-outline" size={20} color="#5B6EF5" />
+                <Ionicons name="shield-outline" size={20} color={tone('#5B6EF5')} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>Privacy & Data</Text>
@@ -142,14 +143,14 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748B" />
+              <Ionicons name="close" size={18} color={tone('#64748B')} />
             </Pressable>
           </View>
 
           {/* Toast Alert */}
           {toastMsg && (
             <View style={styles.toast}>
-              <Ionicons name="checkmark-circle" size={18} color="#27AE60" />
+              <Ionicons name="checkmark-circle" size={18} color={tone('#27AE60')} />
               <Text style={styles.toastText}>{toastMsg}</Text>
             </View>
           )}
@@ -160,7 +161,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             <View style={styles.card}>
               <View style={styles.permRow}>
                 <View style={styles.permIconBox}>
-                  <Ionicons name="camera-outline" size={18} color="#5B6EF5" />
+                  <Ionicons name="camera-outline" size={18} color={tone('#5B6EF5')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.permTitle}>Camera Access</Text>
@@ -173,7 +174,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
 
               <View style={styles.permRow}>
                 <View style={styles.permIconBox}>
-                  <Ionicons name="notifications-outline" size={18} color="#5B6EF5" />
+                  <Ionicons name="notifications-outline" size={18} color={tone('#5B6EF5')} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.permTitle}>Notifications Access</Text>
@@ -190,7 +191,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             <View style={styles.facialCalloutCard}>
               <View style={styles.facialCalloutHeader}>
                 <View style={styles.facialIconCircle}>
-                  <Ionicons name="eye-off" size={20} color="#FFF" />
+                  <Ionicons name="eye-off" size={20} color={tone('#FFF')} />
                 </View>
                 <Text style={styles.facialCalloutTitle}>Strict Facial Data Guarantee</Text>
               </View>
@@ -199,7 +200,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               </Text>
 
               <View style={styles.safeguardItem}>
-                <Ionicons name="hardware-chip-outline" size={16} color="#0369A1" />
+                <Ionicons name="hardware-chip-outline" size={16} color={tone('#0369A1')} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sgTitle}>On-Device Local Processing</Text>
                   <Text style={styles.sgDesc}>Facial expression features are extracted directly on your device CPU/GPU and never uploaded to cloud servers.</Text>
@@ -207,7 +208,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               </View>
 
               <View style={styles.safeguardItem}>
-                <Ionicons name="videocam-off-outline" size={16} color="#0369A1" />
+                <Ionicons name="videocam-off-outline" size={16} color={tone('#0369A1')} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sgTitle}>No Video or Photo Storage</Text>
                   <Text style={styles.sgDesc}>No raw camera feeds, photos, or video recordings are saved to device storage or external databases.</Text>
@@ -215,7 +216,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               </View>
 
               <View style={styles.safeguardItem}>
-                <Ionicons name="trash-bin-outline" size={16} color="#0369A1" />
+                <Ionicons name="trash-bin-outline" size={16} color={tone('#0369A1')} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sgTitle}>Zero Biometric Retention</Text>
                   <Text style={styles.sgDesc}>Facial landmark mesh coordinates are discarded immediately after emotion classification is completed.</Text>
@@ -248,30 +249,30 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             <Text style={styles.sectionLabel}>YOUR DATA RIGHTS & CONTROLS</Text>
             <View style={styles.card}>
               <TouchableOpacity style={styles.actionBtn} onPress={handleExportData} disabled={exporting}>
-                <Ionicons name="download-outline" size={18} color="#5B6EF5" />
+                <Ionicons name="download-outline" size={18} color={tone('#5B6EF5')} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.actionBtnTitle}>Download / Export My Data</Text>
                   <Text style={styles.actionBtnSub}>Generate a JSON backup of all your stress session records</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionBtn} onPress={handleDeleteHistory}>
-                <Ionicons name="refresh-outline" size={18} color="#E08A00" />
+                <Ionicons name="refresh-outline" size={18} color={tone('#E08A00')} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.actionBtnTitle, { color: '#E08A00' }]}>Delete Assessment History</Text>
+                  <Text style={[styles.actionBtnTitle, { color: tone('#E08A00') }]}>Delete Assessment History</Text>
                   <Text style={styles.actionBtnSub}>Wipe all past session records while preserving your account</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionBtn} onPress={handleDeleteAccount}>
-                <Ionicons name="trash-outline" size={18} color="#E05C5C" />
+                <Ionicons name="trash-outline" size={18} color={tone('#E05C5C')} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.actionBtnTitle, { color: '#E05C5C' }]}>Delete Account</Text>
+                  <Text style={[styles.actionBtnTitle, { color: tone('#E05C5C') }]}>Delete Account</Text>
                   <Text style={styles.actionBtnSub}>Permanently delete account, MindPlant, and all associated data</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />
               </TouchableOpacity>
             </View>
 
@@ -288,25 +289,25 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Exported Data Backup (JSON)</Text>
               <Pressable onPress={() => setShowExportModal(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={18} color="#64748B" />
+                <Ionicons name="close" size={18} color={tone('#64748B')} />
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1, backgroundColor: '#0F172A', borderRadius: 12, padding: 12, marginVertical: 10 }}>
-              <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11, color: '#38BDF8' }}>
+            <ScrollView style={{ flex: 1, backgroundColor: toneBg('#0F172A'), borderRadius: 12, padding: 12, marginVertical: 10 }}>
+              <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11, color: tone('#38BDF8') }}>
                 {exportDataJson}
               </Text>
             </ScrollView>
 
             <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: '#5B6EF5', marginTop: 8 }]}
+              style={[styles.saveBtn, { backgroundColor: toneBg('#5B6EF5'), marginTop: 8 }]}
               onPress={() => {
                 setShowExportModal(false);
                 showToast('Data exported successfully!');
               }}
             >
-              <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>Done / Close Export</Text>
+              <Ionicons name="checkmark-circle-outline" size={18} color={tone('#FFF')} />
+              <Text style={{ color: tone('#FFF'), fontWeight: '800', fontSize: 13 }}>Done / Close Export</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -315,37 +316,37 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#FAF8F3',
+    backgroundColor: toneBg('#FAF8F3'),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingBottom: 24,
     maxHeight: '92%',
   },
-  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+  handle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#EEEDFE'), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   headerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center' },
 
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#D6F5E3',
-    borderColor: '#27AE60',
+    backgroundColor: toneBg('#D6F5E3'),
+    borderColor: toneBg('#27AE60'),
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
     marginBottom: 12,
   },
-  toastText: { fontSize: 12, fontWeight: '700', color: '#1E7E43' },
+  toastText: { fontSize: 12, fontWeight: '700', color: tone('#1E7E43') },
 
   scroll: { maxHeight: 540 },
 
@@ -354,29 +355,29 @@ const styles = StyleSheet.create({
   card: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border, gap: 12 },
 
   permRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  permIconBox: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  permIconBox: { width: 32, height: 32, borderRadius: 9, backgroundColor: toneBg('#EEEDFE'), alignItems: 'center', justifyContent: 'center' },
   permTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
   permSub: { fontSize: 11, color: Colors.textSecondary },
-  badgeGranted: { backgroundColor: '#D6F5E3', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeTextGranted: { fontSize: 10, fontWeight: '700', color: '#27AE60' },
+  badgeGranted: { backgroundColor: toneBg('#D6F5E3'), borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeTextGranted: { fontSize: 10, fontWeight: '700', color: tone('#27AE60') },
 
   /* Facial Callout */
   facialCalloutCard: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: toneBg('#E0F2FE'),
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#38BDF8',
+    borderColor: toneBg('#38BDF8'),
     padding: 14,
     gap: 10,
   },
   facialCalloutHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  facialIconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center' },
-  facialCalloutTitle: { fontSize: 14, fontWeight: '800', color: '#0369A1' },
-  facialCalloutDesc: { fontSize: 11.5, color: '#0284C7', lineHeight: 17 },
+  facialIconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: toneBg('#0284C7'), alignItems: 'center', justifyContent: 'center' },
+  facialCalloutTitle: { fontSize: 14, fontWeight: '800', color: tone('#0369A1') },
+  facialCalloutDesc: { fontSize: 11.5, color: tone('#0284C7'), lineHeight: 17 },
 
   safeguardItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 10, padding: 10 },
-  sgTitle: { fontSize: 12, fontWeight: '800', color: '#0369A1' },
-  sgDesc: { fontSize: 11, color: '#334155', lineHeight: 16, marginTop: 1 },
+  sgTitle: { fontSize: 12, fontWeight: '800', color: tone('#0369A1') },
+  sgDesc: { fontSize: 11, color: tone('#334155'), lineHeight: 16, marginTop: 1 },
 
   dataTypeRow: { gap: 2, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: Colors.border },
   dtTitle: { fontSize: 12, fontWeight: '700', color: Colors.textPrimary },
@@ -388,3 +389,6 @@ const styles = StyleSheet.create({
 
   saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, paddingVertical: 12 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

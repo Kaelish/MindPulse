@@ -19,6 +19,7 @@ import {
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
@@ -161,7 +162,7 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const screen = StyleSheet.create({
+const makeScreen = () => StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -196,7 +197,7 @@ const screen = StyleSheet.create({
   },
   inputBox: {
     flex: 1,
-    backgroundColor: '#F2F3F7',
+    backgroundColor: toneBg('#F2F3F7'),
     borderRadius: Radius.md,
     paddingVertical: 14,
     paddingHorizontal: Spacing.md,
@@ -257,7 +258,7 @@ const screen = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
-    backgroundColor: '#DDE3EE',
+    backgroundColor: toneBg('#DDE3EE'),
     marginTop: Spacing.xs,
   },
   calcBtnActive: {
@@ -271,14 +272,17 @@ const screen = StyleSheet.create({
   calcBtnLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#A0AABC',
+    color: tone('#A0AABC'),
   },
   calcBtnLabelActive: {
     color: Colors.white,
   },
 });
 
-const ref = StyleSheet.create({
+let screen = makeScreen();
+registerThemeStyles(() => { screen = makeScreen(); });
+
+const makeRef = () => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,3 +303,6 @@ const ref = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+let ref = makeRef();
+registerThemeStyles(() => { ref = makeRef(); });

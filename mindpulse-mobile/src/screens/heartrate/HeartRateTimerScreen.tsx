@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
+import { registerThemeStyles } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
@@ -60,7 +61,7 @@ export const HeartRateTimerScreen: React.FC<Props> = ({ onBack, onComplete }) =>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   card: {
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -124,3 +125,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

@@ -9,6 +9,7 @@ import {
   recordToolCompletion,
 } from '../../services/assessmentTools';
 import { saveNewStressSession } from '../../services/dashboard';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface ToolSurveyScreenProps {
   tool: AssessmentTool;
@@ -82,7 +83,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
-          <Ionicons name="chevron-back" size={24} color="#6B79F2" />
+          <Ionicons name="chevron-back" size={24} color={tone('#6B79F2')} />
           <Text style={styles.headerBtnText}>Back</Text>
         </TouchableOpacity>
 
@@ -122,7 +123,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
               >
                 <View style={[styles.optionIcon, isSelected && styles.optionIconSelected]}>
                   {isSelected ? (
-                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Ionicons name="checkmark" size={16} color={tone('#fff')} />
                   ) : (
                     <Text style={styles.optionIconText}>{opt.value}</Text>
                   )}
@@ -152,15 +153,15 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
                 ? 'Complete Assessment'
                 : 'Next Question'}
           </Text>
-          {canProceed && !saving && <Ionicons name="chevron-forward" size={20} color="#fff" />}
+          {canProceed && !saving && <Ionicons name="chevron-forward" size={20} color={tone('#fff')} />}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FCFBF8' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
 
   header: {
     flexDirection: 'row',
@@ -170,19 +171,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerBtn: { flexDirection: 'row', alignItems: 'center' },
-  headerBtnText: { fontSize: 16, fontWeight: '600', color: '#6B79F2' },
-  headerExitText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
-  headerPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#EEF0FD' },
-  headerPillText: { fontSize: 12, fontWeight: '700', color: '#6B79F2' },
+  headerBtnText: { fontSize: 16, fontWeight: '600', color: tone('#6B79F2') },
+  headerExitText: { color: tone('#64748b'), fontSize: 16, fontWeight: '600' },
+  headerPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: toneBg('#EEF0FD') },
+  headerPillText: { fontSize: 12, fontWeight: '700', color: tone('#6B79F2') },
 
   progressTrack: {
     height: 6,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: toneBg('#E0E0E0'),
     marginHorizontal: 18,
     borderRadius: 3,
     marginBottom: 24,
   },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: '#6B79F2' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: toneBg('#6B79F2') },
 
   scrollContent: { paddingHorizontal: 18 },
 
@@ -192,13 +193,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#EEF0FD',
+    backgroundColor: toneBg('#EEF0FD'),
     marginBottom: 16,
   },
-  titlePillText: { fontSize: 12, fontWeight: '700', color: '#6B79F2' },
+  titlePillText: { fontSize: 12, fontWeight: '700', color: tone('#6B79F2') },
 
   questionText: {
-    color: '#182033',
+    color: tone('#182033'),
     fontSize: 20,
     fontWeight: '800',
     lineHeight: 28,
@@ -210,43 +211,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: toneBg('#fff'),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: toneBg('#E0E0E0'),
   },
-  optionCardSelected: { backgroundColor: '#FFF8E6', borderColor: '#E6C252' },
+  optionCardSelected: { backgroundColor: toneBg('#FFF8E6'), borderColor: toneBg('#E6C252') },
   optionIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: toneBg('#F0F0F0'),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
   },
-  optionIconSelected: { backgroundColor: '#E6C252' },
-  optionIconText: { color: '#8b95a5', fontSize: 14, fontWeight: '700' },
-  optionLabel: { color: '#182033', fontSize: 15, fontWeight: '600' },
-  optionLabelSelected: { color: '#8a6d0f' },
+  optionIconSelected: { backgroundColor: toneBg('#E6C252') },
+  optionIconText: { color: tone('#8b95a5'), fontSize: 14, fontWeight: '700' },
+  optionLabel: { color: tone('#182033'), fontSize: 15, fontWeight: '600' },
+  optionLabelSelected: { color: tone('#8a6d0f') },
 
-  saveError: { marginTop: 18, color: '#d95d5d', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  saveError: { marginTop: 18, color: tone('#d95d5d'), fontSize: 13, fontWeight: '600', textAlign: 'center' },
 
   footer: { padding: 18 },
   nextBtn: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: toneBg('#F0F0F0'),
     flexDirection: 'row',
     height: 56,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextBtnActive: { backgroundColor: '#6B79F2' },
-  nextBtnText: { color: '#8b95a5', fontSize: 16, fontWeight: '700', marginRight: 8 },
-  nextBtnTextActive: { color: '#fff' },
+  nextBtnActive: { backgroundColor: toneBg('#6B79F2') },
+  nextBtnText: { color: tone('#8b95a5'), fontSize: 16, fontWeight: '700', marginRight: 8 },
+  nextBtnTextActive: { color: tone('#fff') },
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
-  emptyText: { color: '#64748b', fontSize: 15, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, backgroundColor: '#6B79F2' },
-  retryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  emptyText: { color: tone('#64748b'), fontSize: 15, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, backgroundColor: toneBg('#6B79F2') },
+  retryText: { color: tone('#fff'), fontSize: 15, fontWeight: '700' },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

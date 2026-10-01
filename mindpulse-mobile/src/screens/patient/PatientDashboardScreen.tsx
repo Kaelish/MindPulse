@@ -21,6 +21,7 @@ import {
   fetchDashboardData,
 } from '../../services/dashboard';
 import { isMessageNotification, markNotificationRead } from '../../services/notifications';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -179,7 +180,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                 <Text style={styles.greetingEyebrow}>{greeting},</Text>
                 <View style={styles.nameRow}>
                   <Text style={styles.greetingName}>{userName}</Text>
-                  <MaterialCommunityIcons name="hand-wave" size={20} color="#E2B852" />
+                  <MaterialCommunityIcons name="hand-wave" size={20} color={tone('#E2B852')} />
                 </View>
                 <Text style={styles.dateText}>{greetingDate}</Text>
               </View>
@@ -241,26 +242,26 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
           <View style={styles.metricsRow}>
             <TouchableOpacity style={styles.metricCard} activeOpacity={0.85} onPress={() => onNavigate?.('analysis')}>
               <View style={styles.metricLabelRow}>
-                <Ionicons name="heart" size={16} color="#E05C5C" />
+                <Ionicons name="heart" size={16} color={tone('#E05C5C')} />
                 <Text style={styles.metricLabel}>Avg Heart Rate</Text>
               </View>
               <View style={styles.metricValueRow}>
                 <Text style={styles.metricNum}>{metrics.avgHeartRate ?? '—'}</Text>
                 {metrics.avgHeartRate !== null && <Text style={styles.metricUnit}>bpm</Text>}
               </View>
-              <Text style={[styles.metricStatus, { color: '#E05C5C' }]}>{metrics.avgHeartRateStatus}</Text>
+              <Text style={[styles.metricStatus, { color: tone('#E05C5C') }]}>{metrics.avgHeartRateStatus}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.metricCard} activeOpacity={0.85} onPress={() => onNavigate?.('analysis')}>
               <View style={styles.metricLabelRow}>
-                <Ionicons name="trending-up" size={16} color="#E08A00" />
+                <Ionicons name="trending-up" size={16} color={tone('#E08A00')} />
                 <Text style={styles.metricLabel}>Avg Stress</Text>
               </View>
               <View style={styles.metricValueRow}>
                 <Text style={styles.metricNum}>{metrics.avgStressScore ?? '—'}</Text>
                 {metrics.avgStressScore !== null && <Text style={styles.metricUnit}>/100</Text>}
               </View>
-              <Text style={[styles.metricStatus, { color: '#E08A00' }]}>{metrics.avgStressStatus}</Text>
+              <Text style={[styles.metricStatus, { color: tone('#E08A00') }]}>{metrics.avgStressStatus}</Text>
             </TouchableOpacity>
           </View>
 
@@ -344,7 +345,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 };
 
 /* ─── Styles ─── */
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 },
   loadingText: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center' },
@@ -366,17 +367,17 @@ const styles = StyleSheet.create({
   dateText: { color: 'rgba(30,50,30,0.55)', fontSize: 13, marginTop: 4, fontWeight: '500' },
   bellBtn: { width: 48, height: 48, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   bellIcon: { fontSize: 20 },
-  bellBadge: { position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: '#E05C5C', borderWidth: 1.5, borderColor: Colors.white },
+  bellBadge: { position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: toneBg('#E05C5C'), borderWidth: 1.5, borderColor: Colors.white },
 
   /* Body */
   body: { backgroundColor: Colors.pageBg, borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -24, paddingHorizontal: Spacing.md, paddingTop: Spacing.lg, gap: Spacing.md },
 
   /* Latest Stress Card */
-  stressCard: { backgroundColor: '#FAE5DF', borderRadius: 22, padding: Spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  stressCard: { backgroundColor: toneBg('#FAE5DF'), borderRadius: 22, padding: Spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   stressCardLeft: { flex: 1 },
-  stressCardLabel: { color: '#7C4A3A', fontSize: 13, fontWeight: '700' },
+  stressCardLabel: { color: tone('#7C4A3A'), fontSize: 13, fontWeight: '700' },
   stressCardLevel: { color: Colors.textPrimary, fontSize: 28, fontWeight: '900', marginTop: 4 },
-  stressCardTrend: { color: '#E05C5C', fontSize: 13, marginTop: 4, fontWeight: '600' },
+  stressCardTrend: { color: tone('#E05C5C'), fontSize: 13, marginTop: 4, fontWeight: '600' },
   scoreCircle: { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center' },
   scoreCircleNum: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
   scoreCircleLabel: { color: Colors.textSecondary, fontSize: 10, fontWeight: '600' },
@@ -426,7 +427,10 @@ const styles = StyleSheet.create({
   sessionPillText: { fontSize: 12, fontWeight: '700' },
 });
 
-const modalStyles = StyleSheet.create({
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });
+
+const makeModalStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
   box: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.lg, width: '100%' },
   title: { color: Colors.textPrimary, ...Typography.h3, marginBottom: 12 },
@@ -443,3 +447,6 @@ const modalStyles = StyleSheet.create({
   notifBody: { color: Colors.textSecondary, fontSize: 13, marginTop: 2 },
   notifTime: { color: Colors.textHint, fontSize: 11, marginTop: 4 },
 });
+
+let modalStyles = makeModalStyles();
+registerThemeStyles(() => { modalStyles = makeModalStyles(); });

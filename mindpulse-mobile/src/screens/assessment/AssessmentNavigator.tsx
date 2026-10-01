@@ -10,6 +10,7 @@ import { HeartRateNavigator } from '../heartrate/HeartRateNavigator';
 import { ReactionGameScreen, ReactionResult } from '../reaction/ReactionGameScreen';
 import { loadAssessmentState, saveAssessmentState } from './StressAssessmentHubScreen';
 import { AssessmentResultScreen } from './AssessmentResultScreen';
+import { registerThemeStyles } from '../../theme/theme';
 
 export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
   const [screen, setScreen] = useState<'hub' | 'survey' | 'toolSurvey' | 'faceScan' | 'heartRate' | 'reaction' | 'results'>('hub');
@@ -115,8 +116,11 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
   return <View style={styles.container}>{renderScreen()}</View>;
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: {
     flex: 1,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

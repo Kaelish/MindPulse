@@ -9,6 +9,7 @@ import { HeartRateEntryScreen } from './HeartRateEntryScreen';
 import { HeartRateTimerScreen } from './HeartRateTimerScreen';
 import { HeartRateResultScreen } from './HeartRateResultScreen';
 import { BottomTabBar, BottomNavTab } from '../../components/navigation/BottomTabBar';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 type Screen = 'instructions' | 'timer' | 'entry' | 'result';
 
@@ -75,12 +76,15 @@ export const HeartRateNavigator: React.FC<Props> = ({
   return <View style={styles.container}>{renderScreen()}</View>;
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: toneBg('#FAF8F4'),
   },
   content: {
     flex: 1,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

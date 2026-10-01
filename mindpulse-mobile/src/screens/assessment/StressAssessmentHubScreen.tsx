@@ -9,6 +9,7 @@ import {
   fetchActiveAssessmentTools,
   loadToolCompletions,
 } from '../../services/assessmentTools';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed';
 
@@ -93,7 +94,7 @@ const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, w
 
       <View style={styles.statusIndicator}>
         {isLocked && <Ionicons name="lock-closed-outline" size={20} color={Colors.textHint} />}
-        {isCompleted && <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />}
+        {isCompleted && <Ionicons name="checkmark-circle" size={24} color={tone('#4CAF50')} />}
         {status === 'unlocked' && <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />}
       </View>
     </TouchableOpacity>
@@ -109,8 +110,8 @@ interface ToolCardProps {
 /** Assessment questionnaire published by the administrator (Supabase). */
 const ToolCard = ({ tool, completedAt, onPress }: ToolCardProps) => (
   <TouchableOpacity style={styles.stepCard} activeOpacity={0.7} onPress={onPress}>
-    <View style={[styles.iconBox, { backgroundColor: '#EEF0FD' }]}>
-      <MaterialCommunityIcons name="clipboard-text-outline" size={26} color="#6B79F2" />
+    <View style={[styles.iconBox, { backgroundColor: toneBg('#EEF0FD') }]}>
+      <MaterialCommunityIcons name="clipboard-text-outline" size={26} color={tone('#6B79F2')} />
     </View>
 
     <View style={styles.stepTextContent}>
@@ -122,7 +123,7 @@ const ToolCard = ({ tool, completedAt, onPress }: ToolCardProps) => (
 
     <View style={styles.statusIndicator}>
       {completedAt ? (
-        <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+        <Ionicons name="checkmark-circle" size={24} color={tone('#4CAF50')} />
       ) : (
         <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
       )}
@@ -260,7 +261,7 @@ export const StressAssessmentHubScreen = ({
             onPress={() => onNavigate('Results')}
           >
             <Text style={styles.viewResultsText}>View Final Results</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFF" />
+            <Ionicons name="arrow-forward" size={18} color={tone('#FFF')} />
           </TouchableOpacity>
         )}
 
@@ -270,7 +271,7 @@ export const StressAssessmentHubScreen = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.pageBg },
   scrollContent: { padding: Spacing.lg },
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
     width: 88, 
     height: 88, 
     borderRadius: Radius.xl, 
-    backgroundColor: '#7A8DF3', 
+    backgroundColor: toneBg('#7A8DF3'), 
     alignItems: 'center', 
     justifyContent: 'center',
     marginBottom: 16
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   stepCardLocked: {
-    backgroundColor: '#FDFCFB',
+    backgroundColor: toneBg('#FDFCFB'),
   },
   iconBox: {
     width: 60,
@@ -339,17 +340,17 @@ const styles = StyleSheet.create({
 
   tipBox: {
     flexDirection: 'row',
-    backgroundColor: '#E6F9EF',
+    backgroundColor: toneBg('#E6F9EF'),
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginTop: Spacing.xl,
     borderWidth: 1,
-    borderColor: '#C8E8D5',
+    borderColor: toneBg('#C8E8D5'),
   },
   tipIcon: { fontSize: 18, marginRight: 10, marginTop: 2 },
-  tipText: { flex: 1, color: '#2A5D40', fontSize: 13, lineHeight: 18 },
+  tipText: { flex: 1, color: tone('#2A5D40'), fontSize: 13, lineHeight: 18 },
   viewResultsBtn: {
-    backgroundColor: '#6B79F2',
+    backgroundColor: toneBg('#6B79F2'),
     borderRadius: Radius.full,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -364,3 +365,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

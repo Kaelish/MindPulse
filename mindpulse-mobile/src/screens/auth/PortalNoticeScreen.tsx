@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
+import { registerThemeStyles } from '../../theme/theme';
 
 interface PortalNoticeScreenProps {
   kind: 'admin' | 'pending';
@@ -52,7 +53,7 @@ export const PortalNoticeScreen: React.FC<PortalNoticeScreenProps> = ({ kind, on
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg, paddingHorizontal: Spacing.lg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
   iconCircle: {
@@ -90,3 +91,6 @@ const styles = StyleSheet.create({
   },
   signOutText: { color: Colors.white, fontWeight: '800', fontSize: 14.5 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

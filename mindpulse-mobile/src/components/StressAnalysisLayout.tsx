@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
 import { BackButton } from './navigation/BackButton';
+import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ModuleTab = 'survey' | 'faceScan' | 'heartRate' | 'reaction';
@@ -183,7 +184,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const layout = StyleSheet.create({
+const makeLayout = () => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: Colors.pageBg,
@@ -195,7 +196,7 @@ const layout = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   titlePill: {
-    backgroundColor: '#EAF3FB',
+    backgroundColor: toneBg('#EAF3FB'),
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.lg,
     paddingVertical: 6,
@@ -204,7 +205,7 @@ const layout = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A2340',
+    color: tone('#1A2340'),
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -234,7 +235,10 @@ const layout = StyleSheet.create({
   },
 });
 
-const chip = StyleSheet.create({
+let layout = makeLayout();
+registerThemeStyles(() => { layout = makeLayout(); });
+
+const makeChip = () => StyleSheet.create({
   base: {
     flex: 1,
     flexDirection: 'row',
@@ -258,7 +262,10 @@ const chip = StyleSheet.create({
   },
 });
 
-const secTab = StyleSheet.create({
+let chip = makeChip();
+registerThemeStyles(() => { chip = makeChip(); });
+
+const makeSecTab = () => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,7 +311,10 @@ const secTab = StyleSheet.create({
   },
 });
 
-const btab = StyleSheet.create({
+let secTab = makeSecTab();
+registerThemeStyles(() => { secTab = makeSecTab(); });
+
+const makeBtab = () => StyleSheet.create({
   item: {
     flex: 1,
     alignItems: 'center',
@@ -326,3 +336,6 @@ const btab = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+let btab = makeBtab();
+registerThemeStyles(() => { btab = makeBtab(); });

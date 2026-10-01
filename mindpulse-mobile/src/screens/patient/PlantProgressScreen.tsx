@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fetchPlantProgress, PlantProgress } from '../../services/plantProgress';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface PlantProgressScreenProps {
   onBack?: () => void;
@@ -56,8 +57,8 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
   if (loading) {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
-        <ActivityIndicator size="large" color="#1AA956" />
-        <Text style={{ color: '#8A9B91', fontSize: 12 }}>Loading plant progress…</Text>
+        <ActivityIndicator size="large" color={tone('#1AA956')} />
+        <Text style={{ color: tone('#8A9B91'), fontSize: 12 }}>Loading plant progress…</Text>
       </View>
     );
   }
@@ -65,9 +66,9 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
   if (loadError) {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 32 }]}>
-        <Text style={{ color: '#E05C5C', fontSize: 13, textAlign: 'center' }}>{loadError}</Text>
-        <TouchableOpacity onPress={() => void load()} style={{ backgroundColor: '#1AA956', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10 }}>
-          <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Retry</Text>
+        <Text style={{ color: tone('#E05C5C'), fontSize: 13, textAlign: 'center' }}>{loadError}</Text>
+        <TouchableOpacity onPress={() => void load()} style={{ backgroundColor: toneBg('#1AA956'), borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10 }}>
+          <Text style={{ color: tone('#FFF'), fontSize: 13, fontWeight: '700' }}>Retry</Text>
         </TouchableOpacity>
         <Pressable onPress={onBack} hitSlop={10}><Text style={styles.back}>‹ Back</Text></Pressable>
       </View>
@@ -112,32 +113,35 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAFDFC' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: toneBg('#FAFDFC') },
   content: { paddingBottom: 24 },
-  hero: { height: 290, backgroundColor: '#E1F8EA', borderBottomWidth: 1, borderBottomColor: '#66D995' },
+  hero: { height: 290, backgroundColor: toneBg('#E1F8EA'), borderBottomWidth: 1, borderBottomColor: toneBg('#66D995') },
   heroHeader: { height: 52, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { color: '#168A47', fontSize: 11 },
+  back: { color: tone('#168A47'), fontSize: 11 },
   leaf: { fontSize: 18 },
-  stageName: { color: '#142D22', textAlign: 'center', fontSize: 14, fontWeight: '800' },
-  stageCount: { color: '#8A9B91', textAlign: 'center', fontSize: 9, marginTop: 3 },
+  stageName: { color: tone('#142D22'), textAlign: 'center', fontSize: 14, fontWeight: '800' },
+  stageCount: { color: tone('#8A9B91'), textAlign: 'center', fontSize: 9, marginTop: 3 },
   plantScene: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 10 },
   plantArt: { fontSize: 75 },
-  messageBox: { margin: 12, padding: 13, borderWidth: 1, borderColor: '#8BE5AA', borderRadius: 10, backgroundColor: '#E5FBEA' },
-  message: { color: '#47705A', fontSize: 10, lineHeight: 15 },
-  tipBox: { marginHorizontal: 12, padding: 12, borderWidth: 1, borderColor: '#DED5FF', borderRadius: 10, backgroundColor: '#F7F4FF' },
-  tipTitle: { color: '#7562DA', fontSize: 8, fontWeight: '800', marginBottom: 5 },
-  tipText: { color: '#647087', fontSize: 9, lineHeight: 13 },
-  pointsText: { color: '#7562DA', fontSize: 8, fontWeight: '700', marginTop: 6 },
-  sectionTitle: { marginTop: 14, marginHorizontal: 13, color: '#8A9AAF', fontSize: 8, fontWeight: '800' },
+  messageBox: { margin: 12, padding: 13, borderWidth: 1, borderColor: toneBg('#8BE5AA'), borderRadius: 10, backgroundColor: toneBg('#E5FBEA') },
+  message: { color: tone('#47705A'), fontSize: 10, lineHeight: 15 },
+  tipBox: { marginHorizontal: 12, padding: 12, borderWidth: 1, borderColor: toneBg('#DED5FF'), borderRadius: 10, backgroundColor: toneBg('#F7F4FF') },
+  tipTitle: { color: tone('#7562DA'), fontSize: 8, fontWeight: '800', marginBottom: 5 },
+  tipText: { color: tone('#647087'), fontSize: 9, lineHeight: 13 },
+  pointsText: { color: tone('#7562DA'), fontSize: 8, fontWeight: '700', marginTop: 6 },
+  sectionTitle: { marginTop: 14, marginHorizontal: 13, color: tone('#8A9AAF'), fontSize: 8, fontWeight: '800' },
   stageList: { gap: 7, margin: 7 },
-  stageRow: { minHeight: 46, paddingHorizontal: 12, borderWidth: 1, borderColor: '#DDE5ED', borderRadius: 10, backgroundColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center' },
-  stageRowCurrent: { borderColor: '#7EE3A3', backgroundColor: '#E5FBEA' },
-  stageRowLocked: { backgroundColor: '#FAFBFC', borderColor: '#EEF1F4' },
+  stageRow: { minHeight: 46, paddingHorizontal: 12, borderWidth: 1, borderColor: toneBg('#DDE5ED'), borderRadius: 10, backgroundColor: toneBg('#F1F5F9'), flexDirection: 'row', alignItems: 'center' },
+  stageRowCurrent: { borderColor: toneBg('#7EE3A3'), backgroundColor: toneBg('#E5FBEA') },
+  stageRowLocked: { backgroundColor: toneBg('#FAFBFC'), borderColor: toneBg('#EEF1F4') },
   stageEmoji: { width: 28, fontSize: 17, textAlign: 'center' },
   stageCopy: { flex: 1, marginLeft: 7 },
-  stageRowName: { color: '#1F3145', fontSize: 10, fontWeight: '700' },
-  stageRowSubtitle: { color: '#8A9AAF', fontSize: 8, marginTop: 2 },
-  lockedText: { color: '#C8D0D9' },
-  current: { color: '#1AA956', fontSize: 8, fontWeight: '800' },
+  stageRowName: { color: tone('#1F3145'), fontSize: 10, fontWeight: '700' },
+  stageRowSubtitle: { color: tone('#8A9AAF'), fontSize: 8, marginTop: 2 },
+  lockedText: { color: tone('#C8D0D9') },
+  current: { color: tone('#1AA956'), fontSize: 8, fontWeight: '800' },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

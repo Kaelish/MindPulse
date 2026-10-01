@@ -34,6 +34,7 @@ import { recordPlantSession } from './src/services/plantProgress';
 import { AppRole, getCurrentUserRole } from './src/services/session';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
+import { loadThemeMode, registerThemeStyles, tone, toneBg, useThemeMode } from './src/theme/theme';
 
 type ScreenMode =
   | 'splash'
@@ -134,6 +135,13 @@ function App() {
   // One-shot sub-tab intents raised by tapping a chat notification.
   const [consultTabReq, setConsultTabReq] = useState<ConsultTabRequest | null>(null);
   const [clinicTabReq, setClinicTabReq] = useState<ClinicTabRequest | null>(null);
+
+  /* Theme: the saved mode is restored while the splash screen is up, and every
+     later switch re-renders this tree against the rebuilt style sheets. */
+  const themeMode = useThemeMode();
+  useEffect(() => {
+    void loadThemeMode();
+  }, []);
 
   /* Splash → Onboarding after 3 s */
   useEffect(() => {
@@ -305,7 +313,10 @@ function App() {
   /* ─────────── Render ─────────── */
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#3D6FC7" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={themeMode === 'dark' ? Colors.pageBg : '#3D6FC7'}
+      />
       <View style={styles.root}>
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
 
@@ -504,19 +515,22 @@ function App() {
 }
 
 /* ─────────── App Styles ─────────── */
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAF8F3' },
-  mainWrapper: { flex: 1, backgroundColor: '#FAF8F3' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.pageBg },
+  mainWrapper: { flex: 1, backgroundColor: Colors.pageBg },
   tabViewArea: { flex: 1 },
   subScreenWrap: { flex: 1, backgroundColor: Colors.pageBg },
   screenWithBackButton: { flex: 1 },
 });
 
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });
+
 /* ─────────── Splash Styles ─────────── */
-const splashStyles = StyleSheet.create({
+const makeSplashStyles = () => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F4EE',
+    backgroundColor: toneBg('#F7F4EE'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -529,14 +543,14 @@ const splashStyles = StyleSheet.create({
   },
 
   brandName: {
-    color: '#C4907A',
+    color: tone('#C4907A'),
     fontSize: 24,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   tagline: {
-    color: '#A89C96',
+    color: tone('#A89C96'),
     fontSize: 13,
     fontWeight: '400',
     letterSpacing: 0.1,
@@ -555,9 +569,12 @@ const splashStyles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#C4907A',
+    backgroundColor: toneBg('#C4907A'),
     position: 'absolute',
   },
 });
+
+let splashStyles = makeSplashStyles();
+registerThemeStyles(() => { splashStyles = makeSplashStyles(); });
 
 export default App;

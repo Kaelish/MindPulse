@@ -20,6 +20,7 @@ import {
   fetchDoctorCallBooking,
   getDoctorVideoRoomUrl,
 } from '../../services/doctorConsultations';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface VideoCallScreenProps {
   doctorId?: string;
@@ -194,7 +195,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         </View>
 
         {loading ? (
-          <ActivityIndicator size="small" color="#5B6EF5" style={{ marginTop: 16 }} />
+          <ActivityIndicator size="small" color={tone('#5B6EF5')} style={{ marginTop: 16 }} />
         ) : loadError || !booking ? (
           <Text style={styles.lobbyError}>{loadError ?? 'No appointment found for this call.'}</Text>
         ) : (
@@ -206,17 +207,17 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
 
             <View style={styles.infoBox}>
               <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={15} color="#5B6EF5" />
+                <Ionicons name="calendar-outline" size={15} color={tone('#5B6EF5')} />
                 <Text style={styles.infoText}>{booking.scheduledFor}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Ionicons name="pricetag-outline" size={15} color="#5B6EF5" />
+                <Ionicons name="pricetag-outline" size={15} color={tone('#5B6EF5')} />
                 <Text style={styles.infoText}>
                   {STATUS_LABELS[booking.status] ?? booking.status} · Fee ₱{booking.fee}
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Ionicons name="videocam-outline" size={15} color="#5B6EF5" />
+                <Ionicons name="videocam-outline" size={15} color={tone('#5B6EF5')} />
                 <Text style={styles.infoText}>Jitsi room · mindpulse-appt-{booking.id.slice(0, 8)}…</Text>
               </View>
             </View>
@@ -224,12 +225,12 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
             {booking.status === 'confirmed' ? (
               openedInBrowser ? (
                 <View style={styles.openedBox}>
-                  <Ionicons name="checkmark-circle" size={20} color="#27AE60" />
+                  <Ionicons name="checkmark-circle" size={20} color={tone('#27AE60')} />
                   <Text style={styles.openedText}>
                     Your video room is open in the browser. Return here when the session ends.
                   </Text>
                   <TouchableOpacity style={styles.primaryBtn} onPress={() => void handleJoin()}>
-                    <Ionicons name="videocam" size={16} color="#FFF" />
+                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
                     <Text style={styles.primaryBtnText}>Re-open Video Room</Text>
                   </TouchableOpacity>
                 </View>
@@ -240,9 +241,9 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                   disabled={joining}
                 >
                   {joining ? (
-                    <ActivityIndicator size="small" color="#FFF" />
+                    <ActivityIndicator size="small" color={tone('#FFF')} />
                   ) : (
-                    <Ionicons name="videocam" size={16} color="#FFF" />
+                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
                   )}
                   <Text style={styles.primaryBtnText}>
                     {joining ? 'Opening…' : 'Join Video Call'}
@@ -256,7 +257,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         )}
 
         <TouchableOpacity style={styles.endBtn} onPress={onEndCall}>
-          <Ionicons name="call" size={22} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
+          <Ionicons name="call" size={22} color={tone('#FFF')} style={{ transform: [{ rotate: '135deg' }] }} />
           <Text style={styles.endBtnText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -270,16 +271,16 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAF8F3' },
+const makeStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: toneBg('#FAF8F3') },
   lobbyCard: {
     flex: 1,
     margin: 16,
     marginTop: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: toneBg('#FFFFFF'),
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E4E8F0',
+    borderColor: toneBg('#E4E8F0'),
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -289,18 +290,18 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: '#E8ECFA',
+    backgroundColor: toneBg('#E8ECFA'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
-  avatarInitials: { fontSize: 22, fontWeight: '800', color: '#5B6EF5' },
-  lobbyDoctor: { fontSize: 19, fontWeight: '800', color: '#1A2E44', textAlign: 'center' },
-  lobbySpec: { fontSize: 13, color: '#7A90A8', marginBottom: 8 },
-  lobbyError: { fontSize: 13, color: '#B91C1C', textAlign: 'center', marginTop: 12, lineHeight: 19 },
+  avatarInitials: { fontSize: 22, fontWeight: '800', color: tone('#5B6EF5') },
+  lobbyDoctor: { fontSize: 19, fontWeight: '800', color: tone('#1A2E44'), textAlign: 'center' },
+  lobbySpec: { fontSize: 13, color: tone('#7A90A8'), marginBottom: 8 },
+  lobbyError: { fontSize: 13, color: tone('#B91C1C'), textAlign: 'center', marginTop: 12, lineHeight: 19 },
   infoBox: {
     width: '100%',
-    backgroundColor: '#F5F7FC',
+    backgroundColor: toneBg('#F5F7FC'),
     borderRadius: 14,
     padding: 14,
     gap: 10,
@@ -308,28 +309,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoText: { fontSize: 13, color: '#334155', fontWeight: '600', flex: 1 },
+  infoText: { fontSize: 13, color: tone('#334155'), fontWeight: '600', flex: 1 },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#5B6EF5',
+    backgroundColor: toneBg('#5B6EF5'),
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 28,
     width: '100%',
     marginTop: 4,
   },
-  primaryBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  primaryBtnText: { fontSize: 15, fontWeight: '800', color: tone('#FFF') },
   openedBox: { width: '100%', alignItems: 'center', gap: 8, marginTop: 4 },
-  openedText: { fontSize: 12, color: '#1E7E43', textAlign: 'center', lineHeight: 18, fontWeight: '600' },
+  openedText: { fontSize: 12, color: tone('#1E7E43'), textAlign: 'center', lineHeight: 18, fontWeight: '600' },
   lockedText: {
     fontSize: 13,
-    color: '#B45309',
+    color: tone('#B45309'),
     textAlign: 'center',
     lineHeight: 19,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: toneBg('#FEF3C7'),
     borderRadius: 12,
     padding: 12,
     overflow: 'hidden',
@@ -339,12 +340,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: toneBg('#EF4444'),
     borderRadius: 14,
     paddingVertical: 13,
     paddingHorizontal: 28,
     width: '100%',
     marginTop: 14,
   },
-  endBtnText: { fontSize: 14, fontWeight: '800', color: '#FFF' },
+  endBtnText: { fontSize: 14, fontWeight: '800', color: tone('#FFF') },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

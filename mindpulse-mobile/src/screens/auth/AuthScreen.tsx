@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -25,7 +26,7 @@ interface AuthScreenProps {
 const LogoMark = () => (
   <View style={styles.logoWrap}>
     <View style={styles.logoCircle}>
-      <Ionicons name="pulse" size={20} color="#D97B45" />
+      <Ionicons name="pulse" size={20} color={tone('#D97B45')} />
     </View>
     <Text style={styles.logoText}>MindPulse</Text>
   </View>
@@ -211,7 +212,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     <Ionicons
                       name={showLoginPw ? 'eye-outline' : 'eye-off-outline'}
                       size={20}
-                      color="#8CA9C3"
+                      color={tone('#8CA9C3')}
                     />
                   </Pressable>
                 </View>
@@ -222,7 +223,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     onPress={() => setRememberMe(v => !v)}
                   >
                     <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
-                      {rememberMe && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                      {rememberMe && <Ionicons name="checkmark" size={12} color={tone('#FFF')} />}
                     </View>
                     <Text style={styles.rememberText}>Remember me</Text>
                   </Pressable>
@@ -313,7 +314,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     <Ionicons
                       name={showRegPw ? 'eye-outline' : 'eye-off-outline'}
                       size={20}
-                      color="#8CA9C3"
+                      color={tone('#8CA9C3')}
                     />
                   </Pressable>
                 </View>
@@ -348,7 +349,7 @@ const CARD = '#FFFFFF';
 const ACCENT = '#4A8AB5';      // tab pill, button
 const ACCENT_LIGHT = '#D6E8F5'; // tab background
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: SKY,
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFF0E6',
+    backgroundColor: toneBg('#FFF0E6'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D97B45',
+    color: tone('#D97B45'),
     letterSpacing: 0.4,
   },
 
@@ -400,13 +401,13 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A2E44',
+    color: tone('#1A2E44'),
     textAlign: 'center',
     marginBottom: 4,
   },
   subheading: {
     fontSize: 13,
-    color: '#8CA9C3',
+    color: tone('#8CA9C3'),
     textAlign: 'center',
     marginBottom: 22,
   },
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
     color: ACCENT,
   },
   tabTextActive: {
-    color: '#FFF',
+    color: tone('#FFF'),
     fontWeight: '700',
   },
 
@@ -444,19 +445,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4A6680',
+    color: tone('#4A6680'),
     marginTop: 14,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F4F8FC',
+    backgroundColor: toneBg('#F4F8FC'),
     borderRadius: 12,
     height: 50,
     paddingHorizontal: 16,
     fontSize: 14,
-    color: '#1A2E44',
+    color: tone('#1A2E44'),
     borderWidth: 1,
-    borderColor: '#DDE8F2',
+    borderColor: toneBg('#DDE8F2'),
   },
   inputWrap: {
     position: 'relative',
@@ -487,8 +488,8 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: '#B0C4D8',
-    backgroundColor: '#F4F8FC',
+    borderColor: toneBg('#B0C4D8'),
+    backgroundColor: toneBg('#F4F8FC'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -496,7 +497,7 @@ const styles = StyleSheet.create({
     backgroundColor: ACCENT,
     borderColor: ACCENT,
   },
-  rememberText: { fontSize: 12, color: '#6B8CAA', fontWeight: '500' },
+  rememberText: { fontSize: 12, color: tone('#6B8CAA'), fontWeight: '500' },
   forgotText: { fontSize: 12, color: ACCENT, fontWeight: '700' },
 
   /* Primary button */
@@ -515,7 +516,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   primaryBtnText: {
-    color: '#FFF',
+    color: tone('#FFF'),
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -527,9 +528,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
-  switchLabel: { fontSize: 13, color: '#8CA9C3' },
+  switchLabel: { fontSize: 13, color: tone('#8CA9C3') },
   switchLink: { fontSize: 13, fontWeight: '800', color: ACCENT },
 
   /* Name row */
   nameRow: { flexDirection: 'row', marginTop: 0 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

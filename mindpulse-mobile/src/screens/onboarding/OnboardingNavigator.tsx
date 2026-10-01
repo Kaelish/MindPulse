@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   onComplete: (tab?: 'register' | 'login') => void;
@@ -219,7 +220,7 @@ export const OnboardingNavigator: React.FC<Props> = ({ onComplete, onSignIn }) =
 
             {/* Text */}
             <View style={styles.textBlock}>
-              <Text style={[styles.headline, { color: '#FFFFFF' }]}>
+              <Text style={[styles.headline, { color: tone('#FFFFFF') }]}>
                 Multi-modal analysis,{'\n'}
                 <Text style={styles.tealAccent}>built for precision.</Text>
               </Text>
@@ -265,7 +266,7 @@ export const OnboardingNavigator: React.FC<Props> = ({ onComplete, onSignIn }) =
 
           {/* Text */}
           <View style={styles.textBlock}>
-            <Text style={[styles.headline, { color: '#FFFFFF' }]}>
+            <Text style={[styles.headline, { color: tone('#FFFFFF') }]}>
               Your wellness story,{'\n'}
               <Text style={styles.peachAccent}>starts right here.</Text>
             </Text>
@@ -300,7 +301,7 @@ export const OnboardingNavigator: React.FC<Props> = ({ onComplete, onSignIn }) =
 };
 
 /* ─────────── Styles ─────────── */
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   fill: { flex: 1 },
 
   /* Top bar */
@@ -406,7 +407,7 @@ const styles = StyleSheet.create({
   },
   tileSub: {
     fontSize: 10,
-    color: '#9AA0AF',
+    color: tone('#9AA0AF'),
   },
   plantImg: {
     position: 'absolute',
@@ -442,21 +443,21 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    color: '#FFFFFF',
+    color: tone('#FFFFFF'),
     lineHeight: 34,
     letterSpacing: -0.3,
     marginBottom: 12,
   },
   purpleAccent: {
-    color: '#2B1E80',
+    color: tone('#2B1E80'),
     fontWeight: '800',
   },
   tealAccent: {
-    color: '#1A6B5A',
+    color: tone('#1A6B5A'),
     fontWeight: '800',
   },
   peachAccent: {
-    color: '#9E4510',
+    color: tone('#9E4510'),
     fontWeight: '800',
   },
   bodyText: {
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#C06830',
+    backgroundColor: toneBg('#C06830'),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -509,13 +510,13 @@ const styles = StyleSheet.create({
     }),
   },
   createBtnText: {
-    color: '#FFFFFF',
+    color: tone('#FFFFFF'),
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   createBtnArrow: {
-    color: '#FFFFFF',
+    color: tone('#FFFFFF'),
     fontSize: 20,
     fontWeight: '400',
     marginLeft: 6,
@@ -529,7 +530,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
   },
   signInLink: {
-    color: '#9E4510',
+    color: tone('#9E4510'),
     fontWeight: '700',
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

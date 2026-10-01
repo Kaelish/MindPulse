@@ -23,6 +23,7 @@ import {
   markNotificationRead,
   notificationFullTime,
 } from '../services/notifications';
+import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 
 interface DoctorNotificationsProps {
   /** onGradient sits on the purple dashboard header, onLight on white headers. */
@@ -31,11 +32,16 @@ interface DoctorNotificationsProps {
   onOpenMessages?: () => void;
 }
 
-const DOT_COLORS: Record<FeedNotification['type'], string> = {
+const makeDotColors = (): Record<FeedNotification['type'], string> => ({
   alert: Colors.tagRedText,
   appointment: Colors.btnBlue,
   info: Colors.textHint,
-};
+});
+
+let DOT_COLORS = makeDotColors();
+registerThemeStyles(() => {
+  DOT_COLORS = makeDotColors();
+});
 
 /**
  * Doctor bell + full notification history (past → recent), mirroring the web
@@ -274,7 +280,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   bell: {
     width: 38,
     height: 38,
@@ -372,7 +378,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.lg,
-    backgroundColor: '#FBFCFE',
+    backgroundColor: toneBg('#FBFCFE'),
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -394,3 +400,6 @@ const styles = StyleSheet.create({
   },
   unreadTagText: { color: Colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

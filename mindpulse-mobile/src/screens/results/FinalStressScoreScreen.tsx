@@ -14,6 +14,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { ReactionResult } from '../reaction/ReactionGameScreen';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   heartRate: number;
@@ -26,20 +27,20 @@ interface Props {
 // Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35)
 const getLevel = (score: number) => {
   if (score > 60) return {
-    label: 'High Stress', color: '#E05C5C', bg: '#FFD6D6',
-    ringColor: '#E05C5C', lightBg: '#FFF0F0',
+    label: 'High Stress', color: tone('#E05C5C'), bg: toneBg('#FFD6D6'),
+    ringColor: tone('#E05C5C'), lightBg: toneBg('#FFF0F0'),
     message: 'Your signals suggest elevated stress. Consider a short recovery break.',
     isHigh: true,
   };
   if (score > 35) return {
-    label: 'Moderate Stress', color: '#E08A00', bg: '#FFF3CD',
-    ringColor: '#F5C842', lightBg: '#FFFBE6',
+    label: 'Moderate Stress', color: tone('#E08A00'), bg: toneBg('#FFF3CD'),
+    ringColor: tone('#F5C842'), lightBg: toneBg('#FFFBE6'),
     message: 'Your signals suggest some cognitive or physical load. Monitor closely.',
     isHigh: false,
   };
   return {
-    label: 'Low Stress', color: '#27AE60', bg: '#D6F5E3',
-    ringColor: '#27AE60', lightBg: '#EBF9F2',
+    label: 'Low Stress', color: tone('#27AE60'), bg: toneBg('#D6F5E3'),
+    ringColor: tone('#27AE60'), lightBg: toneBg('#EBF9F2'),
     message: 'Your signals suggest a calm and focused state. Keep it up!',
     isHigh: false,
   };
@@ -76,7 +77,7 @@ const HotlineRow = ({
     onPress={() => Linking.openURL(tel).catch(() => {})}
   >
     <View style={[styles.hotlineIcon, { backgroundColor: color }]}>
-      <Ionicons name="call" size={14} color="#FFF" />
+      <Ionicons name="call" size={14} color={tone('#FFF')} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={styles.hotlineName}>{name}</Text>
@@ -117,13 +118,13 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
                 <Text style={[styles.levelPillText, { color: level.color }]}>{level.label}</Text>
               </View>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#E05C5C" /> High Stress (61-100)
+                <Ionicons name="ellipse" size={8} color={tone('#E05C5C')} /> High Stress (61-100)
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#E08A00" /> Moderate Stress (36-60)
+                <Ionicons name="ellipse" size={8} color={tone('#E08A00')} /> Moderate Stress (36-60)
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color="#27AE60" /> Low Stress (0-35)
+                <Ionicons name="ellipse" size={8} color={tone('#27AE60')} /> Low Stress (0-35)
               </Text>
             </View>
           </View>
@@ -132,8 +133,8 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         {/* ── Multi-Modal Fusion bars ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Multi-Modal Fusion (Heart Rate 40% · Reaction 60%)</Text>
-          <FusionBar label="Heart Rate" value={heartRateStress} color="#E05C5C" />
-          <FusionBar label="Reaction Time" value={reactionStress} color="#F5A623" />
+          <FusionBar label="Heart Rate" value={heartRateStress} color={tone('#E05C5C')} />
+          <FusionBar label="Reaction Time" value={reactionStress} color={tone('#F5A623')} />
         </View>
 
         {/* ── Guidance card ── */}
@@ -168,7 +169,7 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         {/* ── Verified help in-app ── */}
         <View style={styles.clinicCard}>
           <View style={styles.clinicHeaderRow}>
-            <Ionicons name="people" size={16} color="#E05C5C" />
+            <Ionicons name="people" size={16} color={tone('#E05C5C')} />
             <Text style={styles.clinicCardTitle}>Verified telehealth professionals</Text>
           </View>
           <Text style={styles.clinicCardSub}>Open the Clinics tab to browse real clinicians and book a session.</Text>
@@ -177,10 +178,10 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         {/* ── Emergency Hotlines ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Emergency Mental Health Hotlines</Text>
-          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color="#E05C5C" tel="tel:988" />
-          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color="#F5A623" tel="tel:09175584673" />
-          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color="#5B6EF5" tel="tel:1553" />
-          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color="#4A90D9" tel="sms:741741" />
+          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color={tone('#E05C5C')} tel="tel:988" />
+          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color={tone('#F5A623')} tel="tel:09175584673" />
+          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color={tone('#5B6EF5')} tel="tel:1553" />
+          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color={tone('#4A90D9')} tel="sms:741741" />
         </View>
 
         {/* ── Action buttons ── */}
@@ -204,7 +205,7 @@ const GuidanceBullet = ({ text, color }: { text: string; color: string }) => (
   </View>
 );
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
 
   /* Score card */
@@ -291,15 +292,15 @@ const styles = StyleSheet.create({
 
   /* Clinic card */
   clinicCard: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: toneBg('#FFF5F5'),
     borderRadius: Radius.xl,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: '#FFD6D6',
+    borderColor: toneBg('#FFD6D6'),
     gap: Spacing.sm,
   },
   clinicHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  clinicCardTitle: { fontSize: 14, fontWeight: '700', color: '#E05C5C' },
+  clinicCardTitle: { fontSize: 14, fontWeight: '700', color: tone('#E05C5C') },
   clinicCardSub: { fontSize: 11, color: Colors.textSecondary, marginBottom: 4 },
   clinicRow: {
     flexDirection: 'row',
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD6D6',
+    backgroundColor: toneBg('#FFD6D6'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -322,22 +323,22 @@ const styles = StyleSheet.create({
   clinicHours: { fontSize: 10, color: Colors.textSecondary },
   clinicBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#D6F5E3',
+    backgroundColor: toneBg('#D6F5E3'),
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 1,
     marginTop: 2,
   },
-  clinicBadgeText: { fontSize: 9, fontWeight: '700', color: '#27AE60' },
+  clinicBadgeText: { fontSize: 9, fontWeight: '700', color: tone('#27AE60') },
   clinicRight: { alignItems: 'flex-end', gap: 6 },
   clinicDist: { fontSize: 11, color: Colors.textSecondary },
   callBtn: {
-    backgroundColor: '#E05C5C',
+    backgroundColor: toneBg('#E05C5C'),
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  callBtnText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
+  callBtnText: { fontSize: 11, fontWeight: '700', color: tone('#FFF') },
 
   /* Hotlines */
   hotlineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -355,12 +356,12 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#27AE60',
+    backgroundColor: toneBg('#27AE60'),
     borderRadius: Radius.lg,
     alignItems: 'center',
     paddingVertical: 14,
   },
-  saveBtnText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  saveBtnText: { fontSize: 14, fontWeight: '700', color: tone('#FFF') },
   helpBtn: {
     flex: 1,
     backgroundColor: Colors.primary,
@@ -368,5 +369,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
   },
-  helpBtnText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  helpBtnText: { fontSize: 14, fontWeight: '700', color: tone('#FFF') },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

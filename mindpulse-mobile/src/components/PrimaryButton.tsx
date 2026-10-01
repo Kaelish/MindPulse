@@ -5,6 +5,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, Radius } from '../theme/typography';
+import { registerThemeStyles } from '../theme/theme';
 
 interface Props {
   label: string;
@@ -50,7 +51,7 @@ export const PrimaryButton: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   btn: {
     width: '100%',
     paddingVertical: 16,
@@ -81,3 +82,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

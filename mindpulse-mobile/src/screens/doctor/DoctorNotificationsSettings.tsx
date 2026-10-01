@@ -17,6 +17,7 @@ import {
   loadNotificationPrefs,
   saveNotificationPrefs,
 } from '../../services/notificationPrefs';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface DoctorNotificationsSettingsProps {
   visible: boolean;
@@ -113,7 +114,7 @@ export const DoctorNotificationsSettings: React.FC<DoctorNotificationsSettingsPr
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="notifications-outline" size={20} color="#5B6EF5" />
+                <Ionicons name="notifications-outline" size={20} color={tone('#5B6EF5')} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.headerTitle}>Notification settings</Text>
@@ -127,7 +128,7 @@ export const DoctorNotificationsSettings: React.FC<DoctorNotificationsSettingsPr
 
           {toastMsg && (
             <View style={styles.toast} role="status">
-              <Ionicons name="information-circle" size={18} color="#5B6EF5" />
+              <Ionicons name="information-circle" size={18} color={tone('#5B6EF5')} />
               <Text style={styles.toastText}>{toastMsg}</Text>
             </View>
           )}
@@ -170,7 +171,7 @@ export const DoctorNotificationsSettings: React.FC<DoctorNotificationsSettingsPr
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheetContainer: {
     backgroundColor: Colors.surface,
@@ -259,3 +260,6 @@ const styles = StyleSheet.create({
   },
   noteText: { flex: 1, fontSize: 11.5, color: Colors.textSecondary, lineHeight: 16 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

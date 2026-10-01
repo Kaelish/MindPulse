@@ -22,6 +22,7 @@ import {
 } from '../../services/doctorProfile';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
 import { DoctorNotificationsSettings } from './DoctorNotificationsSettings';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface DoctorProfileScreenProps {
   onSignOut?: () => void;
@@ -272,7 +273,7 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   content: { paddingBottom: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: Colors.pageBg },
@@ -308,12 +309,12 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: '#E8ECFA',
+    backgroundColor: toneBg('#E8ECFA'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
-  avatarText: { fontSize: 24, fontWeight: '900', color: '#5B6EF5' },
+  avatarText: { fontSize: 24, fontWeight: '900', color: tone('#5B6EF5') },
   identityName: { fontSize: 19, fontWeight: '900', color: Colors.textPrimary },
   identitySpecialty: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   identityEmail: { fontSize: 12.5, color: Colors.textSecondary, marginTop: 2 },
@@ -379,3 +380,6 @@ const styles = StyleSheet.create({
   },
   signOutText: { color: Colors.tagRedText, fontWeight: '800', fontSize: 14.5 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

@@ -6,6 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { loadAssessmentState, saveAssessmentState, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
@@ -23,7 +24,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   if (!stateData) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6B79F2" />
+        <ActivityIndicator size="large" color={tone('#6B79F2')} />
       </View>
     );
   }
@@ -57,9 +58,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   const showHelpResources = isHighStress || isModerateStress;
 
   const getTheme = () => {
-    if (isLowStress) return { bg: '#E8F5E9', text: '#2E7D32', pillBg: '#4CAF50', pillText: '#FFF', label: 'Low Stress' };
-    if (isModerateStress) return { bg: '#FFF3E0', text: '#E65100', pillBg: '#FF9800', pillText: '#FFF', label: 'Moderate Stress' };
-    return { bg: '#FDECE6', text: '#D32F2F', pillBg: '#F44336', pillText: '#FFF', label: 'High Stress' };
+    if (isLowStress) return { bg: toneBg('#E8F5E9'), text: tone('#2E7D32'), pillBg: toneBg('#4CAF50'), pillText: tone('#FFF'), label: 'Low Stress' };
+    if (isModerateStress) return { bg: toneBg('#FFF3E0'), text: tone('#E65100'), pillBg: toneBg('#FF9800'), pillText: tone('#FFF'), label: 'Moderate Stress' };
+    return { bg: toneBg('#FDECE6'), text: tone('#D32F2F'), pillBg: toneBg('#F44336'), pillText: tone('#FFF'), label: 'High Stress' };
   };
 
   const theme = getTheme();
@@ -113,15 +114,15 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             </View>
             
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
+              <View style={[styles.legendDot, { backgroundColor: toneBg('#4CAF50') }]} />
               <Text style={styles.legendText}>Low (0-35)</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
+              <View style={[styles.legendDot, { backgroundColor: toneBg('#FF9800') }]} />
               <Text style={styles.legendText}>Moderate (36-60)</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
+              <View style={[styles.legendDot, { backgroundColor: toneBg('#F44336') }]} />
               <Text style={styles.legendText}>High (61-100)</Text>
             </View>
           </View>
@@ -136,12 +137,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Survey (PSS + Physio)</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: '#E8EAF6' }]}><Text style={[styles.fusionBadgeText, { color: '#3F51B5' }]}>62.5%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#E8EAF6') }]}><Text style={[styles.fusionBadgeText, { color: tone('#3F51B5') }]}>62.5%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
-              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: '#5C6BC0' }]} />
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: toneBg('#5C6BC0') }]} />
             </View>
-            <Text style={[styles.fusionScore, { color: '#3F51B5' }]}>{Math.round(surveyVal)}</Text>
+            <Text style={[styles.fusionScore, { color: tone('#3F51B5') }]}>{Math.round(surveyVal)}</Text>
           </View>
         )}
 
@@ -149,22 +150,22 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
         <View style={styles.fusionRow}>
           <View style={styles.fusionLabelRow}>
             <Text style={styles.fusionLabel}>Facial Emotion</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: '#FFF3E0' }]}><Text style={[styles.fusionBadgeText, { color: '#E08A00' }]}>Demo</Text></View>
+            <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF3E0') }]}><Text style={[styles.fusionBadgeText, { color: tone('#E08A00') }]}>Demo</Text></View>
           </View>
           <View style={styles.fusionTrack} />
-          <Text style={[styles.fusionScore, { color: '#999' }]}>—</Text>
+          <Text style={[styles.fusionScore, { color: tone('#999') }]}>—</Text>
         </View>
 
         {hrVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Heart Rate</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: '#FFEBEE' }]}><Text style={[styles.fusionBadgeText, { color: '#F44336' }]}>25%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFEBEE') }]}><Text style={[styles.fusionBadgeText, { color: tone('#F44336') }]}>25%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
-              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: '#EF5350' }]} />
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: toneBg('#EF5350') }]} />
             </View>
-            <Text style={[styles.fusionScore, { color: '#F44336' }]}>{Math.round(hrVal)}</Text>
+            <Text style={[styles.fusionScore, { color: tone('#F44336') }]}>{Math.round(hrVal)}</Text>
           </View>
         )}
 
@@ -172,62 +173,62 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Reaction Time</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: '#FFF8E1' }]}><Text style={[styles.fusionBadgeText, { color: '#FFB300' }]}>12.5%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF8E1') }]}><Text style={[styles.fusionBadgeText, { color: tone('#FFB300') }]}>12.5%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
-              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: '#FFA000' }]} />
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: toneBg('#FFA000') }]} />
             </View>
-            <Text style={[styles.fusionScore, { color: '#FFB300' }]}>{Math.round(rxVal)}</Text>
+            <Text style={[styles.fusionScore, { color: tone('#FFB300') }]}>{Math.round(rxVal)}</Text>
           </View>
         )}
       </View>
 
       {/* Advisory Card */}
       {isLowStress ? (
-        <View style={[styles.advisoryCard, { backgroundColor: '#E8F5E9' }]}>
+        <View style={[styles.advisoryCard, { backgroundColor: toneBg('#E8F5E9') }]}>
           <View style={styles.advisoryHeader}>
-            <Ionicons name="leaf-outline" size={28} color="#2E7D32" />
-            <Text style={[styles.advisoryTitle, { color: '#2E7D32' }]}>You seem relaxed today.</Text>
+            <Ionicons name="leaf-outline" size={28} color={tone('#2E7D32')} />
+            <Text style={[styles.advisoryTitle, { color: tone('#2E7D32') }]}>You seem relaxed today.</Text>
           </View>
           <Text style={styles.advisoryBody}>
             Maintain healthy routines — good sleep, regular physical activity, and social connections keep stress low.
           </Text>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#2E7D32" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
             <Text style={styles.advisoryCheckText}>Keep up your sleep schedule</Text>
           </View>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#2E7D32" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
             <Text style={styles.advisoryCheckText}>Stay hydrated and eat well</Text>
           </View>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#2E7D32" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
             <Text style={styles.advisoryCheckText}>Continue positive activities you enjoy</Text>
           </View>
         </View>
       ) : (
-        <View style={[styles.advisoryCard, { backgroundColor: '#FDECE6' }]}>
+        <View style={[styles.advisoryCard, { backgroundColor: toneBg('#FDECE6') }]}>
           <View style={styles.advisoryHeader}>
-            <Ionicons name="warning-outline" size={28} color="#D32F2F" />
-            <Text style={[styles.advisoryTitle, { color: '#D32F2F' }]}>Your stress indicators are elevated</Text>
+            <Ionicons name="warning-outline" size={28} color={tone('#D32F2F')} />
+            <Text style={[styles.advisoryTitle, { color: tone('#D32F2F') }]}>Your stress indicators are elevated</Text>
           </View>
           <Text style={styles.advisoryBody}>
             Try resting or practicing relaxation techniques. Consider reaching out to a mental health professional for support.
           </Text>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#D32F2F" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Rest and avoid overloading tasks</Text>
           </View>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#D32F2F" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Practice deep breathing or meditation</Text>
           </View>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#D32F2F" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Reach out to campus counseling</Text>
           </View>
           <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#D32F2F" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Consider a telehealth consultation</Text>
           </View>
         </View>
@@ -243,20 +244,20 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
               activeOpacity={0.7}
             >
               <View style={styles.clinicsIconWrap}>
-                <Ionicons name="location-outline" size={20} color="#FFF" />
+                <Ionicons name="location-outline" size={20} color={tone('#FFF')} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.clinicsTitle}>Find Nearby Psych Clinics</Text>
                 <Text style={styles.clinicsSub}>Suggested based on your stress level</Text>
               </View>
-              <Ionicons name={clinicsExpanded ? "chevron-up" : "chevron-forward"} size={20} color="#D32F2F" />
+              <Ionicons name={clinicsExpanded ? "chevron-up" : "chevron-forward"} size={20} color={tone('#D32F2F')} />
             </TouchableOpacity>
 
             {clinicsExpanded && (
               <View style={styles.clinicsContent}>
                 {/* Guidance placeholder — no fabricated locations or distances */}
                 <View style={styles.mapPlaceholder}>
-                  <Ionicons name="people-outline" size={32} color="#D32F2F" style={{ position: 'absolute', top: 44, alignSelf: 'center' }} />
+                  <Ionicons name="people-outline" size={32} color={tone('#D32F2F')} style={{ position: 'absolute', top: 44, alignSelf: 'center' }} />
                 </View>
 
                 <View style={styles.clinicItem}>
@@ -278,8 +279,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
               onPress={() => Linking.openURL('tel:988').catch(() => {})}
               activeOpacity={0.7}
             >
-              <View style={[styles.hotlineIconWrap, { backgroundColor: '#F44336' }]}>
-                <Ionicons name="call" size={18} color="#FFF" />
+              <View style={[styles.hotlineIconWrap, { backgroundColor: toneBg('#F44336') }]}>
+                <Ionicons name="call" size={18} color={tone('#FFF')} />
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>National Crisis Hotline</Text>
@@ -292,8 +293,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
               onPress={() => Linking.openURL('tel:09178001123').catch(() => {})}
               activeOpacity={0.7}
             >
-              <View style={[styles.hotlineIconWrap, { backgroundColor: '#FF9800' }]}>
-                <Ionicons name="call" size={18} color="#FFF" />
+              <View style={[styles.hotlineIconWrap, { backgroundColor: toneBg('#FF9800') }]}>
+                <Ionicons name="call" size={18} color={tone('#FFF')} />
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>In Touch Crisis Line (PH)</Text>
@@ -306,8 +307,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
               onPress={() => Linking.openURL('tel:1553').catch(() => {})}
               activeOpacity={0.7}
             >
-              <View style={[styles.hotlineIconWrap, { backgroundColor: '#9C27B0' }]}>
-                <Ionicons name="call" size={18} color="#FFF" />
+              <View style={[styles.hotlineIconWrap, { backgroundColor: toneBg('#9C27B0') }]}>
+                <Ionicons name="call" size={18} color={tone('#FFF')} />
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>NCMH Crisis Hotline</Text>
@@ -320,8 +321,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
               onPress={() => Linking.openURL('sms:741741').catch(() => {})}
               activeOpacity={0.7}
             >
-              <View style={[styles.hotlineIconWrap, { backgroundColor: '#03A9F4' }]}>
-                <Ionicons name="call" size={18} color="#FFF" />
+              <View style={[styles.hotlineIconWrap, { backgroundColor: toneBg('#03A9F4') }]}>
+                <Ionicons name="call" size={18} color={tone('#FFF')} />
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>Crisis Text Line</Text>
@@ -343,7 +344,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.helpBtn}>
           <Text style={styles.helpBtnText}>Get Help</Text>
-          <Ionicons name="arrow-forward" size={16} color="#FFF" />
+          <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
         </TouchableOpacity>
       </View>
 
@@ -351,66 +352,69 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   scoreCard: { borderRadius: 16, padding: 20, marginBottom: 16 },
-  scoreTitle: { fontSize: 16, fontWeight: '700', color: '#666', textAlign: 'center', marginBottom: 16 },
+  scoreTitle: { fontSize: 16, fontWeight: '700', color: tone('#666'), textAlign: 'center', marginBottom: 16 },
   scoreContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 32 },
-  scoreCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' },
+  scoreCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: toneBg('#FFF') },
   scoreNumber: { fontSize: 40, fontWeight: '900' },
-  scoreOutof: { fontSize: 12, color: '#888', marginTop: -4 },
+  scoreOutof: { fontSize: 12, color: tone('#888'), marginTop: -4 },
   scoreLegend: { gap: 8 },
   scorePill: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 4 },
   scorePillText: { fontSize: 12, fontWeight: '800' },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  legendText: { fontSize: 11, color: '#666' },
+  legendText: { fontSize: 11, color: tone('#666') },
 
-  fusionCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#EEE' },
-  fusionTitle: { fontSize: 14, fontWeight: '800', color: '#1A1A1A', marginBottom: 16 },
+  fusionCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
+  fusionTitle: { fontSize: 14, fontWeight: '800', color: tone('#1A1A1A'), marginBottom: 16 },
   fusionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   fusionLabelRow: { width: 130, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 8 },
-  fusionLabel: { fontSize: 11, color: '#888' },
+  fusionLabel: { fontSize: 11, color: tone('#888') },
   fusionBadge: { paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
   fusionBadgeText: { fontSize: 8, fontWeight: '800' },
-  fusionTrack: { flex: 1, height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, marginHorizontal: 8 },
+  fusionTrack: { flex: 1, height: 6, backgroundColor: toneBg('#E0E0E0'), borderRadius: 3, marginHorizontal: 8 },
   fusionFill: { height: '100%', borderRadius: 3 },
   fusionScore: { fontSize: 12, fontWeight: '800', width: 24, textAlign: 'right' },
 
   advisoryCard: { borderRadius: 16, padding: 20, marginBottom: 16 },
   advisoryHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   advisoryTitle: { fontSize: 18, fontWeight: '800' },
-  advisoryBody: { fontSize: 13, color: '#666', lineHeight: 20, marginBottom: 16 },
+  advisoryBody: { fontSize: 13, color: tone('#666'), lineHeight: 20, marginBottom: 16 },
   advisoryCheck: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  advisoryCheckText: { fontSize: 12, color: '#555' },
+  advisoryCheckText: { fontSize: 12, color: tone('#555') },
 
-  clinicsCard: { backgroundColor: '#FDECE6', borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
+  clinicsCard: { backgroundColor: toneBg('#FDECE6'), borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
   clinicsHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  clinicsIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E53935', alignItems: 'center', justifyContent: 'center' },
-  clinicsTitle: { fontSize: 14, fontWeight: '800', color: '#D32F2F' },
-  clinicsSub: { fontSize: 11, color: '#D32F2F' },
+  clinicsIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: toneBg('#E53935'), alignItems: 'center', justifyContent: 'center' },
+  clinicsTitle: { fontSize: 14, fontWeight: '800', color: tone('#D32F2F') },
+  clinicsSub: { fontSize: 11, color: tone('#D32F2F') },
   clinicsContent: { padding: 16, paddingTop: 0 },
-  mapPlaceholder: { height: 120, backgroundColor: '#FFF', borderRadius: 12, marginBottom: 16, opacity: 0.8 },
-  clinicItem: { backgroundColor: '#FFF', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  mapPlaceholder: { height: 120, backgroundColor: toneBg('#FFF'), borderRadius: 12, marginBottom: 16, opacity: 0.8 },
+  clinicItem: { backgroundColor: toneBg('#FFF'), borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   clinicInfo: { flex: 1 },
-  clinicName: { fontSize: 13, fontWeight: '800', color: '#1A1A1A', marginBottom: 2 },
-  clinicHours: { fontSize: 11, color: '#888', marginBottom: 4 },
-  clinicTag: { backgroundColor: '#FDECE6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' },
-  clinicTagText: { fontSize: 9, color: '#D32F2F', fontWeight: '700' },
-  callBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E53935', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 4 },
-  callBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700', marginLeft: 4 },
-  clinicDist: { fontSize: 10, color: '#D32F2F', fontWeight: '600' },
+  clinicName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), marginBottom: 2 },
+  clinicHours: { fontSize: 11, color: tone('#888'), marginBottom: 4 },
+  clinicTag: { backgroundColor: toneBg('#FDECE6'), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' },
+  clinicTagText: { fontSize: 9, color: tone('#D32F2F'), fontWeight: '700' },
+  callBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#E53935'), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 4 },
+  callBtnText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700', marginLeft: 4 },
+  clinicDist: { fontSize: 10, color: tone('#D32F2F'), fontWeight: '600' },
 
-  hotlinesCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#EEE' },
-  hotlinesTitle: { fontSize: 14, fontWeight: '800', color: '#1A1A1A', marginBottom: 16 },
+  hotlinesCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
+  hotlinesTitle: { fontSize: 14, fontWeight: '800', color: tone('#1A1A1A'), marginBottom: 16 },
   hotlineItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   hotlineIconWrap: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   hotlineTextWrap: { flex: 1, marginLeft: 12 },
-  hotlineName: { fontSize: 13, fontWeight: '800', color: '#1A1A1A' },
-  hotlineDesc: { fontSize: 11, color: '#666', marginTop: 2 },
+  hotlineName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A') },
+  hotlineDesc: { fontSize: 11, color: tone('#666'), marginTop: 2 },
 
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  saveBtn: { flex: 1, height: 50, backgroundColor: '#81C784', borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
-  helpBtn: { flex: 1, height: 50, backgroundColor: '#6B79F2', borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  helpBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  saveBtn: { flex: 1, height: 50, backgroundColor: toneBg('#81C784'), borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
+  helpBtn: { flex: 1, height: 50, backgroundColor: toneBg('#6B79F2'), borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  helpBtnText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

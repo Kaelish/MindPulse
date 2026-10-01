@@ -45,6 +45,7 @@ import {
   pickDocumentAttachment,
   pickImageAttachment,
 } from '../../services/chat';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 type ClinicTab = 'clinicians' | 'bookings' | 'messages' | 'support';
 
@@ -215,7 +216,7 @@ const ClinicianAvatar = ({ initials }: { initials: string }) => (
     <View style={styles.avatarCircle}>
       <Text style={styles.avatarInitials}>{initials}</Text>
     </View>
-    <View style={[styles.avatarDot, { backgroundColor: '#27AE60' }]} />
+    <View style={[styles.avatarDot, { backgroundColor: toneBg('#27AE60') }]} />
   </View>
 );
 
@@ -259,8 +260,8 @@ const BOOKING_PILLS: Record<string, { label: string; bg: string; fg: string }> =
 const BookingPill = ({ status }: { status: MyBooking['status'] }) => {
   const pill = BOOKING_PILLS[status] ?? BOOKING_PILLS.scheduled;
   return (
-    <View style={[styles.pill, { backgroundColor: pill.bg }]}>
-      <Text style={[styles.pillText, { color: pill.fg }]}>{pill.label}</Text>
+    <View style={[styles.pill, { backgroundColor: toneBg(pill.bg) }]}>
+      <Text style={[styles.pillText, { color: tone(pill.fg) }]}>{pill.label}</Text>
     </View>
   );
 };
@@ -302,14 +303,14 @@ const ChatBubble = ({
             disabled={!attachment.url}
           >
             <Ionicons name="document-text-outline" size={16} color={isMe ? '#FFF' : ACCENT} />
-            <Text style={[styles.docName, isMe && { color: '#FFF' }]} numberOfLines={1}>
+            <Text style={[styles.docName, isMe && { color: tone('#FFF') }]} numberOfLines={1}>
               {attachment.name}
             </Text>
           </TouchableOpacity>
         )}
 
         {text.length > 0 && (
-          <Text style={[styles.bubbleText, isMe && { color: '#FFF' }, attachment && { marginTop: 6 }]}>
+          <Text style={[styles.bubbleText, isMe && { color: tone('#FFF') }, attachment && { marginTop: 6 }]}>
             {text}
           </Text>
         )}
@@ -729,7 +730,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </View>
             <TouchableOpacity style={styles.callNowBtn} onPress={() => setActiveTab('support')}>
               <Text style={styles.callNowText}>Hotlines</Text>
-              <Ionicons name="chevron-forward" size={14} color="#FFF" />
+              <Ionicons name="chevron-forward" size={14} color={tone('#FFF')} />
             </TouchableOpacity>
           </View>
 
@@ -844,7 +845,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   <View style={styles.bookingActions}>
                     <Text style={styles.feeText}>Consultation fee ₱{b.fee}</Text>
                     <TouchableOpacity style={styles.payBtn} onPress={() => openPayment(b)}>
-                      <Ionicons name="card" size={15} color="#FFF" />
+                      <Ionicons name="card" size={15} color={tone('#FFF')} />
                       <Text style={styles.payBtnText}>Pay &amp; Confirm</Text>
                     </TouchableOpacity>
                   </View>
@@ -859,7 +860,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                       style={styles.joinBtn}
                       onPress={() => onStartVideoCall?.(b.doctorId, b.id)}
                     >
-                      <Ionicons name="videocam" size={15} color="#FFF" />
+                      <Ionicons name="videocam" size={15} color={tone('#FFF')} />
                       <Text style={styles.payBtnText}>Join Video Call</Text>
                     </TouchableOpacity>
                   </View>
@@ -1031,8 +1032,8 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   disabled={sendingMessage || (!chatInput.trim() && !pendingAttachment)}
                 >
                   {sendingMessage
-                    ? <ActivityIndicator size="small" color="#FFF" />
-                    : <Ionicons name="send" size={18} color="#FFF" />}
+                    ? <ActivityIndicator size="small" color={tone('#FFF')} />
+                    : <Ionicons name="send" size={18} color={tone('#FFF')} />}
                 </TouchableOpacity>
               </View>
             </>
@@ -1044,7 +1045,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       {activeTab === 'support' && (
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
           <View style={styles.supportIntro}>
-            <Ionicons name="information-circle" size={22} color="#E05C5C" />
+            <Ionicons name="information-circle" size={22} color={tone('#E05C5C')} />
             <Text style={styles.supportIntroText}>
               You are not alone. Free, confidential help is available — the numbers below are
               listed for reference and can be dialed from any phone. In an emergency, call 911.
@@ -1064,7 +1065,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                     onPress={() => setSelectedHotline(h)}
                   >
                     <View style={styles.supportIcon}>
-                      <Ionicons name={h.icon} size={20} color="#E05C5C" />
+                      <Ionicons name={h.icon} size={20} color={tone('#E05C5C')} />
                     </View>
                     <View style={styles.supportInfo}>
                       <Text style={styles.supportName}>{h.name}</Text>
@@ -1126,7 +1127,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                       <Text
                         style={[
                           styles.dateChipDay,
-                          selectedDateIdx === i && { color: '#FFF' },
+                          selectedDateIdx === i && { color: tone('#FFF') },
                           off && { color: Colors.textHint },
                         ]}
                       >
@@ -1175,7 +1176,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                     <Text
                       style={[
                         styles.timeSlotText,
-                        selectedTime === t && { color: '#FFF' },
+                        selectedTime === t && { color: tone('#FFF') },
                         isUnavailable && styles.timeSlotPastText,
                         isBooked && styles.timeSlotBookedText,
                       ]}
@@ -1220,7 +1221,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
         <View style={styles.modalOverlay}>
           <View style={styles.successSheet}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark" size={36} color="#FFF" />
+              <Ionicons name="checkmark" size={36} color={tone('#FFF')} />
             </View>
             <Text style={styles.successTitle}>Request Sent!</Text>
             <Text style={styles.successBody}>
@@ -1270,7 +1271,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             {payDone ? (
               <View style={{ alignItems: 'center', paddingBottom: 12 }}>
                 <View style={[styles.successIcon, { marginBottom: 14 }]}>
-                  <Ionicons name="checkmark" size={34} color="#FFF" />
+                  <Ionicons name="checkmark" size={34} color={tone('#FFF')} />
                 </View>
                 <Text style={styles.payAmount}>₱{payDone.fee} paid</Text>
                 <Text style={styles.waitNote}>
@@ -1286,7 +1287,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                     onStartVideoCall?.(booking.doctorId, booking.id);
                   }}
                 >
-                  <Ionicons name="videocam" size={15} color="#FFF" />
+                  <Ionicons name="videocam" size={15} color={tone('#FFF')} />
                   <Text style={styles.payBtnText}>Join Video Call</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1331,7 +1332,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                       <Text
                         style={[
                           styles.methodChipText,
-                          payMethod === m.key && { color: '#FFF' },
+                          payMethod === m.key && { color: tone('#FFF') },
                         ]}
                       >
                         {m.label}
@@ -1387,7 +1388,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
                 {payError && (
                   <View style={[styles.reasonBox, { marginTop: 12 }]}>
-                    <Text style={[styles.reasonText, { color: '#B91C1C' }]}>{payError}</Text>
+                    <Text style={[styles.reasonText, { color: tone('#B91C1C') }]}>{payError}</Text>
                   </View>
                 )}
 
@@ -1400,7 +1401,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   disabled={!payMethod || payBusy}
                   onPress={() => void handlePay()}
                 >
-                  <ActivityIndicator size="small" color="#FFF" style={payBusy ? undefined : { display: 'none' }} />
+                  <ActivityIndicator size="small" color={tone('#FFF')} style={payBusy ? undefined : { display: 'none' }} />
                   <Text style={styles.payBtnText}>
                     {payBusy ? 'Processing…' : `Pay ₱${payTarget?.fee ?? 0}`}
                   </Text>
@@ -1467,7 +1468,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
 const ACCENT = '#5B6EF5';
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
 
   /* Header */
@@ -1490,31 +1491,31 @@ const styles = StyleSheet.create({
 
   /* Crisis Banner */
   crisisBanner: {
-    backgroundColor: '#FFF1F1',
+    backgroundColor: toneBg('#FFF1F1'),
     borderRadius: 14,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#FFD6D6',
+    borderColor: toneBg('#FFD6D6'),
   },
   crisisLeft: { gap: 3 },
   onlinePill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#27AE60' },
-  onlineText: { fontSize: 11, color: '#27AE60', fontWeight: '700' },
-  crisisTitle: { fontSize: 15, fontWeight: '800', color: '#E05C5C' },
+  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: toneBg('#27AE60') },
+  onlineText: { fontSize: 11, color: tone('#27AE60'), fontWeight: '700' },
+  crisisTitle: { fontSize: 15, fontWeight: '800', color: tone('#E05C5C') },
   crisisPhone: { fontSize: 11, color: Colors.textSecondary },
   callNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E05C5C',
+    backgroundColor: toneBg('#E05C5C'),
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
     gap: 6,
   },
-  callNowText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  callNowText: { fontSize: 13, fontWeight: '700', color: tone('#FFF') },
 
   /* Search */
   searchBar: {
@@ -1543,9 +1544,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   stateText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
-  stateError: { fontSize: 13, color: '#E05C5C', textAlign: 'center', lineHeight: 19 },
+  stateError: { fontSize: 13, color: tone('#E05C5C'), textAlign: 'center', lineHeight: 19 },
   retryBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, backgroundColor: ACCENT },
-  retryText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  retryText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700' },
 
   /* Clinician card */
   clinicianCard: {
@@ -1563,20 +1564,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EAF0FB',
+    backgroundColor: toneBg('#EAF0FB'),
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: { fontSize: 16, fontWeight: '800', color: ACCENT },
-  avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFF' },
+  avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: toneBg('#FFF') },
   clinicianInfo: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   clinicianName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
-  verifiedBadge: { fontSize: 9, fontWeight: '800', color: '#1E7E43', backgroundColor: '#D6F5E3', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  verifiedBadge: { fontSize: 9, fontWeight: '800', color: tone('#1E7E43'), backgroundColor: toneBg('#D6F5E3'), paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
   clinicianSpec: { fontSize: 12, color: ACCENT, fontWeight: '600' },
   clinicianBio: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
-  tag: { backgroundColor: '#EEF0FB', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  tag: { backgroundColor: toneBg('#EEF0FB'), borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
   tagText: { fontSize: 10, color: ACCENT, fontWeight: '600' },
   connectBtn: {
     backgroundColor: ACCENT,
@@ -1585,7 +1586,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignSelf: 'flex-start',
   },
-  connectBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  connectBtnText: { fontSize: 12, fontWeight: '700', color: tone('#FFF') },
 
   /* Messages */
   convoRow: {
@@ -1598,7 +1599,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  convoAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EAF0FB', alignItems: 'center', justifyContent: 'center' },
+  convoAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: toneBg('#EAF0FB'), alignItems: 'center', justifyContent: 'center' },
   convoAvatarText: { fontSize: 14, fontWeight: '800', color: ACCENT },
   convoInfo: { flex: 1 },
   convoName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
@@ -1610,11 +1611,11 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     paddingHorizontal: 5,
-    backgroundColor: '#E05C5C',
+    backgroundColor: toneBg('#E05C5C'),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unreadBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
+  unreadBadgeText: { fontSize: 10, fontWeight: '800', color: tone('#FFF') },
   tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chatScroll: { flex: 1 },
   emptyThreadText: { fontSize: 12, color: Colors.textHint, textAlign: 'center', marginVertical: 8 },
@@ -1634,24 +1635,24 @@ const styles = StyleSheet.create({
   bubbleWrap: { alignItems: 'flex-start', marginBottom: 6 },
   bubbleWrapMe: { alignItems: 'flex-end' },
   bubble: { maxWidth: '75%', borderRadius: 16, padding: 12 },
-  bubbleThem: { backgroundColor: '#F0F2F6', borderBottomLeftRadius: 4 },
+  bubbleThem: { backgroundColor: toneBg('#F0F2F6'), borderBottomLeftRadius: 4 },
   bubbleMe: { backgroundColor: ACCENT, borderBottomRightRadius: 4 },
   bubbleText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   bubbleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   bubbleTime: { fontSize: 10, color: Colors.textHint },
   receiptText: { fontSize: 10, color: Colors.textHint, fontWeight: '600' },
-  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: '#E4E7EF' },
+  bubbleImage: { width: 200, height: 150, borderRadius: 10, backgroundColor: toneBg('#E4E7EF') },
   bubbleImagePending: { alignItems: 'center', justifyContent: 'center' },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: toneBg('#FFF'),
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#E4E7EF',
+    borderColor: toneBg('#E4E7EF'),
   },
   docRowMe: { backgroundColor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.4)' },
   docName: { fontSize: 12.5, fontWeight: '600', color: Colors.textPrimary, flexShrink: 1 },
@@ -1663,10 +1664,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#EEF1FE',
+    backgroundColor: toneBg('#EEF1FE'),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#D6DEFB',
+    borderColor: toneBg('#D6DEFB'),
   },
   attachmentChipText: { flex: 1, fontSize: 12.5, color: ACCENT, fontWeight: '600' },
   attachBtn: {
@@ -1754,7 +1755,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   confirmBtnDisabled: { opacity: 0.4 },
-  confirmBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  confirmBtnText: { fontSize: 15, fontWeight: '800', color: tone('#FFF') },
 
   /* Success modal */
   successSheet: {
@@ -1769,7 +1770,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#27AE60',
+    backgroundColor: toneBg('#27AE60'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1785,7 +1786,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  successBtnText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  successBtnText: { fontSize: 15, fontWeight: '800', color: tone('#FFF') },
   successDismiss: { fontSize: 13, color: Colors.textSecondary },
 
   /* Bookings */
@@ -1802,15 +1803,15 @@ const styles = StyleSheet.create({
   pill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
   pillText: { fontSize: 10, fontWeight: '800' },
   reasonBox: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: toneBg('#FEE2E2'),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: toneBg('#FECACA'),
     padding: 10,
   },
-  reasonText: { fontSize: 12, color: '#B91C1C', lineHeight: 17, fontWeight: '600' },
+  reasonText: { fontSize: 12, color: tone('#B91C1C'), lineHeight: 17, fontWeight: '600' },
   waitNote: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
-  confirmedNote: { fontSize: 12, color: '#1E7E43', lineHeight: 17, fontWeight: '600' },
+  confirmedNote: { fontSize: 12, color: tone('#1E7E43'), lineHeight: 17, fontWeight: '600' },
   bookingActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1836,12 +1837,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#27AE60',
+    backgroundColor: toneBg('#27AE60'),
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  payBtnText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
+  payBtnText: { fontSize: 12, fontWeight: '800', color: tone('#FFF') },
   payAmount: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
 
   /* Payment modal */
@@ -1885,14 +1886,14 @@ const styles = StyleSheet.create({
   supportIntro: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: '#FFF1F1',
+    backgroundColor: toneBg('#FFF1F1'),
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FFD6D6',
+    borderColor: toneBg('#FFD6D6'),
     padding: 14,
     alignItems: 'flex-start',
   },
-  supportIntroText: { flex: 1, fontSize: 12, color: '#9B3B3B', lineHeight: 18 },
+  supportIntroText: { flex: 1, fontSize: 12, color: tone('#9B3B3B'), lineHeight: 18 },
   supportCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1907,7 +1908,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFF1F1',
+    backgroundColor: toneBg('#FFF1F1'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1916,7 +1917,7 @@ const styles = StyleSheet.create({
   supportTagline: { fontSize: 12, color: Colors.textSecondary, lineHeight: 16 },
   supportAvailPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#EEF0FB',
+    backgroundColor: toneBg('#EEF0FB'),
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -1931,7 +1932,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#EEF0FB',
+    backgroundColor: toneBg('#EEF0FB'),
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1953,7 +1954,7 @@ const styles = StyleSheet.create({
   supportNumberLabel: { flex: 1, fontSize: 11, color: Colors.textSecondary },
   supportNumberValue: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 0.3 },
   supportSourceBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: toneBg('#F8FAFC'),
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -1962,3 +1963,6 @@ const styles = StyleSheet.create({
   },
   supportSourceText: { fontSize: 11, color: Colors.textHint, lineHeight: 16 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

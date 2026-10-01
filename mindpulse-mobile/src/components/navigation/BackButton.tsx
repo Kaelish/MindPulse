@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -23,10 +24,10 @@ export const BackButton: React.FC<BackButtonProps> = ({ onPress, style }) => (
   </TouchableOpacity>
 );
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   button: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: toneBg('#FFFFFF'),
     borderRadius: 22,
     elevation: 6,
     height: 44,
@@ -55,15 +56,18 @@ const styles = StyleSheet.create({
   arrowTop: {
     width: 10,
     height: 2.5,
-    backgroundColor: '#4A7DC7',
+    backgroundColor: toneBg('#4A7DC7'),
     borderRadius: 1.5,
     transform: [{ rotate: '-45deg' }, { translateY: 3.5 }],
   },
   arrowBottom: {
     width: 10,
     height: 2.5,
-    backgroundColor: '#4A7DC7',
+    backgroundColor: toneBg('#4A7DC7'),
     borderRadius: 1.5,
     transform: [{ rotate: '45deg' }, { translateY: -3.5 }],
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

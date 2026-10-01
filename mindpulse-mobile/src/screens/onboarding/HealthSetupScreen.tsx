@@ -175,11 +175,11 @@ const Step2 = ({
 }: any) => {
   return (
     <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <View style={[styles.infoBanner, { backgroundColor: '#E9F5E9', borderColor: '#A3D9A5' }]}>
-        <View style={[styles.infoIcon, { backgroundColor: '#27AE60' }]}>
+      <View style={[styles.infoBanner, { backgroundColor: toneBg('#E9F5E9'), borderColor: toneBg('#A3D9A5') }]}>
+        <View style={[styles.infoIcon, { backgroundColor: toneBg('#27AE60') }]}>
           <Text style={styles.infoIconText}>✓</Text>
         </View>
-        <Text style={[styles.infoBannerText, { color: '#1B5E20' }]}>Check all that apply. This data is only used to add context to your analysis — it does not replace a medical diagnosis.</Text>
+        <Text style={[styles.infoBannerText, { color: tone('#1B5E20') }]}>Check all that apply. This data is only used to add context to your analysis — it does not replace a medical diagnosis.</Text>
       </View>
 
       <CategoryCard 
@@ -201,7 +201,7 @@ const Step2 = ({
       />
 
       <Pressable onPress={toggleNone} style={[styles.noneBox, noneApply && styles.noneBoxActive]}>
-        <View style={[styles.checkBox, noneApply && { backgroundColor: '#27AE60', borderColor: '#27AE60' }]}>
+        <View style={[styles.checkBox, noneApply && { backgroundColor: toneBg('#27AE60'), borderColor: toneBg('#27AE60') }]}>
           {noneApply && <Ionicons name="checkmark" size={12} color={Colors.white} />}
         </View>
         <Text style={[styles.checkLabel, noneApply && { fontWeight: '700' }]}>None of the above apply to me</Text>
@@ -250,7 +250,7 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
         <Text style={styles.summaryTitle}>HEALTH CONDITIONS FLAGGED</Text>
         {noConditions ? (
           <View style={styles.summaryRow}>
-            <Ionicons name="checkmark-circle" size={16} color="#27AE60" style={{marginRight: 6}} />
+            <Ionicons name="checkmark-circle" size={16} color={tone('#27AE60')} style={{marginRight: 6}} />
             <Text style={styles.summaryValue}>No conditions specified</Text>
           </View>
         ) : (
@@ -281,6 +281,7 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
 
 import { supabase } from '../../supabase/client';
 import { Alert } from 'react-native';
+import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 /* ─────────── Main Screen ─────────── */
 export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'friend', onContinue }) => {
@@ -361,10 +362,7 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
 };
 
 /* ─────────── Styles ─────────── */
-const ORANGE = Colors.btnOrange;
-const WHITE = Colors.white;
-
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.pageBg },
   header: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8, backgroundColor: Colors.pageBg },
   headerTitle: { color: Colors.textPrimary, ...Typography.h2, textAlign: 'center' },
@@ -372,48 +370,48 @@ const styles = StyleSheet.create({
   progressWrap: { marginTop: 4, marginBottom: 2 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   progressStep: { color: Colors.textPrimary, fontSize: 12, fontWeight: '800' },
-  progressLabel: { color: '#B0B8C8', fontSize: 12, fontWeight: '600' },
-  progressTrack: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: 6, backgroundColor: ORANGE, borderRadius: 3 },
+  progressLabel: { color: tone('#B0B8C8'), fontSize: 12, fontWeight: '600' },
+  progressTrack: { height: 6, backgroundColor: toneBg('#E2E8F0'), borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: Colors.btnOrange, borderRadius: 3 },
   stepScroll: { flex: 1 },
   stepContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
   
-  infoBanner: { flexDirection: 'row', backgroundColor: '#FFFBEB', borderColor: '#FDE68A', borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 24, gap: 10, alignItems: 'center' },
-  infoIcon: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#D97706', alignItems: 'center', justifyContent: 'center' },
-  infoIconText: { color: '#D97706', fontSize: 12, fontWeight: '800' },
-  infoBannerText: { flex: 1, color: '#92400E', fontSize: 12, lineHeight: 18 },
+  infoBanner: { flexDirection: 'row', backgroundColor: toneBg('#FFFBEB'), borderColor: toneBg('#FDE68A'), borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 24, gap: 10, alignItems: 'center' },
+  infoIcon: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: toneBg('#D97706'), alignItems: 'center', justifyContent: 'center' },
+  infoIconText: { color: tone('#D97706'), fontSize: 12, fontWeight: '800' },
+  infoBannerText: { flex: 1, color: tone('#92400E'), fontSize: 12, lineHeight: 18 },
 
   fieldLabel: { color: Colors.textPrimary, ...Typography.h3, marginTop: 16, marginBottom: 12 },
-  optional: { color: '#B0B8C8', fontWeight: '400', fontSize: 14 },
+  optional: { color: tone('#B0B8C8'), fontWeight: '400', fontSize: 14 },
   
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  chip: { borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 24, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: WHITE },
-  chipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  chip: { borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 24, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: Colors.surface },
+  chipActive: { backgroundColor: Colors.btnOrange, borderColor: Colors.btnOrange },
   chipText: { color: Colors.textPrimary, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: WHITE },
+  chipTextActive: { color: Colors.white },
 
-  textInput: { backgroundColor: WHITE, borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, height: 52, paddingHorizontal: 16, fontSize: 14, color: Colors.textPrimary, marginBottom: 8 },
+  textInput: { backgroundColor: Colors.surface, borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 16, height: 52, paddingHorizontal: 16, fontSize: 14, color: Colors.textPrimary, marginBottom: 8 },
   
   radioGroup: { gap: 12 },
-  radioRow: { flexDirection: 'row', alignItems: 'center', height: 56, borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, backgroundColor: WHITE, gap: 12 },
-  radioRowActive: { borderColor: ORANGE },
-  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
-  radioOuterActive: { borderColor: ORANGE },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: ORANGE },
+  radioRow: { flexDirection: 'row', alignItems: 'center', height: 56, borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, backgroundColor: Colors.surface, gap: 12 },
+  radioRowActive: { borderColor: Colors.btnOrange },
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: toneBg('#D1D5DB'), alignItems: 'center', justifyContent: 'center' },
+  radioOuterActive: { borderColor: Colors.btnOrange },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.btnOrange },
   radioLabel: { color: Colors.textPrimary, fontSize: 14, fontWeight: '500' },
   radioLabelActive: { color: Colors.textPrimary, fontWeight: '700' },
 
-  continueBtn: { height: 56, borderRadius: 16, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginTop: 32 },
-  continueBtnActive: { backgroundColor: ORANGE },
+  continueBtn: { height: 56, borderRadius: 16, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginTop: 32 },
+  continueBtnActive: { backgroundColor: Colors.btnOrange },
   continueBtnSmall: { flex: 1, marginTop: 0 },
-  continueBtnText: { color: '#94A3B8', fontSize: 16, fontWeight: '800' },
-  continueBtnTextActive: { color: WHITE },
+  continueBtnText: { color: tone('#94A3B8'), fontSize: 16, fontWeight: '800' },
+  continueBtnTextActive: { color: Colors.white },
 
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 32 },
-  backBtn: { height: 56, paddingHorizontal: 24, borderRadius: 16, backgroundColor: '#F0F2F6', alignItems: 'center', justifyContent: 'center' },
+  backBtn: { height: 56, paddingHorizontal: 24, borderRadius: 16, backgroundColor: toneBg('#F0F2F6'), alignItems: 'center', justifyContent: 'center' },
   backBtnText: { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
 
-  categoryCard: { backgroundColor: WHITE, borderRadius: 16, borderWidth: 2, marginBottom: 20, overflow: 'hidden' },
+  categoryCard: { backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 2, marginBottom: 20, overflow: 'hidden' },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   categoryIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.5)', alignItems: 'center', justifyContent: 'center' },
   cardIconText: { display: 'none' },
@@ -422,28 +420,31 @@ const styles = StyleSheet.create({
   categoryBody: { padding: 16, paddingTop: 4, gap: 16 },
 
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  checkBox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#D1D5DB', backgroundColor: WHITE, alignItems: 'center', justifyContent: 'center' },
+  checkBox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: toneBg('#D1D5DB'), backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   checkMark: { display: 'none' },
   checkLabel: { flex: 1, color: Colors.textPrimary, fontSize: 13, lineHeight: 18 },
 
-  noneBox: { flexDirection: 'row', alignItems: 'center', height: 56, borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, backgroundColor: WHITE, gap: 12, marginBottom: 12 },
-  noneBoxActive: { borderColor: '#27AE60', backgroundColor: '#F0F8F0' },
+  noneBox: { flexDirection: 'row', alignItems: 'center', height: 56, borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, backgroundColor: Colors.surface, gap: 12, marginBottom: 12 },
+  noneBoxActive: { borderColor: toneBg('#27AE60'), backgroundColor: toneBg('#F0F8F0') },
 
-  successCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#E6F8ED', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 20, marginTop: 10 },
-  successCheck: { color: '#27AE60', fontSize: 40, fontWeight: '800' },
+  successCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: toneBg('#E6F8ED'), alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 20, marginTop: 10 },
+  successCheck: { color: tone('#27AE60'), fontSize: 40, fontWeight: '800' },
   reviewHeading: { color: Colors.textPrimary, ...Typography.h1, textAlign: 'center', marginBottom: 8 },
   reviewSubheading: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center', marginBottom: 32 },
 
-  summarySection: { backgroundColor: WHITE, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
-  summaryTitle: { color: '#A0B4CC', fontSize: 12, fontWeight: '800', letterSpacing: 0.5, marginBottom: 16 },
+  summarySection: { backgroundColor: Colors.surface, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#E2E8F0') },
+  summaryTitle: { color: tone('#A0B4CC'), fontSize: 12, fontWeight: '800', letterSpacing: 0.5, marginBottom: 16 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 12 },
   summaryKey: { color: Colors.textSecondary, fontSize: 14, flex: 1 },
   summaryValue: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700', flex: 1.5, textAlign: 'right' },
   
   noneFlaggedWrap: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
 
-  privacyNote: { backgroundColor: '#F0E8FB', borderRadius: 12, padding: 16, marginTop: 10, marginBottom: 32 },
-  privacyNoteText: { color: '#7C4DCC', fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  privacyNote: { backgroundColor: toneBg('#F0E8FB'), borderRadius: 12, padding: 16, marginTop: 10, marginBottom: 32 },
+  privacyNoteText: { color: tone('#7C4DCC'), fontSize: 12, lineHeight: 18, fontWeight: '500' },
   
   reviewNavRow: { flexDirection: 'row', gap: 12 },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

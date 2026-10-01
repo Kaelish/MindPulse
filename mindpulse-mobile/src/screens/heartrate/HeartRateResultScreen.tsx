@@ -18,6 +18,7 @@ import {
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
+import { registerThemeStyles } from '../../theme/theme';
 
 export type BPMStatus = 'normal' | 'elevated' | 'high';
 
@@ -34,7 +35,7 @@ const getStatus = (bpm: number): BPMStatus => {
   return 'high';
 };
 
-const STATUS_MAP: Record<BPMStatus, StatusConfig> = {
+const makeStatusMap = (): Record<BPMStatus, StatusConfig> => ({
   normal: {
     label: 'Normal',
     interpretation: 'Your heart rate is within the normal resting range.',
@@ -54,7 +55,12 @@ const STATUS_MAP: Record<BPMStatus, StatusConfig> = {
     pillBg: Colors.badgeHighBg,
     pillText: Colors.badgeHighText,
   },
-};
+});
+
+let STATUS_MAP = makeStatusMap();
+registerThemeStyles(() => {
+  STATUS_MAP = makeStatusMap();
+});
 
 // ─── Animated BPM count-up (subtle, matches the "number just appeared" feel) ──
 interface BPMDisplayProps {
@@ -168,7 +174,7 @@ export const HeartRateResultScreen: React.FC<Props> = ({
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const card = StyleSheet.create({
+const makeCard = () => StyleSheet.create({
   wrapper: {
     backgroundColor: Colors.resultCardBg,
     borderRadius: Radius.xl,
@@ -226,7 +232,10 @@ const card = StyleSheet.create({
   },
 });
 
-const summary = StyleSheet.create({
+let card = makeCard();
+registerThemeStyles(() => { card = makeCard(); });
+
+const makeSummary = () => StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -248,7 +257,10 @@ const summary = StyleSheet.create({
   },
 });
 
-const actions = StyleSheet.create({
+let summary = makeSummary();
+registerThemeStyles(() => { summary = makeSummary(); });
+
+const makeActions = () => StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -294,3 +306,6 @@ const actions = StyleSheet.create({
     color: Colors.nextText,
   },
 });
+
+let actions = makeActions();
+registerThemeStyles(() => { actions = makeActions(); });

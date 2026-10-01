@@ -17,6 +17,7 @@ import {
   loadNotificationPrefs,
   saveNotificationPrefs,
 } from '../../../services/notificationPrefs';
+import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface NotificationsModalProps {
   visible: boolean;
@@ -68,7 +69,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="notifications-outline" size={20} color="#5B6EF5" />
+                <Ionicons name="notifications-outline" size={20} color={tone('#5B6EF5')} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>Notifications</Text>
@@ -76,14 +77,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748B" />
+              <Ionicons name="close" size={18} color={tone('#64748B')} />
             </Pressable>
           </View>
 
           {/* Toast Alert */}
           {toastMsg && (
             <View style={styles.toast}>
-              <Ionicons name="information-circle" size={18} color="#5B6EF5" />
+              <Ionicons name="information-circle" size={18} color={tone('#5B6EF5')} />
               <Text style={styles.toastText}>{toastMsg}</Text>
             </View>
           )}
@@ -237,37 +238,37 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ visible,
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#FAF8F3',
+    backgroundColor: toneBg('#FAF8F3'),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingBottom: 24,
     maxHeight: '90%',
   },
-  handle: { width: 36, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+  handle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEEDFE', alignItems: 'center', justifyContent: 'center' },
+  headerIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#EEEDFE'), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   headerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center' },
 
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#EEEDFE',
-    borderColor: '#5B6EF5',
+    backgroundColor: toneBg('#EEEDFE'),
+    borderColor: toneBg('#5B6EF5'),
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
     marginBottom: 12,
   },
-  toastText: { fontSize: 12, fontWeight: '700', color: '#5B6EF5' },
+  toastText: { fontSize: 12, fontWeight: '700', color: tone('#5B6EF5') },
 
   scroll: { maxHeight: 520 },
 
@@ -279,11 +280,14 @@ const styles = StyleSheet.create({
   toggleTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
   toggleSub: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
 
-  scheduleBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
-  scheduleLabel: { fontSize: 11, fontWeight: '700', color: '#64748B' },
+  scheduleBox: { backgroundColor: toneBg('#F8FAFC'), borderRadius: 12, padding: 12, marginTop: 4, borderWidth: 1, borderColor: toneBg('#E2E8F0'), gap: 8 },
+  scheduleLabel: { fontSize: 11, fontWeight: '700', color: tone('#64748B') },
   timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   timeChip: { backgroundColor: Colors.surface, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 10, paddingVertical: 6 },
-  timeChipActive: { backgroundColor: '#8353E2', borderColor: '#8353E2' },
+  timeChipActive: { backgroundColor: toneBg('#8353E2'), borderColor: toneBg('#8353E2') },
   timeChipText: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary },
-  timeChipTextActive: { color: '#FFF', fontWeight: '800' },
+  timeChipTextActive: { color: tone('#FFF'), fontWeight: '800' },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, Radius } from '../theme/typography';
+import { registerThemeStyles } from '../theme/theme';
 
 interface Props {
   title: string;
@@ -89,7 +90,7 @@ export const TopNavBar: React.FC<Props> = ({
 
 const BACK_BTN_SIZE = 38;
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   wrapper: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.md,
@@ -179,3 +180,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.nextBg,
   },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });
