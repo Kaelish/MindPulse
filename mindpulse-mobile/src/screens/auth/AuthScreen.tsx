@@ -22,6 +22,44 @@ interface AuthScreenProps {
   onAuthSuccess: (isNewUser: boolean) => void;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Turns Supabase/GoTrue error payloads into wording a student can act on.
+ * The raw messages ("over_email_send_rate_limit", "Database error querying
+ * schema") are meaningless to the person holding the phone.
+ */
+const describeAuthError = (error: any): string => {
+  const code = String(error?.code ?? '');
+  const msg = String(error?.message ?? error ?? 'Something went wrong.');
+  if (code === 'over_email_send_rate_limit' || /rate limit/i.test(msg)) {
+    return 'Too many e-mail attempts in a short time. Only a few confirmation e-mails are allowed per hour — wait about an hour, then tap "Resend confirmation e-mail".';
+  }
+  if (
+    code === 'user_already_exists' ||
+    /already registered/i.test(msg) ||
+    /already exists/i.test(msg)
+  ) {
+    return 'An account with that e-mail address already exists. Sign in instead.';
+  }
+  if (code === 'weak_password' || /password should be at least/i.test(msg)) {
+    return 'Your password must be at least 6 characters long.';
+  }
+  if (code === 'email_address_invalid' || /invalid.*e?mail|not a valid/i.test(msg)) {
+    return 'That e-mail address is not valid. Please check it for typos.';
+  }
+  if (code === 'invalid_credentials' || /invalid login credentials/i.test(msg)) {
+    return 'Wrong e-mail address or password.';
+  }
+  if (/email not confirmed/i.test(msg)) {
+    return 'Your e-mail address has not been confirmed yet. Open the link we sent you, or resend it below.';
+  }
+  if (/database error saving new user/i.test(msg)) {
+    return 'Your account was created but its profile could not be saved. Please contact the administrator.';
+  }
+  return msg;
+};
+
 // ─── Small logo mark at top ───
 const LogoMark = () => (
   <View style={styles.logoWrap}>
@@ -53,50 +91,106 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
 
+  /* Confirmation panel state: set once an account exists but still needs its
+     e-mail link, or when sign-in is blocked by "email not confirmed". */
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      Alert.alert('Error', 'Please enter email and password.');
+    const email = loginEmail.trim();
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('Invalid e-mail', 'Please enter a valid e-mail address.');
+      return;
+    }
+    if (!loginPassword) {
+      Alert.alert('Error', 'Please enter your password.');
       return;
     }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail.trim(),
+        email,
         password: loginPassword,
       });
       if (error) {
         if (/email not confirmed/i.test(error.message)) {
-          Alert.alert(
-            'Confirm Your Email',
-            'Open the confirmation link we e-mailed you, then sign in. If it expired, ask your administrator to confirm the account.',
-          );
+          // Hand the user somewhere useful instead of a dead-end alert.
+          setPendingEmail(email);
           return;
         }
-        throw error;
+        throw new Error(describeAuthError(error));
       }
       onAuthSuccess(false);
     } catch (err: any) {
-      Alert.alert('Login Failed', err.message);
+      Alert.alert('Login Failed', err?.message ?? 'Something went wrong.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResend = async () => {
+    const email = (pendingEmail ?? '').trim();
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('Invalid e-mail', 'Please enter a valid e-mail address.');
+      return;
+    }
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw new Error(describeAuthError(error));
+      Alert.alert(
+        'E-mail sent',
+        `If ${email} has an account waiting for confirmation, a new link is on its way. Also check your spam/junk folder.`,
+      );
+    } catch (err: any) {
+      Alert.alert('Could not send e-mail', err?.message ?? 'Something went wrong.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleRegister = async () => {
-    if (!regEmail || !regPassword || !firstName || !lastName) {
-      Alert.alert('Error', 'Please fill in all required fields.');
+    const email = regEmail.trim();
+    if (!firstName.trim() || !lastName.trim()) {
+      Alert.alert('Missing information', 'Please enter your first and last name.');
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('Invalid e-mail', 'Please enter a valid e-mail address.');
+      return;
+    }
+    if (regPassword.length < 6) {
+      Alert.alert('Weak password', 'Your password must be at least 6 characters long.');
       return;
     }
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: regEmail.trim(),
+        email,
         password: regPassword,
         options: {
           data: { first_name: firstName, last_name: lastName, mi },
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(describeAuthError(error));
+
+      // GoTrue answers a sign-up for an address that already has an account
+      // with a synthetic user whose `identities` array is empty, and it sends
+      // no e-mail at all. Treating that as "check your e-mail" would strand
+      // the student on a confirmation that never arrives.
+      const identities = data.user?.identities;
+      if (data.user && Array.isArray(identities) && identities.length === 0) {
+        Alert.alert(
+          'Account already exists',
+          `${email} is already registered on MindPulse. Sign in with it — if you never got the confirmation e-mail, we can resend it.`,
+          [
+            { text: 'Sign In', onPress: () => setActiveTab('login') },
+            { text: 'Resend E-mail', onPress: () => setPendingEmail(email) },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return;
+      }
 
       if (data.session) {
         // Email confirmation is disabled. Create the canonical profile row
@@ -108,7 +202,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           const { error: profileError } = await supabase.from('profiles').upsert(
             {
               id: newUser.id,
-              email: regEmail.trim(),
+              email,
               first_name: firstName,
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
@@ -126,13 +220,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       // Email confirmation is enabled: the account exists but cannot be used
       // until the link in the e-mail is clicked.
-      Alert.alert(
-        'Check Your E-mail',
-        `We sent a confirmation link to ${regEmail.trim()}. Confirm your address, then sign in.`,
-        [{ text: 'OK', onPress: () => setActiveTab('login') }],
-      );
+      setPendingEmail(email);
     } catch (err: any) {
-      Alert.alert('Registration Failed', err.message);
+      Alert.alert('Registration Failed', err?.message ?? 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -154,13 +244,57 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <LogoMark />
 
             {/* Heading */}
-            <Text style={styles.heading}>Let's Get Started!</Text>
+            <Text style={styles.heading}>
+              {pendingEmail ? 'Confirm Your E-mail' : "Let's Get Started!"}
+            </Text>
             <Text style={styles.subheading}>
-              {activeTab === 'login'
-                ? 'Sign in to your account today'
-                : 'Create your free account today'}
+              {pendingEmail
+                ? 'Almost there — one more step'
+                : activeTab === 'login'
+                  ? 'Sign in to your account today'
+                  : 'Create your free account today'}
             </Text>
 
+            {/* ── WAITING FOR CONFIRMATION E-MAIL ── */}
+            {pendingEmail ? (
+              <View style={styles.panel}>
+                <Ionicons name="mail-unread-outline" size={30} color={ACCENT} />
+                <Text style={styles.panelTitle}>Check your e-mail</Text>
+                <Text style={styles.panelBody}>
+                  We sent a confirmation link to{'\n'}
+                  <Text style={styles.panelEmail}>{pendingEmail}</Text>
+                  {'\n\n'}
+                  Open it on this device, then come back and sign in.
+                </Text>
+
+                <Pressable
+                  style={[styles.primaryBtn, resending && { opacity: 0.7 }]}
+                  onPress={handleResend}
+                  disabled={resending}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {resending ? 'Sending...' : 'Resend confirmation e-mail'}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.backBtn}
+                  onPress={() => {
+                    setPendingEmail(null);
+                    setActiveTab('login');
+                  }}
+                >
+                  <Text style={styles.backBtnText}>Back to Sign In</Text>
+                </Pressable>
+
+                <Text style={styles.panelHint}>
+                  Nothing after a few minutes? Look in spam/junk, and make sure
+                  you used a brand-new e-mail address — an address that already
+                  has a MindPulse account will not receive a new link.
+                </Text>
+              </View>
+            ) : (
+            <>
             {/* ── Tab Switcher ── */}
             <View style={styles.tabRow}>
               <Pressable
@@ -336,6 +470,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   </Pressable>
                 </View>
               </View>
+            )}
+            </>
             )}
           </View>
         </ScrollView>
@@ -530,6 +666,52 @@ const makeStyles = () => StyleSheet.create({
   },
   switchLabel: { fontSize: 13, color: tone('#8CA9C3') },
   switchLink: { fontSize: 13, fontWeight: '800', color: ACCENT },
+
+  /* "Check your e-mail" panel */
+  panel: {
+    alignItems: 'center',
+    backgroundColor: toneBg('#F4F8FC'),
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: toneBg('#DDE8F2'),
+    paddingHorizontal: 18,
+    paddingVertical: 24,
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: tone('#1A2E44'),
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  panelBody: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: tone('#4A6680'),
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  panelEmail: { fontWeight: '800', color: tone('#1A2E44') },
+  panelHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: tone('#8CA9C3'),
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  backBtn: {
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: ACCENT_LIGHT,
+    backgroundColor: toneBg('#FFF'),
+    marginTop: 2,
+    width: '100%',
+  },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: ACCENT },
 
   /* Name row */
   nameRow: { flexDirection: 'row', marginTop: 0 },

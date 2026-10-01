@@ -266,8 +266,10 @@ function App() {
 
   /* ── Auth success handler ── */
   const handleAuthSuccess = async (isNewUser: boolean) => {
+    let userId: string | undefined;
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
       if (user?.user_metadata?.first_name) {
         setRegisteredUserName(user.user_metadata.first_name);
       } else {
@@ -290,13 +292,39 @@ function App() {
     const role = await getCurrentUserRole();
     setUserRole(role);
 
-    if (isNewUser) {
-      changeScreen('healthSetup');
-    } else if (role === 'doctor') {
+    if (role === 'doctor') {
       setCurrentTab('home');
       changeScreen('main');
-    } else if (role === 'admin' || role === 'pending') {
+      return;
+    }
+    if (role === 'admin' || role === 'pending') {
       changeScreen('main');
+      return;
+    }
+
+    // Students fill the health background exactly once: immediately after
+    // their first successful sign-in (register → e-mail confirmation → login).
+    // Health Setup sets profiles.onboarding_complete, so every later sign-in
+    // lands straight on the dashboard.
+    let needsHealthSetup = isNewUser;
+    if (!needsHealthSetup) {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('onboarding_complete')
+          .eq('id', userId ?? '')
+          .maybeSingle();
+        if (!error) {
+          needsHealthSetup = profile ? profile.onboarding_complete !== true : true;
+        }
+      } catch (e) {
+        // Never block sign-in because the flag could not be read.
+        console.warn('Failed to read onboarding flag', e);
+      }
+    }
+
+    if (needsHealthSetup) {
+      changeScreen('healthSetup');
     } else {
       setCurrentTab('home');
       changeScreen('main');
