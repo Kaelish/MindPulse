@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchPlantProgress, PlantProgress } from '../../services/plantProgress';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
@@ -29,6 +30,10 @@ const STAGE_MESSAGES: Record<string, string> = {
 };
 
 export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack }) => {
+  // The hero runs edge-to-edge, so the header - and with it the Back button -
+  // has to clear the notch/status bar or the button sits underneath it and
+  // cannot be tapped.
+  const insets = useSafeAreaInsets();
   const [selectedStage, setSelectedStage] = useState(1);
   const [progress, setProgress] = useState<PlantProgress | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +75,7 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
         <TouchableOpacity onPress={() => void load()} style={{ backgroundColor: toneBg('#1AA956'), borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10 }}>
           <Text style={{ color: tone('#FFF'), fontSize: 13, fontWeight: '700' }}>Retry</Text>
         </TouchableOpacity>
-        <Pressable onPress={onBack} hitSlop={10}><Text style={styles.back}>‹ Back</Text></Pressable>
+        <Pressable onPress={onBack} hitSlop={12} style={styles.backHit}><Text style={styles.back}>‹ Back</Text></Pressable>
       </View>
     );
   }
@@ -83,8 +88,8 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
     <View style={styles.root}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <View style={styles.heroHeader}>
-            <Pressable onPress={onBack} hitSlop={10}><Text style={styles.back}>‹ Back</Text></Pressable>
+          <View style={[styles.heroHeader, { paddingTop: insets.top + 6 }]}>
+            <Pressable onPress={onBack} hitSlop={12} style={styles.backHit}><Text style={styles.back}>‹ Back</Text></Pressable>
             <Text style={styles.leaf}>🌱</Text>
           </View>
           <Text style={styles.stageName}>{stage.name}</Text>
@@ -117,8 +122,9 @@ const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: toneBg('#FAFDFC') },
   content: { paddingBottom: 24 },
   hero: { height: 290, backgroundColor: toneBg('#E1F8EA'), borderBottomWidth: 1, borderBottomColor: toneBg('#66D995') },
-  heroHeader: { height: 52, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { color: tone('#168A47'), fontSize: 11 },
+  heroHeader: { minHeight: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backHit: { paddingVertical: 8, paddingHorizontal: 10, marginLeft: -10, borderRadius: 12 },
+  back: { color: tone('#168A47'), fontSize: 14, fontWeight: '700' },
   leaf: { fontSize: 18 },
   stageName: { color: tone('#142D22'), textAlign: 'center', fontSize: 14, fontWeight: '800' },
   stageCount: { color: tone('#8A9B91'), textAlign: 'center', fontSize: 9, marginTop: 3 },

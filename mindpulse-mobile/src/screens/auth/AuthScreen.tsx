@@ -23,6 +23,8 @@ interface AuthScreenProps {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
+const GENDER_OPTIONS = ['Female', 'Male', 'Prefer not to say'];
 
 /**
  * Turns Supabase/GoTrue error payloads into wording a student can act on.
@@ -88,13 +90,81 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [mi, setMi] = useState('');
   const [lastName, setLastName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regDob, setRegDob] = useState('');
+  const [regGender, setRegGender] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
+  const [showRegPw2, setShowRegPw2] = useState(false);
+
+  /** Returns a human message, or null when the form is good to send. */
+  const validateRegistration = (email: string): string | null => {
+    if (!firstName.trim() || !lastName.trim()) {
+      return 'Please enter your first and last name.';
+    }
+    if (!EMAIL_RE.test(email)) {
+      return 'Please enter a valid e-mail address.';
+    }
+    const digits = regPhone.replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) {
+      return 'Please enter a valid phone number (7 to 15 digits).';
+    }
+    if (!DOB_RE.test(regDob)) {
+      return 'Please enter your birth date as YYYY-MM-DD, e.g. 2004-06-17.';
+    }
+    const dob = new Date(`${regDob}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Round-trip catches impossible dates such as 2004-02-31, which the Date
+    // constructor would otherwise silently roll over to March.
+    if (Number.isNaN(dob.getTime()) || dob.toISOString().slice(0, 10) !== regDob) {
+      return 'That birth date does not exist. Please check it.';
+    }
+    if (dob > today || dob.getFullYear() < 1900) {
+      return 'Please enter a birth date between 1900 and today.';
+    }
+    if (!regGender) {
+      return 'Please select your gender.';
+    }
+    if (regPassword.length < 6) {
+      return 'Your password must be at least 6 characters long.';
+    }
+    if (regPassword !== regConfirm) {
+      return 'The two passwords do not match.';
+    }
+    return null;
+  };
 
   /* Confirmation panel state: set once an account exists but still needs its
      e-mail link, or when sign-in is blocked by "email not confirmed". */
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const handleForgotPassword = async () => {
+    const email = loginEmail.trim();
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert(
+        'E-mail needed',
+        'Type the e-mail address of your account above, then tap Forgot Password.',
+      );
+      return;
+    }
+    setResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw new Error(describeAuthError(error));
+      Alert.alert(
+        'Reset link sent',
+        `If ${email} has a MindPulse account, a password reset link is on its way. Open it on this device, then choose a new password. Also check spam/junk.`,
+      );
+    } catch (err: any) {
+      Alert.alert('Could not send reset e-mail', err?.message ?? 'Something went wrong.');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const handleLogin = async () => {
     const email = loginEmail.trim();
@@ -151,16 +221,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
   const handleRegister = async () => {
     const email = regEmail.trim();
-    if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Missing information', 'Please enter your first and last name.');
-      return;
-    }
-    if (!EMAIL_RE.test(email)) {
-      Alert.alert('Invalid e-mail', 'Please enter a valid e-mail address.');
-      return;
-    }
-    if (regPassword.length < 6) {
-      Alert.alert('Weak password', 'Your password must be at least 6 characters long.');
+    const problem = validateRegistration(email);
+    if (problem) {
+      Alert.alert('Check the form', problem);
       return;
     }
     setLoading(true);
@@ -169,7 +232,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         email,
         password: regPassword,
         options: {
-          data: { first_name: firstName, last_name: lastName, mi },
+          data: {
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            mi,
+            phone: regPhone.trim(),
+            birth_date: regDob,
+            sex: regGender,
+          },
         },
       });
       if (error) throw new Error(describeAuthError(error));
@@ -181,8 +251,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       const identities = data.user?.identities;
       if (data.user && Array.isArray(identities) && identities.length === 0) {
         Alert.alert(
-          'Account already exists',
-          `${email} is already registered on MindPulse. Sign in with it — if you never got the confirmation e-mail, we can resend it.`,
+          'That e-mail already has an account',
+          `${email} is already registered on MindPulse, so no confirmation e-mail was sent.\n\nSign in with it instead — if you never received the confirmation e-mail, we can resend it.`,
           [
             { text: 'Sign In', onPress: () => setActiveTab('login') },
             { text: 'Resend E-mail', onPress: () => setPendingEmail(email) },
@@ -207,6 +277,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
               role: 'student',
+              phone: regPhone.trim(),
+              sex: regGender,
+              birth_date: regDob,
             },
             { onConflict: 'id', ignoreDuplicates: true },
           );
@@ -361,8 +434,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     </View>
                     <Text style={styles.rememberText}>Remember me</Text>
                   </Pressable>
-                  <Pressable>
-                    <Text style={styles.forgotText}>Forgot Password</Text>
+                  <Pressable
+                    onPress={handleForgotPassword}
+                    disabled={resetting}
+                    style={resetting && { opacity: 0.6 }}
+                  >
+                    <Text style={styles.forgotText}>
+                      {resetting ? 'Sending...' : 'Forgot Password'}
+                    </Text>
                   </Pressable>
                 </View>
 
@@ -431,6 +510,42 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   onChangeText={setRegEmail}
                 />
 
+                <Text style={styles.label}>Phone Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. 09171234567"
+                  placeholderTextColor="#B0C4D8"
+                  keyboardType="phone-pad"
+                  maxLength={20}
+                  value={regPhone}
+                  onChangeText={setRegPhone}
+                />
+
+                <Text style={styles.label}>Birth Date</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#B0C4D8"
+                  maxLength={10}
+                  value={regDob}
+                  onChangeText={setRegDob}
+                />
+
+                <Text style={styles.label}>Gender</Text>
+                <View style={styles.chipRow}>
+                  {GENDER_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() => setRegGender(option)}
+                      style={[styles.chip, regGender === option && styles.chipOn]}
+                    >
+                      <Text style={[styles.chipText, regGender === option && styles.chipTextOn]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
@@ -452,6 +567,31 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     />
                   </Pressable>
                 </View>
+
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.inputWrap}>
+                  <TextInput
+                    style={[styles.input, styles.inputWithIcon]}
+                    placeholder="Re-enter password"
+                    placeholderTextColor="#B0C4D8"
+                    secureTextEntry={!showRegPw2}
+                    value={regConfirm}
+                    onChangeText={setRegConfirm}
+                  />
+                  <Pressable
+                    style={styles.eyeBtn}
+                    onPress={() => setShowRegPw2(v => !v)}
+                  >
+                    <Ionicons
+                      name={showRegPw2 ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color={tone('#8CA9C3')}
+                    />
+                  </Pressable>
+                </View>
+                {regConfirm.length > 0 && regConfirm !== regPassword && (
+                  <Text style={styles.fieldError}>Passwords do not match</Text>
+                )}
 
                 <Pressable
                   style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
@@ -608,6 +748,43 @@ const makeStyles = () => StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
+  },
+
+  /* Gender selector + inline field error */
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  chip: {
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: ACCENT_LIGHT,
+    backgroundColor: toneBg('#F4F8FC'),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipOn: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: tone('#4A6680'),
+  },
+  chipTextOn: {
+    color: tone('#FFF'),
+    fontWeight: '700',
+  },
+  fieldError: {
+    fontSize: 12,
+    color: tone('#D9534F'),
+    marginTop: 6,
+    fontWeight: '600',
   },
 
   /* Remember me row */

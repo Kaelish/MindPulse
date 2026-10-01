@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 interface HealthSetupScreenProps {
   userName?: string;
   onContinue: () => void;
+  onBack?: () => void;
 }
 
 /* ─────────── Constants ─────────── */
@@ -284,7 +285,7 @@ import { Alert } from 'react-native';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 /* ─────────── Main Screen ─────────── */
-export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'friend', onContinue }) => {
+export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'friend', onContinue, onBack }) => {
   const [step, setStep] = useState(1);
   const [year, setYear] = useState('');
   const [program, setProgram] = useState('');
@@ -294,6 +295,31 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
   const [lifestyleChecked, setLifestyleChecked] = useState<string[]>([]);
   const [noneApply, setNoneApply] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Leaving without saving. The health form is only shown once per account,
+   * so the skip is recorded too - otherwise the same screen would come back
+   * on every sign-in. It can still be filled in later from Profile.
+   */
+  const handleExit = async () => {
+    if (!onBack) return;
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, onboarding_complete: true }, { onConflict: 'id' });
+        if (error) throw new Error(error.message);
+      }
+    } catch (err) {
+      // Never trap the student on this screen: leave even if the flag failed.
+      console.warn('Could not save onboarding flag', err);
+    } finally {
+      setLoading(false);
+    }
+    onBack();
+  };
 
   const toggle = (list: string[], setter: (v: string[]) => void, val: string) => {
     setNoneApply(false);
@@ -349,7 +375,20 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Health Background</Text>
+        <View style={styles.headerRow}>
+          <Pressable
+            onPress={handleExit}
+            disabled={loading}
+            style={[styles.headerBack, loading && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={18} color={Colors.textPrimary} />
+            <Text style={styles.headerBackText}>Back</Text>
+          </Pressable>
+          <Text style={styles.headerTitle}>Health Background</Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <Text style={styles.headerSubtitle}>Welcome, {userName}! One last step.</Text>
         <ProgressBar step={step} />
       </View>
@@ -365,7 +404,20 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
 const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.pageBg },
   header: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8, backgroundColor: Colors.pageBg },
-  headerTitle: { color: Colors.textPrimary, ...Typography.h2, textAlign: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  headerBack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 74,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: toneBg('#F0F2F6'),
+  },
+  headerBackText: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  headerSpacer: { width: 74 },
+  headerTitle: { flex: 1, color: Colors.textPrimary, ...Typography.h2, textAlign: 'center' },
   headerSubtitle: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center', marginTop: 4, marginBottom: 16 },
   progressWrap: { marginTop: 4, marginBottom: 2 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },

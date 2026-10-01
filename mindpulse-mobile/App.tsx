@@ -129,6 +129,8 @@ function App() {
   const [reactionResult, setReactionResult] = useState<ReactionResult | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('register');
   const [registeredUserName, setRegisteredUserName] = useState('friend');
+  // Where Health Background was opened from, so its Back button returns there.
+  const [healthSetupOrigin, setHealthSetupOrigin] = useState<'firstRun' | 'profile'>('firstRun');
   const [userRole, setUserRole] = useState<AppRole>(null);
   const [callDoctorId, setCallDoctorId] = useState<string | null>(null);
   const [callAppointmentId, setCallAppointmentId] = useState<string | null>(null);
@@ -324,6 +326,7 @@ function App() {
     }
 
     if (needsHealthSetup) {
+      setHealthSetupOrigin('firstRun');
       changeScreen('healthSetup');
     } else {
       setCurrentTab('home');
@@ -379,6 +382,15 @@ function App() {
             <HealthSetupScreen
               userName={registeredUserName}
               onContinue={() => {
+                setCurrentTab('home');
+                changeScreen('main');
+              }}
+              onBack={() => {
+                if (healthSetupOrigin === 'profile') {
+                  changeScreen('main');
+                  setCurrentTab('profile');
+                  return;
+                }
                 setCurrentTab('home');
                 changeScreen('main');
               }}
@@ -508,7 +520,10 @@ function App() {
                     setAuthTab('login');
                     changeScreen('auth');
                   }}
-                  onOpenHealthSetup={() => changeScreen('healthSetup')}
+                  onOpenHealthSetup={() => {
+                    setHealthSetupOrigin('profile');
+                    changeScreen('healthSetup');
+                  }}
                   onOpenPlantProgress={() => changeScreen('plantProgress')}
                 />
               )}

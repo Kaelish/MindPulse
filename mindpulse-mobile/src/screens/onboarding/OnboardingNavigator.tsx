@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   Animated,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -11,6 +10,7 @@ import {
   Easing,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
