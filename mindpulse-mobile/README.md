@@ -36,15 +36,17 @@ Custom flood-fill scripts were used to process assets (like the meditation figur
 ## Future Implementation Requirements
 
 ### Video Calling Integration
-The TeleHealth video call UI (`VideoCallScreen.tsx`) is a UI shell, and
-`src/services/video.ts` already implements Daily.co session creation (it throws
-when `EXPO_PUBLIC_DAILY_BASE_URL` / `EXPO_PUBLIC_DAILY_TOKEN` are missing
-instead of persisting a fake session) — the screen does not call it yet. To
-finish real video calls:
-1. Wire `VideoCallScreen` to `createDailyVideoSession` and open `meetingUrl`.
-2. Standard WebRTC requires native code. If you go beyond the Daily link, move
-   from "Expo Go" to an "Expo Development Build" via `npx expo prebuild` and
-   `npx expo run:android` / `npx expo run:ios`.
+Teleconsultations run entirely in-app: `VideoCallScreen.tsx` opens the
+deterministic Jitsi room (`mindpulse-appt-<appointment id>` — shared by
+`appointments.ts`, `doctorConsultations.ts` and the web doctor portal) in a
+full-screen `InAppVideoCall` WebView (`react-native-webview`, included in
+Expo Go), so nobody leaves MindPulse for an external browser. Camera/mic
+permissions are requested up front on Android; a "open in browser" fallback
+lives in the call header. `src/services/video.ts` (Daily.co) is unused
+scaffolding — it throws when `EXPO_PUBLIC_DAILY_BASE_URL` /
+`EXPO_PUBLIC_DAILY_TOKEN` are missing and nothing imports it. Only revisit
+providers (Daily/Zoom) if you need hosted rooms or recordings; Zoom's SDK
+also requires a custom development build instead of Expo Go.
 
 ### Supabase Backend
 The app talks to Supabase directly with the publishable key configured in

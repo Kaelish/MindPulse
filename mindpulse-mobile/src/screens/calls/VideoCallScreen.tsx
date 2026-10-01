@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { InAppVideoCall, ensureMediaPermissions } from '../../components/InAppVideoCall';
 import {
   MyBooking,
   fetchMyBookings,
@@ -73,8 +73,9 @@ const fromDoctorBooking = (booking: DoctorCallBooking): LobbyView => ({
 });
 
 /**
- * Lobby for the appointment's real Jitsi room. The actual call opens in the
- * phone's browser at the deterministic room mindpulse-appt-<appointment id>.
+ * Lobby for the appointment's real Jitsi room. Joining opens the room
+ * IN-APP (full-screen WebView) at the deterministic room
+ * mindpulse-appt-<appointment id>, so neither side leaves MindPulse.
  * Patients and doctors each get their own variant of the same lobby.
  */
 export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
@@ -90,7 +91,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [openedInBrowser, setOpenedInBrowser] = useState(false);
+  const [callUrl, setCallUrl] = useState<string | null>(null);
 
   const loadBooking = useCallback(async () => {
     setLoading(true);
@@ -141,12 +142,8 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
               throw new Error('No appointment was passed to this call.');
             })()
         : await fetchVideoRoom(booking.id, booking.roomDoctorId ?? '');
-      const supported = await Linking.canOpenURL(url).catch(() => true);
-      if (supported === false) {
-        throw new Error('This device cannot open the video room link.');
-      }
-      await Linking.openURL(url);
-      setOpenedInBrowser(true);
+      await ensureMediaPermissions();
+      setCallUrl(url);
     } catch (e: any) {
       Alert.alert(
         'Could not open the call',
@@ -223,33 +220,20 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
             </View>
 
             {booking.status === 'confirmed' ? (
-              openedInBrowser ? (
-                <View style={styles.openedBox}>
-                  <Ionicons name="checkmark-circle" size={20} color={tone('#27AE60')} />
-                  <Text style={styles.openedText}>
-                    Your video room is open in the browser. Return here when the session ends.
-                  </Text>
-                  <TouchableOpacity style={styles.primaryBtn} onPress={() => void handleJoin()}>
-                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
-                    <Text style={styles.primaryBtnText}>Re-open Video Room</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
-                  onPress={() => void handleJoin()}
-                  disabled={joining}
-                >
-                  {joining ? (
-                    <ActivityIndicator size="small" color={tone('#FFF')} />
-                  ) : (
-                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
-                  )}
-                  <Text style={styles.primaryBtnText}>
-                    {joining ? 'Opening…' : 'Join Video Call'}
-                  </Text>
-                </TouchableOpacity>
-              )
+              <TouchableOpacity
+                style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
+                onPress={() => void handleJoin()}
+                disabled={joining}
+              >
+                {joining ? (
+                  <ActivityIndicator size="small" color={tone('#FFF')} />
+                ) : (
+                  <Ionicons name="videocam" size={16} color={tone('#FFF')} />
+                )}
+                <Text style={styles.primaryBtnText}>
+                  {joining ? 'Opening…' : 'Join Video Call'}
+                </Text>
+              </TouchableOpacity>
             ) : (
               <Text style={styles.lockedText}>{lockedText()}</Text>
             )}
@@ -266,6 +250,14 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         variant={isDoctor ? 'doctor' : 'patient'}
         activeTab="clinics"
         onNavigate={(tab) => onNavigateTab?.(tab)}
+      />
+
+      <InAppVideoCall
+        visible={!!callUrl}
+        url={callUrl ?? ''}
+        title={booking?.counterpartName ?? 'Video call'}
+        subtitle={booking?.counterpartSub}
+        onClose={() => setCallUrl(null)}
       />
     </View>
   );
@@ -323,8 +315,6 @@ const makeStyles = () => StyleSheet.create({
     marginTop: 4,
   },
   primaryBtnText: { fontSize: 15, fontWeight: '800', color: tone('#FFF') },
-  openedBox: { width: '100%', alignItems: 'center', gap: 8, marginTop: 4 },
-  openedText: { fontSize: 12, color: tone('#1E7E43'), textAlign: 'center', lineHeight: 18, fontWeight: '600' },
   lockedText: {
     fontSize: 13,
     color: tone('#B45309'),
