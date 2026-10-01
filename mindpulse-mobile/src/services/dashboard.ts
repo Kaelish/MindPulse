@@ -9,6 +9,7 @@ export interface StressSessionItem {
   date: string;
   status: 'Low' | 'Moderate' | 'High';
   statusColor: 'green' | 'yellow' | 'pink';
+  createdAt?: string;
   heartRate?: number;
   notes?: string;
   surveyScore?: number;
@@ -140,8 +141,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
   const { data: dbSessions, error: sessionsError } = await supabase
     .from('stress_sessions')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(10);
+    .order('created_at', { ascending: false });
 
   if (sessionsError) {
     throw new Error(sessionsError.message);
@@ -156,6 +156,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
       date: row.created_at ? formatDate(row.created_at) : '',
       status: row.stress_level ?? levelForScore(score),
       statusColor: colorForScore(score),
+      createdAt: row.created_at ?? undefined,
       heartRate: row.heart_rate ?? undefined,
       surveyScore: row.survey_score ?? undefined,
       emotion: row.emotion ?? undefined,
@@ -305,6 +306,7 @@ export const saveNewStressSession = async (
     date: row.created_at ? formatDate(row.created_at) : '',
     status,
     statusColor: colorForScore(score),
+    createdAt: row.created_at ?? undefined,
     heartRate: heartRate ?? undefined,
     surveyScore: surveyScore ?? undefined,
     reactionTimeMs: reactionTimeMs ?? undefined,

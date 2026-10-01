@@ -21,6 +21,7 @@ import {
   fetchDashboardData,
 } from '../../services/dashboard';
 import { isMessageNotification, markNotificationRead } from '../../services/notifications';
+import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
@@ -286,27 +287,11 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
       </ScrollView>
 
       {/* Session Details Modal */}
-      {selectedSession && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setSelectedSession(null)}>
-          <View style={modalStyles.overlay}>
-            <View style={modalStyles.box}>
-              <Text style={modalStyles.title}>Session Details</Text>
-              <Text style={modalStyles.score}>Score: {selectedSession.score} / 100 ({selectedSession.status})</Text>
-              <Text style={modalStyles.date}>{selectedSession.date}</Text>
-              {selectedSession.heartRate && <Text style={modalStyles.meta}>Heart Rate: {selectedSession.heartRate} bpm</Text>}
-              {selectedSession.notes && (
-                <View style={modalStyles.notes}>
-                  <Text style={modalStyles.notesLabel}>Analysis Notes:</Text>
-                  <Text style={modalStyles.notesText}>{selectedSession.notes}</Text>
-                </View>
-              )}
-              <TouchableOpacity style={modalStyles.closeBtn} onPress={() => setSelectedSession(null)}>
-                <Text style={modalStyles.closeBtnText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
+      <SessionDetailModal
+        visible={selectedSession !== null}
+        session={selectedSession}
+        onClose={() => setSelectedSession(null)}
+      />
 
       {/* Notifications Modal */}
       {showNotificationsModal && (
@@ -434,12 +419,6 @@ const makeModalStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
   box: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.lg, width: '100%' },
   title: { color: Colors.textPrimary, ...Typography.h3, marginBottom: 12 },
-  score: { color: Colors.textPrimary, ...Typography.body1 },
-  date: { color: Colors.textSecondary, ...Typography.body2, marginTop: 4 },
-  meta: { color: Colors.textPrimary, ...Typography.body2, marginTop: 8 },
-  notes: { backgroundColor: Colors.divider, borderRadius: Radius.sm, padding: Spacing.md, marginTop: 12 },
-  notesLabel: { color: Colors.textPrimary, fontWeight: '700', fontSize: 13, marginBottom: 4 },
-  notesText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 20 },
   closeBtn: { marginTop: 20, height: 52, borderRadius: Radius.md, backgroundColor: Colors.btnBlue, alignItems: 'center', justifyContent: 'center' },
   closeBtnText: { color: Colors.white, fontWeight: '800', fontSize: 16 },
   notifItem: { borderBottomWidth: 1, borderBottomColor: Colors.divider, paddingVertical: 12 },

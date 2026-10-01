@@ -27,6 +27,7 @@ import { AccountInfoModal } from './settings/AccountInfoModal';
 import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
+import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { registerThemeStyles, setThemeMode, tone, toneBg, useThemeMode } from '../../theme/theme';
 
 export type ProfileTabSegment = 'profile' | 'history' | 'settings';
@@ -110,11 +111,11 @@ registerThemeStyles(() => { lcStyles = makeLcStyles(); });
 
 // ── Session row ───────────────────────────────────────────────────────────────
 const SessionRow = ({
-  session, expanded, onToggle,
-}: { session: StressSessionItem; expanded: boolean; onToggle: () => void }) => {
+  session, onPress,
+}: { session: StressSessionItem; onPress: () => void }) => {
   const lp = levelProps(session.status);
   return (
-    <TouchableOpacity style={sessionStyles.row} onPress={onToggle} activeOpacity={0.8}>
+    <TouchableOpacity style={sessionStyles.row} onPress={onPress} activeOpacity={0.8}>
       <View style={[sessionStyles.scorePill, { backgroundColor: lp.bg }]}>
         <Text style={[sessionStyles.scoreText, { color: lp.color }]}>{session.score}</Text>
       </View>
@@ -127,7 +128,7 @@ const SessionRow = ({
         </View>
         <Text style={sessionStyles.date}>{session.date}</Text>
       </View>
-      <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textHint} />
+      <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
     </TouchableOpacity>
   );
 };
@@ -205,7 +206,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [data, setData] = useState<PatientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailSession, setDetailSession] = useState<StressSessionItem | null>(null);
   const [plant, setPlant] = useState<PlantProgress | null>(null);
   const [plantError, setPlantError] = useState<string | null>(null);
 
@@ -274,10 +275,11 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
 
   const { userName, userEmail, userInitials, metrics, recentSessions } = data;
 
-  // ── Score trend data (last 5 sessions reversed); HR chart only plots
+  // ── Score trend data (last 10 sessions reversed); HR chart only plots
   //    sessions that actually recorded a heart rate ──
-  const scoreTrend = [...recentSessions].reverse().map(s => s.score);
-  const hrSessions = recentSessions.filter(s => typeof s.heartRate === 'number');
+  const chartSessions = recentSessions.slice(0, 10);
+  const scoreTrend = [...chartSessions].reverse().map(s => s.score);
+  const hrSessions = chartSessions.filter(s => typeof s.heartRate === 'number');
   const hrTrend = [...hrSessions].reverse().map(s => s.heartRate as number);
 
   return (
@@ -448,7 +450,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 <>
                   <LineChart data={scoreTrend} color={tone('#5B6EF5')} height={90} />
                   <View style={styles.xLabels}>
-                    {recentSessions.slice().reverse().map((s, i) => (
+                    {chartSessions.slice().reverse().map((s, i) => (
                       <Text key={i} style={styles.xLabel}>
                         {s.date.split(',')[0].split(' ').slice(-1)[0]}
                       </Text>
@@ -486,8 +488,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
               <SessionRow
                 key={session.id}
                 session={session}
-                expanded={expandedId === session.id}
-                onToggle={() => setExpandedId(id => id === session.id ? null : session.id)}
+                onPress={() => setDetailSession(session)}
               />
             ))}
           </>
@@ -591,6 +592,11 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
       <AboutMindPulseModal
         visible={showAboutMindPulse}
         onClose={() => setShowAboutMindPulse(false)}
+      />
+      <SessionDetailModal
+        visible={detailSession !== null}
+        session={detailSession}
+        onClose={() => setDetailSession(null)}
       />
     </View>
   );

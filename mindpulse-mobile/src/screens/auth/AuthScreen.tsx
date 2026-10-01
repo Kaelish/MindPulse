@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
+import { CalendarDatePicker } from '../../components/CalendarDatePicker';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
@@ -111,7 +112,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       return 'Please enter a valid phone number (7 to 15 digits).';
     }
     if (!DOB_RE.test(regDob)) {
-      return 'Please enter your birth date as YYYY-MM-DD, e.g. 2004-06-17.';
+      return 'Please pick your birth date from the calendar.';
     }
     const dob = new Date(`${regDob}T00:00:00`);
     const today = new Date();
@@ -522,14 +523,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 />
 
                 <Text style={styles.label}>Birth Date</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#B0C4D8"
-                  maxLength={10}
-                  value={regDob}
-                  onChangeText={setRegDob}
-                />
+                <CalendarDatePicker value={regDob} onChange={setRegDob} />
 
                 <Text style={styles.label}>Gender</Text>
                 <View style={styles.chipRow}>

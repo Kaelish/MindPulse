@@ -180,7 +180,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
                 </View>
                 <View>
                   <Text style={styles.teamName}>KOSE Labs</Text>
-                  <Text style={styles.teamSub}>4th Year Computer Engineering / Computer Science Capstone Project</Text>
+                  <Text style={styles.teamSub}>4th Year BSIT (Bachelor of Science in Information Technology) Capstone Project</Text>
                 </View>
               </View>
               <Text style={styles.teamDesc}>
