@@ -30,7 +30,7 @@ const InstructionRow: React.FC<InstructionRowProps> = ({ emoji, text }) => (
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export const HeartRateInstructionsScreen: React.FC<Props> = ({ onBack, onReady }) => {
   return (
-    <StressAnalysisLayout activeModule="heartRate" activeSection="heartRate">
+    <StressAnalysisLayout activeModule="heartRate" onBack={onBack}>
 
       {/* ── Instruction card ── */}
       <View style={screen.card}>

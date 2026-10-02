@@ -12,7 +12,7 @@ import { loadAssessmentState, saveAssessmentState } from './StressAssessmentHubS
 import { AssessmentResultScreen } from './AssessmentResultScreen';
 import { registerThemeStyles } from '../../theme/theme';
 
-export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
+export const AssessmentNavigator = ({ onExit, onBookSession }: { onExit?: () => void; onBookSession?: () => void }) => {
   const [screen, setScreen] = useState<'hub' | 'survey' | 'toolSurvey' | 'faceScan' | 'heartRate' | 'reaction' | 'results'>('hub');
   const [activeTool, setActiveTool] = useState<AssessmentTool | null>(null);
 
@@ -115,6 +115,7 @@ export const AssessmentNavigator = ({ onExit }: { onExit?: () => void }) => {
         return (
           <AssessmentResultScreen
             onBack={() => setScreen('hub')}
+            onBookSession={onBookSession}
           />
         );
       default:

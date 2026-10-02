@@ -2,33 +2,41 @@
  * StressAnalysisLayout
  * Shared chrome for every screen in the Stress Analysis flow:
  *   - Page header ("Stress Analysis" title + subtitle)
- *   - 4-step module tab chips  (Survey / Face Scan / Heart Rate / Reaction)
- *   - Secondary section tabs   (Heart Rate / Reaction / Results)
+ *   - 4-step module chips  (Survey / Face Scan / Heart Rate / Reaction)
+ *     — one list only. A second, non-navigating "Heart Rate / Reaction /
+ *       Results" row used to sit underneath and duplicated it, so it is gone.
  *   - Bottom navigation tab bar
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
 import { BackButton } from './navigation/BackButton';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import {
+  AssessmentStepStatus,
+  isDayComplete,
+  loadAssessmentState,
+} from '../screens/assessment/StressAssessmentHubScreen';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ModuleTab = 'survey' | 'faceScan' | 'heartRate' | 'reaction';
-export type SectionTab = 'heartRate' | 'reaction' | 'results';
 
 interface Props {
   activeModule: ModuleTab;
-  activeSection: SectionTab;
   children: React.ReactNode;
-  /** Whether the Heart Rate tab shows a ✓ completion badge */
+  /**
+   * Extra "done" signal for the Heart Rate chip. The real source of truth is
+   * the saved assessment state; this covers screens that render before the
+   * navigator has persisted the step.
+   */
   heartRateDone?: boolean;
   onBack?: () => void;
   subtitle?: string;
@@ -54,7 +62,11 @@ const ModuleChip: React.FC<ModuleChipProps> = ({
       chip.base,
       active && { backgroundColor: chipBg ?? Colors.primaryLight },
     ]}>
-    <View style={[chip.dot, { backgroundColor: dotColor }]} />
+    {completed ? (
+      <Ionicons name="checkmark-circle" size={13} color={dotColor} />
+    ) : (
+      <View style={[chip.dot, { backgroundColor: dotColor }]} />
+    )}
     <Text
       style={[
         chip.label,
@@ -64,31 +76,6 @@ const ModuleChip: React.FC<ModuleChipProps> = ({
       {label}
     </Text>
   </View>
-);
-
-// ─── Secondary section tabs ───────────────────────────────────────────────────
-interface SecTabProps {
-  label: string;
-  icon: string;
-  active: boolean;
-  badge?: string; // e.g. "✓" overlay
-  onPress?: () => void;
-}
-const SecTab: React.FC<SecTabProps> = ({ label, icon, active, badge, onPress }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    accessibilityRole="tab"
-    style={[secTab.base, active && secTab.active]}>
-    <Text style={[secTab.icon, active && secTab.iconActive]}>{icon}</Text>
-    <Text style={[secTab.label, active && secTab.labelActive]}>
-      {label}
-    </Text>
-    {badge ? (
-      <View style={secTab.badge}>
-        <Text style={secTab.badgeText}>{badge}</Text>
-      </View>
-    ) : null}
-  </TouchableOpacity>
 );
 
 // ─── Bottom tab bar ───────────────────────────────────────────────────────────
@@ -107,12 +94,42 @@ const BottomTab: React.FC<BottomTabProps> = ({ icon, label, active }) => (
 // ─── Main layout ──────────────────────────────────────────────────────────────
 export const StressAnalysisLayout: React.FC<Props> = ({
   activeModule,
-  activeSection,
   children,
   heartRateDone,
   onBack,
   subtitle = 'Complete all steps then view your fused result',
 }) => {
+  const [stepStatus, setStepStatus] = useState<Record<ModuleTab, AssessmentStepStatus>>({
+    survey: 'locked',
+    faceScan: 'locked',
+    heartRate: 'locked',
+    reaction: 'locked',
+  });
+
+  useEffect(() => {
+    let alive = true;
+    loadAssessmentState()
+      .then((s) => {
+        if (!alive) return;
+        const dayDone = isDayComplete(s);
+        setStepStatus({
+          survey: dayDone ? 'completed' : s.survey,
+          faceScan: dayDone ? 'completed' : s.faceScan,
+          heartRate: dayDone ? 'completed' : s.heartRate,
+          reaction: dayDone ? 'completed' : s.reaction,
+        });
+      })
+      .catch(() => {
+        // Assessment state is a nicety — the chrome still renders without it.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const isDone = (step: ModuleTab): boolean =>
+    stepStatus[step] === 'completed' || (step === 'heartRate' && !!heartRateDone);
+
   return (
     <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
       {onBack && <BackButton onPress={onBack} />}
@@ -124,50 +141,34 @@ export const StressAnalysisLayout: React.FC<Props> = ({
         <Text style={layout.subtitle}>{subtitle}</Text>
       </View>
 
-      {/* ── Module step tabs ── */}
+      {/* ── Module step tabs — the single step list ── */}
       <View style={layout.moduleTabs}>
         <ModuleChip
           label="Survey"
           dotColor={Colors.tabSurveyDot}
           chipBg="#EEEEFF"
           active={activeModule === 'survey'}
+          completed={isDone('survey')}
         />
         <ModuleChip
           label="Face Scan"
           dotColor={Colors.tabFaceDot}
           chipBg={Colors.tabFaceBg}
           active={activeModule === 'faceScan'}
+          completed={isDone('faceScan')}
         />
         <ModuleChip
           label="Heart Rate"
           dotColor={Colors.tabHeartDot}
           chipBg={Colors.tabHeartBg}
           active={activeModule === 'heartRate'}
+          completed={isDone('heartRate')}
         />
         <ModuleChip
           label="Reaction"
           dotColor={Colors.tabReactionDot}
           active={activeModule === 'reaction'}
-        />
-      </View>
-
-      {/* ── Secondary section tabs ── */}
-      <View style={layout.secTabs}>
-        <SecTab
-          label="Heart Rate"
-          icon="♥"
-          active={activeSection === 'heartRate'}
-          badge={heartRateDone ? '✓' : undefined}
-        />
-        <SecTab
-          label="Reaction"
-          icon="⚡"
-          active={activeSection === 'reaction'}
-        />
-        <SecTab
-          label="Results"
-          icon="◎"
-          active={activeSection === 'results'}
+          completed={isDone('reaction')}
         />
       </View>
 
@@ -219,12 +220,6 @@ const makeLayout = () => StyleSheet.create({
     gap: 8,
     marginBottom: Spacing.sm,
   },
-  secTabs: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    gap: 8,
-    marginBottom: Spacing.md,
-  },
   scroll: {
     flex: 1,
   },
@@ -264,55 +259,6 @@ const makeChip = () => StyleSheet.create({
 
 let chip = makeChip();
 registerThemeStyles(() => { chip = makeChip(); });
-
-const makeSecTab = () => StyleSheet.create({
-  base: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.divider,
-    position: 'relative',
-  },
-  active: {
-    backgroundColor: Colors.primaryLight,
-  },
-  icon: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  iconActive: {
-    color: Colors.primary,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  labelActive: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  badge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.nextBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 2,
-  },
-  badgeText: {
-    fontSize: 8,
-    color: Colors.white,
-    fontWeight: '800',
-  },
-});
-
-let secTab = makeSecTab();
-registerThemeStyles(() => { secTab = makeSecTab(); });
 
 const makeBtab = () => StyleSheet.create({
   item: {

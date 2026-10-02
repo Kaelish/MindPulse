@@ -4,18 +4,46 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
-import { loadAssessmentState, saveAssessmentState, AssessmentState } from './StressAssessmentHubScreen';
+import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
+import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
+  /** Opens the Clinics tab so the patient can book with one of the panel doctors. */
+  onBookSession?: () => void;
 }
 
-export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
+export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
   const [clinicsExpanded, setClinicsExpanded] = useState(false);
   const [stateData, setStateData] = useState<AssessmentState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // "Get Help" must never be a dead button: it reveals the resource cards even
+  // for a low-stress result, where they are otherwise hidden.
+  const [helpRequested, setHelpRequested] = useState(false);
+  // High-stress results offer a tap-to-call panel before the crisis hotlines.
+  const [panel, setPanel] = useState<PanelDoctor[]>([]);
+  const [panelLoading, setPanelLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setPanelLoading(true);
+    fetchDoctorPanel()
+      .then((docs) => {
+        if (alive) setPanel(docs);
+      })
+      .catch(() => {
+        // A missing panel must never mask the assessment result itself.
+        if (alive) setPanel([]);
+      })
+      .finally(() => {
+        if (alive) setPanelLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     loadAssessmentState().then(setStateData);
@@ -34,6 +62,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   const surveyVal = stateData.surveyScore;
   const hrBpm = stateData.heartRateBpm;
   const rxMs = stateData.reactionTimeMs;
+
+  // Re-opening these results after saving must not create a second row today.
+  const alreadySavedToday = isDayComplete(stateData);
 
   // Heart rate → stress (60 bpm baseline; higher bpm = more stress)
   const hrVal = hrBpm != null ? Math.min(100, Math.max(0, (hrBpm - 60) * 2)) : null;
@@ -55,7 +86,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   const isModerateStress = finalScore > 35 && finalScore <= 60;
   const isLowStress = finalScore <= 35;
 
-  const showHelpResources = isHighStress || isModerateStress;
+  const showHelpResources = helpRequested || isHighStress || isModerateStress;
+
+  const handleGetHelp = () => {
+    setHelpRequested(true);
+    setClinicsExpanded(true);
+  };
 
   const getTheme = () => {
     if (isLowStress) return { bg: toneBg('#E8F5E9'), text: tone('#2E7D32'), pillBg: toneBg('#4CAF50'), pillText: tone('#FFF'), label: 'Low Stress' };
@@ -66,6 +102,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   const theme = getTheme();
 
   const handleSaveResult = async () => {
+    if (alreadySavedToday) return;
     setIsSaving(true);
     try {
       await saveNewStressSession(
@@ -75,14 +112,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
         surveyVal,
         rxMs,
       );
-      
-      // Reset the assessment state back to start
-      await saveAssessmentState({
-        survey: 'unlocked',
-        faceScan: 'locked',
-        heartRate: 'locked',
-        reaction: 'locked',
-      });
+
+      // Today is now spent: keep the numbers for review, close every step, and
+      // let the hub show "Today's assessment is complete!" until midnight.
+      await saveAssessmentState(markDayComplete(stateData));
 
       onBack();
     } catch (e: any) {
@@ -94,7 +127,6 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
   return (
     <StressAnalysisLayout
       activeModule="reaction"
-      activeSection="results"
       heartRateDone
       onBack={onBack}
     >
@@ -271,6 +303,61 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
             )}
           </View>
 
+          {/* High stress: reach a real doctor before the crisis hotlines */}
+          {isHighStress && (
+            <View style={styles.doctorPanelCard}>
+              <View style={styles.doctorPanelHeader}>
+                <View style={styles.doctorPanelIconWrap}>
+                  <Ionicons name="medkit-outline" size={18} color={tone('#FFF')} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.doctorPanelTitle}>Call One of Our Doctors</Text>
+                  <Text style={styles.doctorPanelSub}>Verified professionals on the MindPulse panel</Text>
+                </View>
+              </View>
+
+              {panelLoading && (
+                <ActivityIndicator size="small" color={tone('#D32F2F')} style={{ marginVertical: 12 }} />
+              )}
+
+              {!panelLoading && panel.length === 0 && (
+                <Text style={styles.doctorPanelEmpty}>
+                  No panel doctors are listed right now. Please use the crisis hotlines below.
+                </Text>
+              )}
+
+              {!panelLoading &&
+                panel.map((doc) => (
+                  <View key={doc.id} style={styles.doctorRow}>
+                    <View style={styles.doctorAvatar}>
+                      <Text style={styles.doctorAvatarText}>
+                        {doc.name.replace(/^Dr\.?\s+/i, '').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.doctorName}>{doc.name}</Text>
+                      <Text style={styles.doctorSpec} numberOfLines={1}>{doc.specialty}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.doctorCallBtn, !doc.contactNumber && { opacity: 0.5 }]}
+                      onPress={() => doc.contactNumber && Linking.openURL(`tel:${doc.contactNumber}`).catch(() => {})}
+                      disabled={!doc.contactNumber}
+                      activeOpacity={0.8}>
+                      <Ionicons name="call" size={13} color={tone('#FFF')} />
+                      <Text style={styles.doctorCallText}>Call</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+              {onBookSession && (
+                <TouchableOpacity style={styles.doctorBookBtn} onPress={onBookSession} activeOpacity={0.85}>
+                  <Text style={styles.doctorBookText}>Book a session</Text>
+                  <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           <View style={styles.hotlinesCard}>
             <Text style={styles.hotlinesTitle}>Emergency Mental Health Hotlines</Text>
             
@@ -336,13 +423,15 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack }) => {
       {/* Bottom Action Buttons */}
       <View style={styles.actionsRow}>
         <TouchableOpacity 
-          style={[styles.saveBtn, isSaving && { opacity: 0.7 }]} 
+          style={[styles.saveBtn, (isSaving || alreadySavedToday) && { opacity: 0.7 }]} 
           onPress={handleSaveResult}
-          disabled={isSaving}
+          disabled={isSaving || alreadySavedToday}
         >
-          <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save Result'}</Text>
+          <Text style={styles.saveBtnText}>
+            {isSaving ? 'Saving...' : alreadySavedToday ? 'Saved for today' : 'Save Result'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.helpBtn}>
+        <TouchableOpacity style={styles.helpBtn} onPress={handleGetHelp}>
           <Text style={styles.helpBtnText}>Get Help</Text>
           <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
         </TouchableOpacity>
@@ -400,6 +489,22 @@ const makeStyles = () => StyleSheet.create({
   callBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#E53935'), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 4 },
   callBtnText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700', marginLeft: 4 },
   clinicDist: { fontSize: 10, color: tone('#D32F2F'), fontWeight: '600' },
+
+  doctorPanelCard: { backgroundColor: toneBg('#FFF5F5'), borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#FFCDD2') },
+  doctorPanelHeader: { flexDirection: 'row', alignItems: 'center' },
+  doctorPanelIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#D32F2F'), alignItems: 'center', justifyContent: 'center' },
+  doctorPanelTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
+  doctorPanelSub: { fontSize: 11, color: tone('#8A6A6A'), marginTop: 2 },
+  doctorPanelEmpty: { fontSize: 12, color: tone('#8A6A6A'), marginVertical: 12, lineHeight: 18 },
+  doctorRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#FFF'), borderRadius: 12, padding: 12, marginTop: 12, borderWidth: 1, borderColor: toneBg('#FBE9E7') },
+  doctorAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#FDECE6'), alignItems: 'center', justifyContent: 'center' },
+  doctorAvatarText: { fontSize: 13, fontWeight: '800', color: tone('#D32F2F') },
+  doctorName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A') },
+  doctorSpec: { fontSize: 11, color: tone('#666'), marginTop: 2 },
+  doctorCallBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: toneBg('#E53935'), paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginLeft: 8 },
+  doctorCallText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700' },
+  doctorBookBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, backgroundColor: toneBg('#D32F2F'), borderRadius: 23, marginTop: 14 },
+  doctorBookText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
 
   hotlinesCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
   hotlinesTitle: { fontSize: 14, fontWeight: '800', color: tone('#1A1A1A'), marginBottom: 16 },

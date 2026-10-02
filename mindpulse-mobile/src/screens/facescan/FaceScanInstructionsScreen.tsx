@@ -143,6 +143,20 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Top bar */}
+        {onBack && (
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={onBack}
+              accessibilityRole="button"
+              accessibilityLabel="Back to assessment steps">
+              <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Page Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
@@ -339,6 +353,10 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   safeArea: { flex: 1 },
+
+  topBar: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, flexDirection: 'row' },
+  backBtn: { flexDirection: 'row', alignItems: 'center' },
+  backText: { color: tone('#6B79F2'), fontSize: 16, fontWeight: '600', marginLeft: 2 },
 
   pageHeader: { alignItems: 'center', paddingTop: Spacing.lg, paddingBottom: Spacing.md, paddingHorizontal: Spacing.lg },
   pageTitle: { color: Colors.textPrimary, ...Typography.h2, textAlign: 'center' },

@@ -2494,10 +2494,25 @@
 
 .doctor-scope .jitsi-frame {
   width: 100%;
-  min-height: 460px;
+  min-height: 360px;
   border: 1px solid var(--doc-line);
   border-radius: var(--doc-radius);
   background: var(--doc-panel);
+}
+
+.doctor-scope .jitsi-fallback {
+  background: color-mix(in srgb, #f59e0b 12%, var(--doc-panel));
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--doc-line));
+}
+
+.doctor-scope .jitsi-fallback-title { color: var(--primary-strong); }
+
+.doctor-scope .jitsi-fallback-text { color: var(--doc-ink); }
+
+.doctor-scope .jitsi-fallback-url { color: var(--doc-muted); }
+
+.doctor-scope .web-chat-modal-body {
+  background: var(--doc-bg);
 }
 
 /* =========================================================================
@@ -2822,8 +2837,10 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   }
 
   .doctor-scope .web-chat-modal-box {
-    width: 96vw;
-    height: 84vh;
+    /* The overlay now carries 24px of padding, so a 96vw box would overflow
+       the viewport horizontally. Width comes from the base rule. */
+    width: 100%;
+    height: min(720px, calc(100vh - 48px));
   }
 }
 

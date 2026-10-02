@@ -17,20 +17,24 @@ type SurveyQuestion = {
 };
 
 /* PSS-10 (Cohen et al., 1983) — public-domain Perceived Stress Scale.
- * Items 4, 5, 7, 8 are reverse-scored (score = 4 - raw). */
+ * Items 4, 5, 7, 8 are reverse-scored (score = 4 - raw).
+ * Recall window adapted from the original "last month" to "last 24 hours" so a
+ * daily check-in measures today instead of the past 30 days. Scoring is
+ * unchanged (0-40), so dashboard thresholds stay comparable. */
 const PSS_REVERSE_IDS = new Set([4, 5, 7, 8]);
+const RECALL = 'In the last 24 hours';
 
 const part1Questions: SurveyQuestion[] = [
-  { id: 1, pill: 'Unexpected Event', text: 'In the last month, how often have you been upset because of something that happened unexpectedly?' },
-  { id: 2, pill: 'Control', text: 'In the last month, how often have you felt that you were unable to control the important things in your life?' },
-  { id: 3, pill: 'Nervous & Stressed', text: 'In the last month, how often have you felt nervous and stressed?' },
-  { id: 4, pill: 'Confidence', text: 'In the last month, how often have you felt confident about your ability to handle your personal problems?' },
-  { id: 5, pill: 'Going Your Way', text: 'In the last month, how often have you felt that things were going your way?' },
-  { id: 6, pill: 'Overloaded', text: 'In the last month, how often have you found that you could not cope with all the things that you had to do?' },
-  { id: 7, pill: 'Irritations', text: 'In the last month, how often have you been able to control irritations in your life?' },
-  { id: 8, pill: 'On Top of Things', text: 'In the last month, how often have you felt that you were on top of things?' },
-  { id: 9, pill: 'Anger', text: 'In the last month, how often have you been angered because of things that were outside of your control?' },
-  { id: 10, pill: 'Overwhelm', text: 'In the last month, how often have you felt difficulties were piling up so high that you could not overcome them?' },
+  { id: 1, pill: 'Unexpected Event', text: `${RECALL}, how often have you been upset because of something that happened unexpectedly?` },
+  { id: 2, pill: 'Control', text: `${RECALL}, how often have you felt that you were unable to control the important things in your life?` },
+  { id: 3, pill: 'Nervous & Stressed', text: `${RECALL}, how often have you felt nervous and stressed?` },
+  { id: 4, pill: 'Confidence', text: `${RECALL}, how often have you felt confident about your ability to handle your personal problems?` },
+  { id: 5, pill: 'Going Your Way', text: `${RECALL}, how often have you felt that things were going your way?` },
+  { id: 6, pill: 'Overloaded', text: `${RECALL}, how often have you found that you could not cope with all the things that you had to do?` },
+  { id: 7, pill: 'Irritations', text: `${RECALL}, how often have you been able to control irritations in your life?` },
+  { id: 8, pill: 'On Top of Things', text: `${RECALL}, how often have you felt that you were on top of things?` },
+  { id: 9, pill: 'Anger', text: `${RECALL}, how often have you been angered because of things that were outside of your control?` },
+  { id: 10, pill: 'Overwhelm', text: `${RECALL}, how often have you felt difficulties were piling up so high that you could not overcome them?` },
 ];
 
 /* Part 2 — 8 body/lifestyle indicators, 0-3 scale, higher = more stress. */

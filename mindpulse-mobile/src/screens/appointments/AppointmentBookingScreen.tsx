@@ -349,6 +349,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [loadingClinicians, setLoadingClinicians] = useState(true);
   const [cliniciansError, setCliniciansError] = useState<string | null>(null);
   const [bookedKeys, setBookedKeys] = useState<Set<string>>(new Set());
+  const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
 
   const [conversation, setConversation] = useState<PatientConversation | null>(null);
   const [conversations, setConversations] = useState<PatientConversation[]>([]);
@@ -524,19 +525,27 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     void subscribeToMyAppointments(() => {
       void loadBookings(false);
       void fetchBookedSlotKeysQuietly();
-    }).then((unsub) => {
-      if (disposed) unsub();
-      else unsubAppointments = unsub;
-    });
+    })
+      .then((unsub) => {
+        if (disposed) unsub();
+        else unsubAppointments = unsub;
+      })
+      .catch(() => {
+        // Realtime is a bonus; the manual pull-to-refresh still works.
+      });
 
     void subscribeToMyMessages(() => {
       void refreshConversations();
       const current = conversationRef.current;
       if (current) void refreshThread(current);
-    }).then((unsub) => {
-      if (disposed) unsub();
-      else unsubMessages = unsub;
-    });
+    })
+      .then((unsub) => {
+        if (disposed) unsub();
+        else unsubMessages = unsub;
+      })
+      .catch(() => {
+        // Realtime is a bonus; the manual pull-to-refresh still works.
+      });
 
     return () => {
       disposed = true;
@@ -557,6 +566,25 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     c.specialty.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  /**
+   * Availability only tells us which slots *this patient* already holds, so a
+   * failed fetch must not block booking — it degrades to "no known conflicts"
+   * and the modal shows a retry row instead of dead-ending on an alert.
+   */
+  const loadAvailability = async (clinician: TelehealthClinician): Promise<boolean> => {
+    try {
+      setBookedKeys(await fetchBookedSlotKeys(clinician.id));
+      setAvailabilityNotice(null);
+      return true;
+    } catch (e: any) {
+      setBookedKeys(new Set());
+      setAvailabilityNotice(
+        e?.message || 'Could not load availability. Times shown may be out of date.',
+      );
+      return false;
+    }
+  };
+
   const handleConnect = async (c: TelehealthClinician) => {
     setSelectedClinician(c);
     // Land on the first date this doctor actually works (they may have days off).
@@ -565,13 +593,12 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     );
     setSelectedDateIdx(firstOpen >= 0 ? firstOpen : 0);
     setSelectedTime(null);
-    try {
-      // Availability must be fresh before offering times.
-      setBookedKeys(await fetchBookedSlotKeys(c.id));
-      setShowBookingModal(true);
-    } catch (e: any) {
-      Alert.alert('Could not load availability', e?.message || 'Please try again.');
-    }
+    setBookedKeys(new Set());
+    setAvailabilityNotice(null);
+    // Open immediately: the patient can pick a time while availability loads,
+    // and a failure shows inside the modal instead of as a blocking alert.
+    setShowBookingModal(true);
+    await loadAvailability(c);
   };
 
   const handleConfirm = async () => {
@@ -1103,6 +1130,18 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 <Ionicons name="close" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            {availabilityNotice ? (
+              <View style={styles.availabilityBanner}>
+                <Ionicons name="cloud-offline-outline" size={16} color={Colors.textSecondary} />
+                <Text style={styles.availabilityBannerText}>{availabilityNotice}</Text>
+                <TouchableOpacity
+                  onPress={() => selectedClinician && void loadAvailability(selectedClinician)}
+                >
+                  <Text style={styles.availabilityRetry}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             <Text style={styles.modalSectionLabel}>Select Day</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
@@ -1718,6 +1757,18 @@ const makeStyles = () => StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   modalSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   modalSectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10 },
+  availabilityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.divider,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  availabilityBannerText: { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  availabilityRetry: { fontSize: 13, fontWeight: '800', color: Colors.btnBlue },
 
   dateChip: {
     alignItems: 'center',

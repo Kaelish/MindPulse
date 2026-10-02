@@ -10,6 +10,7 @@ import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 interface Props {
   expression: string;
   score: number;
+  onBack: () => void;
   onRetry: () => void;
   onFinish: () => void;
 }
@@ -23,7 +24,7 @@ const EXPR_EMOJI: Record<string, string> = {
   happy: '😄',
 };
 
-export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRetry, onFinish }) => {
+export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBack, onRetry, onFinish }) => {
   const confidencePercent = Math.round(Math.min(1, Math.max(0, score)) * 100);
   const emoji = EXPR_EMOJI[expression] ?? '😐';
   const expressionLabel = expression.charAt(0).toUpperCase() + expression.slice(1);
@@ -31,6 +32,18 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Back to face scan instructions">
+            <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
@@ -135,7 +148,11 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onRet
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
   scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
-  
+
+  topBar: { marginBottom: 4 },
+  backBtn: { flexDirection: 'row', alignItems: 'center' },
+  backText: { color: tone('#6B79F2'), fontSize: 16, fontWeight: '600', marginLeft: 2 },
+
   pageHeader: { alignItems: 'center', marginTop: 16, marginBottom: 24 },
   pageTitle: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary },
   pageSubtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },

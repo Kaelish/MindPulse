@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUser } from './session';
 import { recordPlantSession } from './plantProgress';
 import { isNotificationEnabled, loadNotificationPrefs } from './notificationPrefs';
 
@@ -93,10 +94,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
   let authEmail = '';
 
   if (!targetUserId) {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      throw new Error('Your session has expired. Please sign in again.');
-    }
+    const user = await requireUser();
     targetUserId = user.id;
     metadata = user.user_metadata ?? null;
     authEmail = user.email || '';
@@ -252,10 +250,7 @@ export const saveNewStressSession = async (
   reactionTimeMs?: number,
   faceConfidencePercent?: number,
 ): Promise<StressSessionItem> => {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    throw new Error('Your session has expired. Please sign in again.');
-  }
+  const { id: userId } = await requireUser();
 
   const status = levelForScore(score);
   const title = `${status} Stress`;
@@ -263,7 +258,7 @@ export const saveNewStressSession = async (
   const { data: inserted, error } = await supabase
     .from('stress_sessions')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       score,
       stress_level: status,
       heart_rate: heartRate ?? null,
@@ -300,7 +295,7 @@ export const saveNewStressSession = async (
               message: `Your latest stress check recorded a score of ${score}. Tap for ideas to keep your stress low.`,
             };
     const { error: notificationError } = await supabase.from('notifications').insert({
-      user_id: user.id,
+      user_id: userId,
       ...notice,
       type: 'alert',
     });

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
 
 export type PlantProgress = {
   currentStage: string;
@@ -15,15 +16,12 @@ const defaultProgress: PlantProgress = {
 };
 
 export async function fetchPlantProgress(): Promise<PlantProgress> {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    throw new Error('Your session has expired. Please sign in again.');
-  }
+  const userId = await requireUserId();
 
   const { data, error } = await supabase
     .from('MIND_PLANT_PROGRESS')
     .select('CURRENT_STAGE, CURRENT_STREAK, TOTAL_GROWTH_POINTS, LAST_SESSION_DATE')
-    .eq('USER_ID', user.id)
+    .eq('USER_ID', userId)
     .maybeSingle();
 
   if (error) {
@@ -42,10 +40,7 @@ export async function fetchPlantProgress(): Promise<PlantProgress> {
 }
 
 export async function recordPlantSession(): Promise<PlantProgress> {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    throw new Error('Your session has expired. Please sign in again.');
-  }
+  const userId = await requireUserId();
 
   const current = await fetchPlantProgress();
   const today = new Date().toISOString().slice(0, 10);
@@ -79,7 +74,7 @@ export async function recordPlantSession(): Promise<PlantProgress> {
     .from('MIND_PLANT_PROGRESS')
     .upsert(
       {
-        USER_ID: user.id,
+        USER_ID: userId,
         CURRENT_STAGE: next.currentStage,
         CURRENT_STREAK: next.currentStreak,
         TOTAL_GROWTH_POINTS: next.totalGrowthPoints,

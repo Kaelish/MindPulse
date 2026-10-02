@@ -165,8 +165,11 @@ function App() {
       let hasSession = false;
       try {
         if (await isRememberMeEnabled()) {
-          const { data, error } = await withTimeout(supabase.auth.getUser(), 6000);
-          hasSession = !error && !!data.user;
+          // getSession() answers from local storage (refreshing only when the
+          // token is near expiry), so a slow auth endpoint can't force the
+          // user back through the login screen.
+          const { data, error } = await withTimeout(supabase.auth.getSession(), 6000);
+          hasSession = !error && !!data.session;
         }
       } catch (e) {
         console.warn('Remember-me session check failed', e);
@@ -568,6 +571,7 @@ function App() {
               {currentTab === 'analysis' && (
                 <AssessmentNavigator
                   onExit={() => setCurrentTab('profile')}
+                  onBookSession={() => setCurrentTab('clinics')}
                 />
               )}
               {currentTab !== 'home' &&

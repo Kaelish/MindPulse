@@ -70,7 +70,6 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
   return (
     <StressAnalysisLayout
       activeModule="heartRate"
-      activeSection="heartRate"
       onBack={onBack}>
 
       {/* ── Beat count input card ── */}

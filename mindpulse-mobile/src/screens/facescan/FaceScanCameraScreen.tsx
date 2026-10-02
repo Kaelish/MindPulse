@@ -34,6 +34,18 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
 
   return (
     <SafeAreaView style={styles.root}>
+      {/* Top bar — the demo auto-advances after ~3s, so a back tap must be possible meanwhile */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back to face scan instructions">
+          <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Header */}
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
@@ -104,6 +116,9 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
 
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
+  topBar: { paddingHorizontal: Spacing.lg, paddingTop: 6, flexDirection: 'row' },
+  backBtn: { flexDirection: 'row', alignItems: 'center' },
+  backText: { color: tone('#6B79F2'), fontSize: 16, fontWeight: '600', marginLeft: 2 },
   pageHeader: { alignItems: 'center', marginTop: 32, marginBottom: 24 },
   pageTitle: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary },
   pageSubtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },

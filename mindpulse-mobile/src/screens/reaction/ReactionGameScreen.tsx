@@ -19,6 +19,54 @@ interface Props {
   onComplete?: (result: ReactionResult) => void;
 }
 
+/**
+ * Reaction time bands. The result used to be hard-coded red, which read as a
+ * warning even for a perfectly healthy score — colour now follows the number.
+ */
+type ReactionBand = {
+  key: 'fast' | 'normal' | 'slow';
+  label: string;
+  accent: string;
+  bg: string;
+  pillBg: string;
+  pillText: string;
+  sub: string;
+};
+
+const bandFor = (ms: number): ReactionBand => {
+  if (ms <= 250) {
+    return {
+      key: 'fast',
+      label: 'Fast',
+      accent: '#2E7D32',
+      bg: '#E8F5E9',
+      pillBg: '#CDE9D4',
+      pillText: '#1F7A45',
+      sub: 'Faster than average — sharp focus',
+    };
+  }
+  if (ms <= 400) {
+    return {
+      key: 'normal',
+      label: 'Normal',
+      accent: '#2C7A7B',
+      bg: '#E6F7F5',
+      pillBg: '#C6ECE5',
+      pillText: '#1F6E6E',
+      sub: 'Normal reaction time',
+    };
+  }
+  return {
+    key: 'slow',
+    label: 'Slow',
+    accent: '#D32F2F',
+    bg: '#FDECE6',
+    pillBg: '#F8D5C8',
+    pillText: '#B32D2D',
+    sub: 'Slower than average — may suggest stress',
+  };
+};
+
 export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [round, setRound] = useState(1);
@@ -60,12 +108,11 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
   };
 
   const average = attempts.length > 0 ? Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length) : 0;
-  const isSlow = average > 400; // Arbitrary threshold
+  const band = bandFor(average);
 
   return (
     <StressAnalysisLayout
       activeModule="reaction"
-      activeSection={phase === 'results' ? 'results' : 'reaction'}
       heartRateDone
       onBack={onBack}
     >
@@ -122,45 +169,51 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
             <View style={styles.attemptsCard}>
               <Text style={styles.attemptsTitle}>Reaction Times</Text>
               <View style={styles.attemptsRow}>
-                {attempts.map((t, i) => (
-                  <View key={i} style={styles.attemptPill}>
-                    <Text style={styles.attemptLabel}>R{i + 1}</Text>
-                    <Text style={styles.attemptValue}>{t}ms</Text>
-                  </View>
-                ))}
+                {attempts.map((t, i) => {
+                  const b = bandFor(t);
+                  return (
+                    <View key={i} style={[styles.attemptPill, { backgroundColor: toneBg(b.bg) }]}>
+                      <Text style={styles.attemptLabel}>R{i + 1}</Text>
+                      <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{t}ms</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
         </>
       ) : (
         <>
-          <View style={styles.resultHero}>
+          <View style={[styles.resultHero, { backgroundColor: toneBg(band.bg) }]}>
             <Text style={styles.resultLabel}>Average Reaction Time</Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              <Text style={styles.resultValue}>{average}</Text>
-              <Text style={styles.resultUnit}>ms</Text>
+              <Text style={[styles.resultValue, { color: tone(band.accent) }]}>{average}</Text>
+              <Text style={[styles.resultUnit, { color: tone(band.accent) }]}>ms</Text>
             </View>
-            <View style={styles.resultPill}>
-              <Text style={styles.resultPillText}>{isSlow ? 'Very Slow' : 'Normal'}</Text>
+            <View style={[styles.resultPill, { backgroundColor: toneBg(band.pillBg) }]}>
+              <Text style={[styles.resultPillText, { color: tone(band.pillText) }]}>{band.label}</Text>
             </View>
           </View>
 
           <View style={styles.attemptsCardResult}>
             <Text style={styles.attemptsTitle}>Reaction Times</Text>
             <View style={styles.attemptsRowResult}>
-              {attempts.map((t, i) => (
-                <View key={i} style={styles.attemptPill}>
-                  <Text style={styles.attemptLabel}>R{i + 1}</Text>
-                  <Text style={styles.attemptValue}>{t}ms</Text>
-                </View>
-              ))}
+              {attempts.map((t, i) => {
+                const b = bandFor(t);
+                return (
+                  <View key={i} style={[styles.attemptPill, { backgroundColor: toneBg(b.bg) }]}>
+                    <Text style={styles.attemptLabel}>R{i + 1}</Text>
+                    <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{t}ms</Text>
+                  </View>
+                );
+              })}
             </View>
 
-            <View style={styles.summaryBox}>
-              <Ionicons name="flash" size={16} color={tone('#D32F2F')} />
+            <View style={[styles.summaryBox, { backgroundColor: toneBg(band.bg) }]}>
+              <Ionicons name="flash" size={16} color={tone(band.accent)} />
               <View style={{ marginLeft: 8 }}>
-                <Text style={styles.summaryTitle}>Average: {average}ms</Text>
-                <Text style={styles.summarySub}>{isSlow ? 'Slower than average — may suggest stress' : 'Normal reaction time'}</Text>
+                <Text style={[styles.summaryTitle, { color: tone(band.accent) }]}>Average: {average}ms</Text>
+                <Text style={styles.summarySub}>{band.sub}</Text>
               </View>
             </View>
           </View>
@@ -198,19 +251,19 @@ const makeStyles = () => StyleSheet.create({
   attemptsTitle: { fontSize: 16, fontWeight: '600', color: tone('#666'), marginBottom: 16 },
   attemptsRow: { flexDirection: 'row', gap: 12 },
   attemptsRowResult: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  attemptPill: { flex: 1, backgroundColor: toneBg('#FDECE6'), borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  attemptPill: { flex: 1, backgroundColor: toneBg('#F1F5F9'), borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   attemptLabel: { fontSize: 12, color: tone('#888'), fontWeight: '700', marginBottom: 4 },
-  attemptValue: { fontSize: 16, color: tone('#D32F2F'), fontWeight: '800' },
+  attemptValue: { fontSize: 16, color: tone('#2C7A7B'), fontWeight: '800' },
 
-  resultHero: { backgroundColor: toneBg('#F4E5E3'), borderRadius: 20, padding: 30, alignItems: 'center', justifyContent: 'center' },
+  resultHero: { backgroundColor: toneBg('#E6F7F5'), borderRadius: 20, padding: 30, alignItems: 'center', justifyContent: 'center' },
   resultLabel: { fontSize: 16, fontWeight: '600', color: tone('#777'), marginBottom: 16 },
-  resultValue: { fontSize: 64, fontWeight: '900', color: tone('#D32F2F') },
-  resultUnit: { fontSize: 28, fontWeight: '800', color: tone('#D32F2F'), marginLeft: 4 },
-  resultPill: { backgroundColor: toneBg('#F3C5C5'), paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
-  resultPillText: { color: tone('#B32D2D'), fontWeight: '700', fontSize: 14 },
+  resultValue: { fontSize: 64, fontWeight: '900', color: tone('#2C7A7B') },
+  resultUnit: { fontSize: 28, fontWeight: '800', color: tone('#2C7A7B'), marginLeft: 4 },
+  resultPill: { backgroundColor: toneBg('#C6ECE5'), paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
+  resultPillText: { color: tone('#1F6E6E'), fontWeight: '700', fontSize: 14 },
 
-  summaryBox: { backgroundColor: toneBg('#F8EEF0'), borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' },
-  summaryTitle: { fontSize: 15, fontWeight: '800', color: tone('#D32F2F'), marginBottom: 2 },
+  summaryBox: { backgroundColor: toneBg('#E6F7F5'), borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' },
+  summaryTitle: { fontSize: 15, fontWeight: '800', color: tone('#2C7A7B'), marginBottom: 2 },
   summarySub: { fontSize: 11, color: tone('#999') },
 
   nextBtn: { backgroundColor: toneBg('#6B79F2'), borderRadius: 28, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24 },

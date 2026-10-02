@@ -49,6 +49,7 @@ export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan, onSki
           <FaceScanResultScreen
             expression={expression}
             score={score}
+            onBack={() => setStep('instructions')}
             onRetry={() => setStep('instructions')}
             onFinish={() => onFinishScan({ expression, score })}
           />

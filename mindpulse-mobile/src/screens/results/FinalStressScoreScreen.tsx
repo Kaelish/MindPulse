@@ -103,7 +103,6 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
       {/* Stress Analysis chrome header */}
       <StressAnalysisLayout
         activeModule="reaction"
-        activeSection="results"
         heartRateDone
         onBack={onBack}
         subtitle="Multi-modal stress assessment"

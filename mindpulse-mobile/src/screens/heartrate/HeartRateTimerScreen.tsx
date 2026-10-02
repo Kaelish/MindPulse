@@ -41,7 +41,7 @@ export const HeartRateTimerScreen: React.FC<Props> = ({ onBack, onComplete }) =>
   const isPreparing = phase === 'preparing';
 
   return (
-    <StressAnalysisLayout activeModule="heartRate" activeSection="heartRate" onBack={onBack}>
+    <StressAnalysisLayout activeModule="heartRate" onBack={onBack}>
       <View style={styles.card}>
         <Text style={styles.instruction}>
           {isPreparing ? 'Get ready to count your heartbeats!' : 'Count every heartbeat you feel.'}

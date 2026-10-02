@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUser } from './session';
 import { loadNotificationPrefs } from './notificationPrefs';
 import {
   ChatAttachment,
@@ -73,14 +74,6 @@ export interface PatientConversation {
   lastAt: string;
   unreadCount: number;
 }
-
-const requireUser = async () => {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    throw new Error('Your session has expired. Please sign in again.');
-  }
-  return user;
-};
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -224,6 +217,55 @@ const toClinician = (row: any): TelehealthClinician => {
       ? (embedded.blocked_dates as string[]).map((d) => String(d).trim()).filter(Boolean)
       : [],
   };
+};
+
+/** One verified clinician shown on the high-stress "doctor panel" card. */
+export interface PanelDoctor {
+  id: string;
+  name: string;
+  specialty: string;
+  contactNumber: string;
+}
+
+/**
+ * Verified doctors a patient can reach out to. RLS already hides unverified
+ * `doctor_profiles` rows, but a doctor whose profile embed is filtered out
+ * comes back with a null embed — those are dropped explicitly too.
+ */
+export const fetchDoctorPanel = async (limit = 4): Promise<PanelDoctor[]> => {
+  await requireUser();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(
+      'id, first_name, last_name, full_name, email, doctor_profiles ( specialization, contact_number, is_verified )',
+    )
+    .eq('role', 'doctor')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const panel: PanelDoctor[] = [];
+  for (const row of (data ?? []) as any[]) {
+    const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
+    if (!embedded || embedded.is_verified !== true) continue;
+
+    const baseName =
+      `${row.full_name || ''}`.trim() ||
+      `${row.first_name || ''} ${row.last_name || ''}`.trim() ||
+      row.email ||
+      'Clinician';
+    panel.push({
+      id: String(row.id),
+      name: /^dr\.?\s/i.test(baseName) ? baseName : `Dr. ${baseName}`,
+      specialty: embedded.specialization || 'Mental Health Professional',
+      contactNumber: (embedded.contact_number || '').trim(),
+    });
+    if (panel.length >= limit) break;
+  }
+  return panel;
 };
 
 export const fetchClinicians = async (): Promise<TelehealthClinician[]> => {

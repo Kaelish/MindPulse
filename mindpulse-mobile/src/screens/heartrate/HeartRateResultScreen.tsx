@@ -111,7 +111,6 @@ export const HeartRateResultScreen: React.FC<Props> = ({
   return (
     <StressAnalysisLayout
       activeModule="heartRate"
-      activeSection="heartRate"
       heartRateDone
       onBack={onBack}>
 

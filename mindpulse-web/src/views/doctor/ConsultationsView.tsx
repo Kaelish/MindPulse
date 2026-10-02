@@ -1755,7 +1755,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             </div>
 
             {showVideoCall ? (
-              <div style={{ flex: 1, padding: '10px' }}>
+              <div className="web-chat-modal-body">
                 <JitsiCallPanel appointment={activeSessionItem} onBack={() => setShowVideoCall(false)} />
               </div>
             ) : (

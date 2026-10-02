@@ -18,7 +18,10 @@ export interface AssessmentState {
   faceScan: AssessmentStepStatus;
   heartRate: AssessmentStepStatus;
   reaction: AssessmentStepStatus;
-  
+
+  /** Local YYYY-MM-DD the patient saved this run. Null/absent = still open. */
+  completedOn?: string;
+
   // Stored data from modules
   surveyScore?: number;
   faceScanData?: any;
@@ -33,16 +36,52 @@ const DEFAULT_STATE: AssessmentState = {
   reaction: 'locked',
 };
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * The device's local calendar day. Deliberately not `toISOString()` — that is
+ * UTC, so a 9 PM check-in in UTC+8 would already count as tomorrow.
+ */
+export const todayKey = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+/** True when today's 4-step run has already been saved. */
+export const isDayComplete = (state: AssessmentState): boolean =>
+  !!state.completedOn && state.completedOn === todayKey();
+
+/**
+ * The state written when the patient saves their result: today is done, every
+ * step shows its finished status, and the numbers are kept so the results stay
+ * viewable until the day rolls over.
+ */
+export const markDayComplete = (state: AssessmentState): AssessmentState => ({
+  ...state,
+  survey: 'completed',
+  faceScan: state.faceScan === 'completed' ? 'completed' : 'skipped',
+  heartRate: 'completed',
+  reaction: 'completed',
+  completedOn: todayKey(),
+});
+
 export const loadAssessmentState = async (): Promise<AssessmentState> => {
+  let stored: AssessmentState = DEFAULT_STATE;
   try {
     const json = await AsyncStorage.getItem('assessment_state');
     if (json) {
-      return JSON.parse(json) as AssessmentState;
+      stored = { ...DEFAULT_STATE, ...(JSON.parse(json) as AssessmentState) };
     }
   } catch (e) {
     console.error('Failed to load assessment state', e);
   }
-  return DEFAULT_STATE;
+
+  // A run saved on an earlier day no longer counts — hand back a clean slate.
+  // Nothing is written here; the next saveAssessmentState persists the reset.
+  if (stored.completedOn && stored.completedOn !== todayKey()) {
+    return { ...DEFAULT_STATE };
+  }
+  return stored;
 };
 
 export const saveAssessmentState = async (state: AssessmentState) => {
@@ -64,9 +103,13 @@ interface StepCardProps {
   weight: string;
   /** Short hint pill: Required steps gate the results, Skippable ones do not. */
   flag?: 'required' | 'skippable';
+  /** Today's run is already saved — tapping explains why it is closed. */
+  dayComplete?: boolean;
 }
 
-const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag }: StepCardProps) => {
+const StepCard = ({
+  title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, dayComplete,
+}: StepCardProps) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
   const isSkipped = status === 'skipped';
@@ -76,7 +119,12 @@ const StepCard = ({ title, subtitle, icon, iconColor, iconBg, status, onPress, w
       style={[styles.stepCard, isLocked && styles.stepCardLocked]}
       activeOpacity={isLocked ? 1 : 0.7}
       onPress={() => {
-        if (isLocked) {
+        if (dayComplete) {
+          Alert.alert(
+            'Today’s assessment is complete',
+            'You already finished today’s check-in. The next one unlocks tomorrow.',
+          );
+        } else if (isLocked) {
           Alert.alert('Locked', 'Complete the previous assessment first to unlock this assessment.');
         } else {
           onPress();
@@ -178,14 +226,22 @@ export const StressAssessmentHubScreen = ({
     );
   }
 
+  const dayComplete = isDayComplete(state);
+
+  // Once today's run is saved, every step shows its finished status instead of
+  // the "locked" leftovers from the run that just ended.
+  const displayStatus = (s: AssessmentStepStatus): AssessmentStepStatus =>
+    dayComplete && s !== 'completed' && s !== 'skipped' ? 'skipped' : s;
+
   const completedCount = [state.survey, state.faceScan, state.heartRate, state.reaction]
     .filter(s => s === 'completed').length;
   // The face scan is a demo excluded from scoring, so it never blocks results —
   // only the three scored steps (survey, heart rate, reaction) are required.
   const canViewResults =
-    state.survey === 'completed' &&
-    state.heartRate === 'completed' &&
-    state.reaction === 'completed';
+    dayComplete ||
+    (state.survey === 'completed' &&
+      state.heartRate === 'completed' &&
+      state.reaction === 'completed');
 
   return (
     <View style={styles.root}>
@@ -196,8 +252,24 @@ export const StressAssessmentHubScreen = ({
             <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={Colors.white} />
           </View>
           <Text style={styles.title}>Stress Assessment</Text>
-          <Text style={styles.subtitle}>Complete all steps for the most accurate result</Text>
+          <Text style={styles.subtitle}>
+            {dayComplete
+              ? 'Done for today — your results are below'
+              : 'Complete all steps for the most accurate result'}
+          </Text>
         </View>
+
+        {dayComplete && (
+          <View style={styles.dayCompleteBanner}>
+            <Ionicons name="checkmark-circle" size={22} color={tone('#FFF')} />
+            <View style={styles.dayCompleteCopy}>
+              <Text style={styles.dayCompleteTitle}>Today's assessment is complete!</Text>
+              <Text style={styles.dayCompleteSub}>
+                Your next daily check-in unlocks tomorrow. You can still review today's results.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Questionnaires published by the administrator */}
         {extras.tools.length > 0 && (
@@ -214,8 +286,18 @@ export const StressAssessmentHubScreen = ({
                 onPress={() => {
                   // Multi-Modal tools launch the full 4-step flow (survey →
                   // scan → heart rate → reaction); surveys run standalone.
-                  if (tool.category === 'Multi-Modal') onNavigate('StressSurvey');
-                  else onNavigate('ToolSurvey', tool);
+                  if (tool.category === 'Multi-Modal') {
+                    if (dayComplete) {
+                      Alert.alert(
+                        'Today’s assessment is complete',
+                        'You already finished today’s check-in. The next one unlocks tomorrow.',
+                      );
+                      return;
+                    }
+                    onNavigate('StressSurvey');
+                    return;
+                  }
+                  onNavigate('ToolSurvey', tool);
                 }}
               />
             ))}
@@ -226,8 +308,10 @@ export const StressAssessmentHubScreen = ({
         <View style={styles.stepsSection}>
           <View style={styles.sectionHeaderRow}>
              <Text style={styles.sectionTitle}>ASSESSMENT STEPS</Text>
-             <Text style={styles.progressText}>{completedCount}/4 Completed</Text>
-          </View>
+             <Text style={styles.progressText}>
+               {dayComplete ? 'Completed today' : `${completedCount}/4 Completed`}
+             </Text>
+           </View>
           
           <StepCard
             title="Stress Survey"
@@ -235,9 +319,10 @@ export const StressAssessmentHubScreen = ({
             icon="clipboard-edit-outline"
             iconColor="#6B79F2"
             iconBg="#EEF0FD"
-            status={state.survey}
+            status={displayStatus(state.survey)}
             weight="50%"
             flag="required"
+            dayComplete={dayComplete}
             onPress={() => onNavigate('StressSurvey')}
           />
           <StepCard
@@ -246,9 +331,10 @@ export const StressAssessmentHubScreen = ({
             icon="camera-outline"
             iconColor="#50C8EA"
             iconBg="#E4F7FC"
-            status={state.faceScan}
+            status={displayStatus(state.faceScan)}
             weight="20%"
             flag="skippable"
+            dayComplete={dayComplete}
             onPress={() => onNavigate('FaceScan')}
           />
           <StepCard
@@ -257,9 +343,10 @@ export const StressAssessmentHubScreen = ({
             icon="heart-outline"
             iconColor="#EE7788"
             iconBg="#FCE9EC"
-            status={state.heartRate}
+            status={displayStatus(state.heartRate)}
             weight="20%"
             flag="required"
+            dayComplete={dayComplete}
             onPress={() => onNavigate('HeartRate')}
           />
           <StepCard
@@ -268,9 +355,10 @@ export const StressAssessmentHubScreen = ({
             icon="lightning-bolt-outline"
             iconColor="#F2BA24"
             iconBg="#FEF6DB"
-            status={state.reaction}
+            status={displayStatus(state.reaction)}
             weight="20%"
             flag="required"
+            dayComplete={dayComplete}
             onPress={() => onNavigate('ReactionGame')}
           />
         </View>
@@ -279,7 +367,10 @@ export const StressAssessmentHubScreen = ({
         <View style={styles.tipBox}>
           <Text style={styles.tipIcon}>💡</Text>
           <Text style={styles.tipText}>
-            <Text style={{ fontWeight: '700' }}>Tip:</Text> Complete all 4 steps for the most accurate stress score. Each step contributes a weighted input to your final analysis.
+            <Text style={{ fontWeight: '700' }}>{dayComplete ? 'Note:' : 'Tip:'}</Text>{' '}
+            {dayComplete
+              ? 'You can retake the assessment tomorrow. Each day produces one score so your trend stays meaningful.'
+              : 'Complete all 4 steps for the most accurate stress score. Each step contributes a weighted input to your final analysis.'}
           </Text>
         </View>
 
@@ -288,7 +379,9 @@ export const StressAssessmentHubScreen = ({
             style={styles.viewResultsBtn}
             onPress={() => onNavigate('Results')}
           >
-            <Text style={styles.viewResultsText}>View Final Results</Text>
+            <Text style={styles.viewResultsText}>
+              {dayComplete ? "View Today's Results" : 'View Final Results'}
+            </Text>
             <Ionicons name="arrow-forward" size={18} color={tone('#FFF')} />
           </TouchableOpacity>
         )}
@@ -316,6 +409,22 @@ const makeStyles = () => StyleSheet.create({
   },
   title: { ...Typography.h1, color: Colors.textPrimary, marginBottom: 8, textAlign: 'center' },
   subtitle: { ...Typography.body1, color: Colors.textSecondary, textAlign: 'center' },
+
+  dayCompleteBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: toneBg('#E6F9EF'),
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: toneBg('#C8E8D5'),
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    marginBottom: Spacing.lg,
+  },
+  dayCompleteCopy: { flex: 1 },
+  dayCompleteTitle: { fontSize: 15, fontWeight: '800', color: tone('#1F7A45') },
+  dayCompleteSub: { fontSize: 12.5, color: tone('#2A5D40'), marginTop: 3, lineHeight: 17 },
 
   stepsSection: { gap: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

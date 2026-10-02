@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { InAppVideoCall, ensureMediaPermissions } from '../../components/InAppVideoCall';
@@ -185,65 +187,84 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.lobbyCard}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
-
-        {loading ? (
-          <ActivityIndicator size="small" color={tone('#5B6EF5')} style={{ marginTop: 16 }} />
-        ) : loadError || !booking ? (
-          <Text style={styles.lobbyError}>{loadError ?? 'No appointment found for this call.'}</Text>
-        ) : (
-          <>
-            <Text style={styles.lobbyDoctor}>{booking.counterpartName}</Text>
-            <Text style={styles.lobbySpec}>
-              {isDoctor ? `${booking.counterpartSub} · with you` : booking.counterpartSub}
-            </Text>
-
-            <View style={styles.infoBox}>
-              <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={15} color={tone('#5B6EF5')} />
-                <Text style={styles.infoText}>{booking.scheduledFor}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="pricetag-outline" size={15} color={tone('#5B6EF5')} />
-                <Text style={styles.infoText}>
-                  {STATUS_LABELS[booking.status] ?? booking.status} · Fee ₱{booking.fee}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="videocam-outline" size={15} color={tone('#5B6EF5')} />
-                <Text style={styles.infoText}>Jitsi room · mindpulse-appt-{booking.id.slice(0, 8)}…</Text>
-              </View>
-            </View>
-
-            {booking.status === 'confirmed' ? (
-              <TouchableOpacity
-                style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
-                onPress={() => void handleJoin()}
-                disabled={joining}
-              >
-                {joining ? (
-                  <ActivityIndicator size="small" color={tone('#FFF')} />
-                ) : (
-                  <Ionicons name="videocam" size={16} color={tone('#FFF')} />
-                )}
-                <Text style={styles.primaryBtnText}>
-                  {joining ? 'Opening…' : 'Join Video Call'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.lockedText}>{lockedText()}</Text>
-            )}
-          </>
-        )}
-
-        <TouchableOpacity style={styles.endBtn} onPress={onEndCall}>
-          <Ionicons name="call" size={22} color={tone('#FFF')} style={{ transform: [{ rotate: '135deg' }] }} />
-          <Text style={styles.endBtnText}>Back</Text>
+    <SafeAreaView style={styles.root} edges={['top']}>
+      {/* The lobby previously started flush with the top of the window, so on a
+          notched phone the avatar and the doctor's name sat under the status bar. */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.topBack}
+          onPress={onEndCall}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={20} color={tone('#1A2E44')} />
         </TouchableOpacity>
+        <Text style={styles.topTitle}>{isDoctor ? 'Patient call lobby' : 'Video call'}</Text>
+        <View style={styles.topSpacer} />
+      </View>
+
+      <View style={styles.lobbyCard}>
+        <ScrollView
+          contentContainerStyle={styles.lobbyScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="small" color={tone('#5B6EF5')} style={{ marginTop: 16 }} />
+          ) : loadError || !booking ? (
+            <Text style={styles.lobbyError}>{loadError ?? 'No appointment found for this call.'}</Text>
+          ) : (
+            <>
+              <Text style={styles.lobbyDoctor}>{booking.counterpartName}</Text>
+              <Text style={styles.lobbySpec}>
+                {isDoctor ? `${booking.counterpartSub} · with you` : booking.counterpartSub}
+              </Text>
+
+              <View style={styles.infoBox}>
+                <View style={styles.infoRow}>
+                  <Ionicons name="calendar-outline" size={15} color={tone('#5B6EF5')} />
+                  <Text style={styles.infoText}>{booking.scheduledFor}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="pricetag-outline" size={15} color={tone('#5B6EF5')} />
+                  <Text style={styles.infoText}>
+                    {STATUS_LABELS[booking.status] ?? booking.status} · Fee ₱{booking.fee}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="videocam-outline" size={15} color={tone('#5B6EF5')} />
+                  <Text style={styles.infoText}>Jitsi room · mindpulse-appt-{booking.id.slice(0, 8)}…</Text>
+                </View>
+              </View>
+
+              {booking.status === 'confirmed' ? (
+                <TouchableOpacity
+                  style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
+                  onPress={() => void handleJoin()}
+                  disabled={joining}
+                >
+                  {joining ? (
+                    <ActivityIndicator size="small" color={tone('#FFF')} />
+                  ) : (
+                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
+                  )}
+                  <Text style={styles.primaryBtnText}>
+                    {joining ? 'Opening…' : 'Join Video Call'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.lockedText}>{lockedText()}</Text>
+              )}
+            </>
+          )}
+
+          <TouchableOpacity style={styles.endBtn} onPress={onEndCall}>
+            <Ionicons name="call" size={22} color={tone('#FFF')} style={{ transform: [{ rotate: '135deg' }] }} />
+            <Text style={styles.endBtnText}>Back</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <BottomTabBar
@@ -259,23 +280,45 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
         subtitle={booking?.counterpartSub}
         onClose={() => setCallUrl(null)}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: toneBg('#FAF8F3') },
-  lobbyCard: {
-    flex: 1,
-    margin: 16,
-    marginTop: 24,
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  topBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: toneBg('#FFFFFF'),
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: toneBg('#E4E8F0'),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  topTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '800', color: tone('#1A2E44') },
+  topSpacer: { width: 36, height: 36 },
+  lobbyCard: {
+    flex: 1,
+    margin: 16,
+    marginTop: 8,
+    backgroundColor: toneBg('#FFFFFF'),
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: toneBg('#E4E8F0'),
     padding: 24,
+    overflow: 'hidden',
+  },
+  lobbyScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 6,
   },
   avatarCircle: {
