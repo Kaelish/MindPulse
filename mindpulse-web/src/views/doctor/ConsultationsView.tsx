@@ -28,6 +28,7 @@ import {
   toIsoDate,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
+import { PATIENT_FILE_CATEGORIES, PatientFileCategory, uploadStudentFile } from '../../services/patientFiles';
 import { DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 
 const FALLBACK_SLOTS = [
@@ -75,6 +76,8 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [webThreads, setWebThreads] = useState<WebThreadSummary[]>([]);
   const [webInputMessage, setWebInputMessage] = useState<string>('');
   const [pendingFile, setPendingFile] = useState<{ file: File; name: string; kind: 'image' | 'document' } | null>(null);
+  // null = "Chat only" (send in the thread without filing it into My Files).
+  const [fileCategory, setFileCategory] = useState<PatientFileCategory | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showVideoCall, setShowVideoCall] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -307,8 +310,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     }
 
     const outgoingFile = pendingFile;
+    const outgoingCategory = fileCategory;
     setWebInputMessage('');
     setPendingFile(null);
+    setFileCategory(null);
     setChatError(null);
 
     try {
@@ -317,10 +322,25 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       fetchWebChatThreads()
         .then(setWebThreads)
         .catch(() => { /* refreshed by the poll */ });
+
+      // Category chosen → also file the attachment into the patient's My Files.
+      if (outgoingFile && outgoingCategory) {
+        uploadStudentFile({
+          patientId: chatTarget.patientId,
+          category: outgoingCategory,
+          title: outgoingFile.name,
+          file: outgoingFile.file,
+        }).catch((err) => {
+          setChatError(
+            `Message sent, but it was not added to My Files: ${err instanceof Error ? err.message : 'upload failed.'}`,
+          );
+        });
+      }
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Unable to send the message.');
       setWebInputMessage(text);
       if (outgoingFile) setPendingFile(outgoingFile);
+      setFileCategory(outgoingCategory);
     }
   };
 
@@ -336,8 +356,41 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       return;
     }
     setPendingFile({ file, name: file.name, kind });
+    setFileCategory(null);
     setChatError(null);
   };
+
+  /** Pending-attachment chip: file name + "save to" category picker + remove. */
+  const renderPendingAttachment = () =>
+    pendingFile ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-soft)', borderTop: '1px solid var(--primary-soft)' }}>
+        <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? 'Image' : 'Document'}</span>
+        <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {pendingFile.name}
+        </span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--doc-muted)', whiteSpace: 'nowrap' }}>Save to</span>
+        <select
+          aria-label="File attachment to My Files"
+          title="Send to the chat only, or also file it into the patient's My Files"
+          value={fileCategory ?? ''}
+          onChange={(event) => setFileCategory((event.target.value || null) as PatientFileCategory | null)}
+          style={{ fontSize: '0.72rem', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--primary)', background: '#fff', color: 'var(--doc-ink)', cursor: 'pointer' }}
+        >
+          <option value="">Chat only</option>
+          {PATIENT_FILE_CATEGORIES.map((category) => (
+            <option key={category.key} value={category.key}>{category.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          aria-label="Remove attachment"
+          onClick={() => { setPendingFile(null); setFileCategory(null); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
+        >
+          ✕
+        </button>
+      </div>
+    ) : null;
 
   /* ── Approve / decline / reschedule ─────────────────────────────────── */
 
@@ -999,22 +1052,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                   ))}
                 </div>
 
-                {pendingFile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-soft)', borderTop: '1px solid var(--primary-soft)' }}>
-                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? 'Image' : 'Document'}</span>
-                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pendingFile.name}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="Remove attachment"
-                      onClick={() => setPendingFile(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
+                {renderPendingAttachment()}
 
                 {/* Message Input Bar */}
                 <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
@@ -1878,22 +1916,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                   ))}
                 </div>
 
-                {pendingFile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-soft)', borderTop: '1px solid var(--primary-soft)' }}>
-                    <span style={{ fontSize: '0.8rem' }}>{pendingFile.kind === 'image' ? 'Image' : 'Document'}</span>
-                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pendingFile.name}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="Remove attachment"
-                      onClick={() => setPendingFile(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--doc-muted)', fontSize: '1rem' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
+                {renderPendingAttachment()}
 
                 <form className="web-chat-input-bar" onSubmit={handleSendWebMessage}>
                   <input

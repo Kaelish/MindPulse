@@ -11,6 +11,7 @@ import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
 import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView, ConsultationsTabRequest } from './views/doctor/ConsultationsView';
+import { TransactionsView } from './views/doctor/TransactionsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
 import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
 import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
@@ -69,6 +70,8 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
         return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':
         return <ConsultationsView openTabRequest={consultTabReq} />;
+      case 'transactions':
+        return <TransactionsView />;
       case 'recommendations':
         return <RecommendationsView />;
       case 'profile-setting':

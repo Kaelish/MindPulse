@@ -10,6 +10,7 @@ import { AdminRecordsView } from './AdminRecordsView';
 import { AdminGenerateReportsView } from './AdminGenerateReportsView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
+import { BrandLogo } from '../../components/BrandLogo';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminDashboardCharts, AdminOverviewStats, fetchAdminDashboardCharts, fetchAdminOverview } from '../../services/admin';
 import { fetchUnreadNotificationCount } from '../../services/notifications';
@@ -161,9 +162,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
 
       <main className="admin-dashboard-main">
         <header className="admin-dashboard-header">
-          <div>
-            <div className="admin-dashboard-eyebrow">System Management</div>
-            <h1>Admin Dashboard</h1>
+          <div className="admin-dashboard-title">
+            <span className="admin-dashboard-logo">
+              <BrandLogo className="brand-logo-img" />
+            </span>
+            <div>
+              <div className="admin-dashboard-eyebrow">System Management</div>
+              <h1>Admin Dashboard</h1>
+            </div>
           </div>
           <div className="admin-dashboard-actions">
             <div className="admin-dashboard-notification-wrap">

@@ -46,6 +46,11 @@ import {
   previewLabelFor,
 } from '../../services/chat';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import {
+  PATIENT_FILE_CATEGORIES,
+  PatientFileCategory,
+  uploadPatientFile,
+} from '../../services/patientFiles';
 
 type ConsultTab = 'upcoming' | 'history' | 'messages';
 
@@ -156,6 +161,8 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
   const [sending, setSending] = useState(false);
   const [threads, setThreads] = useState<Map<string, ChatThreadSummary>>(new Map());
   const [pendingAttachment, setPendingAttachment] = useState<PickedAttachment | null>(null);
+  // null = "Chat only" (send in the thread without filing it into My Files).
+  const [pendingFileCategory, setPendingFileCategory] = useState<PatientFileCategory | null>(null);
 
   const threadRef = useRef<DoctorConsultation | null>(null);
   threadRef.current = thread;
@@ -436,17 +443,49 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
     if (!thread || sending) return;
     if (!text && !pendingAttachment) return;
     setSending(true);
+    const outgoingAttachment = pendingAttachment;
+    const outgoingCategory = pendingFileCategory;
+    const patientId = thread.patientId;
     try {
-      const sent = await sendDoctorChatMessage(thread.patientId, text, pendingAttachment);
+      const sent = await sendDoctorChatMessage(patientId, text, outgoingAttachment);
       setThreadMessages((prev) => [...prev, sent]);
       setChatInput('');
       setPendingAttachment(null);
+      setPendingFileCategory(null);
       void loadThreads();
+
+      // Category chosen → also file the attachment into the patient's My Files.
+      if (outgoingAttachment && outgoingCategory) {
+        uploadPatientFile({
+          patientId,
+          category: outgoingCategory,
+          title: outgoingAttachment.name,
+          file: outgoingAttachment,
+        }).catch((err: any) => {
+          Alert.alert(
+            'Sent, but not filed',
+            err?.message || 'The message went through, but the file could not be added to My Files.',
+          );
+        });
+      }
     } catch (e: any) {
       Alert.alert('Message not sent', e?.message || 'Please try again.');
+      setPendingAttachment(outgoingAttachment);
+      setPendingFileCategory(outgoingCategory);
     } finally {
       setSending(false);
     }
+  };
+
+  /** After a file is picked, ask where it should go: chat only, or My Files. */
+  const chooseFileCategory = () => {
+    Alert.alert('Save to My Files?', 'Send it in the chat only, or also file it for this patient.', [
+      { text: 'Chat only', onPress: () => setPendingFileCategory(null) },
+      { text: 'Prescription', onPress: () => setPendingFileCategory('prescription') },
+      { text: 'Lab test', onPress: () => setPendingFileCategory('lab_test') },
+      { text: 'Other note', onPress: () => setPendingFileCategory('other_note') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const attachFile = () => {
@@ -455,7 +494,11 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
         text: 'Photo',
         onPress: () => {
           void pickImageAttachment().then((picked) => {
-            if (picked) setPendingAttachment(picked);
+            if (picked) {
+              setPendingAttachment(picked);
+              setPendingFileCategory(null);
+              chooseFileCategory();
+            }
           });
         },
       },
@@ -463,7 +506,11 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
         text: 'Document',
         onPress: () => {
           void pickDocumentAttachment().then((picked) => {
-            if (picked) setPendingAttachment(picked);
+            if (picked) {
+              setPendingAttachment(picked);
+              setPendingFileCategory(null);
+              chooseFileCategory();
+            }
           });
         },
       },
@@ -741,7 +788,23 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
                     <Text style={styles.attachmentChipText} numberOfLines={1}>
                       {pendingAttachment.name}
                     </Text>
-                    <TouchableOpacity onPress={() => setPendingAttachment(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity
+                      onPress={chooseFileCategory}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.attachmentChipCategory}>
+                        {pendingFileCategory
+                          ? PATIENT_FILE_CATEGORIES.find((category) => category.key === pendingFileCategory)?.label
+                          : 'Chat only'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPendingAttachment(null);
+                        setPendingFileCategory(null);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
                       <Ionicons name="close-circle" size={18} color={Colors.textHint} />
                     </TouchableOpacity>
                   </View>
@@ -1304,6 +1367,18 @@ const makeStyles = () => StyleSheet.create({
     borderColor: toneBg('#D6DEFB'),
   },
   attachmentChipText: { flex: 1, fontSize: 12.5, color: Colors.btnBlue, fontWeight: '600' },
+  attachmentChipCategory: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: Colors.btnBlue,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: toneBg('#D6DEFB'),
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
   attachBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   patientRowMeta: { alignItems: 'flex-end', gap: 6 },
   patientRowTime: { fontSize: 11, color: Colors.textHint },

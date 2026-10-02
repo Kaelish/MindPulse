@@ -9,6 +9,7 @@ export type DoctorView =
   | 'student-case-detail'
   | 'assessment-results'
   | 'consultations'
+  | 'transactions'
   | 'recommendations'
   | 'profile-setting'
   | 'settings';
@@ -80,6 +81,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     { key: 'student-cases', label: 'Student Cases', icon: '\u25C9' },
     { key: 'assessment-results', label: 'Assessment Results', icon: '\u25A3' },
     { key: 'consultations', label: 'Consultations', icon: '\u25A4' },
+    { key: 'transactions', label: 'Transactions', icon: '\u25C8' },
     { key: 'recommendations', label: 'Recommendations', icon: '\u25CE' },
     { key: 'settings', label: 'Settings', icon: '\u2699' },
   ];
