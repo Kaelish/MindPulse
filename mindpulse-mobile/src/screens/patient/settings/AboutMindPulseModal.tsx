@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
@@ -101,7 +102,11 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             {/* ── BRAND HERO ── */}
             <View style={styles.heroSection}>
               <View style={styles.logoBadge}>
-                <Ionicons name="pulse" size={36} color={tone('#8353E2')} />
+                <Image
+                  source={require('../../../../assets/images/logo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.brandTitle}>MindPulse</Text>
               <Text style={styles.brandTagline}>AI-Based Emotional Stress Detection System Using Facial Analysis</Text>
@@ -351,7 +356,8 @@ const makeStyles = () => StyleSheet.create({
 
   /* Hero */
   heroSection: { alignItems: 'center', marginVertical: 14, gap: 4 },
-  logoBadge: { width: 64, height: 64, borderRadius: 22, backgroundColor: toneBg('#F0E8FB'), alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  logoBadge: { width: 64, height: 64, borderRadius: 22, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  logoImage: { width: 64, height: 64, borderRadius: 22 },
   brandTitle: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary },
   brandTagline: { fontSize: 11.5, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
   versionBadge: { backgroundColor: toneBg('#EEEDFE'), borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },

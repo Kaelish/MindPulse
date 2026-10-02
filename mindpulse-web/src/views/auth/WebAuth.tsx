@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
+import { BrandLogo } from '../../components/BrandLogo';
 import { passwordPolicyError } from '../../services/adminSettings';
 import { OTHER_SPECIALIZATION, SPECIALIZATION_GROUPS } from '../../services/specializations';
 
@@ -278,7 +279,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         <div className="auth-card auth-card-split">
           <aside className="auth-side-panel auth-side-panel-soft">
             <div className="brand-chip">
-              <span className="brand-icon">M</span>
+              <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
               <span>MindPulse</span>
             </div>
             <h2>Confirm your email</h2>
@@ -323,7 +324,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         <div className="auth-card auth-card-split">
           <aside className="auth-side-panel auth-side-panel-soft">
             <div className="brand-chip">
-              <span className="brand-icon">M</span>
+              <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
               <span>MindPulse</span>
             </div>
             <h2>{isReset ? 'Create New Password' : 'Forgot Password?'}</h2>
@@ -399,7 +400,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         <div className="auth-card auth-card-split">
           <aside className="auth-side-panel auth-side-panel-soft">
             <div className="brand-chip">
-              <span className="brand-icon">M</span>
+              <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
               <span>MindPulse</span>
             </div>
             <h2>Almost there</h2>
@@ -443,7 +444,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         <div className="auth-card auth-card-split">
           <aside className="auth-side-panel">
             <div className="brand-chip">
-              <span className="brand-icon">M</span>
+              <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
               <span>MindPulse</span>
             </div>
             <h2>Doctor registration</h2>
@@ -542,7 +543,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
       <div className="auth-card auth-card-split">
         <aside className="auth-side-panel auth-side-panel-soft">
           <div className="brand-chip">
-            <span className="brand-icon">M</span>
+            <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
             <span>MindPulse</span>
           </div>
           <h2>Welcome Back to MindPulse</h2>

@@ -11,6 +11,16 @@ import {
   StudentSessionRecord,
 } from '../../services/studentCases';
 import { createRecommendation } from '../../services/recommendations';
+import {
+  PATIENT_FILE_CATEGORIES,
+  PatientFileCategory,
+  PatientFileRecord,
+  createStudentFileUrl,
+  deleteStudentFile,
+  fetchStudentFiles,
+  formatPatientFileSize,
+  uploadStudentFile,
+} from '../../services/patientFiles';
 import { bandForScore } from '../../services/admin';
 import type { RecommendationPriority } from '../../types/supabase';
 
@@ -19,7 +29,7 @@ interface StudentCaseDetailViewProps {
   student: StudentCase;
 }
 
-type DetailTab = 'Overview' | 'Assessment Results' | 'Consultations' | 'Add Recommendation';
+type DetailTab = 'Overview' | 'Assessment Results' | 'Consultations' | 'Files' | 'Add Recommendation';
 
 const CATEGORIES = ['General', 'Therapy', 'Academic', 'Lifestyle', 'Wellness'];
 const PRIORITIES: RecommendationPriority[] = ['Low', 'Medium', 'High'];
@@ -59,6 +69,14 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [files, setFiles] = useState<PatientFileRecord[]>([]);
+  const [filesError, setFilesError] = useState('');
+  const [fileCategory, setFileCategory] = useState<PatientFileCategory>('prescription');
+  const [fileTitle, setFileTitle] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -85,6 +103,23 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       })
       .finally(() => {
         if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [student.userId, reloadKey]);
+
+  useEffect(() => {
+    let active = true;
+    setFilesError('');
+    fetchStudentFiles(student.userId)
+      .then((rows) => {
+        if (active) setFiles(rows);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setFiles([]);
+        setFilesError(error instanceof Error ? error.message : 'Unable to load this student’s files.');
       });
     return () => {
       active = false;
@@ -176,6 +211,57 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
     setSaveError('');
   };
 
+  const resetFileForm = () => {
+    setFileCategory('prescription');
+    setFileTitle('');
+    setPendingFile(null);
+    setFileError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleUploadFile = async () => {
+    if (!pendingFile) {
+      setFileError('Choose a file to upload.');
+      return;
+    }
+    setIsUploading(true);
+    setFileError('');
+    try {
+      const created = await uploadStudentFile({
+        patientId: student.userId,
+        category: fileCategory,
+        title: fileTitle,
+        file: pendingFile,
+      });
+      setFiles((prev) => [created, ...prev]);
+      resetFileForm();
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : 'Unable to upload the file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (file: PatientFileRecord) => {
+    setFileError('');
+    try {
+      await deleteStudentFile(file);
+      setFiles((prev) => prev.filter((row) => row.id !== file.id));
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : 'Unable to delete the file.');
+    }
+  };
+
+  const handleOpenFile = async (file: PatientFileRecord) => {
+    setFileError('');
+    try {
+      const url = await createStudentFileUrl(file.storagePath);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : 'Unable to open this file.');
+    }
+  };
+
   const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   return (
@@ -186,7 +272,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
         <div className="student-profile-heading"><div className="student-initials">{student.initials}</div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
         <div className="student-contact-row"><span>{student.email}</span><span>{student.phone}</span><span>{student.location}</span></div>
       </section>
-      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
+      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Files', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
       {isLoading && <DoctorLoading label="Loading case data…" />}
       {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
       {!isLoading && !loadError && <>
@@ -301,6 +387,66 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
               </section>
             );
           })}
+        </div>}
+        {activeTab === 'Files' && <div className="student-detail-content">
+          <section className="detail-panel file-upload-panel">
+            <h2>Upload a file</h2>
+            <label htmlFor="patient-file-category">Category</label>
+            <select id="patient-file-category" value={fileCategory} onChange={(event) => setFileCategory(event.target.value as PatientFileCategory)}>
+              {PATIENT_FILE_CATEGORIES.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+            </select>
+            <label htmlFor="patient-file-title">Title (optional)</label>
+            <input
+              id="patient-file-title"
+              type="text"
+              placeholder="e.g. Fluconazole 150mg — 1 dose"
+              value={fileTitle}
+              onChange={(event) => setFileTitle(event.target.value)}
+            />
+            <label htmlFor="patient-file-input">File</label>
+            <input
+              id="patient-file-input"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              onChange={(event) => setPendingFile(event.target.files?.[0] ?? null)}
+            />
+            <div>
+              <button type="button" className="primary-button" disabled={isUploading || !pendingFile} onClick={handleUploadFile}>
+                {isUploading ? 'Uploading…' : 'Upload File'}
+              </button>
+              <button type="button" className="ghost-button" onClick={resetFileForm}>Clear</button>
+            </div>
+            {fileError && <p className="case-load-error is-error" role="alert">{fileError}</p>}
+          </section>
+          <section className="detail-panel">
+            <h2>Patient files ({files.length})</h2>
+            {filesError && <p className="case-load-error is-error" role="alert">{filesError}</p>}
+            {!filesError && files.length === 0 && <p className="empty-table">Nothing uploaded yet. Files added here appear in the patient app under My Files.</p>}
+            {files.length > 0 && (
+              <ul className="patient-file-list">
+                {files.map((file) => {
+                  const label = PATIENT_FILE_CATEGORIES.find((option) => option.key === file.category)?.label ?? 'File';
+                  return (
+                    <li className="patient-file-row" key={file.id}>
+                      <div className="patient-file-info">
+                        <strong>{file.title}</strong>
+                        <span>
+                          {label} · {file.fileName}
+                          {file.sizeBytes != null ? ` · ${formatPatientFileSize(file.sizeBytes)}` : ''}
+                        </span>
+                        <small>{formatDateTime(file.createdAt)}</small>
+                      </div>
+                      <div className="patient-file-actions">
+                        <button type="button" className="ghost-button" onClick={() => handleOpenFile(file)}>Open</button>
+                        <button type="button" className="ghost-button is-danger" onClick={() => handleDeleteFile(file)}>Delete</button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>}
         {activeTab === 'Add Recommendation' && <div className="student-detail-content">
           <section className="detail-panel notes-detail">

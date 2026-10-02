@@ -73,6 +73,24 @@
 .consultation-detail .consult-summary-stamp { display: block; margin-top: 14px; padding-top: 10px; border-top: 1px dashed #dbe6f7; font-size: 0.66rem; }
 .consultation-detail .consult-summary-pending { margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: #f5f7fb; font-style: italic; }
 
+.file-upload-panel { display: grid; gap: 10px; }
+.file-upload-panel h2 { margin-bottom: 2px; }
+.file-upload-panel label { margin-top: 3px; color: #374151; font-size: 0.72rem; font-weight: 700; }
+.file-upload-panel select,
+.file-upload-panel input[type='text'] { width: 100%; padding: 9px 10px; border: 1px solid #e0e7ef; border-radius: 7px; background: #fff; font: inherit; font-size: 0.78rem; color: #202938; }
+.file-upload-panel input[type='file'] { width: 100%; padding: 8px; border: 1px dashed #cdd7e5; border-radius: 7px; background: #f8fafc; font-size: 0.74rem; color: #475569; }
+.file-upload-panel input[type='file']::file-selector-button { margin-right: 10px; padding: 6px 12px; border: 1px solid #e0e7ef; border-radius: 6px; background: #fff; font: inherit; font-size: 0.72rem; cursor: pointer; }
+
+.patient-file-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.patient-file-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #e0e7ef; border-radius: 8px; background: #f9fbfd; }
+.patient-file-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.patient-file-info strong { color: #202938; font-size: 0.82rem; overflow-wrap: anywhere; }
+.patient-file-info span { color: #718096; font-size: 0.7rem; overflow-wrap: anywhere; }
+.patient-file-info small { color: #94a3b8; font-size: 0.66rem; }
+.patient-file-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.student-detail-content .ghost-button.is-danger { color: #e0454f; border-color: #f6c8c8; }
+.student-detail-content .ghost-button.is-danger:hover { background: #fff1f1; }
+
 @media (max-width: 760px) {
   .student-contact-row { flex-direction: column; }
   .detail-stat-grid { grid-template-columns: 1fr 1fr; }

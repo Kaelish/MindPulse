@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { fetchOwnProfile } from '../../services/profile';
+import { BrandLogo } from '../BrandLogo';
 import './AdminSidebar.css';
 import '../../views/admin/admin-theme.css';
 
@@ -66,7 +67,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
   return (
     <aside className="admin-sidebar">
       <div className="brand-block">
-        <div className="brand-mark">M</div>
+        <div className="brand-mark has-image"><BrandLogo className="brand-logo-img" /></div>
         <div>
           <div className="brand-name">MindPulse</div>
           <div className="brand-subtitle">Admin Portal</div>

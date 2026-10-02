@@ -30,9 +30,21 @@ import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
+import { MyFilesSection } from './MyFilesSection';
+import { TransactionsSection } from './TransactionsSection';
 import { registerThemeStyles, setThemeMode, tone, toneBg, useThemeMode } from '../../theme/theme';
 
-export type ProfileTabSegment = 'profile' | 'history' | 'settings';
+export type ProfileTabSegment = 'profile' | 'history' | 'files' | 'others' | 'settings';
+
+const PROFILE_SEGMENTS: ProfileTabSegment[] = ['profile', 'history', 'files', 'others', 'settings'];
+
+const SEGMENT_LABELS: Record<ProfileTabSegment, string> = {
+  profile: 'My Profile',
+  history: 'History',
+  files: 'My Files',
+  others: 'Others',
+  settings: 'Settings',
+};
 
 interface PatientProfileScreenProps {
   onNavigateHome?: () => void;
@@ -332,19 +344,19 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         </View>
 
         {/* Segment tabs */}
-        <View style={styles.tabRow}>
-          {(['profile', 'history', 'settings'] as ProfileTabSegment[]).map(seg => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
+          {PROFILE_SEGMENTS.map(seg => (
             <TouchableOpacity
               key={seg}
               style={[styles.tabBtn, activeSegment === seg && styles.tabBtnActive]}
               onPress={() => setActiveSegment(seg)}
             >
               <Text style={[styles.tabText, activeSegment === seg && styles.tabTextActive]}>
-                {seg === 'profile' ? 'My Profile' : seg.charAt(0).toUpperCase() + seg.slice(1)}
+                {SEGMENT_LABELS[seg]}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </SafeAreaView>
 
       {/* ── Tab content ── */}
@@ -508,6 +520,12 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
           </>
         )}
 
+        {/* ══════════ MY FILES TAB ══════════ */}
+        {activeSegment === 'files' && <MyFilesSection />}
+
+        {/* ══════════ OTHERS TAB ══════════ */}
+        {activeSegment === 'others' && <TransactionsSection />}
+
         {/* ══════════ SETTINGS TAB ══════════ */}
         {activeSegment === 'settings' && (
           <>
@@ -653,8 +671,8 @@ const makeStyles = () => StyleSheet.create({
   statLbl: { fontSize: 9, fontWeight: '600', color: tone('#5B6EF5'), marginTop: 1 },
 
   /* Segment tabs */
-  tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 0 },
-  tabBtn: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  tabRow: { flexDirection: 'row', paddingHorizontal: 12 },
+  tabBtn: { paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
   tabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   tabTextActive: { color: Colors.primary },

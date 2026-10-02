@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchDoctorProfile } from '../../services/doctorProfile';
+import { BrandLogo } from '../BrandLogo';
 import '../../views/doctor/doctor-theme.css';
 
 export type DoctorView =
@@ -86,7 +87,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
   return (
     <aside className="sidebar">
       <div className="brand-block">
-        <div className="brand-mark">M</div>
+        <div className="brand-mark has-image"><BrandLogo className="brand-logo-img" /></div>
         <div>
           <div className="brand-name">MindPulse</div>
           <div className="brand-subtitle">Doctor Portal</div>

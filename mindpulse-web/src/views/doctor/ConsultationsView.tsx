@@ -1084,12 +1084,6 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     <strong>Notes:</strong> {item.notes}
                   </div>
                 ) : null}
-
-                {consultNotes[item.id] ? (
-                  <ConsultationSummaryView note={consultNotes[item.id]} />
-                ) : item.rawStatus === 'completed' ? (
-                  <ConsultationSummaryEmpty message="No after-visit summary has been written for this consultation yet." />
-                ) : null}
               </div>
             ))}
             {(consultTab === 'upcoming' ? upcomingConsultations : pastConsultations).length === 0 && (

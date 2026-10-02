@@ -119,6 +119,11 @@
   box-shadow: 0 8px 18px rgba(15, 130, 152, 0.35);
 }
 
+.doctor-scope .brand-mark.has-image {
+  background: transparent;
+  box-shadow: none;
+}
+
 .doctor-scope .brand-name {
   font-size: 1.05rem;
   font-weight: 800;

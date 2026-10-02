@@ -38,6 +38,11 @@
   box-shadow: 0 8px 18px rgba(14, 127, 150, 0.45);
 }
 
+.admin-sidebar .brand-mark.has-image {
+  background: transparent;
+  box-shadow: none;
+}
+
 .admin-sidebar .brand-name {
   color: #ffffff;
   font-size: 1.06rem;

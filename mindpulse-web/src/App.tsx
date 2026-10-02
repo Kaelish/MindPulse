@@ -4,6 +4,7 @@ import { getCurrentUserRole } from './services/session';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
 import { applyDoctorSettings, loadDoctorSettings } from './services/doctorSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
+import { BrandLogo } from './components/BrandLogo';
 import { DOCTOR_NAVIGATE_EVENT, DoctorNavigateDetail } from './components/NotificationHistorySheet';
 import { DoctorDashboardView } from './views/doctor/DoctorDashboardView';
 import { StudentCase, StudentCasesView } from './views/doctor/StudentCasesView';
@@ -97,7 +98,7 @@ function UnauthorizedView({ onSignOut }: { onSignOut: () => void }) {
       <div className="auth-card auth-card-split">
         <aside className="auth-side-panel auth-side-panel-soft">
           <div className="brand-chip">
-            <span className="brand-icon">M</span>
+            <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
             <span>MindPulse</span>
           </div>
           <h2>No portal access</h2>
@@ -141,7 +142,7 @@ function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; 
       <div className="auth-card auth-card-split">
         <aside className="auth-side-panel auth-side-panel-soft">
           <div className="brand-chip">
-            <span className="brand-icon">M</span>
+            <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
             <span>MindPulse</span>
           </div>
           <h2>Awaiting approval</h2>

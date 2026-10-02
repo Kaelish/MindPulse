@@ -10,6 +10,7 @@ import {
   View,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
@@ -72,7 +73,11 @@ const describeAuthError = (error: any): string => {
 const LogoMark = () => (
   <View style={styles.logoWrap}>
     <View style={styles.logoCircle}>
-      <Ionicons name="pulse" size={20} color={tone('#D97B45')} />
+      <Image
+        source={require('../../../assets/images/logo.png')}
+        style={styles.logoImage}
+        resizeMode="contain"
+      />
     </View>
     <Text style={styles.logoText}>MindPulse</Text>
   </View>
@@ -689,10 +694,15 @@ const makeStyles = () => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: toneBg('#FFF0E6'),
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
+  },
+  logoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   logoText: {
     fontSize: 13,
