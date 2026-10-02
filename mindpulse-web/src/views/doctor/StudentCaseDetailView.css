@@ -66,6 +66,13 @@
 .notes-detail label { margin-top: 3px; color: #374151; font-size: 0.72rem; font-weight: 700; }
 .notes-detail textarea { min-height: 105px; padding: 12px; border: 1px solid #e0e7ef; border-radius: 7px; resize: vertical; font: inherit; font-size: 0.75rem; }
 
+.consultation-detail .consult-summary { margin-top: 16px; padding: 14px 16px; border: 1px solid #dbe6f7; border-radius: 8px; background: #f6faff; }
+.consultation-detail .consult-summary h3 { margin: 14px 0 5px; color: #5b6ef5; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.consultation-detail .consult-summary h3:first-child { margin-top: 0; }
+.consultation-detail .consult-summary p { margin: 0; color: #374151; font-size: 0.8rem; line-height: 1.55; white-space: pre-wrap; }
+.consultation-detail .consult-summary-stamp { display: block; margin-top: 14px; padding-top: 10px; border-top: 1px dashed #dbe6f7; font-size: 0.66rem; }
+.consultation-detail .consult-summary-pending { margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: #f5f7fb; font-style: italic; }
+
 @media (max-width: 760px) {
   .student-contact-row { flex-direction: column; }
   .detail-stat-grid { grid-template-columns: 1fr 1fr; }

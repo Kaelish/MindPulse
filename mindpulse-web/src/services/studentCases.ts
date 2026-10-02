@@ -214,3 +214,44 @@ export const fetchStudentConsultations = async (
     createdAt: row.created_at,
   }));
 };
+
+export interface StudentConsultationNoteRecord {
+  appointmentId: string;
+  summary: string;
+  observations: string;
+  recommendation: string;
+  followUp: string | null;
+  updatedAt: string;
+}
+
+export const fetchStudentConsultationNotes = async (
+  studentId: string,
+): Promise<StudentConsultationNoteRecord[]> => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+  }
+  await requireUserId();
+
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .select('appointment_id, summary, observations, recommendation, follow_up, updated_at')
+    .eq('patient_id', studentId)
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as {
+    appointment_id: string;
+    summary: string;
+    observations: string;
+    recommendation: string;
+    follow_up: string | null;
+    updated_at: string;
+  }[]).map((row) => ({
+    appointmentId: row.appointment_id,
+    summary: row.summary,
+    observations: row.observations,
+    recommendation: row.recommendation,
+    followUp: row.follow_up,
+    updatedAt: row.updated_at,
+  }));
+};

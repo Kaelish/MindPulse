@@ -3,9 +3,11 @@ import { StudentCase } from './StudentCasesView';
 import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import './StudentCaseDetailView.css';
 import {
+  fetchStudentConsultationNotes,
   fetchStudentConsultations,
   fetchStudentSessions,
   StudentAppointmentRecord,
+  StudentConsultationNoteRecord,
   StudentSessionRecord,
 } from '../../services/studentCases';
 import { createRecommendation } from '../../services/recommendations';
@@ -48,6 +50,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const [saved, setSaved] = useState(false);
   const [sessions, setSessions] = useState<StudentSessionRecord[]>([]);
   const [consultations, setConsultations] = useState<StudentAppointmentRecord[]>([]);
+  const [consultNotes, setConsultNotes] = useState<Record<string, StudentConsultationNoteRecord>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
@@ -61,11 +64,21 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
     let active = true;
     setIsLoading(true);
     setLoadError('');
-    Promise.all([fetchStudentSessions(student.userId), fetchStudentConsultations(student.userId)])
-      .then(([sessionRows, consultationRows]) => {
+    Promise.all([
+      fetchStudentSessions(student.userId),
+      fetchStudentConsultations(student.userId),
+      fetchStudentConsultationNotes(student.userId),
+    ])
+      .then(([sessionRows, consultationRows, noteRows]) => {
         if (!active) return;
         setSessions(sessionRows);
         setConsultations(consultationRows);
+        setConsultNotes(
+          noteRows.reduce<Record<string, StudentConsultationNoteRecord>>((lookup, note) => {
+            lookup[note.appointmentId] = note;
+            return lookup;
+          }, {}),
+        );
       })
       .catch((error) => {
         if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load this student case.');
@@ -267,11 +280,24 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
               : consultation.status === 'cancelled'
                 ? 'status-pill status-critical'
                 : 'status-pill status-confirmed';
+            const note = consultNotes[consultation.id];
             return (
               <section className="detail-panel consultation-detail" key={consultation.id}>
                 <h2>Consultation <span className={pillClass}>{statusLabel}</span></h2>
                 <small>{consultation.scheduledFor || formatDateTime(consultation.createdAt)}</small>
-                {consultation.notes && (<><h3>Notes:</h3><p>{consultation.notes}</p></>)}
+                {consultation.notes && (<><h3>Booking note</h3><p>{consultation.notes}</p></>)}
+                {note ? (
+                  <div className="consult-summary">
+                    <h3>Session summary</h3>
+                    <p>{note.summary}</p>
+                    {note.observations && (<><h3>Observations</h3><p>{note.observations}</p></>)}
+                    {note.recommendation && (<><h3>Recommendation</h3><p>{note.recommendation}</p></>)}
+                    {note.followUp && (<><h3>Follow-up</h3><p>{note.followUp}</p></>)}
+                    <small className="consult-summary-stamp">After-visit summary · saved {formatDateTime(note.updatedAt)}</small>
+                  </div>
+                ) : consultation.status === 'completed' ? (
+                  <p className="consult-summary-pending">This consultation is completed, but no after-visit summary has been written yet.</p>
+                ) : null}
               </section>
             );
           })}

@@ -1718,7 +1718,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       {/* LIVE DOCTOR CONSULTATION & TWO-WAY CHAT MODAL */}
       {activeSessionItem && (
         <div className="web-chat-modal-overlay">
-          <div className="web-chat-modal-box">
+          <div className={`web-chat-modal-box${showVideoCall ? ' is-video-call' : ''}`}>
             <div className="web-chat-modal-header">
               <div>
                 <h3>Consultation Session: {activeSessionItem.patientName}</h3>
