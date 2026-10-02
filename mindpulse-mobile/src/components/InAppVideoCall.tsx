@@ -7,12 +7,13 @@ import {
   Modal,
   PermissionsAndroid,
   Platform,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
@@ -64,6 +65,18 @@ export const InAppVideoCall: React.FC<InAppVideoCallProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Modal windows are a separate window and do not reliably inherit the root
+  // safe-area insets, so SafeAreaView alone left the header drawn straight under
+  // the status bar / notch — which is where the Leave button ended up, too high
+  // to tap. Take the largest of every source we have instead.
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0,
+    initialWindowMetrics?.insets.top ?? 0,
+  );
+  const bottomInset = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
+
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
@@ -101,7 +114,7 @@ export const InAppVideoCall: React.FC<InAppVideoCallProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <View style={[styles.root, { paddingTop: topInset, paddingBottom: bottomInset }]}>
         <View style={styles.header}>
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle} numberOfLines={1}>
@@ -174,7 +187,7 @@ export const InAppVideoCall: React.FC<InAppVideoCallProps> = ({
             </View>
           )}
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };
@@ -205,6 +218,7 @@ const makeStyles = () =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
+      minHeight: 40,
       backgroundColor: toneBg('#EF4444'),
       borderRadius: 12,
       paddingVertical: 9,

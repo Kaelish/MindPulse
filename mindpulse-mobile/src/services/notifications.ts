@@ -113,8 +113,7 @@ export const markNotificationRead = async (id: string): Promise<void> => {
  * True for the rows produced by the chat trigger (`New message from <name>`),
  * which the app routes to the message thread instead of a generic view.
  */
-export const isMessageNotification = (notification: { title: string; message?: string }): boolean =>
-  /^new message from\b/i.test((notification.title || '').trim()) ||
+export const isMessageNotification = (notification: { title: string; message?: string }): boolean =>  /^new message from\b/i.test((notification.title || '').trim()) ||
   /\bsent you a message\b/i.test(`${notification.title || ''} ${notification.message || ''}`);
 
 const MINUTE = 60 * 1000;
@@ -143,4 +142,30 @@ export const notificationFullTime = (iso: string): string => {
     hour: 'numeric',
     minute: '2-digit',
   });
+};
+
+export const subscribeToMyNotificationFeed = async (
+  onInsert: () => void,
+): Promise<() => void> => {
+  try {
+    const userId = await requireUserId();
+    const channel = supabase
+      .channel(`my-notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        onInsert,
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  } catch {
+    return () => {};
+  }
 };

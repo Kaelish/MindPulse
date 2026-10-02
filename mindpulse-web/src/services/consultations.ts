@@ -660,3 +660,98 @@ export const ensureVideoSession = async (item: WebConsultationItem): Promise<Vid
 
   return { roomName, meetingUrl };
 };
+
+export interface ConsultationNote {
+  appointmentId: string;
+  doctorId: string;
+  patientId: string;
+  summary: string;
+  observations: string;
+  recommendation: string;
+  followUp: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const startVideoConsultation = async (item: WebConsultationItem): Promise<VideoRoom> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const room = await ensureVideoSession(item);
+
+  const { error: statusError } = await supabase
+    .from('video_sessions')
+    .update({ status: 'active', started_at: new Date().toISOString() })
+    .eq('appointment_id', item.id)
+    .neq('status', 'ended');
+  if (statusError) throw new Error(statusError.message);
+
+  const { error: noticeError } = await supabase.from('notifications').insert({
+    user_id: item.patientId,
+    title: 'Your doctor is calling',
+    message: 'The doctor has started your video consultation. Tap Join now to enter the room.',
+    type: 'appointment',
+  });
+  void noticeError;
+
+  return room;
+};
+
+export const endVideoConsultation = async (item: WebConsultationItem): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { error } = await supabase.rpc('end_video_consultation', {
+    p_appointment_id: item.id,
+  });
+  if (error) throw new Error(error.message);
+};
+
+export const fetchConsultationNote = async (appointmentId: string): Promise<ConsultationNote | null> => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .select(
+      'appointment_id, doctor_id, patient_id, summary, observations, recommendation, follow_up, created_at, updated_at',
+    )
+    .eq('appointment_id', appointmentId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    appointmentId: data.appointment_id,
+    doctorId: data.doctor_id,
+    patientId: data.patient_id,
+    summary: data.summary ?? '',
+    observations: data.observations ?? '',
+    recommendation: data.recommendation ?? '',
+    followUp: data.follow_up ?? null,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export interface ConsultationNoteDraft {
+  summary: string;
+  observations: string;
+  recommendation: string;
+  followUp: string | null;
+}
+
+export const saveConsultationNote = async (
+  item: WebConsultationItem,
+  draft: ConsultationNoteDraft,
+): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const doctorId = await requireUserId();
+  const payload = {
+    appointment_id: item.id,
+    doctor_id: doctorId,
+    patient_id: item.patientId,
+    summary: draft.summary.trim(),
+    observations: draft.observations.trim(),
+    recommendation: draft.recommendation.trim(),
+    follow_up: draft.followUp?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase
+    .from('consultation_notes')
+    .upsert(payload, { onConflict: 'appointment_id' });
+  if (error) throw new Error(error.message);
+};

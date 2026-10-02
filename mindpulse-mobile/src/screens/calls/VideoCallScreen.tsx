@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { ConsultationSummaryCard } from '../../components/ConsultationSummaryCard';
 import { InAppVideoCall, ensureMediaPermissions } from '../../components/InAppVideoCall';
+import { supabase } from '../../supabase/client';
 import {
   MyBooking,
   fetchMyBookings,
@@ -29,6 +31,7 @@ interface VideoCallScreenProps {
   appointmentId?: string;
   /** 'doctor' renders the doctor portal variant (tab bar, gating, room logic). */
   role?: 'patient' | 'doctor';
+  autoJoin?: boolean;
   onEndCall?: () => void;
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
@@ -84,6 +87,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   doctorId,
   appointmentId,
   role = 'patient',
+  autoJoin = false,
   onEndCall,
   onNavigateTab,
 }) => {
@@ -94,6 +98,13 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [callUrl, setCallUrl] = useState<string | null>(null);
+  const joinedRef = useRef(false);
+  const callUrlRef = useRef<string | null>(null);
+  const endedNoticeRef = useRef(false);
+
+  useEffect(() => {
+    callUrlRef.current = callUrl;
+  }, [callUrl]);
 
   const loadBooking = useCallback(async () => {
     setLoading(true);
@@ -155,6 +166,46 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
       setJoining(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoJoin) {
+      joinedRef.current = false;
+      return;
+    }
+    if (joinedRef.current || loading || !booking || booking.status !== 'confirmed') return;
+    joinedRef.current = true;
+    void handleJoin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoin, loading, booking]);
+
+  useEffect(() => {
+    if (!booking?.id) return;
+    let cancelled = false;
+    const channel = supabase
+      .channel(`call-status-${booking.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `id=eq.${booking.id}` },
+        (payload) => {
+          const row = payload.new as { status?: string } | null;
+          if (cancelled || row?.status !== 'completed') return;
+          setBooking((current) => (current ? { ...current, status: 'completed' } : current));
+          if (callUrlRef.current && !endedNoticeRef.current) {
+            endedNoticeRef.current = true;
+            setCallUrl(null);
+            Alert.alert(
+              'Consultation ended',
+              'The doctor has ended this consultation. You can review the summary in your bookings.',
+            );
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [booking?.id]);
 
   const initials = (booking?.counterpartName ?? '')
     .split(' ')
@@ -239,21 +290,37 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                 </View>
               </View>
 
-              {booking.status === 'confirmed' ? (
-                <TouchableOpacity
-                  style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
-                  onPress={() => void handleJoin()}
-                  disabled={joining}
-                >
-                  {joining ? (
-                    <ActivityIndicator size="small" color={tone('#FFF')} />
-                  ) : (
-                    <Ionicons name="videocam" size={16} color={tone('#FFF')} />
-                  )}
-                  <Text style={styles.primaryBtnText}>
-                    {joining ? 'Opening…' : 'Join Video Call'}
+              {booking.status === 'completed' ? (
+                <>
+                  <View style={styles.endedBox}>
+                    <Ionicons name="checkmark-circle" size={16} color={tone('#0F5C4A')} />
+                    <Text style={styles.endedText}>This consultation has ended.</Text>
+                  </View>
+                  <ConsultationSummaryCard appointmentId={booking.id} />
+                </>
+              ) : booking.status === 'confirmed' ? (
+                // Patients wait for the doctor to open the room; only the doctor
+                // starts the call from here.
+                isDoctor ? (
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, joining && { opacity: 0.6 }]}
+                    onPress={() => void handleJoin()}
+                    disabled={joining}
+                  >
+                    {joining ? (
+                      <ActivityIndicator size="small" color={tone('#FFF')} />
+                    ) : (
+                      <Ionicons name="videocam" size={16} color={tone('#FFF')} />
+                    )}
+                    <Text style={styles.primaryBtnText}>
+                      {joining ? 'Opening…' : 'Join Video Call'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.waitNote}>
+                    Wait for the doctor to call or the scheduled consultation.
                   </Text>
-                </TouchableOpacity>
+                )
               ) : (
                 <Text style={styles.lockedText}>{lockedText()}</Text>
               )}
@@ -368,6 +435,17 @@ const makeStyles = () => StyleSheet.create({
     padding: 12,
     overflow: 'hidden',
   },
+  waitNote: {
+    fontSize: 13.5,
+    color: tone('#0F5C4A'),
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '700',
+    backgroundColor: toneBg('#E7F6F1'),
+    borderRadius: 12,
+    padding: 14,
+    width: '100%',
+  },
   endBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -381,6 +459,18 @@ const makeStyles = () => StyleSheet.create({
     marginTop: 14,
   },
   endBtnText: { fontSize: 14, fontWeight: '800', color: tone('#FFF') },
+  endedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    width: '100%',
+    backgroundColor: toneBg('#E7F6F1'),
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+  },
+  endedText: { fontSize: 13.5, fontWeight: '800', color: tone('#0F5C4A') },
 });
 
 let styles = makeStyles();

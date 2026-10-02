@@ -5,14 +5,16 @@ import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminResultRow, bandForScore, fetchAdminResults } from '../../services/admin';
 import {
   AtRiskRecordRow,
+  ConsultationRecordRow,
   RecordSessionRow,
   StudentRecordRow,
+  fetchConsultationRecords,
   fetchRecordBundles,
   fetchStudentRecordSessions,
 } from '../../services/adminRecords';
 import './AdminRecordsView.css';
 
-type RecordsTab = 'assessments' | 'students' | 'at-risk';
+type RecordsTab = 'assessments' | 'students' | 'at-risk' | 'consultations';
 
 interface AdminRecordsViewProps {
   onSignOut: () => void;
@@ -46,9 +48,14 @@ const TAB_META: Record<RecordsTab, { label: string; title: string; subtitle: str
     title: 'Identify At-Risk Students',
     subtitle: 'Students requiring immediate attention and intervention',
   },
+  consultations: {
+    label: 'Consultation Records',
+    title: 'View Consultation Records',
+    subtitle: 'After-visit summaries written after each video consultation',
+  },
 };
 
-const TAB_ORDER: RecordsTab[] = ['assessments', 'students', 'at-risk'];
+const TAB_ORDER: RecordsTab[] = ['assessments', 'students', 'at-risk', 'consultations'];
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -93,6 +100,7 @@ interface RecordData {
   assessments: AdminResultRow[];
   students: StudentRecordRow[];
   atRisk: AtRiskRecordRow[];
+  consultations: ConsultationRecordRow[];
 }
 
 export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, onNavigate }) => {
@@ -110,8 +118,10 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
   const [programFilter, setProgramFilter] = useState('all');
   const [riskSearch, setRiskSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
+  const [consultSearch, setConsultSearch] = useState('');
 
   const [viewing, setViewing] = useState<AdminResultRow | null>(null);
+  const [viewingConsultation, setViewingConsultation] = useState<ConsultationRecordRow | null>(null);
   const [historyFor, setHistoryFor] = useState<StudentRecordRow | null>(null);
   const [historyRows, setHistoryRows] = useState<RecordSessionRow[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -121,9 +131,16 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
     let active = true;
     setIsLoading(true);
     setLoadError('');
-    Promise.all([fetchAdminResults(), fetchRecordBundles()])
-      .then(([assessments, bundles]) => {
-        if (active) setData({ assessments, students: bundles.students, atRisk: bundles.atRisk });
+    Promise.all([fetchAdminResults(), fetchRecordBundles(), fetchConsultationRecords()])
+      .then(([assessments, bundles, consultations]) => {
+        if (active) {
+          setData({
+            assessments,
+            students: bundles.students,
+            atRisk: bundles.atRisk,
+            consultations,
+          });
+        }
       })
       .catch((error) => {
         if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load records.');
@@ -174,8 +191,20 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
     });
   }, [data, riskSearch, tierFilter]);
 
-  const riskCounts = useMemo(() => {
-    const rows = data?.atRisk ?? [];
+  const filteredConsultations = useMemo(() => {
+    const needle = consultSearch.trim().toLowerCase();
+    return (data?.consultations ?? []).filter((row) => {
+      if (
+        needle &&
+        !`${row.studentName} ${row.studentEmail} ${row.doctorName}`.toLowerCase().includes(needle)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [data, consultSearch]);
+
+  const riskCounts = useMemo(() => {    const rows = data?.atRisk ?? [];
     return {
       total: rows.length,
       critical: rows.filter((row) => row.riskTier === 'critical').length,
@@ -584,6 +613,68 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                 </section>
               </>
             )}
+
+            {activeTab === 'consultations' && (
+              <section className="records-panel">
+                <div className="records-toolbar">
+                  <label className="records-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input
+                      value={consultSearch}
+                      onChange={(event) => setConsultSearch(event.target.value)}
+                      placeholder="Search student or doctor name"
+                    />
+                  </label>
+                  <span className="records-count">{filteredConsultations.length} records</span>
+                </div>
+
+                {filteredConsultations.length === 0 ? (
+                  <p className="empty-table">
+                    {data.consultations.length === 0
+                      ? 'No consultation summaries have been written yet.'
+                      : 'No records match your search.'}
+                  </p>
+                ) : (
+                  <div className="records-table-wrap">
+                    <table className="data-table records-table">
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th>Doctor</th>
+                          <th>Appointment</th>
+                          <th>Last Updated</th>
+                          <th>Follow-up</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredConsultations.map((row) => (
+                          <tr key={row.appointmentId}>
+                            <td>
+                              <strong>{row.studentName}</strong>
+                              <small className="cell-muted">{row.studentEmail}</small>
+                            </td>
+                            <td>{row.doctorName}</td>
+                            <td>{row.scheduledFor || '—'}</td>
+                            <td>{row.updatedAt ? formatStamp(row.updatedAt) : '—'}</td>
+                            <td>{row.followUp || '—'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="records-row-button"
+                                onClick={() => setViewingConsultation(row)}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
           </>
         )}
       </main>
@@ -645,6 +736,64 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
             </dl>
             <div className="records-modal-actions">
               <button type="button" className="records-action primary" onClick={() => setViewing(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingConsultation && (
+        <div
+          className="records-modal-backdrop"
+          role="presentation"
+          onClick={() => setViewingConsultation(null)}
+        >
+          <div
+            className="records-modal wide"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Consultation summary"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="records-modal-head">
+              <div>
+                <h2>{viewingConsultation.studentName}</h2>
+                <p>
+                  with {viewingConsultation.doctorName}
+                  {viewingConsultation.scheduledFor ? ` · ${viewingConsultation.scheduledFor}` : ''}
+                </p>
+              </div>
+              <button type="button" onClick={() => setViewingConsultation(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+
+            <dl className="records-detail-grid">
+              <div>
+                <dt>Session summary</dt>
+                <dd>{viewingConsultation.summary || '—'}</dd>
+              </div>
+              <div>
+                <dt>Observations</dt>
+                <dd>{viewingConsultation.observations || '—'}</dd>
+              </div>
+              <div>
+                <dt>Recommendation</dt>
+                <dd>{viewingConsultation.recommendation || '—'}</dd>
+              </div>
+              <div>
+                <dt>Follow-up</dt>
+                <dd>{viewingConsultation.followUp || '—'}</dd>
+              </div>
+            </dl>
+
+            <div className="records-modal-actions">
+              <button
+                type="button"
+                className="records-action primary"
+                onClick={() => setViewingConsultation(null)}
+              >
                 Close
               </button>
             </div>

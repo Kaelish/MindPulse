@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { ConsultationSummaryCard } from '../../components/ConsultationSummaryCard';
 import { Colors } from '../../theme/colors';
 import { Spacing } from '../../theme/typography';
 import {
@@ -325,7 +326,6 @@ const ChatBubble = ({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> = ({
-  onStartVideoCall,
   openTabRequest = null,
 }) => {
   const [activeTab, setActiveTab] = useState<ClinicTab>(openTabRequest?.tab ?? 'clinicians');
@@ -879,18 +879,19 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 )}
 
                 {b.status === 'confirmed' && (
-                  <View style={styles.bookingActions}>
-                    <Text style={styles.confirmedNote}>
-                      Payment received — your video room opens at the scheduled time.
+                  <Text style={styles.waitNote}>
+                    Payment received. Wait for the doctor to call or the scheduled
+                    consultation.
+                  </Text>
+                )}
+
+                {b.status === 'completed' && (
+                  <>
+                    <Text style={styles.waitNote}>
+                      This consultation is complete. Here is what the doctor recorded.
                     </Text>
-                    <TouchableOpacity
-                      style={styles.joinBtn}
-                      onPress={() => onStartVideoCall?.(b.doctorId, b.id)}
-                    >
-                      <Ionicons name="videocam" size={15} color={tone('#FFF')} />
-                      <Text style={styles.payBtnText}>Join Video Call</Text>
-                    </TouchableOpacity>
-                  </View>
+                    <ConsultationSummaryCard appointmentId={b.id} />
+                  </>
                 )}
 
                 {b.status === 'cancelled' && (
@@ -1314,27 +1315,15 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                 </View>
                 <Text style={styles.payAmount}>₱{payDone.fee} paid</Text>
                 <Text style={styles.waitNote}>
-                  Your appointment is confirmed. Join the video room when it's time for your
-                  session.
+                  Your appointment is confirmed. Wait for the doctor to call or the
+                  scheduled consultation.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.payBtn, { width: '100%', marginTop: 18 }]}
-                  onPress={() => {
-                    const booking = payDone;
-                    setPayTarget(null);
-                    setPayDone(null);
-                    onStartVideoCall?.(booking.doctorId, booking.id);
-                  }}
-                >
-                  <Ionicons name="videocam" size={15} color={tone('#FFF')} />
-                  <Text style={styles.payBtnText}>Join Video Call</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   onPress={() => {
                     setPayTarget(null);
                     setPayDone(null);
                   }}
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 18 }}
                 >
                   <Text style={styles.successDismiss}>Done</Text>
                 </TouchableOpacity>

@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { VideoRoom, WebConsultationItem, ensureVideoSession } from '../services/consultations';
+import {
+  VideoRoom,
+  WebConsultationItem,
+  endVideoConsultation,
+  startVideoConsultation,
+} from '../services/consultations';
+import { ConsultationSummaryForm } from './ConsultationSummaryForm';
 
 interface JitsiCallPanelProps {
   appointment: WebConsultationItem;
@@ -52,6 +58,7 @@ const probeSummary = (p: WebRtcProbe): string =>
     `mediaDevices: ${p.hasMedia ? 'yes' : 'no'}`,
   ].join('  ·  ');
 
+type Phase = 'room' | 'summary';
 
 /**
  * Real Jitsi call for an appointment. Both parties get the same deterministic
@@ -59,9 +66,12 @@ const probeSummary = (p: WebRtcProbe): string =>
  */
 export const JitsiCallPanel = ({ appointment, onBack }: JitsiCallPanelProps) => {
   const [loading, setLoading] = useState(false);
+  const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [room, setRoom] = useState<VideoRoom | null>(null);
   const [probe, setProbe] = useState<WebRtcProbe | null>(null);
+  const [phase, setPhase] = useState<Phase>('room');
+  const [ended, setEnded] = useState(false);
 
   useEffect(() => {
     setProbe(probeWebRtc());
@@ -71,12 +81,31 @@ export const JitsiCallPanel = ({ appointment, onBack }: JitsiCallPanelProps) => 
     try {
       setLoading(true);
       setError(null);
-      setRoom(await ensureVideoSession(appointment));
+      setRoom(await startVideoConsultation(appointment));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to start the video call.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const finishCall = async () => {
+    try {
+      setEnding(true);
+      setError(null);
+      await endVideoConsultation(appointment);
+      setEnded(true);
+      setPhase('summary');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to end the consultation.');
+    } finally {
+      setEnding(false);
+    }
+  };
+
+  const leaveSummary = () => {
+    if (onBack) onBack();
+    else setPhase('room');
   };
 
   const header = (
@@ -89,6 +118,29 @@ export const JitsiCallPanel = ({ appointment, onBack }: JitsiCallPanelProps) => 
       ) : null}
     </div>
   );
+
+  if (phase === 'summary') {
+    return <ConsultationSummaryForm appointment={appointment} onDone={leaveSummary} />;
+  }
+
+  if (ended || appointment.rawStatus === 'completed') {
+    return (
+      <section className="panel call-panel" aria-label="Video consultation">
+        {header}
+        <div className="call-card">
+          <div className="call-main-label">Consultation ended</div>
+          <p style={{ margin: '8px 0 16px', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
+            The video session with {appointment.patientName} is closed and the appointment is
+            marked completed. Add the after-visit summary so the student and the administrators
+            can read it.
+          </p>
+          <button type="button" className="primary-button" onClick={() => setPhase('summary')}>
+            Write consultation summary
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   if (appointment.rawStatus !== 'confirmed') {
     return (
@@ -159,10 +211,23 @@ export const JitsiCallPanel = ({ appointment, onBack }: JitsiCallPanelProps) => 
                 <p className="jitsi-fallback-url">{probeSummary(probe)}</p>
               </div>
             )}
+
+            <button
+              type="button"
+              className="primary-button end-consultation-btn"
+              onClick={() => void finishCall()}
+              disabled={ending}
+            >
+              {ending ? 'Ending consultation…' : 'End consultation'}
+            </button>
           </div>
         ) : (
           <>
             <div className="call-metric">Ready to connect</div>
+            <p style={{ margin: '0 0 12px', fontSize: '0.83rem', color: '#64748b', lineHeight: 1.5 }}>
+              Starting the call rings {appointment.patientName}'s phone inside the MindPulse app
+              and lets them join this room.
+            </p>
             <button
               type="button"
               className="primary-button"

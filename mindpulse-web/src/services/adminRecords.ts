@@ -170,8 +170,8 @@ const buildRecord = (student: StudentProfileRow, bundles: Bundles): StudentRecor
     initials: initialsOf(name, student.email || ''),
     email: student.email || 'No email',
     studentNo: student.student_no || student.id.slice(0, 8).toUpperCase(),
-    program: student.program || '—',
-    year: student.year_level || '—',
+    program: student.program || 'â€”',
+    year: student.year_level || 'â€”',
     createdAt: student.created_at,
     sessions: sessions.length,
     lastAssessment: latest?.created_at ?? null,
@@ -268,4 +268,92 @@ export const fetchStudentRecordSessions = async (userId: string): Promise<Record
     reactionTimeMs: row.reaction_time_ms,
     emotion: row.emotion,
   }));
+};
+
+export interface ConsultationRecordRow {
+  appointmentId: string;
+  studentId: string;
+  doctorId: string;
+  studentName: string;
+  studentEmail: string;
+  doctorName: string;
+  scheduledFor: string;
+  summary: string;
+  observations: string;
+  recommendation: string;
+  followUp: string | null;
+  updatedAt: string | null;
+}
+
+const personLabel = (entry: { name: string; email: string } | undefined): string =>
+  entry?.name || entry?.email || 'Unknown';
+
+export const fetchConsultationRecords = async (): Promise<ConsultationRecordRow[]> => {
+  if (!supabase) throw notConfigured();
+
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .select(
+      'appointment_id, patient_id, doctor_id, summary, observations, recommendation, follow_up, updated_at, appointments(scheduled_for)',
+    )
+    .order('updated_at', { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+
+  type RawNote = {
+    appointment_id: string;
+    patient_id: string;
+    doctor_id: string;
+    summary: string | null;
+    observations: string | null;
+    recommendation: string | null;
+    follow_up: string | null;
+    updated_at: string | null;
+    appointments: { scheduled_for?: string } | { scheduled_for?: string }[] | null;
+  };
+
+  const rows = (data ?? []) as unknown as RawNote[];
+  const ids = Array.from(
+    new Set(rows.flatMap((row) => [row.patient_id, row.doctor_id]).filter((id): id is string => !!id)),
+  );
+
+  const people = new Map<string, { name: string; email: string }>();
+  if (ids.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, full_name, email')
+      .in('id', ids);
+    if (!profileError) {
+      for (const profile of (profiles ?? []) as {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+        full_name: string | null;
+        email: string | null;
+      }[]) {
+        const name =
+          (profile.full_name ?? '').trim() ||
+          [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim();
+        people.set(profile.id, { name, email: profile.email ?? '' });
+      }
+    }
+  }
+
+  return rows.map((row) => {
+    const appointment = Array.isArray(row.appointments) ? row.appointments[0] : row.appointments;
+    return {
+      appointmentId: row.appointment_id,
+      studentId: row.patient_id,
+      doctorId: row.doctor_id,
+      studentName: personLabel(people.get(row.patient_id)),
+      studentEmail: people.get(row.patient_id)?.email ?? '',
+      doctorName: personLabel(people.get(row.doctor_id)),
+      scheduledFor: appointment?.scheduled_for ?? '',
+      summary: row.summary ?? '',
+      observations: row.observations ?? '',
+      recommendation: row.recommendation ?? '',
+      followUp: row.follow_up ?? null,
+      updatedAt: row.updated_at,
+    };
+  });
 };

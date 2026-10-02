@@ -24,6 +24,14 @@ import { DoctorProfileScreen } from './src/screens/doctor/DoctorProfileScreen';
 import { AssessmentNavigator } from './src/screens/assessment/AssessmentNavigator';
 import { AppointmentBookingScreen, ClinicTabRequest } from './src/screens/appointments/AppointmentBookingScreen';
 import { VideoCallScreen } from './src/screens/calls/VideoCallScreen';
+import { IncomingCallOverlay } from './src/components/IncomingCallOverlay';
+import {
+  IncomingCall,
+  declineIncomingCall,
+  fetchCallerDisplayName,
+  getActiveIncomingCall,
+  subscribeToIncomingCall,
+} from './src/services/consultationLifecycle';
 import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
 import { FinalStressScoreScreen } from './src/screens/results/FinalStressScoreScreen';
 import { FaceScanNavigator } from './src/screens/facescan/FaceScanNavigator';
@@ -148,6 +156,9 @@ function App() {
   // One-shot sub-tab intents raised by tapping a chat notification.
   const [consultTabReq, setConsultTabReq] = useState<ConsultTabRequest | null>(null);
   const [clinicTabReq, setClinicTabReq] = useState<ClinicTabRequest | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [incomingCallName, setIncomingCallName] = useState('Your doctor');
+  const [autoJoinCall, setAutoJoinCall] = useState(false);
 
   /* Theme: the saved mode is restored while the splash screen is up, and every
      later switch re-renders this tree against the rebuilt style sheets. */
@@ -239,6 +250,66 @@ function App() {
     }
   }, [currentTab]);
 
+  useEffect(() => {
+    const isStudent =
+      screenMode === 'main' &&
+      userRole !== 'doctor' &&
+      userRole !== 'admin' &&
+      userRole !== 'pending';
+    if (!isStudent) return;
+
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const ring = async (call: IncomingCall) => {
+      const name = await fetchCallerDisplayName(call.doctorId).catch(() => 'Your doctor');
+      if (cancelled) return;
+      setIncomingCallName(name);
+      setIncomingCall(call);
+    };
+
+    const handleStatus = (call: IncomingCall, status: string) => {
+      if (cancelled) return;
+      if (status === 'active') {
+        void ring(call);
+        return;
+      }
+      if (status === 'ended' || status === 'pending') {
+        setIncomingCall((current) =>
+          current && current.sessionId === call.sessionId ? null : current,
+        );
+      }
+    };
+
+    void (async () => {
+      const missed = await getActiveIncomingCall();
+      if (missed && !cancelled) await ring(missed);
+      if (cancelled) return;
+      unsubscribe = await subscribeToIncomingCall(handleStatus).catch(() => null);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+      setIncomingCall(null);
+    };
+  }, [screenMode, userRole]);
+
+  const answerIncomingCall = () => {
+    if (!incomingCall) return;
+    setCallDoctorId(null);
+    setCallAppointmentId(incomingCall.appointmentId);
+    setAutoJoinCall(true);
+    setIncomingCall(null);
+    changeScreen('call');
+  };
+
+  const declineIncoming = () => {
+    const call = incomingCall;
+    setIncomingCall(null);
+    if (call) void declineIncomingCall(call);
+  };
+
   const handleBack = () => {
     if (screenMode === 'healthSetup') {
       changeScreen('main');
@@ -251,6 +322,7 @@ function App() {
       return;
     }
     if (screenMode === 'call') {
+      setAutoJoinCall(false);
       changeScreen('main');
       setCurrentTab(userRole === 'doctor' ? 'clinics' : 'home');
       return;
@@ -445,8 +517,10 @@ function App() {
               doctorId={callDoctorId ?? undefined}
               appointmentId={callAppointmentId ?? undefined}
               role={userRole === 'doctor' ? 'doctor' : 'patient'}
+              autoJoin={autoJoinCall}
               onEndCall={() => {
                 // Doctors return to whichever doctor tab they left; patients go home.
+                setAutoJoinCall(false);
                 if (userRole !== 'doctor') setCurrentTab('home');
                 changeScreen('main');
               }}
@@ -594,6 +668,13 @@ function App() {
           </View>
         )}
         </Animated.View>
+
+        <IncomingCallOverlay
+          visible={!!incomingCall}
+          doctorName={incomingCallName}
+          onJoin={answerIncomingCall}
+          onDecline={declineIncoming}
+        />
       </View>
     </SafeAreaProvider>
   );

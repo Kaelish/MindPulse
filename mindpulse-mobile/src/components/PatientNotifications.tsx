@@ -23,6 +23,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   notificationFullTime,
+  subscribeToMyNotificationFeed,
 } from '../services/notifications';
 import { StressBand, stressBandFor } from '../services/selfCareTips';
 import { SelfCareModal } from './SelfCareModal';
@@ -147,6 +148,23 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
       setReloadKey((key) => key + 1);
     });
     return () => subscription.remove();
+  }, [refreshUnread]);
+
+  useEffect(() => {
+    let active = true;
+    let cleanup: (() => void) | null = null;
+    void subscribeToMyNotificationFeed(() => {
+      if (!active) return;
+      refreshUnread();
+      setReloadKey((key) => key + 1);
+    }).then((unsubscribe) => {
+      if (!active) unsubscribe();
+      else cleanup = unsubscribe;
+    });
+    return () => {
+      active = false;
+      if (cleanup) cleanup();
+    };
   }, [refreshUnread]);
 
   useEffect(() => {
