@@ -1682,6 +1682,66 @@ button {
   margin-top: 4px;
 }
 
+.consult-summary-view {
+  align-self: stretch;
+  margin-top: 4px;
+  padding: 14px 16px;
+  border: 1px solid #dbe6f7;
+  border-radius: 12px;
+  background: #f6faff;
+}
+
+.consult-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #dbe6f7;
+}
+
+.consult-summary-head strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #5b6ef5;
+}
+
+.consult-summary-head span {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.summary-field {
+  margin-top: 12px;
+}
+
+.summary-field span {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.summary-field p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+
+.consult-summary-view.is-empty {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
 .sidebar-profile-card {
   margin-top: auto;
   background: #ffffff;
@@ -1771,6 +1831,13 @@ button {
   flex-direction: column;
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
   overflow: hidden;
+}
+
+/* Content-sized: the summary only needs room for four short fields. */
+.summary-modal {
+  width: min(760px, calc(100vw - 48px));
+  height: auto;
+  max-height: calc(100vh - 48px);
 }
 
 .web-chat-modal-header {

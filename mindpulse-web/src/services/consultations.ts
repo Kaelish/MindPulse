@@ -734,6 +734,39 @@ export interface ConsultationNoteDraft {
   followUp: string | null;
 }
 
+export const fetchDoctorConsultationNotes = async (): Promise<ConsultationNote[]> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  await requireUserId();
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .select(
+      'appointment_id, doctor_id, patient_id, summary, observations, recommendation, follow_up, created_at, updated_at',
+    )
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as {
+    appointment_id: string;
+    doctor_id: string;
+    patient_id: string;
+    summary: string;
+    observations: string;
+    recommendation: string;
+    follow_up: string | null;
+    created_at?: string;
+    updated_at: string;
+  }[]).map((row) => ({
+    appointmentId: row.appointment_id,
+    doctorId: row.doctor_id,
+    patientId: row.patient_id,
+    summary: row.summary ?? '',
+    observations: row.observations ?? '',
+    recommendation: row.recommendation ?? '',
+    followUp: row.follow_up ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+};
+
 export const saveConsultationNote = async (
   item: WebConsultationItem,
   draft: ConsultationNoteDraft,

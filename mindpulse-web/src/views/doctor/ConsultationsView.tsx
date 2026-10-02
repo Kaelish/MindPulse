@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
+import { ConsultationSummaryEmpty, ConsultationSummaryView } from '../../components/ConsultationSummaryView';
 import {
   ALL_WEEKDAY_KEYS,
+  ConsultationNote,
   DoctorAvailability,
   WebChatMessage,
   WebConsultationItem,
@@ -12,6 +14,7 @@ import {
   editAppointmentTime,
   fetchBookedSlotKeys,
   fetchDoctorAvailability,
+  fetchDoctorConsultationNotes,
   fetchWebChatMessages,
   fetchWebChatThreads,
   fetchWebConsultations,
@@ -65,6 +68,8 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
   const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>(openTabRequest?.tab ?? 'upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
+  const [summaryTarget, setSummaryTarget] = useState<WebConsultationItem | null>(null);
+  const [consultNotes, setConsultNotes] = useState<Record<string, ConsultationNote>>({});
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
   const [webThreads, setWebThreads] = useState<WebThreadSummary[]>([]);
@@ -217,7 +222,20 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             if (isActive) setWebThreads(threadsRes);
           })
           .catch(() => {
-            /* previews are cosmetic — the list still renders without them */
+            /* previews are cosmetic â?" the list still renders without them */
+          });
+        fetchDoctorConsultationNotes()
+          .then((noteRows) => {
+            if (!isActive) return;
+            setConsultNotes(
+              noteRows.reduce<Record<string, ConsultationNote>>((lookup, note) => {
+                lookup[note.appointmentId] = note;
+                return lookup;
+              }, {}),
+            );
+          })
+          .catch(() => {
+            /* rows still render; the summary block is simply skipped */
           });
       } catch (err) {
         if (isActive) {
@@ -658,7 +676,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           <button
             type="button"
             className="view-case-btn"
-            onClick={() => setActiveSessionItem(item)}
+            onClick={() => {
+              setActiveSessionItem(null);
+              setSummaryTarget(item);
+            }}
           >
             View Case
           </button>
@@ -1062,6 +1083,12 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                   <div className="consult-notes-box">
                     <strong>Notes:</strong> {item.notes}
                   </div>
+                ) : null}
+
+                {consultNotes[item.id] ? (
+                  <ConsultationSummaryView note={consultNotes[item.id]} />
+                ) : item.rawStatus === 'completed' ? (
+                  <ConsultationSummaryEmpty message="No after-visit summary has been written for this consultation yet." />
                 ) : null}
               </div>
             ))}
@@ -1711,6 +1738,49 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* AFTER-VISIT SUMMARY MODAL (History > View Case) */}
+      {summaryTarget && (
+        <div className="web-chat-modal-overlay">
+          <div className="web-chat-modal-box summary-modal">
+            <div className="web-chat-modal-header">
+              <div>
+                <h3>After-visit summary</h3>
+                <p>
+                  {summaryTarget.patientName} &middot; {summaryTarget.studentId} &middot;{' '}
+                  {summaryTarget.scheduledTime}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close summary"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.3rem',
+                  cursor: 'pointer',
+                  color: 'var(--doc-muted)',
+                }}
+                onClick={() => setSummaryTarget(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="web-chat-modal-body">
+              {consultNotes[summaryTarget.id] ? (
+                <ConsultationSummaryView note={consultNotes[summaryTarget.id]} />
+              ) : (
+                <ConsultationSummaryEmpty message="No after-visit summary has been written for this consultation yet." />
+              )}
+              {summaryTarget.notes ? (
+                <div className="consult-notes-box">
+                  <strong>Booking note:</strong> {summaryTarget.notes}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

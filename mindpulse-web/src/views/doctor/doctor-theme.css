@@ -1757,6 +1757,29 @@
   line-height: 1.5;
 }
 
+.doctor-scope .consult-summary-view {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+}
+
+.doctor-scope .consult-summary-head {
+  border-bottom-color: var(--doc-line);
+}
+
+.doctor-scope .consult-summary-head strong {
+  color: var(--primary-strong);
+}
+
+.doctor-scope .consult-summary-head span,
+.doctor-scope .summary-field span,
+.doctor-scope .consult-summary-view.is-empty {
+  color: var(--doc-muted);
+}
+
+.doctor-scope .summary-field p {
+  color: var(--doc-ink-2);
+}
+
 .doctor-scope .decide-btn {
   display: inline-flex;
   align-items: center;
