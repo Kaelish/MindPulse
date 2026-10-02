@@ -67,7 +67,7 @@ begin
     raise exception 'Appointment % was not found', p_appointment_id;
   end if;
 
-  if not (public.is_admin() or auth.uid() = a.doctor_id) then
+  if not (public.is_admin() or coalesce(auth.uid() = a.doctor_id, false)) then
     raise exception 'Only the doctor or an administrator can end this consultation';
   end if;
 
@@ -109,6 +109,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.end_video_consultation(uuid) from public;
 revoke execute on function public.end_video_consultation(uuid) from anon;
 grant execute on function public.end_video_consultation(uuid) to authenticated;
 
