@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
+import { StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface BackButtonProps {
@@ -14,13 +15,14 @@ export const BackButton: React.FC<BackButtonProps> = ({ onPress, style }) => (
     accessibilityRole="button"
     activeOpacity={0.8}
     onPress={onPress}
+    // Wider touch target than the 44pt circle — the button sits near the top
+    // edge, so extra slop keeps it easy to hit.
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     style={[styles.button, style]}
   >
-    {/* Arrow drawn from Views — left-pointing chevron */}
-    <View style={styles.arrowWrap}>
-      <View style={styles.arrowTop} />
-      <View style={styles.arrowBottom} />
-    </View>
+    {/* Real icon: the old chevron was two rotated Views whose strokes crossed
+        and overflowed their 14×14 box, rendering as a clipped "×". */}
+    <Ionicons name="chevron-back" size={20} color={tone('#4A7DC7')} />
   </TouchableOpacity>
 );
 
@@ -46,26 +48,6 @@ const makeStyles = () => StyleSheet.create({
     top: 14,
     width: 44,
     zIndex: 10,
-  },
-  arrowWrap: {
-    width: 14,
-    height: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowTop: {
-    width: 10,
-    height: 2.5,
-    backgroundColor: toneBg('#4A7DC7'),
-    borderRadius: 1.5,
-    transform: [{ rotate: '-45deg' }, { translateY: 3.5 }],
-  },
-  arrowBottom: {
-    width: 10,
-    height: 2.5,
-    backgroundColor: toneBg('#4A7DC7'),
-    borderRadius: 1.5,
-    transform: [{ rotate: '45deg' }, { translateY: -3.5 }],
   },
 });
 

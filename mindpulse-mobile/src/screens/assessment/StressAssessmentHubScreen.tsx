@@ -139,6 +139,19 @@ const StepCard = ({
           );
         } else if (isLocked) {
           Alert.alert('Locked', 'Complete the previous assessment first to unlock this assessment.');
+        } else if (isCompleted) {
+          // The checkmark has to mean something: a stray tap must not look
+          // like progress was lost. Retaking stays possible mid-run (before
+          // the day is saved), but only after an explicit confirmation —
+          // new answers replace the old ones.
+          Alert.alert(
+            'You already completed this step',
+            'Retake it? Your new answers will replace the old ones.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Retake', onPress },
+            ],
+          );
         } else {
           onPress();
         }

@@ -14,7 +14,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
@@ -127,65 +127,79 @@ export const StressAnalysisLayout: React.FC<Props> = ({
     };
   }, []);
 
+  const insets = useSafeAreaInsets();
+
   const isDone = (step: ModuleTab): boolean =>
     stepStatus[step] === 'completed' || (step === 'heartRate' && !!heartRateDone);
 
   return (
-    <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
-      {onBack && <BackButton onPress={onBack} />}
-      {/* ── Page header ── */}
-      <View style={layout.header}>
-        <View style={layout.titlePill}>
-          <Text style={layout.title}>Stress Analysis</Text>
+    <View style={layout.root}>
+      <SafeAreaView style={layout.safe} edges={['top', 'bottom']}>
+        {/* ── Page header ── */}
+        <View style={layout.header}>
+          <View style={layout.titlePill}>
+            <Text style={layout.title}>Stress Analysis</Text>
+          </View>
+          <Text style={layout.subtitle}>{subtitle}</Text>
         </View>
-        <Text style={layout.subtitle}>{subtitle}</Text>
-      </View>
 
-      {/* ── Module step tabs — the single step list ── */}
-      <View style={layout.moduleTabs}>
-        <ModuleChip
-          label="Survey"
-          dotColor={Colors.tabSurveyDot}
-          chipBg="#EEEEFF"
-          active={activeModule === 'survey'}
-          completed={isDone('survey')}
-        />
-        <ModuleChip
-          label="Face Scan"
-          dotColor={Colors.tabFaceDot}
-          chipBg={Colors.tabFaceBg}
-          active={activeModule === 'faceScan'}
-          completed={isDone('faceScan')}
-        />
-        <ModuleChip
-          label="Heart Rate"
-          dotColor={Colors.tabHeartDot}
-          chipBg={Colors.tabHeartBg}
-          active={activeModule === 'heartRate'}
-          completed={isDone('heartRate')}
-        />
-        <ModuleChip
-          label="Reaction"
-          dotColor={Colors.tabReactionDot}
-          active={activeModule === 'reaction'}
-          completed={isDone('reaction')}
-        />
-      </View>
+        {/* ── Module step tabs — the single step list ── */}
+        <View style={layout.moduleTabs}>
+          <ModuleChip
+            label="Survey"
+            dotColor={Colors.tabSurveyDot}
+            chipBg="#EEEEFF"
+            active={activeModule === 'survey'}
+            completed={isDone('survey')}
+          />
+          <ModuleChip
+            label="Face Scan"
+            dotColor={Colors.tabFaceDot}
+            chipBg={Colors.tabFaceBg}
+            active={activeModule === 'faceScan'}
+            completed={isDone('faceScan')}
+          />
+          <ModuleChip
+            label="Heart Rate"
+            dotColor={Colors.tabHeartDot}
+            chipBg={Colors.tabHeartBg}
+            active={activeModule === 'heartRate'}
+            completed={isDone('heartRate')}
+          />
+          <ModuleChip
+            label="Reaction"
+            dotColor={Colors.tabReactionDot}
+            active={activeModule === 'reaction'}
+            completed={isDone('reaction')}
+          />
+        </View>
 
-      {/* ── Scrollable content ── */}
-      <ScrollView
-        style={layout.scroll}
-        contentContainerStyle={layout.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-        {children}
-      </ScrollView>
-    </SafeAreaView>
+        {/* ── Scrollable content ── */}
+        <ScrollView
+          style={layout.scroll}
+          contentContainerStyle={layout.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {children}
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* Absolutely positioned against the UNPADDED root and offset by the
+          real top inset: absolutely positioned children do not inherit the
+          SafeAreaView's inset padding, so keeping the button inside buried it
+          under the status bar, where the system swallowed every tap (the same
+          bug PlantProgressScreen documents). */}
+      {onBack && <BackButton onPress={onBack} style={{ top: insets.top + 14 }} />}
+    </View>
   );
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const makeLayout = () => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.pageBg,
+  },
   safe: {
     flex: 1,
     backgroundColor: Colors.pageBg,
