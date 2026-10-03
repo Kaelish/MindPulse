@@ -43,16 +43,36 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
       return;
     }
 
-    // Last question answered → score, persist, done.
+    // Last question answered → score, persist, done. The raw answers travel
+    // with the session so the doctor can review which items drove the score.
     setSaving(true);
     setSaveError('');
     try {
       const score = scoreToolAnswers(questions, answers);
+      const surveyAnswers = {
+        toolId: tool.id,
+        toolTitle: tool.title,
+        items: questions.map((question) => {
+          const value = answers[question.id] ?? 0;
+          const options = question.options?.length ? question.options : DEFAULT_LIKERT;
+          const option = options.find((candidate) => candidate.value === value);
+          return {
+            id: question.id,
+            text: question.text,
+            reverse: question.reverse ?? false,
+            value,
+            label: option?.label ?? String(value),
+          };
+        }),
+      };
       await saveNewStressSession(
         score,
         `Completed assessment: ${tool.title}`,
         undefined,
         score,
+        undefined,
+        undefined,
+        surveyAnswers,
       );
       await recordToolCompletion(tool.id);
       Alert.alert('Assessment complete', `${tool.title}\nYour score: ${score}/100 (saved).`);

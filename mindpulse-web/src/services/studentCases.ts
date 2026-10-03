@@ -175,6 +175,42 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
 
 // ---- Per-student history (visible to a doctor through the appointment link) --
 
+/** One answered questionnaire item as stored on stress_sessions.survey_answers. */
+export interface SurveyAnswerItem {
+  id: number;
+  text: string;
+  reverse?: boolean;
+  value: number;
+  label: string;
+}
+
+/** Snapshot written by the patient app when an assessment is completed. */
+export interface SurveyAnswerSet {
+  toolId?: string;
+  toolTitle?: string;
+  items: SurveyAnswerItem[];
+}
+
+/** Tolerant parse of the survey_answers jsonb (null/legacy/garbage → null). */
+const parseSurveyAnswers = (value: unknown): SurveyAnswerSet | null => {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as { items?: unknown; toolId?: unknown; toolTitle?: unknown };
+  if (!Array.isArray(raw.items)) return null;
+  const items = raw.items.filter(
+    (item): item is SurveyAnswerItem =>
+      !!item &&
+      typeof item === 'object' &&
+      typeof (item as SurveyAnswerItem).text === 'string' &&
+      typeof (item as SurveyAnswerItem).value === 'number',
+  );
+  if (!items.length) return null;
+  return {
+    toolId: typeof raw.toolId === 'string' ? raw.toolId : undefined,
+    toolTitle: typeof raw.toolTitle === 'string' ? raw.toolTitle : undefined,
+    items,
+  };
+};
+
 export interface StudentSessionRecord {
   id: string;
   createdAt: string;
@@ -185,6 +221,8 @@ export interface StudentSessionRecord {
   reactionTimeMs: number | null;
   emotion: string | null;
   notes: string | null;
+  /** Raw questionnaire answers; null for sessions saved before migration 0019. */
+  surveyAnswers: SurveyAnswerSet | null;
 }
 
 export const fetchStudentSessions = async (studentId: string): Promise<StudentSessionRecord[]> => {
@@ -195,7 +233,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
 
   const { data, error } = await supabase
     .from('stress_sessions')
-    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, notes')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, notes, survey_answers')
     .eq('user_id', studentId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -210,6 +248,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     reaction_time_ms: number | null;
     emotion: string | null;
     notes: string | null;
+    survey_answers: unknown;
   }[]).map((row) => ({
     id: row.id,
     createdAt: row.created_at,
@@ -220,6 +259,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     reactionTimeMs: row.reaction_time_ms,
     emotion: row.emotion,
     notes: row.notes,
+    surveyAnswers: parseSurveyAnswers(row.survey_answers),
   }));
 };
 

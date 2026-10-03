@@ -51,6 +51,7 @@ export interface StressSession {
   stress_level: StressLevel | null;
   heart_rate: number | null;
   survey_score: number | null;
+  survey_answers: Record<string, unknown> | null;
   emotion: string | null;
   reaction_time_ms: number | null;
   face_confidence: number | null;

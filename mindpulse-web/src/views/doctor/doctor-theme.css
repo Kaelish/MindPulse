@@ -1395,7 +1395,14 @@
   color: var(--doc-ink);
 }
 
-.doctor-scope .detail-assessment-card p,
+/* The assessment date sits under a larger title — keep it quiet and compact. */
+.doctor-scope .detail-assessment-card > div:first-child > p {
+  margin: 5px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--doc-muted);
+}
+
 .doctor-scope .consultation-detail p,
 .doctor-scope .notes-detail p {
   margin: 4px 0;
@@ -1404,10 +1411,16 @@
   color: var(--doc-muted);
 }
 
+/* Cards are already spaced by the content grid — avoid a double rhythm. */
+.doctor-scope .detail-assessment-card {
+  margin-bottom: 0;
+}
+
 .doctor-scope .detail-emotion-bars {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
+  border-top-color: var(--doc-line);
 }
 
 .doctor-scope .detail-assessment-card > strong {
@@ -1415,6 +1428,13 @@
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.doctor-scope .detail-assessment-card > strong small {
+  margin-top: 5px;
+  color: var(--doc-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
 }
 
 .doctor-scope .detail-assessment-card > strong.score-low {
@@ -1436,14 +1456,69 @@
   gap: 7px;
 }
 
+/* Assessment metrics read as small tiles inside the card. */
+.doctor-scope .detail-emotion {
+  padding: 10px 12px;
+  border: 1px solid var(--doc-line);
+  border-radius: 10px;
+  background: var(--doc-panel);
+}
+
 .doctor-scope .detail-emotion > div,
 .doctor-scope .emotion-bar > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin: 0;
   font-size: 0.84rem;
   color: var(--doc-ink-2);
+}
+
+/* Title, caption and footer rhythm for the assessment card. */
+.doctor-scope .detail-assessment-card h2 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--doc-ink);
+}
+
+.doctor-scope .detail-assessment-card footer {
+  color: var(--doc-muted);
+  border-top-color: var(--doc-line);
+}
+
+/* Assessment → per-question survey answers (migration 0019). */
+.doctor-scope .survey-answers-toggle {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .survey-answers-toggle:hover {
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .survey-answers {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+}
+
+.doctor-scope .survey-answers h3,
+.doctor-scope .survey-answer-row {
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .survey-answer-row + .survey-answer-row {
+  border-top-color: var(--doc-line);
+}
+
+.doctor-scope .survey-answer-row em {
+  color: var(--doc-muted);
+}
+
+.doctor-scope .survey-answer-row strong {
+  background: var(--doc-panel-2);
+  color: var(--doc-ink);
 }
 
 .doctor-scope .emotion-bar > b {

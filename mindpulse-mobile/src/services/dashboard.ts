@@ -249,6 +249,8 @@ export const saveNewStressSession = async (
   surveyScore?: number,
   reactionTimeMs?: number,
   faceConfidencePercent?: number,
+  /** Raw questionnaire snapshot {toolId, toolTitle, items:[…]} (assessments). */
+  surveyAnswers?: Record<string, unknown> | null,
 ): Promise<StressSessionItem> => {
   const { id: userId } = await requireUser();
 
@@ -265,6 +267,7 @@ export const saveNewStressSession = async (
       survey_score: surveyScore ?? null,
       reaction_time_ms: reactionTimeMs ?? null,
       face_confidence: faceConfidencePercent ?? null,
+      survey_answers: surveyAnswers ?? null,
       notes,
     })
     .select()

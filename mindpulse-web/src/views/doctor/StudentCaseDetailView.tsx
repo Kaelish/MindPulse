@@ -64,6 +64,8 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  /** Session id whose raw survey answers are expanded (Assessment Results tab). */
+  const [openAnswers, setOpenAnswers] = useState<string | null>(null);
   const [category, setCategory] = useState('General');
   const [priority, setPriority] = useState<RecommendationPriority>('Medium');
   const [note, setNote] = useState('');
@@ -356,6 +358,36 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                   <SessionMetric label="Survey score" value={session.surveyScore == null ? '—' : String(session.surveyScore)} />
                   <SessionMetric label="Reaction time" value={session.reactionTimeMs == null ? '—' : `${session.reactionTimeMs} ms`} />
                 </div>
+                {session.surveyAnswers && (
+                  <>
+                    <button
+                      type="button"
+                      className="survey-answers-toggle"
+                      aria-expanded={openAnswers === session.id}
+                      onClick={() => setOpenAnswers((current) => (current === session.id ? null : session.id))}
+                    >
+                      {openAnswers === session.id
+                        ? 'Hide survey answers'
+                        : `View survey answers (${session.surveyAnswers.items.length})`}
+                    </button>
+                    {openAnswers === session.id && (
+                      <div className="survey-answers">
+                        {session.surveyAnswers.toolTitle && <h3>{session.surveyAnswers.toolTitle}</h3>}
+                        <ol>
+                          {session.surveyAnswers.items.map((item) => (
+                            <li className="survey-answer-row" key={item.id}>
+                              <span>
+                                {item.text}
+                                {item.reverse && <em> · reverse-scored item</em>}
+                              </span>
+                              <strong>{item.label}</strong>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </>
+                )}
                 <footer>Emotion: {session.emotion ?? '—'}{session.notes ? ` · ${session.notes}` : ''}</footer>
               </section>
             );
