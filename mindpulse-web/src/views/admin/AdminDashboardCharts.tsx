@@ -63,9 +63,11 @@ export const AppointmentStatusDonut = ({ statuses }: { statuses: AppointmentStat
 
 interface ActivityChartProps {
   weeks: AdminActivityWeek[];
+  /** Caption under the legend, e.g. "last 12 weeks". */
+  rangeLabel?: string;
 }
 
-export const ActivityLineChart = ({ weeks }: ActivityChartProps) => {
+export const ActivityLineChart = ({ weeks, rangeLabel = 'last 12 weeks' }: ActivityChartProps) => {
   const width = 720;
   const height = 240;
   const padLeft = 44;
@@ -105,14 +107,14 @@ export const ActivityLineChart = ({ weeks }: ActivityChartProps) => {
         <span className="admin-activity-key admin-activity-key--assessments">
           <i /> Assessments <strong>{assessmentsTotal}</strong>
         </span>
-        <em>last 12 weeks</em>
+        <em>{rangeLabel}</em>
       </div>
       <svg
         className="admin-activity-svg"
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`Bookings and assessments over the last 12 weeks. ${bookingsTotal} bookings and ${assessmentsTotal} assessments.`}
+        aria-label={`Bookings and assessments over the ${rangeLabel}. ${bookingsTotal} bookings and ${assessmentsTotal} assessments.`}
       >
         {gridValues.map((value) => (
           <g key={value}>

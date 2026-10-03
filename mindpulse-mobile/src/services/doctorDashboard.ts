@@ -87,10 +87,11 @@ const initialsOf = (name: string, email: string) => {
   return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
 };
 
+/** Bands match levelForScore in dashboard.ts: Stable 0-35, Watch 36-60, Critical 61-100. */
 const statusForScore = (score: number | null): DoctorPatientStatus => {
   if (score == null) return 'Unassessed';
   if (score > 60) return 'Critical';
-  if (score > 30) return 'Watch';
+  if (score > 35) return 'Watch';
   return 'Stable';
 };
 

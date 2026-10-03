@@ -27,6 +27,8 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
   const [activeView, setActiveView] = useState<DoctorView>(() => loadDoctorSettings().landingView);
   const [selectedStudent, setSelectedStudent] = useState<StudentCase | null>(null);
   const [consultTabReq, setConsultTabReq] = useState<ConsultationsTabRequest | null>(null);
+  // Where the case-detail Back button returns to (Student Cases or Consultations).
+  const [caseBackView, setCaseBackView] = useState<DoctorView>('student-cases');
 
   // A notification's "View details" jumps straight to the matching section.
   useEffect(() => {
@@ -57,19 +59,29 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
           <DoctorDashboardView
             onViewCase={(student) => {
               setSelectedStudent(student);
+              setCaseBackView('student-cases');
               setActiveView('student-case-detail');
             }}
             onViewAllCases={() => setActiveView('student-cases')}
           />
         );
       case 'student-cases':
-        return <StudentCasesView onViewDetails={(student) => { setSelectedStudent(student); setActiveView('student-case-detail'); }} />;
+        return <StudentCasesView onViewDetails={(student) => { setSelectedStudent(student); setCaseBackView('student-cases'); setActiveView('student-case-detail'); }} />;
       case 'student-case-detail':
-        return selectedStudent ? <StudentCaseDetailView student={selectedStudent} onBack={() => setActiveView('student-cases')} /> : <StudentCasesView />;
+        return selectedStudent ? <StudentCaseDetailView student={selectedStudent} onBack={() => setActiveView(caseBackView)} /> : <StudentCasesView />;
       case 'assessment-results':
         return <AssessmentResultsView onViewFullCase={() => setActiveView('student-case-detail')} />;
       case 'consultations':
-        return <ConsultationsView openTabRequest={consultTabReq} />;
+        return (
+          <ConsultationsView
+            openTabRequest={consultTabReq}
+            onViewHistory={(student) => {
+              setSelectedStudent(student);
+              setCaseBackView('consultations');
+              setActiveView('student-case-detail');
+            }}
+          />
+        );
       case 'transactions':
         return <TransactionsView />;
       case 'recommendations':

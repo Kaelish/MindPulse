@@ -408,6 +408,25 @@
   color: #0e7f96;
 }
 
+.assessment-show-all {
+  display: block;
+  margin: 14px auto 2px;
+  padding: 8px 18px;
+  border: 1px solid #d5dde7;
+  border-radius: 8px;
+  background: #fff;
+  color: #0e7f96;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assessment-show-all:hover {
+  background: #0e7f96;
+  border-color: #0e7f96;
+  color: #fff;
+}
+
 /* Modals */
 .assessment-modal-backdrop {
   position: fixed;
@@ -746,10 +765,17 @@ html[data-theme='dark'] .assessment-field select,
 html[data-theme='dark'] .assessment-field textarea,
 html[data-theme='dark'] .assessment-edit-button,
 html[data-theme='dark'] .assessment-delete-button,
-html[data-theme='dark'] .assessment-view-button {
+html[data-theme='dark'] .assessment-view-button,
+html[data-theme='dark'] .assessment-show-all {
   background: #0f1729;
   border-color: var(--line, #26314a);
   color: var(--text, #e7ebf3);
+}
+
+html[data-theme='dark'] .assessment-show-all:hover {
+  background: #0e7f96;
+  border-color: #0e7f96;
+  color: #fff;
 }
 
 html[data-theme='dark'] .question-box {

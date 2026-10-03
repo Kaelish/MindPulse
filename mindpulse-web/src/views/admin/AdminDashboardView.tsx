@@ -150,8 +150,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   const share = (count: number) => (assessed ? Math.round((count / assessed) * 100) : 0);
   const bands = stats
     ? [
-        { key: 'low', label: 'Low (0–30)', count: stats.low, color: '#0f9d63' },
-        { key: 'moderate', label: 'Moderate (31–60)', count: stats.moderate, color: '#e0a63a' },
+        { key: 'low', label: 'Low (0–35)', count: stats.low, color: '#0f9d63' },
+        { key: 'moderate', label: 'Moderate (36–60)', count: stats.moderate, color: '#e0a63a' },
         { key: 'high', label: 'High (61–100)', count: stats.high, color: '#d64550' },
       ]
     : [];
@@ -212,8 +212,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
         {!isLoading && !loadError && stats && (
           <>
             <section className="admin-dashboard-stat-grid">
-              <DashboardStat label="Low Stress (0–30)" value={String(stats.low)} note={`Students (${share(stats.low)}%)`} />
-              <DashboardStat label="Moderate (31–60)" value={String(stats.moderate)} note={`Students (${share(stats.moderate)}%)`} />
+              <DashboardStat label="Low Stress (0–35)" value={String(stats.low)} note={`Students (${share(stats.low)}%)`} />
+              <DashboardStat label="Moderate (36–60)" value={String(stats.moderate)} note={`Students (${share(stats.moderate)}%)`} />
               <DashboardStat label="High Stress (61–100)" value={String(stats.high)} note={`Students (${share(stats.high)}%)`} />
             </section>
 
@@ -254,7 +254,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
               <article className="admin-dashboard-panel admin-dashboard-panel--wide">
                 <h2>Activity</h2>
                 {charts ? (
-                  <ActivityLineChart weeks={charts.weeks} />
+                  <ActivityLineChart weeks={charts.weeks} rangeLabel={charts.rangeLabel} />
                 ) : chartsError ? (
                   <p className="admin-chart-empty">{chartsError}</p>
                 ) : (

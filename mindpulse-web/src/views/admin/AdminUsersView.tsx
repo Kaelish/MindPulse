@@ -23,6 +23,16 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
   const [myId, setMyId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
+  const [viewing, setViewing] = useState<AdminAccountRow | null>(null);
+
+  useEffect(() => {
+    if (!viewing) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setViewing(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [viewing]);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
@@ -144,7 +154,16 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                     const busy = busyId === account.id;
                     return (
                       <tr key={account.id}>
-                        <td><div className="account-name-cell"><span className="account-avatar">{account.initials}</span><strong>{account.name}</strong></div></td>
+                        <td>
+                          <div className="account-name-cell">
+                            {account.avatarUrl ? (
+                              <img className="account-avatar account-avatar-img" src={account.avatarUrl} alt="" />
+                            ) : (
+                              <span className="account-avatar">{account.initials}</span>
+                            )}
+                            <strong>{account.name}</strong>
+                          </div>
+                        </td>
                         <td>
                           <span className="contact-cell">✉ {account.email}</span>
                           {activeRole === 'Doctors' && account.licenseNo && (
@@ -166,6 +185,9 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                         <td><span className={`status-pill status-${status.toLowerCase()}`}>{status}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button type="button" className="view-details-button" onClick={() => setViewing(account)}>
+                              View
+                            </button>
                             {activeRole === 'Doctors' && !account.isVerified && (
                               <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => approveRegistration(account)}>
                                 {busy ? 'Working…' : 'Approve'}
@@ -181,7 +203,6 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                                 Unverify
                               </button>
                             )}
-                            {activeRole === 'Students' && <span style={{ color: '#94a3b8' }}>—</span>}
                           </div>
                         </td>
                       </tr>
@@ -194,6 +215,110 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
           )}
         </section>
       </main>
+
+      {/* Profile dialog — opened by the "View" action in the accounts table */}
+      {viewing && (
+        <div className="modal-backdrop" onClick={() => setViewing(null)}>
+          <div
+            className="account-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${viewing.name} profile`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-heading">
+              <div className="user-profile-head">
+                {viewing.avatarUrl ? (
+                  <img className="user-profile-photo" src={viewing.avatarUrl} alt="" />
+                ) : (
+                  <span className="user-profile-photo user-profile-photo--fallback">{viewing.initials}</span>
+                )}
+                <div>
+                  <h2>{viewing.name}</h2>
+                  <p>{viewing.email}</p>
+                  <span className={`status-pill status-${(viewing.isVerified || (viewing.role === 'student' && viewing.onboardingComplete)) ? 'active' : 'pending'}`}>
+                    {viewing.role === 'doctor'
+                      ? (viewing.isVerified ? 'Verified' : 'Pending approval')
+                      : (viewing.onboardingComplete ? 'Onboarding complete' : 'Onboarding incomplete')}
+                  </span>
+                </div>
+              </div>
+              <button type="button" className="modal-close" aria-label="Close profile" onClick={() => setViewing(null)}>
+                ×
+              </button>
+            </div>
+
+            <dl className="user-profile-grid">
+              <div>
+                <dt>Role</dt>
+                <dd>{viewing.role === 'doctor' ? 'Doctor' : 'Student'}</dd>
+              </div>
+              <div>
+                <dt>Joined</dt>
+                <dd className="user-profile-joined">
+                  {new Date(viewing.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </dd>
+              </div>
+              {viewing.role === 'student' ? (
+                <>
+                  <div>
+                    <dt>Program</dt>
+                    <dd>{viewing.program}</dd>
+                  </div>
+                  <div>
+                    <dt>Year Level</dt>
+                    <dd>{viewing.year}</dd>
+                  </div>
+                  <div>
+                    <dt>Student No.</dt>
+                    <dd>{viewing.studentNo || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Assessments</dt>
+                    <dd>{viewing.patients}</dd>
+                  </div>
+                  <div className="user-profile-wide">
+                    <dt>Latest Assessment</dt>
+                    <dd>
+                      {viewing.latestLevel ? (
+                        <span className={`status-pill status-${viewing.latestLevel.toLowerCase()}`}>
+                          {viewing.latestLevel}
+                          {viewing.latestScore != null ? ` (${viewing.latestScore}/100)` : ''}
+                        </span>
+                      ) : (
+                        'No assessments yet'
+                      )}
+                    </dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt>Specialization</dt>
+                    <dd>{viewing.program}</dd>
+                  </div>
+                  <div>
+                    <dt>License No.</dt>
+                    <dd>{viewing.licenseNo || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Contact</dt>
+                    <dd>{viewing.contactNumber || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Patients (bookings)</dt>
+                    <dd>{viewing.patients}</dd>
+                  </div>
+                  <div className="user-profile-wide">
+                    <dt>Bio</dt>
+                    <dd>{viewing.bio || '—'}</dd>
+                  </div>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

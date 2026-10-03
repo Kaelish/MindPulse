@@ -4,9 +4,10 @@ import type { AppRole, StressLevel } from '../types/supabase';
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
 
-// Bands match the dashboard labels: Low 0-30, Moderate 31-60, High 61-100.
+// Bands match the patient app's levelForScore (mobile dashboard.ts) and the
+// doctor portal's riskForScore: Low 0-35, Moderate 36-60, High 61-100.
 export const bandForScore = (score: number): 'low' | 'moderate' | 'high' =>
-  score <= 30 ? 'low' : score <= 60 ? 'moderate' : 'high';
+  score > 60 ? 'high' : score > 35 ? 'moderate' : 'low';
 
 export interface AdminOverviewStats {
   students: number;
@@ -138,6 +139,10 @@ export interface AdminActivityWeek {
 export interface AdminDashboardCharts {
   statuses: AppointmentStatusCount[];
   weeks: AdminActivityWeek[];
+  /** What each entry in `weeks` covers: a trailing week or a calendar month. */
+  granularity?: 'week' | 'month';
+  /** Range shown in the chart caption, e.g. "last 12 weeks". */
+  rangeLabel?: string;
 }
 
 const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
@@ -185,40 +190,95 @@ export const fetchAdminDashboardCharts = async (): Promise<AdminDashboardCharts>
   }));
 
   const now = new Date();
-  const firstMonday = startOfUtcWeek(now);
-  firstMonday.setUTCDate(firstMonday.getUTCDate() - 7 * 11);
-  const weekCount = 12;
-  const weeks: AdminActivityWeek[] = Array.from({ length: weekCount }, (_, index) => {
-    const start = new Date(firstMonday);
-    start.setUTCDate(start.getUTCDate() + 7 * index);
-    return {
-      label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
-      bookings: 0,
-      assessments: 0,
-    };
-  });
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const parseTime = (value: string) => {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
+  };
 
-  const bucketOf = (value: string) => Math.floor((startOfUtcWeek(value).getTime() - firstMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
-
+  // Both tables are fetched in full above, so bucket the entire history from
+  // the earliest activity onward — the old fixed 12-week window silently
+  // dropped every older assessment.
+  const times: number[] = [];
   appointmentRows.forEach((row) => {
-    const index = bucketOf(row.created_at);
-    if (index >= 0 && index < weekCount) weeks[index].bookings += 1;
+    const time = parseTime(row.created_at);
+    if (time != null) times.push(time);
   });
   sessionRows.forEach((row) => {
-    const index = bucketOf(row.created_at);
-    if (index >= 0 && index < weekCount) weeks[index].assessments += 1;
+    const time = parseTime(row.created_at);
+    if (time != null) times.push(time);
   });
 
-  return { statuses, weeks };
+  const currentWeek = startOfUtcWeek(now);
+  const earliest = times.length ? Math.min(...times) : currentWeek.getTime();
+  const spanWeeks = Math.floor((currentWeek.getTime() - earliest) / weekMs);
+
+  const weeks: AdminActivityWeek[] = [];
+  const tally = (
+    rows: { created_at: string }[],
+    indexOf: (time: number) => number,
+    key: 'bookings' | 'assessments',
+  ) => {
+    rows.forEach((row) => {
+      const time = parseTime(row.created_at);
+      if (time == null) return;
+      const index = indexOf(time);
+      if (index >= 0 && index < weeks.length) weeks[index][key] += 1;
+    });
+  };
+
+  if (spanWeeks <= 26) {
+    // Weekly buckets stretched back to the first week with activity, keeping
+    // the familiar trailing 12 weeks when history is short or empty.
+    const back = Math.max(11, spanWeeks);
+    const firstMonday = new Date(currentWeek.getTime() - back * weekMs);
+    for (let index = 0; index <= back; index += 1) {
+      const start = new Date(firstMonday.getTime() + index * weekMs);
+      weeks.push({
+        label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+        bookings: 0,
+        assessments: 0,
+      });
+    }
+    const weeklyIndex = (time: number) =>
+      Math.floor((startOfUtcWeek(new Date(time)).getTime() - firstMonday.getTime()) / weekMs);
+    tally(appointmentRows, weeklyIndex, 'bookings');
+    tally(sessionRows, weeklyIndex, 'assessments');
+    return { statuses, weeks, granularity: 'week', rangeLabel: `last ${weeks.length} weeks` };
+  }
+
+  // Longer history switches to calendar months (the same bucket labels
+  // Analytics uses) so the whole range stays readable on one line chart.
+  const start = new Date(earliest);
+  const startYear = start.getFullYear();
+  const startMonth = start.getMonth();
+  const spanMonths = (now.getFullYear() - startYear) * 12 + (now.getMonth() - startMonth) + 1;
+  const visibleMonths = Math.min(spanMonths, 240);
+  const skippedMonths = spanMonths - visibleMonths;
+  for (let offset = skippedMonths; offset < spanMonths; offset += 1) {
+    const date = new Date(startYear, startMonth + offset, 1);
+    weeks.push({ label: bucketLabel(date.getFullYear(), date.getMonth()), bookings: 0, assessments: 0 });
+  }
+  const monthlyIndex = (time: number) => {
+    const date = new Date(time);
+    return (date.getFullYear() - startYear) * 12 + (date.getMonth() - startMonth) - skippedMonths;
+  };
+  tally(appointmentRows, monthlyIndex, 'bookings');
+  tally(sessionRows, monthlyIndex, 'assessments');
+  return { statuses, weeks, granularity: 'month', rangeLabel: `last ${visibleMonths} months` };
 };
 
 export interface AdminAccountRow {
   id: string;
+  role: 'student' | 'doctor';
   name: string;
   initials: string;
+  /** Profile photo (profile-photos bucket); null when the user has none. */
+  avatarUrl: string | null;
   email: string;
   program: string;
   year: string;
+  studentNo: string | null;
   patients: number;
   isVerified: boolean;
   onboardingComplete: boolean;
@@ -227,6 +287,7 @@ export interface AdminAccountRow {
   latestLevel: StressLevel | null;
   licenseNo: string | null;
   contactNumber: string | null;
+  bio: string | null;
 }
 
 interface AccountProfileRow {
@@ -237,6 +298,7 @@ interface AccountProfileRow {
   program: string | null;
   year_level: string | null;
   student_no: string | null;
+  avatar_url: string | null;
   onboarding_complete: boolean;
   created_at: string;
 }
@@ -252,7 +314,7 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
 
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, program, year_level, student_no, onboarding_complete, created_at')
+    .select('id, first_name, last_name, email, program, year_level, student_no, avatar_url, onboarding_complete, created_at')
     .eq('role', role)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -286,11 +348,11 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
   }
 
   let verifiedByUser = new Map<string, boolean>();
-  let professionalByUser = new Map<string, { specialization: string | null; license_no: string | null; contact_number: string | null }>();
+  let professionalByUser = new Map<string, { specialization: string | null; license_no: string | null; contact_number: string | null; bio: string | null }>();
   if (role === 'doctor') {
     const { data: doctorProfiles, error: doctorProfilesError } = await supabase
       .from('doctor_profiles')
-      .select('user_id, is_verified, specialization, license_no, contact_number')
+      .select('user_id, is_verified, specialization, license_no, contact_number, bio')
       .in('user_id', ids);
     if (doctorProfilesError) throw new Error(doctorProfilesError.message);
     const doctorRows = (doctorProfiles ?? []) as {
@@ -299,12 +361,13 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       specialization: string | null;
       license_no: string | null;
       contact_number: string | null;
+      bio: string | null;
     }[];
     verifiedByUser = new Map(doctorRows.map((row) => [row.user_id, row.is_verified]));
     professionalByUser = new Map(
       doctorRows.map((row) => [
         row.user_id,
-        { specialization: row.specialization, license_no: row.license_no, contact_number: row.contact_number },
+        { specialization: row.specialization, license_no: row.license_no, contact_number: row.contact_number, bio: row.bio },
       ]),
     );
   }
@@ -316,11 +379,14 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
     const professional = professionalByUser.get(row.id);
     return {
       id: row.id,
+      role,
       name,
       initials: initialsOf(name, row.email || ''),
+      avatarUrl: row.avatar_url ?? null,
       email: row.email || 'No email',
       program: role === 'doctor' ? professional?.specialization || '—' : row.program || '—',
       year: row.year_level || '—',
+      studentNo: row.student_no || null,
       patients: role === 'doctor' ? appointmentCounts.get(row.id) ?? 0 : sessionCounts.get(row.id) ?? 0,
       isVerified: verifiedByUser.get(row.id) ?? false,
       onboardingComplete: row.onboarding_complete,
@@ -329,6 +395,7 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       latestLevel: (latestSession?.stress_level as StressLevel | null) ?? null,
       licenseNo: professional?.license_no ?? null,
       contactNumber: professional?.contact_number ?? null,
+      bio: professional?.bio ?? null,
     };
   });
 };
@@ -456,6 +523,9 @@ export interface AdminAnalytics {
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/** Short month label ("Jan '26") shared by Analytics and the dashboard chart. */
+const bucketLabel = (year: number, month: number) => `${MONTH_LABELS[month]} '${String(year).slice(-2)}`;
+
 /**
  * `months = 0` → All Time (default). Any other value filters **every** metric
  * (totals, average, bands, assessed students, engagement) to those calendar
@@ -506,8 +576,6 @@ export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> =
   }
 
   const buckets: { year: number; month: number; label: string }[] = [];
-  const bucketLabel = (year: number, month: number) =>
-    `${MONTH_LABELS[month]} '${String(year).slice(-2)}`;
   if (months > 0) {
     for (let offset = months - 1; offset >= 0; offset -= 1) {
       const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);

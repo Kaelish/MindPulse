@@ -63,6 +63,46 @@ const formatDate = (value: string | null) =>
     ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'No assessment';
 
+/** Maps one profile + its two newest sessions into the shared case record. */
+const buildStudentCase = (
+  profile: ProfileRow,
+  userSessions: SessionRow[],
+  avatarUrl: string | null,
+): StudentCaseRecord => {
+  const name =
+    `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
+  const latest = userSessions[0];
+  const previous = userSessions[1];
+
+  const score = latest?.score ?? 0;
+  const status: StudentCaseStatus = latest ? statusForScore(score) : 'No Assessment';
+
+  let trend = 'Stable';
+  if (latest && previous && latest.score != null && previous.score != null) {
+    const delta = latest.score - previous.score;
+    trend = delta > 2 ? 'Increasing' : delta < -2 ? 'Decreasing' : 'Stable';
+  }
+
+  return {
+    userId: profile.id,
+    name,
+    id: profile.student_no || profile.id.slice(0, 8).toUpperCase(),
+    initials: name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
+    avatarUrl,
+    email: profile.email || 'No email',
+    phone: '—',
+    location: '—',
+    sex: profile.sex || '—',
+    program: profile.program || '—',
+    year: profile.year_level || '—',
+    age: formatAge(profile.birth_date),
+    status,
+    lastAssessment: formatDate(latest?.created_at ?? null),
+    score,
+    trend,
+  };
+};
+
 export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
   if (!supabase) {
     throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -96,42 +136,42 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
     }
   }
 
-  return profileRows.map((profile) => {
-    const name =
-      `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
-    const userSessions = recentByUser.get(profile.id) ?? [];
-    const latest = userSessions[0];
-    const previous = userSessions[1];
-
-    const score = latest?.score ?? 0;
-    const status: StudentCaseStatus = latest ? statusForScore(score) : 'No Assessment';
-
-    let trend = 'Stable';
-    if (latest && previous && latest.score != null && previous.score != null) {
-      const delta = latest.score - previous.score;
-      trend = delta > 2 ? 'Increasing' : delta < -2 ? 'Decreasing' : 'Stable';
-    }
-
-    return {
-      userId: profile.id,
-      name,
-      id: profile.student_no || profile.id.slice(0, 8).toUpperCase(),
-      initials: name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
-      avatarUrl: avatars.get(profile.id) ?? null,
-      email: profile.email || 'No email',
-      phone: '—',
-      location: '—',
-      sex: profile.sex || '—',
-      program: profile.program || '—',
-      year: profile.year_level || '—',
-      age: formatAge(profile.birth_date),
-      status,
-      lastAssessment: formatDate(latest?.created_at ?? null),
-      score,
-      trend,
-    };
-  });
+  return profileRows.map((profile) =>
+    buildStudentCase(profile, recentByUser.get(profile.id) ?? [], avatars.get(profile.id) ?? null),
+  );
 }
+
+/**
+ * One student's case record — lets a doctor jump from a booking straight into
+ * that patient's assessment history (old and recent sessions). Returns null
+ * when the profile no longer exists. Mapping is shared with fetchStudentCases.
+ */
+export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseRecord | null> => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no, program, year_level, birth_date, sex')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const profile = data as ProfileRow;
+
+  const avatars = await fetchAvatarUrls([profile.id]);
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('stress_sessions')
+    .select('user_id, score, created_at')
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: false })
+    .limit(2);
+  if (sessionsError) throw new Error(sessionsError.message);
+
+  return buildStudentCase(profile, (sessions ?? []) as SessionRow[], avatars.get(profile.id) ?? null);
+};
 
 // ---- Per-student history (visible to a doctor through the appointment link) --
 

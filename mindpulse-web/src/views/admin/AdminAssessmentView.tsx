@@ -79,6 +79,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   const [outcomesLoading, setOutcomesLoading] = useState(false);
   const [outcomesError, setOutcomesError] = useState('');
   const [viewing, setViewing] = useState<AdminResultRow | null>(null);
+  const [showAllRecent, setShowAllRecent] = useState(false);
 
   const loadTools = async () => {
     setToolsLoading(true);
@@ -381,7 +382,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 </section>
 
                 <section className="assessment-panel">
-                  <h2>Recent Assessment Details</h2>
+                  <h2>{showAllRecent ? `All Assessment Details (${outcomes.recent.length})` : 'Recent Assessment Details'}</h2>
                   {outcomes.recent.length === 0 ? (
                     <div className="assessment-empty">No completed assessments yet.</div>
                   ) : (
@@ -401,7 +402,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                           </tr>
                         </thead>
                         <tbody>
-                          {outcomes.recent.map((row) => (
+                          {(showAllRecent ? outcomes.recent : outcomes.recent.slice(0, 12)).map((row) => (
                             <tr key={row.id}>
                               <td>
                                 <strong>{row.studentName}</strong>
@@ -425,6 +426,15 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                         </tbody>
                       </table>
                     </div>
+                  )}
+                  {outcomes.recent.length > 12 && (
+                    <button
+                      type="button"
+                      className="assessment-show-all"
+                      onClick={() => setShowAllRecent((current) => !current)}
+                    >
+                      {showAllRecent ? 'Show latest 12 only' : `Show all ${outcomes.recent.length} assessments`}
+                    </button>
                   )}
                 </section>
               </>

@@ -25,6 +25,7 @@ export interface AssessmentOutcomes {
   avgOverall: number | null;
   thisWeek: number;
   components: ComponentStat[];
+  /** Every session, newest first — the view windows it and can reveal all. */
   recent: AdminResultRow[];
 }
 
@@ -95,6 +96,8 @@ export const fetchAssessmentOutcomes = async (): Promise<AssessmentOutcomes> => 
       averageOf(rows, facialComponentOf, 'facial', 'Facial Analysis', 20),
       averageOf(rows, reactionComponentOf, 'reaction', 'Reaction Time', 10),
     ],
-    recent: rows.slice(0, 12),
+    // Full history, newest first; the view windows the first 12 rows and can
+    // reveal everything so older sessions stay reachable.
+    recent: rows,
   };
 };

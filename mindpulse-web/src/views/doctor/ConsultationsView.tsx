@@ -28,6 +28,7 @@ import {
   toIsoDate,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
+import { fetchStudentCaseById, StudentCaseRecord } from '../../services/studentCases';
 import { PATIENT_FILE_CATEGORIES, PatientFileCategory, uploadStudentFile } from '../../services/patientFiles';
 import { DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 
@@ -63,9 +64,11 @@ export interface ConsultationsTabRequest {
 
 interface ConsultationsViewProps {
   openTabRequest?: ConsultationsTabRequest | null;
+  /** Opens a patient's full assessment history (old + recent) from a booking row. */
+  onViewHistory?: (student: StudentCaseRecord) => void;
 }
 
-export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabRequest = null }) => {
+export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabRequest = null, onViewHistory }) => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
   const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>(openTabRequest?.tab ?? 'upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
@@ -87,6 +90,35 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [decisionBusy, setDecisionBusy] = useState<string | null>(null);
+
+  // Booking row → the patient's assessment history (old + recent sessions).
+  const [historyBusy, setHistoryBusy] = useState<string | null>(null);
+  const openAssessmentHistory = async (item: WebConsultationItem) => {
+    if (!onViewHistory) return;
+    setActionError(null);
+    setHistoryBusy(item.id);
+    try {
+      const record = await fetchStudentCaseById(item.patientId);
+      if (record) onViewHistory(record);
+      else setActionError('No student profile exists for this patient yet.');
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to open the assessment history.');
+    } finally {
+      setHistoryBusy(null);
+    }
+  };
+  const assessmentHistoryButton = (item: WebConsultationItem) =>
+    onViewHistory ? (
+      <button
+        type="button"
+        className="view-case-btn"
+        disabled={historyBusy === item.id}
+        title="Open this patient's assessment history"
+        onClick={() => void openAssessmentHistory(item)}
+      >
+        {historyBusy === item.id ? 'Opening…' : '📊 Assessments'}
+      </button>
+    ) : null;
 
   // Doctor's consultation fee + offered time slots (read by the mobile app too)
   const [availability, setAvailability] = useState<DoctorAvailability | null>(null);
@@ -635,6 +667,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     if (item.rawStatus === 'scheduled') {
       return (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {assessmentHistoryButton(item)}
           <button
             type="button"
             className="decide-btn decide-btn-approve"
@@ -668,6 +701,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     if (item.rawStatus === 'awaiting_payment') {
       return (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {assessmentHistoryButton(item)}
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309' }}>
             Waiting for patient payment
           </span>
@@ -688,6 +722,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     if (item.rawStatus === 'confirmed') {
       return (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {assessmentHistoryButton(item)}
           <button
             type="button"
             className="view-case-btn"
@@ -719,6 +754,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     if (item.rawStatus === 'completed') {
       return (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {assessmentHistoryButton(item)}
           <button
             type="button"
             className="view-case-btn"
@@ -740,14 +776,17 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       );
     }
     return (
-      <button
-        type="button"
-        className="view-case-btn"
-        style={{ background: 'var(--primary-strong)' }}
-        onClick={() => setActiveSessionItem(item)}
-      >
-        Message
-      </button>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        {assessmentHistoryButton(item)}
+        <button
+          type="button"
+          className="view-case-btn"
+          style={{ background: 'var(--primary-strong)' }}
+          onClick={() => setActiveSessionItem(item)}
+        >
+          Message
+        </button>
+      </div>
     );
   };
 
