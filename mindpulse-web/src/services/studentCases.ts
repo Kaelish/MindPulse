@@ -29,6 +29,7 @@ type ProfileRow = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  phone: string | null;
   student_no: string | null;
   program: string | null;
   year_level: string | null;
@@ -90,7 +91,7 @@ const buildStudentCase = (
     initials: name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
     avatarUrl,
     email: profile.email || 'No email',
-    phone: '—',
+    phone: profile.phone || '—',
     location: '—',
     sex: profile.sex || '—',
     program: profile.program || '—',
@@ -110,7 +111,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, student_no, program, year_level, birth_date, sex')
+    .select('id, first_name, last_name, email, phone, student_no, program, year_level, birth_date, sex')
     .eq('role', 'student')
     .order('created_at', { ascending: true });
   if (profilesError) throw new Error(profilesError.message);
@@ -153,7 +154,7 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, student_no, program, year_level, birth_date, sex')
+    .select('id, first_name, last_name, email, phone, student_no, program, year_level, birth_date, sex')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);

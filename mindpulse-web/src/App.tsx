@@ -15,6 +15,7 @@ import { TransactionsView } from './views/doctor/TransactionsView';
 import { RecommendationsView } from './views/doctor/RecommendationsView';
 import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
 import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
+import { HelpView } from './views/doctor/HelpView';
 import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth, AuthScreen } from './views/auth/WebAuth';
 import './App.css';
@@ -86,6 +87,8 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
         return <TransactionsView />;
       case 'recommendations':
         return <RecommendationsView />;
+      case 'help':
+        return <HelpView onNavigate={setActiveView} />;
       case 'profile-setting':
         return <DoctorProfileSettingView />;
       case 'settings':

@@ -226,25 +226,34 @@ const ClinicianAvatar = ({ initials, avatarUrl }: { initials: string; avatarUrl?
 
 // ─── Clinician card ───────────────────────────────────────────────────────────
 const ClinicianCard = ({
-  clinician, onConnect,
-}: { clinician: TelehealthClinician; onConnect: () => void }) => (
+  clinician, onConnect, onViewProfile,
+}: { clinician: TelehealthClinician; onConnect: () => void; onViewProfile: () => void }) => (
   <View style={styles.clinicianCard}>
-    <ClinicianAvatar initials={clinician.avatar} avatarUrl={clinician.avatarUrl} />
-    <View style={styles.clinicianInfo}>
-      <View style={styles.nameRow}>
-        <Text style={styles.clinicianName}>{clinician.name}</Text>
-        {clinician.verified && <Text style={styles.verifiedBadge}>✓ Verified</Text>}
+    <TouchableOpacity
+      style={styles.clinicianMain}
+      activeOpacity={0.7}
+      onPress={onViewProfile}
+      accessibilityRole="button"
+      accessibilityLabel={`View ${clinician.name} profile`}
+    >
+      <ClinicianAvatar initials={clinician.avatar} avatarUrl={clinician.avatarUrl} />
+      <View style={styles.clinicianInfo}>
+        <View style={styles.nameRow}>
+          <Text style={styles.clinicianName}>{clinician.name}</Text>
+          {clinician.verified && <Text style={styles.verifiedBadge}>✓ Verified</Text>}
+        </View>
+        <Text style={styles.clinicianSpec}>{clinician.specialty}</Text>
+        <Text style={styles.clinicianBio} numberOfLines={2}>{clinician.bio}</Text>
+        <View style={styles.tagRow}>
+          {clinician.tags.slice(0, 3).map(t => (
+            <View key={t} style={styles.tag}>
+              <Text style={styles.tagText}>{t}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.viewProfileHint}>View profile ›</Text>
       </View>
-      <Text style={styles.clinicianSpec}>{clinician.specialty}</Text>
-      <Text style={styles.clinicianBio} numberOfLines={2}>{clinician.bio}</Text>
-      <View style={styles.tagRow}>
-        {clinician.tags.slice(0, 3).map(t => (
-          <View key={t} style={styles.tag}>
-            <Text style={styles.tagText}>{t}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
+    </TouchableOpacity>
     <TouchableOpacity style={styles.connectBtn} onPress={onConnect}>
       <Text style={styles.connectBtnText}>Book</Text>
     </TouchableOpacity>
@@ -339,6 +348,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   }, [openTabRequest]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinician, setSelectedClinician] = useState<TelehealthClinician | null>(null);
+  const [profileClinician, setProfileClinician] = useState<TelehealthClinician | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedHotline, setSelectedHotline] = useState<SupportHotline | null>(null);
@@ -782,11 +792,18 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             <Ionicons name="search" size={16} color={Colors.textHint} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search clinicians..."
+              placeholder="Search clinicians by name or specialization..."
               placeholderTextColor={Colors.textHint}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              autoCorrect={false}
+              returnKeyType="search"
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={16} color={Colors.textHint} />
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={styles.sectionLabel}>Available Clinicians</Text>
@@ -819,7 +836,12 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           )}
 
           {!loadingClinicians && !cliniciansError && filtered.map(c => (
-            <ClinicianCard key={c.id} clinician={c} onConnect={() => void handleConnect(c)} />
+            <ClinicianCard
+              key={c.id}
+              clinician={c}
+              onConnect={() => void handleConnect(c)}
+              onViewProfile={() => setProfileClinician(c)}
+            />
           ))}
         </ScrollView>
       )}
@@ -1510,11 +1532,116 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
           </View>
         </View>
       </Modal>
+
+      {/* ── Doctor profile sheet — professional details only.
+             Deliberately omits license number and personal contact: booking
+             decisions don't need them, and chat stays inside the app. ── */}
+      <Modal
+        visible={profileClinician !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setProfileClinician(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={styles.modalTitle}>{profileClinician?.name}</Text>
+                  <Text style={styles.modalSubtitle}>{profileClinician?.specialty}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setProfileClinician(null)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.profileHeadRow}>
+                <ClinicianAvatar
+                  initials={profileClinician?.avatar ?? ''}
+                  avatarUrl={profileClinician?.avatarUrl ?? null}
+                />
+                <View style={{ flex: 1, gap: 4 }}>
+                  {!!profileClinician?.verified && (
+                    <View style={styles.profileVerifiedRow}>
+                      <Ionicons name="checkmark-circle" size={13} color={tone('#1E7E43')} />
+                      <Text style={styles.verifiedBadge}>Verified professional</Text>
+                    </View>
+                  )}
+                  <Text style={styles.profileFee}>
+                    Consultation fee ₱{profileClinician?.fee ?? 500}
+                  </Text>
+                  <Text style={styles.profileFeeNote}>
+                    Payable only after the doctor approves your booking.
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.modalSectionLabel}>About</Text>
+              <Text style={styles.profileBio}>
+                {profileClinician?.bio || 'No bio provided yet.'}
+              </Text>
+              {!!profileClinician?.tags.length && (
+                <View style={styles.tagRow}>
+                  {profileClinician.tags.map(t => (
+                    <View key={t} style={styles.tag}>
+                      <Text style={styles.tagText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Text style={[styles.modalSectionLabel, { marginTop: 16 }]}>Availability</Text>
+              <View style={styles.profileInfoRow}>
+                <Ionicons name="calendar-outline" size={14} color={ACCENT} />
+                <Text style={styles.profileInfoText}>
+                  {profileClinician?.availableDays.length
+                    ? profileClinician.availableDays
+                        .map(d => DAY_LABELS[d] ?? d.toUpperCase())
+                        .join(', ')
+                    : 'Set by the doctor before booking'}
+                </Text>
+              </View>
+              <View style={styles.profileInfoRow}>
+                <Ionicons name="time-outline" size={14} color={ACCENT} />
+                <Text style={styles.profileInfoText}>
+                  {profileClinician?.slots.length
+                    ? `${profileClinician.slots.slice(0, 3).join(' · ')}${profileClinician.slots.length > 3 ? ' · …' : ''}`
+                    : 'Standard hours apply'}
+                </Text>
+              </View>
+
+              <View style={styles.profileNoteBox}>
+                <Ionicons name="chatbubbles-outline" size={14} color={ACCENT} />
+                <Text style={styles.profileNoteText}>
+                  Messages stay inside MindPulse — after booking, reach your doctor through the
+                  Messages tab.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={() => {
+                  const clinician = profileClinician;
+                  setProfileClinician(null);
+                  if (clinician) void handleConnect(clinician);
+                }}
+              >
+                <Text style={styles.confirmBtnText}>Book a session</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const ACCENT = '#5B6EF5';
+
+/** 'mon' … 'sun' weekday keys → short labels for the doctor profile sheet. */
+const DAY_LABELS: Record<string, string> = {
+  mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
+};
 
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
@@ -1620,6 +1747,25 @@ const makeStyles = () => StyleSheet.create({
   avatarImage: { width: 48, height: 48, borderRadius: 24 },
   avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: toneBg('#FFF') },
   clinicianInfo: { flex: 1, gap: 3 },
+  clinicianMain: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
+  viewProfileHint: { fontSize: 10.5, fontWeight: '700', color: ACCENT, marginTop: 6 },
+  profileHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 },
+  profileVerifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  profileFee: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  profileFeeNote: { fontSize: 10.5, color: Colors.textHint },
+  profileBio: { fontSize: 13, lineHeight: 20, color: Colors.textSecondary, marginBottom: 10 },
+  profileInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  profileInfoText: { fontSize: 12.5, color: Colors.textSecondary, flex: 1 },
+  profileNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: toneBg('#EEF0FB'),
+    borderRadius: 12,
+    padding: 10,
+    marginVertical: 12,
+  },
+  profileNoteText: { flex: 1, fontSize: 11.5, lineHeight: 17, color: ACCENT },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   clinicianName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   verifiedBadge: { fontSize: 9, fontWeight: '800', color: tone('#1E7E43'), backgroundColor: toneBg('#D6F5E3'), paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },

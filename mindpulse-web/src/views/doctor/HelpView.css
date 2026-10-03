@@ -1,0 +1,212 @@
+/* Help & Guide — doctor portal */
+
+.help-body {
+  padding: 24px 30px 44px;
+}
+
+.help-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 580px;
+  padding: 11px 14px;
+  background: #ffffff;
+  border: 1px solid #e4eaf2;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.help-search-icon {
+  color: #8a94a6;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.help-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 0.84rem;
+  color: #0f172a;
+}
+
+.help-search input::placeholder {
+  color: #9aa5b5;
+}
+
+.help-search-clear {
+  border: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.help-search-clear:hover {
+  background: #e2e8f0;
+}
+
+.help-result-count {
+  margin: 14px 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.guide-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 18px 16px;
+  background: #ffffff;
+  border: 1px solid #e9eef5;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.guide-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guide-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eeedfe;
+  color: #5b6ef5;
+  font-size: 0.98rem;
+}
+
+.guide-head h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #0f172a;
+}
+
+.guide-head p {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #8a94a6;
+}
+
+.guide-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: #4a5568;
+}
+
+.guide-steps li::marker {
+  color: #5b6ef5;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.guide-link {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5b6ef5;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guide-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .help-body {
+    padding: 18px 16px 36px;
+  }
+
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dark mode — doctor portal only ─────────────────────────────────────── */
+
+html[data-doctor-theme='dark'] .help-search {
+  background: #171f2e;
+  border-color: #273247;
+  box-shadow: none;
+}
+
+html[data-doctor-theme='dark'] .help-search input {
+  color: #e6ebf4;
+}
+
+html[data-doctor-theme='dark'] .help-search input::placeholder {
+  color: #6d7a91;
+}
+
+html[data-doctor-theme='dark'] .help-search-clear {
+  background: #232d41;
+  color: #9fb0c9;
+}
+
+html[data-doctor-theme='dark'] .help-search-clear:hover {
+  background: #2c3850;
+}
+
+html[data-doctor-theme='dark'] .help-result-count {
+  color: #7d8aa3;
+}
+
+html[data-doctor-theme='dark'] .guide-card {
+  background: #131a27;
+  border-color: #232d41;
+  box-shadow: none;
+}
+
+html[data-doctor-theme='dark'] .guide-icon {
+  background: #232d41;
+  color: #8f9bff;
+}
+
+html[data-doctor-theme='dark'] .guide-head h3 {
+  color: #e6ebf4;
+}
+
+html[data-doctor-theme='dark'] .guide-head p {
+  color: #7d8aa3;
+}
+
+html[data-doctor-theme='dark'] .guide-steps {
+  color: #aeb9cc;
+}
+
+html[data-doctor-theme='dark'] .guide-link {
+  color: #8f9bff;
+}

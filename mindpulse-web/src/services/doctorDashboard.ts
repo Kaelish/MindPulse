@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
+import { fetchAllRows } from './admin';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -164,31 +165,27 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   if (!supabase) throw notConfigured();
   const doctorId = await requireUserId();
 
-  const [{ data: profileRows, error: profilesError }, { data: sessionRows, error: sessionsError }, { data: appointmentRows, error: appointmentsError }] =
-    await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, student_no, created_at')
-        .eq('role', 'student')
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('stress_sessions')
-        .select('user_id, score, created_at')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('appointments')
-        .select('id, patient_id, scheduled_for, status, created_at, updated_at')
-        .eq('doctor_id', doctorId)
-        .order('created_at', { ascending: false }),
-    ]);
+  // Paginated reads (fetchAllRows) so the dashboard counts every row even past
+  // the 1000-row REST default — keeps these numbers aligned with the admin
+  // portal, which reads the same tables through fetchAllRows.
+  const [profileRows, sessionRows, appointmentRows] = await Promise.all([
+    fetchAllRows<ProfileRow>('profiles', 'id, first_name, last_name, email, student_no, created_at', {
+      column: 'role',
+      values: ['student'],
+    }),
+    fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at'),
+    fetchAllRows<AppointmentRow>('appointments', 'id, patient_id, scheduled_for, status, created_at, updated_at', {
+      column: 'doctor_id',
+      values: [doctorId],
+    }),
+  ]);
 
-  if (profilesError) throw new Error(profilesError.message);
-  if (sessionsError) throw new Error(sessionsError.message);
-  if (appointmentsError) throw new Error(appointmentsError.message);
+  // fetchAllRows returns newest-first; keep students oldest-first as before.
+  profileRows.sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-  const profiles = (profileRows ?? []) as ProfileRow[];
-  const sessions = (sessionRows ?? []) as SessionRow[];
-  const appointments = (appointmentRows ?? []) as AppointmentRow[];
+  const profiles = profileRows;
+  const sessions = sessionRows;
+  const appointments = appointmentRows;
 
   const avatars = await fetchAvatarUrls([
     ...profiles.map((profile) => profile.id),
@@ -243,11 +240,15 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   );
   let extraProfiles: ProfileRow[] = [];
   if (missingIds.length) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email, student_no, created_at')
-      .in('id', missingIds);
-    if (!error) extraProfiles = (data ?? []) as ProfileRow[];
+    try {
+      extraProfiles = await fetchAllRows<ProfileRow>('profiles', 'id, first_name, last_name, email, student_no, created_at', {
+        column: 'id',
+        values: missingIds,
+      });
+    } catch {
+      // Name enrichment is best-effort — keep the dashboard rendering.
+      extraProfiles = [];
+    }
   }
   const nameById = new Map<string, ProfileRow>();
   for (const row of [...profiles, ...extraProfiles]) nameById.set(row.id, row);
@@ -313,6 +314,14 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   const newCasesPrevWeek = countSince(profiles, twoWeeksAgo, weekAgo);
 
   const highRiskCount = cases.filter((item) => item.risk === 'High Risk').length;
+  // "New alerts" must be a subset of the students counted on this same card:
+  // currently high-risk students whose >60 session happened this week. Without
+  // this, a student who re-assessed down could push the note above the card's
+  // own number, or an improved student could read as a fresh alert.
+  const highRiskIds = new Set(
+    cases.filter((item) => item.risk === 'High Risk').map((item) => item.userId),
+  );
+  const newAlertCount = Array.from(highRiskAlerts).filter((id) => highRiskIds.has(id)).length;
 
   return {
     activeCases: {
@@ -331,8 +340,8 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       note:
         highRiskCount === 0
           ? { text: 'No students at high risk', tone: 'positive' }
-          : highRiskAlerts.size > 0
-            ? { text: `${highRiskAlerts.size} new alert${highRiskAlerts.size === 1 ? '' : 's'}`, tone: 'danger' }
+          : newAlertCount > 0
+            ? { text: `${newAlertCount} new alert${newAlertCount === 1 ? '' : 's'}`, tone: 'danger' }
             : { text: 'No new alerts', tone: 'neutral' },
     },
     completedThisWeek: {

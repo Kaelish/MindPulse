@@ -29,6 +29,7 @@ import { getAvatarUrl } from '../../services/profileAvatar';
 import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
+import { HelpGuideModal } from './settings/HelpGuideModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { MyFilesSection } from './MyFilesSection';
 import { TransactionsSection } from './TransactionsSection';
@@ -230,6 +231,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPrivacyData, setShowPrivacyData] = useState(false);
   const [showAboutMindPulse, setShowAboutMindPulse] = useState(false);
+  const [showHelpGuide, setShowHelpGuide] = useState(false);
 
   // Dark mode (device-wide, restored on the next launch)
   const themeMode = useThemeMode();
@@ -579,6 +581,13 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 onPress={() => setShowPrivacyData(true)}
               />
               <SettingRow
+                icon="help-circle-outline"
+                bg="#FFF3E0"
+                label="Help & Guide"
+                sub="How to use the app — step by step"
+                onPress={() => setShowHelpGuide(true)}
+              />
+              <SettingRow
                 icon="information-circle-outline"
                 bg="#E6F7F5"
                 label="About MindPulse"
@@ -625,6 +634,10 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
       <AboutMindPulseModal
         visible={showAboutMindPulse}
         onClose={() => setShowAboutMindPulse(false)}
+      />
+      <HelpGuideModal
+        visible={showHelpGuide}
+        onClose={() => setShowHelpGuide(false)}
       />
       <SessionDetailModal
         visible={detailSession !== null}

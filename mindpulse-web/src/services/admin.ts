@@ -53,7 +53,7 @@ const latestSessionsByUser = <T extends { user_id: string; created_at: string }>
 const PAGE_SIZE = 1000;
 
 export const fetchAllRows = async <T>(
-  table: 'stress_sessions' | 'appointments',
+  table: 'stress_sessions' | 'appointments' | 'profiles',
   columns: string,
   filter?: { column: string; values: string[] },
 ): Promise<T[]> => {
@@ -276,6 +276,8 @@ export interface AdminAccountRow {
   /** Profile photo (profile-photos bucket); null when the user has none. */
   avatarUrl: string | null;
   email: string;
+  /** Mobile number captured at registration (profiles.phone). */
+  phone: string | null;
   program: string;
   year: string;
   studentNo: string | null;
@@ -295,6 +297,7 @@ interface AccountProfileRow {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  phone: string | null;
   program: string | null;
   year_level: string | null;
   student_no: string | null;
@@ -314,7 +317,7 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
 
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, program, year_level, student_no, avatar_url, onboarding_complete, created_at')
+    .select('id, first_name, last_name, email, phone, program, year_level, student_no, avatar_url, onboarding_complete, created_at')
     .eq('role', role)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -384,6 +387,7 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       initials: initialsOf(name, row.email || ''),
       avatarUrl: row.avatar_url ?? null,
       email: row.email || 'No email',
+      phone: row.phone || null,
       program: role === 'doctor' ? professional?.specialization || '—' : row.program || '—',
       year: row.year_level || '—',
       studentNo: row.student_no || null,

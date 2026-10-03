@@ -6,6 +6,7 @@ import {
   DashboardRecentCase,
   DoctorDashboardOverview,
   fetchDoctorDashboardOverview,
+  parseScheduledFor,
 } from '../../services/doctorDashboard';
 import { WebConsultationItem, fetchWebConsultations } from '../../services/consultations';
 import { fetchStudentCases, StudentCaseRecord } from '../../services/studentCases';
@@ -112,7 +113,20 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
     let active = true;
     fetchWebConsultations()
       .then((rows) => {
-        if (active) setNextCall(rows.find((row) => row.rawStatus === 'confirmed') ?? null);
+        if (!active) return;
+        // "Next call" = the confirmed session happening soonest by date.
+        // Rows arrive newest-first by booking time, which is not the same as
+        // soonest by schedule — so sort by parsed date with undated ones last.
+        const confirmed = rows
+          .filter((row) => row.rawStatus === 'confirmed')
+          .map((row) => ({ row, at: parseScheduledFor(row.scheduledTime)?.getTime() ?? null }));
+        confirmed.sort((a, b) => {
+          if (a.at == null && b.at == null) return 0;
+          if (a.at == null) return 1;
+          if (b.at == null) return -1;
+          return a.at - b.at;
+        });
+        setNextCall(confirmed[0]?.row ?? null);
       })
       .catch(() => {
         if (active) setNextCall(null);
@@ -240,7 +254,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
                 {data.recentCases.length === 0 && (
                   <DoctorEmpty
                     title="No student cases yet"
-                    description="Cases appear here as soon as students register and book a session."
+                    description="Cases appear here as soon as a student registers."
                   />
                 )}
               </div>

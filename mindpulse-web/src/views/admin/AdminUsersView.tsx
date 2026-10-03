@@ -166,6 +166,11 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                         </td>
                         <td>
                           <span className="contact-cell">✉ {account.email}</span>
+                          {account.phone && (
+                            <span className="contact-cell" style={{ display: 'block' }}>
+                              ☎ {account.phone}
+                            </span>
+                          )}
                           {activeRole === 'Doctors' && account.licenseNo && (
                             <span className="contact-cell" style={{ display: 'block' }}>
                               🪪 {account.licenseNo}
@@ -272,6 +277,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                   <div>
                     <dt>Student No.</dt>
                     <dd>{viewing.studentNo || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>{viewing.phone || '—'}</dd>
                   </div>
                   <div>
                     <dt>Assessments</dt>

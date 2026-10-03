@@ -11,6 +11,7 @@ export type DoctorView =
   | 'consultations'
   | 'transactions'
   | 'recommendations'
+  | 'help'
   | 'profile-setting'
   | 'settings';
 
@@ -83,6 +84,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     { key: 'consultations', label: 'Consultations', icon: '\u25A4' },
     { key: 'transactions', label: 'Transactions', icon: '\u25C8' },
     { key: 'recommendations', label: 'Recommendations', icon: '\u25CE' },
+    { key: 'help', label: 'Help & Guide', icon: '\u24D8' },
     { key: 'settings', label: 'Settings', icon: '\u2699' },
   ];
 

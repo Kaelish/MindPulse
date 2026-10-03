@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
 import { getAvatarUrl, pickProfilePhoto, uploadProfilePhoto } from '../../../services/profileAvatar';
+import { CalendarDatePicker } from '../../../components/CalendarDatePicker';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AccountInfoModalProps {
@@ -37,6 +38,10 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
   const [email, setEmail] = useState(currentEmail);
   const [yearLevel, setYearLevel] = useState<string | null>(null);
   const [livingSituation, setLivingSituation] = useState<string | null>(null);
+  const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
+  const [savedPhone, setSavedPhone] = useState('');
+  const [savedDob, setSavedDob] = useState('');
   const [savedYear, setSavedYear] = useState<string | null>(null);
   const [savedLiving, setSavedLiving] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -44,12 +49,16 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const chipsTouched = useRef(false);
+  const phoneTouched = useRef(false);
+  const dobTouched = useRef(false);
 
   // Load the real profile values every time the sheet opens — nothing here is
   // prefilled with guessed data, so saving can never overwrite an empty field.
   useEffect(() => {
     if (!visible) return;
     chipsTouched.current = false;
+    phoneTouched.current = false;
+    dobTouched.current = false;
     let active = true;
     const loadProfile = async () => {
       setLoadingProfile(true);
@@ -61,16 +70,30 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
           .catch(() => {});
         const { data } = await supabase
           .from('profiles')
-          .select('year_level, living_situation')
+          .select('year_level, living_situation, phone, birth_date')
           .eq('id', user.id)
           .maybeSingle();
-        if (active && data && !chipsTouched.current) {
-          const year = data.year_level ?? null;
-          const living = data.living_situation ?? null;
-          setYearLevel(year);
-          setLivingSituation(living);
-          setSavedYear(year);
-          setSavedLiving(living);
+        if (active && data) {
+          if (!chipsTouched.current) {
+            const year = data.year_level ?? null;
+            const living = data.living_situation ?? null;
+            setYearLevel(year);
+            setLivingSituation(living);
+            setSavedYear(year);
+            setSavedLiving(living);
+          }
+          // Fill the contact fields only when the user hasn't started editing
+          // them, so a slow load never overwrites what they just typed.
+          if (!phoneTouched.current) {
+            const storedPhone = data.phone ?? '';
+            setPhone(storedPhone);
+            setSavedPhone(storedPhone);
+          }
+          if (!dobTouched.current) {
+            const storedDob = data.birth_date ?? '';
+            setDob(storedDob);
+            setSavedDob(storedDob);
+          }
         }
       } catch {
         // Keep the fields empty rather than inventing values.
@@ -110,6 +133,18 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
       Alert.alert('Validation Error', 'Please enter your full name.');
       return;
     }
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits && (phoneDigits.length < 7 || phoneDigits.length > 15)) {
+      Alert.alert('Validation Error', 'Please enter a valid phone number (7 to 15 digits).');
+      return;
+    }
+    if (dob) {
+      const dobDate = new Date(`${dob}T00:00:00`);
+      if (Number.isNaN(dobDate.getTime()) || dobDate.getTime() > Date.now()) {
+        Alert.alert('Validation Error', 'Please select a valid birthday.');
+        return;
+      }
+    }
     setSavingProfile(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -132,6 +167,10 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
         // (unset) value is never written over a real one by accident.
         if (yearLevel !== savedYear) patch.year_level = yearLevel;
         if (livingSituation !== savedLiving) patch.living_situation = livingSituation;
+        // Phone is compared digit-for-digit, so a stored "0969 346 4427" and a
+        // typed "09693464427" count as the same number (no pointless rewrite).
+        if (phoneDigits !== savedPhone.replace(/\D/g, '')) patch.phone = phoneDigits || null;
+        if (dob !== savedDob) patch.birth_date = dob || null;
 
         const { error } = await supabase
           .from('profiles')
@@ -141,6 +180,8 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 
         setSavedYear(yearLevel);
         setSavedLiving(livingSituation);
+        setSavedPhone(phoneDigits);
+        setSavedDob(dob);
       }
       showToast('Profile information updated successfully!');
       onProfileUpdated?.();
@@ -304,6 +345,34 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                   placeholderTextColor={Colors.textHint}
                 />
                 <Text style={styles.fieldNote}>Email address is managed by student authentication.</Text>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Mobile Number</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={(text) => { phoneTouched.current = true; setPhone(text); }}
+                  placeholder="09XX XXX XXXX"
+                  placeholderTextColor={Colors.textHint}
+                  keyboardType="phone-pad"
+                  maxLength={20}
+                />
+                <Text style={styles.fieldNote}>
+                  The number you gave at registration — your doctor sees it on your case record.
+                </Text>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Birthday</Text>
+                <CalendarDatePicker
+                  value={dob}
+                  onChange={(iso) => { dobTouched.current = true; setDob(iso); }}
+                  placeholder="Select your birth date"
+                />
+                <Text style={styles.fieldNote}>
+                  Used to show your age to your doctor. Set at registration.
+                </Text>
               </View>
 
               <View style={styles.fieldGroup}>
