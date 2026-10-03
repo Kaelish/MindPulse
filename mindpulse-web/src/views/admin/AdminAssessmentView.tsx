@@ -523,7 +523,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                       <span className="question-box-index">Q{index + 1}</span>
                       <label
                         className="question-box-reverse"
-                        title="Negatively worded item (PSS-style): the score is inverted (max − answer) when scoring."
+                        title="Positively worded item (PSS-style): the score is inverted (max − answer) when scoring."
                       >
                         <input
                           type="checkbox"
@@ -575,7 +575,8 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               </button>
               <small>
                 Students answer on a 0–4 scale (Never → Very Often) unless the question defines its own
-                options. Tick “Reverse-scored” for negatively worded items so they score correctly.
+                options. Tick “Reverse-scored” for positively worded items (e.g. “felt confident”) so they
+                score correctly.
                 Changes go live for students once you save.
               </small>
             </div>
