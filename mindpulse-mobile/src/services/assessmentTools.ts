@@ -43,12 +43,22 @@ interface ToolRow {
   questions: AssessmentToolQuestion[];
 }
 
+export interface ActiveAssessmentTools {
+  tools: AssessmentTool[];
+  /**
+   * True when the query itself failed (offline / RLS). The hub uses this to
+   * show a retry note instead of silently hiding the section — otherwise a
+   * failed fetch is indistinguishable from "the admin published no tools".
+   */
+  failed: boolean;
+}
+
 /**
  * Active assessments published by the administrator (admin portal →
- * Assessment Tools). Never throws: an offline / RLS failure just means the
- * hub shows no remote cards instead of breaking the assessment flow.
+ * Assessment Tools). Never throws: an offline / RLS failure yields
+ * `{ tools: [], failed: true }` instead of breaking the assessment flow.
  */
-export const fetchActiveAssessmentTools = async (): Promise<AssessmentTool[]> => {
+export const fetchActiveAssessmentTools = async (): Promise<ActiveAssessmentTools> => {
   try {
     const { data, error } = await supabase
       .from('assessment_tools')
@@ -56,18 +66,21 @@ export const fetchActiveAssessmentTools = async (): Promise<AssessmentTool[]> =>
       .eq('status', 'active')
       .order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
-    return ((data ?? []) as ToolRow[]).map((row) => ({
-      id: String(row.id),
-      title: row.title,
-      description: row.description ?? '',
-      category: row.category ?? 'Supplementary',
-      status: row.status ?? 'active',
-      durationMinutes: Number(row.duration_minutes) || 10,
-      questions: Array.isArray(row.questions) ? row.questions : [],
-    }));
+    return {
+      tools: ((data ?? []) as ToolRow[]).map((row) => ({
+        id: String(row.id),
+        title: row.title,
+        description: row.description ?? '',
+        category: row.category ?? 'Supplementary',
+        status: row.status ?? 'active',
+        durationMinutes: Number(row.duration_minutes) || 10,
+        questions: Array.isArray(row.questions) ? row.questions : [],
+      })),
+      failed: false,
+    };
   } catch (error) {
     console.warn('Could not load assessment tools', error);
-    return [];
+    return { tools: [], failed: true };
   }
 };
 

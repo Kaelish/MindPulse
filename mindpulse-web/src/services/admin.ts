@@ -446,7 +446,18 @@ export interface AdminResultRow {
   emotion: string | null;
   faceConfidence: number | null;
   createdAt: string;
+  /** Tool title stored in survey_answers.jsonb; null on sessions saved before per-item answers existed. */
+  toolTitle: string | null;
 }
+
+/**
+ * Display name of the assessment that produced a session. Sessions predating
+ * stored answers are all built-in multi-modal PSS-10 check-ins (that flow was
+ * the only one that saved without answers), so they fall back accordingly.
+ * Accepts any row shape carrying the parsed tool title.
+ */
+export const assessmentNameOf = (row: { toolTitle: string | null }): string =>
+  row.toolTitle ?? 'PSS-10 (multi-modal)';
 
 export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
   if (!supabase) throw notConfigured();
@@ -462,9 +473,10 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
     emotion: string | null;
     face_confidence: number | null;
     created_at: string;
+    survey_answers: { toolTitle?: unknown } | null;
   }>(
     'stress_sessions',
-    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at',
+    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at, survey_answers',
   );
   if (!rows.length) return [];
 
@@ -497,6 +509,7 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
       emotion: row.emotion,
       faceConfidence: row.face_confidence,
       createdAt: row.created_at,
+      toolTitle: typeof row.survey_answers?.toolTitle === 'string' ? row.survey_answers.toolTitle : null,
     };
   });
 };

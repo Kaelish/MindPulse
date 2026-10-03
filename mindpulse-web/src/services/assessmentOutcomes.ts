@@ -5,7 +5,7 @@ import { AdminResultRow, fetchAdminResults } from './admin';
  * sessions (stress_sessions). Component scores are derived per session and
  * averaged; the formulas mirror the mobile app's fusion weights:
  *
- *   Survey (PSS-10)  survey_score / 2            → 0–50  (survey_score is 0–100)
+ *   Survey Score     survey_score / 2            → 0–50  (survey_score is 0–100)
  *   Heart Rate       (bpm − 55) / 45 clamped ×20 → 0–20  (55 bpm → 0, 100+ → 20)
  *   Facial Analysis  emotion stress map ×20      → 0–20  (angry 1.0 … calm 0.1)
  *   Reaction Time    rt_ms / 2000 clamped ×10    → 0–10  (slower → higher stress)
@@ -91,7 +91,7 @@ export const fetchAssessmentOutcomes = async (): Promise<AssessmentOutcomes> => 
     avgOverall: avgOverall == null ? null : Math.round(avgOverall * 10) / 10,
     thisWeek: rows.filter((row) => new Date(row.createdAt) >= weekStart).length,
     components: [
-      averageOf(rows, surveyComponentOf, 'survey', 'Survey (PSS-10)', 50),
+      averageOf(rows, surveyComponentOf, 'survey', 'Survey Score', 50),
       averageOf(rows, heartRateComponentOf, 'heartRate', 'Heart Rate', 20),
       averageOf(rows, facialComponentOf, 'facial', 'Facial Analysis', 20),
       averageOf(rows, reactionComponentOf, 'reaction', 'Reaction Time', 10),

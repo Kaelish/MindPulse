@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AdminResultRow, bandForScore, fetchVisibleStressResults } from '../../services/admin';
+import { AdminResultRow, assessmentNameOf, bandForScore, fetchVisibleStressResults } from '../../services/admin';
 import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications, DoctorResultCount } from '../../components/doctor/DoctorChrome';
 
 const BAND_LABELS: Record<'low' | 'moderate' | 'high', string> = { low: 'Low', moderate: 'Moderate', high: 'High' };
@@ -115,7 +115,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const isReviewed = reviewed.includes(result.id);
           return <article className="assessment-card" key={result.id}>
             <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Student').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small></div></div>
+              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Student').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small><small>{assessmentNameOf(result)}</small></div></div>
               <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
               <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
             </div>

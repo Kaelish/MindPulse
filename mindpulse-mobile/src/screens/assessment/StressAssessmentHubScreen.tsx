@@ -13,6 +13,17 @@ import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed' | 'skipped';
 
+/**
+ * Self-contained snapshot of the built-in survey's answers — the same shape
+ * standalone tools store on stress_sessions.survey_answers (migration 0019),
+ * so the doctor's "View survey answers" works for the daily check-in too.
+ */
+export type SurveyAnswersSnapshot = {
+  toolId?: string;
+  toolTitle: string;
+  items: { id: number; text: string; reverse: boolean; value: number; label: string }[];
+};
+
 export interface AssessmentState {
   survey: AssessmentStepStatus;
   faceScan: AssessmentStepStatus;
@@ -27,6 +38,8 @@ export interface AssessmentState {
   faceScanData?: any;
   heartRateBpm?: number;
   reactionTimeMs?: number;
+  /** Raw answers from today's survey, carried to the final session save. */
+  surveyAnswersSnapshot?: SurveyAnswersSnapshot;
 }
 
 const DEFAULT_STATE: AssessmentState = {
@@ -199,6 +212,8 @@ const ToolCard = ({ tool, completedAt, onPress }: ToolCardProps) => (
 interface HubExtras {
   tools: AssessmentTool[];
   completions: Record<string, string>;
+  /** The tools query failed (offline/RLS) — show a retry instead of hiding. */
+  toolsFailed: boolean;
 }
 
 export const StressAssessmentHubScreen = ({
@@ -209,14 +224,15 @@ export const StressAssessmentHubScreen = ({
   onExit?: () => void;
 }) => {
   const [state, setState] = useState<AssessmentState | null>(null);
-  const [extras, setExtras] = useState<HubExtras>({ tools: [], completions: {} });
+  const [extras, setExtras] = useState<HubExtras>({ tools: [], completions: {}, toolsFailed: false });
+  const [toolsReloadKey, setToolsReloadKey] = useState(0);
 
   useEffect(() => {
     loadAssessmentState().then(setState);
-    Promise.all([fetchActiveAssessmentTools(), loadToolCompletions()]).then(([tools, completions]) =>
-      setExtras({ tools, completions }),
+    Promise.all([fetchActiveAssessmentTools(), loadToolCompletions()]).then(([result, completions]) =>
+      setExtras({ tools: result.tools, completions, toolsFailed: result.failed }),
     );
-  }, []);
+  }, [toolsReloadKey]);
 
   if (!state) {
     return (
@@ -278,6 +294,9 @@ export const StressAssessmentHubScreen = ({
               <Text style={styles.sectionTitle}>AVAILABLE ASSESSMENTS</Text>
               <Text style={styles.progressText}>{extras.tools.length} Tools</Text>
             </View>
+            <Text style={styles.sectionNote}>
+              Tap any assessment to take it now — each result is saved to your record.
+            </Text>
             {extras.tools.map((tool) => (
               <ToolCard
                 key={tool.id}
@@ -294,13 +313,34 @@ export const StressAssessmentHubScreen = ({
                       );
                       return;
                     }
-                    onNavigate('StressSurvey');
+                    onNavigate('StressSurvey', tool);
                     return;
                   }
                   onNavigate('ToolSurvey', tool);
                 }}
               />
             ))}
+          </View>
+        )}
+
+        {/* Failed fetch must not look like "no assessments exist" — say so. */}
+        {extras.tools.length === 0 && extras.toolsFailed && (
+          <View style={styles.stepsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>AVAILABLE ASSESSMENTS</Text>
+            </View>
+            <View style={styles.loadErrorCard}>
+              <Ionicons name="cloud-offline-outline" size={22} color={Colors.textHint} />
+              <Text style={styles.loadErrorText}>
+                Couldn’t load your assessments. Check your connection and try again.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => setToolsReloadKey((key) => key + 1)}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -312,6 +352,9 @@ export const StressAssessmentHubScreen = ({
                {dayComplete ? 'Completed today' : `${completedCount}/4 Completed`}
              </Text>
            </View>
+           <Text style={styles.sectionNote}>
+             One combined daily check-in: survey, face scan, heart rate & reaction time.
+           </Text>
           
           <StepCard
             title="Stress Survey"
@@ -323,7 +366,12 @@ export const StressAssessmentHubScreen = ({
             weight="50%"
             flag="required"
             dayComplete={dayComplete}
-            onPress={() => onNavigate('StressSurvey')}
+            onPress={() =>
+              onNavigate(
+                'StressSurvey',
+                extras.tools.find((candidate) => candidate.category === 'Multi-Modal'),
+              )
+            }
           />
           <StepCard
             title="Face Emotion Scan"
@@ -429,6 +477,24 @@ const makeStyles = () => StyleSheet.create({
   stepsSection: { gap: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   sectionTitle: { color: Colors.textHint, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  sectionNote: { color: Colors.textHint, fontSize: 12, lineHeight: 17 },
+  loadErrorCard: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  loadErrorText: { color: Colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  retryButton: {
+    backgroundColor: Colors.btnBlue,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: Radius.sm,
+  },
+  retryButtonText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
   progressText: { color: Colors.btnBlue, fontSize: 13, fontWeight: '700' },
   
   stepCard: {

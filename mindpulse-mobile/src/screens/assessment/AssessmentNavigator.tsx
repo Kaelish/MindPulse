@@ -57,7 +57,12 @@ export const AssessmentNavigator = ({ onExit, onBookSession }: { onExit?: () => 
         return (
           <StressAssessmentHubScreen
             onNavigate={(nextScreen: string, tool?: AssessmentTool) => {
-              if (nextScreen === 'StressSurvey') setScreen('survey');
+              if (nextScreen === 'StressSurvey') {
+                // The Multi-Modal tool travels with the built-in survey so its
+                // saved answers can carry the real tool id + admin-managed title.
+                setActiveTool(tool ?? null);
+                setScreen('survey');
+              }
               if (nextScreen === 'FaceScan') setScreen('faceScan');
               if (nextScreen === 'HeartRate') setScreen('heartRate');
               if (nextScreen === 'ReactionGame') setScreen('reaction');
@@ -72,6 +77,7 @@ export const AssessmentNavigator = ({ onExit, onBookSession }: { onExit?: () => 
       case 'survey':
         return (
           <StressSurveyScreen
+            tool={activeTool ?? undefined}
             onBack={() => setScreen('hub')}
           />
         );

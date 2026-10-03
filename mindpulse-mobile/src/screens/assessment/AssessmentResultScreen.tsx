@@ -105,12 +105,19 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
     if (alreadySavedToday) return;
     setIsSaving(true);
     try {
+      // Same notes shape the standalone tools use ("Completed assessment: …")
+      // so the doctor's session footer reads consistently across every flow,
+      // and the raw answers ride along so item-level review works here too.
+      const snapshot = stateData.surveyAnswersSnapshot;
+      const assessmentName = snapshot?.toolTitle ?? 'PSS-10 Stress Assessment';
       await saveNewStressSession(
         finalScore,
-        `Multi-modal assessment completed. HR: ${hrBpm ?? 'n/a'}bpm, Reaction: ${rxMs ?? 'n/a'}ms`,
+        `Completed assessment: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms`,
         hrBpm,
         surveyVal,
         rxMs,
+        undefined,
+        snapshot ?? null,
       );
 
       // Today is now spent: keep the numbers for review, close every step, and

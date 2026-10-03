@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { AdminResultRow, bandForScore, fetchAdminResults } from '../../services/admin';
+import { AdminResultRow, assessmentNameOf, bandForScore, fetchAdminResults } from '../../services/admin';
 import {
   AtRiskRecordRow,
   ConsultationRecordRow,
@@ -348,6 +348,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                         <tr>
                           <th>Student</th>
                           <th>Date</th>
+                          <th>Assessment</th>
                           <th>Score</th>
                           <th>Level</th>
                           <th>Survey</th>
@@ -367,6 +368,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                                 <small className="cell-muted">{row.id.slice(0, 8)}</small>
                               </td>
                               <td>{formatStamp(row.createdAt)}</td>
+                              <td>{assessmentNameOf(row)}</td>
                               <td>{row.score == null ? '—' : `${row.score}/100`}</td>
                               <td>
                                 <span className={levelPillClass(level)}>{level ?? '—'}</span>
@@ -700,6 +702,10 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                 <dd>{formatStamp(viewing.createdAt)}</dd>
               </div>
               <div>
+                <dt>Assessment</dt>
+                <dd>{assessmentNameOf(viewing)}</dd>
+              </div>
+              <div>
                 <dt>Score</dt>
                 <dd>{viewing.score == null ? '—' : `${viewing.score}/100`}</dd>
               </div>
@@ -838,6 +844,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                       <thead>
                         <tr>
                           <th>Date</th>
+                          <th>Assessment</th>
                           <th>Score</th>
                           <th>Level</th>
                           <th>Survey</th>
@@ -852,6 +859,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                           return (
                             <tr key={session.id}>
                               <td>{formatStamp(session.createdAt)}</td>
+                              <td>{assessmentNameOf(session)}</td>
                               <td>{session.score == null ? '—' : `${session.score}/100`}</td>
                               <td>
                                 <span className={levelPillClass(level)}>{level ?? '—'}</span>

@@ -5,6 +5,7 @@ import { Colors } from '../../theme/colors';
 import { Typography, Radius, Spacing } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { loadAssessmentState, saveAssessmentState } from '../assessment/StressAssessmentHubScreen';
+import { AssessmentTool } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 type SurveyOption = { value: number; label: string };
@@ -97,7 +98,7 @@ const part1Options = [
   { value: 4, label: 'Very Often' },
 ];
 
-export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
+export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?: AssessmentTool }) => {
   const [phase, setPhase] = useState<'part1' | 'interstitial' | 'part2'>('part1');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -135,6 +136,40 @@ export const StressSurveyScreen = ({ onBack }: { onBack: () => void }) => {
         const scaledScore = Math.round(((pssSum + part2Sum) / maxPossible) * 100);
         
         state.surveyScore = scaledScore;
+
+        // Carry every answered item with the run so the final save stores the
+        // same {toolId, toolTitle, items} snapshot the standalone tools write.
+        // All 18 items travel: the 10 PSS-10 items + the 8 physiological
+        // indicators the doctor reviewed — nothing answered is dropped.
+        const snapshotItems = [
+          ...part1Questions.map((question) => {
+            const value = answers[question.id] ?? 0;
+            const option = part1Options.find((candidate) => candidate.value === value);
+            return {
+              id: question.id,
+              text: question.text,
+              reverse: PSS_REVERSE_IDS.has(question.id),
+              value,
+              label: option?.label ?? String(value),
+            };
+          }),
+          ...part2Questions.map((question) => {
+            const value = answers[question.id] ?? 0;
+            const option = question.options?.find((candidate) => candidate.value === value);
+            return {
+              id: question.id,
+              text: question.text,
+              reverse: false,
+              value,
+              label: option?.label ?? String(value),
+            };
+          }),
+        ];
+        state.surveyAnswersSnapshot = {
+          ...(tool?.id ? { toolId: tool.id } : {}),
+          toolTitle: tool?.title ?? 'PSS-10 Stress Assessment',
+          items: snapshotItems,
+        };
 
         await saveAssessmentState(state);
         onBack();

@@ -16,7 +16,7 @@ import {
   updateAssessmentTool,
 } from '../../services/assessmentTools';
 import { AssessmentOutcomes, fetchAssessmentOutcomes } from '../../services/assessmentOutcomes';
-import { AdminResultRow } from '../../services/admin';
+import { AdminResultRow, assessmentNameOf } from '../../services/admin';
 import './AdminAssessmentView.css';
 
 type Mode = 'tools' | 'outcomes';
@@ -392,6 +392,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                           <tr>
                             <th>Student</th>
                             <th>Date</th>
+                            <th>Assessment</th>
                             <th>Overall Score</th>
                             <th>Level</th>
                             <th>Survey</th>
@@ -408,6 +409,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                                 <strong>{row.studentName}</strong>
                               </td>
                               <td>{formatDate(row.createdAt)}</td>
+                              <td>{assessmentNameOf(row)}</td>
                               <td>{row.score == null ? '—' : `${row.score}/100`}</td>
                               <td>
                                 <span className={levelPill(row.stressLevel)}>{row.stressLevel ?? '—'}</span>
@@ -629,6 +631,10 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               <div>
                 <dt>Date</dt>
                 <dd>{formatDate(viewing.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>Assessment</dt>
+                <dd>{assessmentNameOf(viewing)}</dd>
               </div>
               <div>
                 <dt>Overall Score</dt>

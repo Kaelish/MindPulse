@@ -236,6 +236,8 @@ export interface RecordSessionRow {
   surveyScore: number | null;
   reactionTimeMs: number | null;
   emotion: string | null;
+  /** Tool title from survey_answers.jsonb (null on pre-answers sessions). */
+  toolTitle: string | null;
 }
 
 export const fetchStudentRecordSessions = async (userId: string): Promise<RecordSessionRow[]> => {
@@ -243,7 +245,7 @@ export const fetchStudentRecordSessions = async (userId: string): Promise<Record
 
   const { data, error } = await supabase
     .from('stress_sessions')
-    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, survey_answers')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -258,6 +260,7 @@ export const fetchStudentRecordSessions = async (userId: string): Promise<Record
     survey_score: number | null;
     reaction_time_ms: number | null;
     emotion: string | null;
+    survey_answers: { toolTitle?: unknown } | null;
   }[]).map((row) => ({
     id: row.id,
     createdAt: row.created_at,
@@ -267,6 +270,7 @@ export const fetchStudentRecordSessions = async (userId: string): Promise<Record
     surveyScore: row.survey_score,
     reactionTimeMs: row.reaction_time_ms,
     emotion: row.emotion,
+    toolTitle: typeof row.survey_answers?.toolTitle === 'string' ? row.survey_answers.toolTitle : null,
   }));
 };
 

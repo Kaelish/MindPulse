@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client';
-import { AdminResultRow, bandForScore, fetchAdminResults, fetchAllRows } from './admin';
+import { AdminResultRow, assessmentNameOf, bandForScore, fetchAdminResults, fetchAllRows } from './admin';
 import { fetchAtRiskStudents, levelForScore } from './adminRecords';
 
 const notConfigured = () =>
@@ -236,6 +236,7 @@ const buildAssessmentSummary = async (options: ReportOptions): Promise<BuiltRepo
     headers: [
       'Date',
       'Student',
+      'Assessment',
       'Score',
       'Stress Level',
       'Survey Score',
@@ -248,6 +249,7 @@ const buildAssessmentSummary = async (options: ReportOptions): Promise<BuiltRepo
     rows: filtered.map((row) => [
       stamp(row.createdAt),
       row.studentName,
+      assessmentNameOf(row),
       row.score ?? '',
       row.stressLevel ?? '',
       row.surveyScore ?? '',
