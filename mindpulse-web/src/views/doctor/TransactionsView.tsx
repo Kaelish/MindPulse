@@ -7,6 +7,7 @@ import {
   formatTransactionAmount,
   formatTransactionDate,
 } from '../../services/transactions';
+import './TransactionsView.css';
 
 const METHOD_FILTERS = ['All Methods', 'Card', 'GCash', 'Maya'];
 const STATUS_FILTERS = ['All Statuses', 'Paid', 'Refunded'];
@@ -19,6 +20,18 @@ export const TransactionsView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState('All Methods');
   const [status, setStatus] = useState('All Statuses');
+  /** The clicked transaction — its receipt opens in a dialog. */
+  const [receiptTx, setReceiptTx] = useState<DoctorTransactionItem | null>(null);
+
+  // Back button: Esc closes the receipt dialog.
+  useEffect(() => {
+    if (!receiptTx) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setReceiptTx(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [receiptTx]);
 
   useEffect(() => {
     let active = true;
@@ -153,7 +166,20 @@ export const TransactionsView: React.FC = () => {
             PAYMENT_METHOD_LABELS[transaction.method],
             formatTransactionDate(transaction.createdAt),
           ].filter(Boolean).join(' · ');
-          return <article className="assessment-card" key={transaction.id}>
+          return <article
+            className="assessment-card is-clickable"
+            key={transaction.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`View receipt for ${transaction.reference}, ${formatTransactionAmount(transaction.amount)}`}
+            onClick={() => setReceiptTx(transaction)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setReceiptTx(transaction);
+              }
+            }}
+          >
             <div className="assessment-card-header">
               <div className="assessment-student">
                 <span className="account-avatar">
@@ -173,6 +199,7 @@ export const TransactionsView: React.FC = () => {
                 <span className={`risk-badge ${isPaid ? 'low' : 'moderate'}`}>{isPaid ? 'Paid' : 'Refunded'}</span>
               </div>
             </div>
+            <div className="receipt-hint">View receipt ›</div>
           </article>;
         })}</div>}
         {visibleTransactions.length === 0 && (transactions.length === 0
@@ -195,5 +222,89 @@ export const TransactionsView: React.FC = () => {
             />)}
       </>}
     </section>
+
+    {/* ── Receipt dialog (click a transaction) ── */}
+    {receiptTx && (
+      <div
+        className="tx-receipt-overlay"
+        role="presentation"
+        onClick={() => setReceiptTx(null)}
+      >
+        <div
+          className="tx-receipt-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Payment receipt ${receiptTx.reference}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="tx-receipt-head">
+            <button
+              type="button"
+              className="tx-receipt-back"
+              aria-label="Back to transactions"
+              onClick={() => setReceiptTx(null)}
+            >
+              ←
+            </button>
+            <h2>Payment Receipt</h2>
+            <span className={`risk-badge ${receiptTx.status === 'paid' ? 'low' : 'moderate'}`}>
+              {receiptTx.status === 'paid' ? 'Paid' : 'Refunded'}
+            </span>
+          </header>
+
+          <div className="tx-receipt-amount">
+            <span>{receiptTx.status === 'paid' ? 'AMOUNT PAID' : 'AMOUNT REFUNDED'}</span>
+            <strong>{formatTransactionAmount(receiptTx.amount)}</strong>
+          </div>
+
+          <dl className="tx-receipt-rows">
+            <div>
+              <dt>Reference No.</dt>
+              <dd>{receiptTx.reference}</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>{formatTransactionDate(receiptTx.createdAt)}</dd>
+            </div>
+            <div>
+              <dt>Received from</dt>
+              <dd>{receiptTx.patientName}</dd>
+            </div>
+            <div>
+              <dt>Service</dt>
+              <dd>Online consultation</dd>
+            </div>
+            {receiptTx.scheduledFor && (
+              <div>
+                <dt>Session</dt>
+                <dd>{receiptTx.scheduledFor}</dd>
+              </div>
+            )}
+            <div>
+              <dt>Method</dt>
+              <dd>{PAYMENT_METHOD_LABELS[receiptTx.method]}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{receiptTx.status === 'paid' ? 'Paid' : 'Refunded'}</dd>
+            </div>
+          </dl>
+
+          <footer className="tx-receipt-foot">
+            <p>MindPulse mock payment — no real charge was made.</p>
+            <p>Computer-generated receipt · keep for your records.</p>
+          </footer>
+
+          <div className="tx-receipt-actions">
+            <button type="button" className="ghost-button" onClick={() => setReceiptTx(null)}>
+              Close
+            </button>
+            <button type="button" className="ghost-button" onClick={() => window.print()}>
+              🖨 Print
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </main>;
 };

@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ConsultationSummaryCard } from '../../components/ConsultationSummaryCard';
+import { PaymentReceipt, PaymentReceiptData } from '../../components/PaymentReceipt';
 import { Colors } from '../../theme/colors';
 import { Spacing } from '../../theme/typography';
 import {
@@ -372,6 +373,8 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [payDone, setPayDone] = useState<MyBooking | null>(null);
+  /** Receipt shown in the payment modal once the payment succeeds. */
+  const [payReceipt, setPayReceipt] = useState<PaymentReceiptData | null>(null);
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -398,6 +401,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     setPayMethod(null);
     setPayError(null);
     setPayDone(null);
+    setPayReceipt(null);
   };
 
   const closePayment = () => {
@@ -406,6 +410,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     setPayMethod(null);
     setPayError(null);
     setPayDone(null);
+    setPayReceipt(null);
   };
 
   const handlePay = async () => {
@@ -423,8 +428,17 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     try {
       // Mock gateway processing time.
       await new Promise((resolve) => setTimeout(resolve, 1200));
-      await payForAppointment(payTarget, payMethod);
+      const result = await payForAppointment(payTarget, payMethod);
       setPayDone(payTarget);
+      setPayReceipt({
+        reference: result.reference,
+        createdAt: new Date().toISOString(),
+        amount: payTarget.fee,
+        method: payMethod,
+        status: 'paid',
+        payeeName: payTarget.doctorName,
+        scheduledFor: payTarget.scheduledFor,
+      });
       void loadBookings(false);
       void fetchBookedSlotKeysQuietly();
     } catch (e: any) {
@@ -1293,45 +1307,47 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
       </Modal>
 
       {/* ── Payment Modal (mock online payment) ── */}
-      <Modal visible={payTarget !== null} transparent animationType="slide">
+      <Modal
+        visible={payTarget !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={closePayment}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>
-                  {payDone ? 'Payment Successful' : 'Pay Consultation Fee'}
-                </Text>
-                <Text style={styles.modalSubtitle}>
-                  {payTarget
-                    ? `${payTarget.doctorName} · ${payTarget.scheduledFor}`
-                    : ''}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={closePayment}>
-                <Ionicons name="close" size={22} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {payDone ? (
-              <View style={{ alignItems: 'center', paddingBottom: 12 }}>
-                <View style={[styles.successIcon, { marginBottom: 14 }]}>
-                  <Ionicons name="checkmark" size={34} color={tone('#FFF')} />
+            {!payDone && (
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Pay Consultation Fee</Text>
+                  <Text style={styles.modalSubtitle}>
+                    {payTarget
+                      ? `${payTarget.doctorName} · ${payTarget.scheduledFor}`
+                      : ''}
+                  </Text>
                 </View>
-                <Text style={styles.payAmount}>₱{payDone.fee} paid</Text>
-                <Text style={styles.waitNote}>
-                  Your appointment is confirmed. Wait for the doctor to call or the
-                  scheduled consultation.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPayTarget(null);
-                    setPayDone(null);
-                  }}
-                  style={{ marginTop: 18 }}
-                >
-                  <Text style={styles.successDismiss}>Done</Text>
+                <TouchableOpacity onPress={closePayment}>
+                  <Ionicons name="close" size={22} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
+            )}
+
+            {payDone ? (
+              /* Payment done → the receipt pops up (with a back button). */
+              <PaymentReceipt
+                receipt={
+                  payReceipt ?? {
+                    reference: '—',
+                    createdAt: new Date().toISOString(),
+                    amount: payDone.fee,
+                    method: payMethod ?? 'card',
+                    status: 'paid',
+                    payeeName: payDone.doctorName,
+                    scheduledFor: payDone.scheduledFor,
+                  }
+                }
+                showSuccessBanner
+                onBack={closePayment}
+              />
             ) : (
               <>
                 <View style={styles.feeRow}>

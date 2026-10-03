@@ -625,23 +625,31 @@ export const fetchVideoRoom = async (appointmentId: string, doctorId: string): P
  * confirmed (a DB guard requires the payment row to exist first), notifies the
  * doctor, and returns the shared video room URL.
  */
+export interface PayResult {
+  /** Shared Jitsi room for the confirmed appointment. */
+  roomUrl: string;
+  /** Payment reference shown on the receipt (MP-…). */
+  reference: string;
+}
+
 export const payForAppointment = async (
   booking: MyBooking,
   method: PaymentMethod,
-): Promise<string> => {
+): Promise<PayResult> => {
   const user = await requireUser();
+  let reference = '';
 
   // Idempotency: a retry after a half-failed attempt must not double-charge.
   const { data: prior, error: priorError } = await supabase
     .from('payments')
-    .select('id')
+    .select('id, reference')
     .eq('appointment_id', booking.id)
     .eq('status', 'paid')
     .limit(1);
   if (priorError) throw new Error(priorError.message);
 
   if (!prior || prior.length === 0) {
-    const reference = `MP-${Date.now().toString(36).toUpperCase()}-${Math.random()
+    reference = `MP-${Date.now().toString(36).toUpperCase()}-${Math.random()
       .toString(36)
       .slice(2, 6)
       .toUpperCase()}`;
@@ -659,6 +667,10 @@ export const payForAppointment = async (
     if (payError || !payment) {
       throw new Error(payError?.message || 'The payment could not be processed. Please try again.');
     }
+  } else {
+    // Already recorded (retry path) — reuse the original reference so the
+    // receipt always matches the row in `payments`.
+    reference = (prior[0] as { reference: string }).reference ?? '';
   }
 
   const { error: confirmError } = await supabase
@@ -678,7 +690,7 @@ export const payForAppointment = async (
   });
   void noticeError;
 
-  return fetchVideoRoom(booking.id, booking.doctorId);
+  return { roomUrl: await fetchVideoRoom(booking.id, booking.doctorId), reference };
 };
 
 // ─── Realtime refreshes ──────────────────────────────────────────────────────

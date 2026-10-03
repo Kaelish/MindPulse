@@ -1,0 +1,217 @@
+/* Transactions page — clickable cards + payment receipt dialog (with print). */
+
+.assessment-card.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.assessment-card.is-clickable:hover,
+.assessment-card.is-clickable:focus-visible {
+  border-color: #0e7f96;
+  box-shadow: 0 6px 16px rgba(14, 127, 150, 0.12);
+  outline: none;
+}
+
+.receipt-hint {
+  margin-top: 8px;
+  color: #0e7f96;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+/* ── Receipt dialog ── */
+.tx-receipt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.tx-receipt-sheet {
+  width: min(430px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.tx-receipt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.tx-receipt-head h2 {
+  flex: 1;
+  margin: 0;
+  color: #182033;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.tx-receipt-back {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #dfe5ec;
+  border-radius: 10px;
+  background: #fff;
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tx-receipt-back:hover {
+  border-color: #0e7f96;
+  color: #0e7f96;
+}
+
+.tx-receipt-amount {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.tx-receipt-amount span {
+  color: #94a3b8;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.tx-receipt-amount strong {
+  color: #182033;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.tx-receipt-rows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 4px 14px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #fafbfd;
+}
+
+.tx-receipt-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.tx-receipt-rows > div:last-child {
+  border-bottom: 0;
+}
+
+.tx-receipt-rows dt {
+  color: #64748b;
+  font-size: 0.74rem;
+}
+
+.tx-receipt-rows dd {
+  margin: 0;
+  color: #182033;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.tx-receipt-foot {
+  display: grid;
+  gap: 3px;
+  text-align: center;
+}
+
+.tx-receipt-foot p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.66rem;
+}
+
+.tx-receipt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Dark theme (Settings → General → Dark Mode) ── */
+html[data-theme='dark'] .tx-receipt-sheet {
+  background: #141d31;
+  border: 1px solid #26314a;
+}
+
+html[data-theme='dark'] .tx-receipt-head {
+  border-bottom-color: #26314a;
+}
+
+html[data-theme='dark'] .tx-receipt-head h2,
+html[data-theme='dark'] .tx-receipt-amount strong,
+html[data-theme='dark'] .tx-receipt-rows dd {
+  color: #e7ebf3;
+}
+
+html[data-theme='dark'] .tx-receipt-back {
+  background: #0f1729;
+  border-color: #26314a;
+  color: #e7ebf3;
+}
+
+html[data-theme='dark'] .tx-receipt-rows {
+  background: #0f1729;
+  border-color: #26314a;
+}
+
+html[data-theme='dark'] .tx-receipt-rows > div {
+  border-bottom-color: #26314a;
+}
+
+html[data-theme='dark'] .tx-receipt-rows dt,
+html[data-theme='dark'] .tx-receipt-foot p {
+  color: #96a2b8;
+}
+
+/* ── Print: only the receipt ── */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .tx-receipt-sheet,
+  .tx-receipt-sheet * {
+    visibility: visible !important;
+  }
+
+  .tx-receipt-overlay {
+    position: static;
+    padding: 0;
+    background: none;
+  }
+
+  .tx-receipt-sheet {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .tx-receipt-actions,
+  .tx-receipt-back {
+    display: none !important;
+  }
+}

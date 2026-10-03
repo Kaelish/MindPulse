@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { TransactionItem, fetchMyTransactions, formatTransactionDate } from '../../services/transactions';
+import { PaymentReceipt } from '../../components/PaymentReceipt';
 
 const METHOD_LABELS: Record<string, string> = {
   card: 'Card',
@@ -18,6 +19,8 @@ export const TransactionsSection: React.FC = () => {
   const [rows, setRows] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** The tapped transaction — its receipt pops up in a modal. */
+  const [receiptRow, setReceiptRow] = useState<TransactionItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,7 +93,14 @@ export const TransactionsSection: React.FC = () => {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Transaction history</Text>
         {rows.map((row) => (
-          <View key={row.id} style={styles.row}>
+          <TouchableOpacity
+            key={row.id}
+            style={styles.row}
+            onPress={() => setReceiptRow(row)}
+            accessibilityRole="button"
+            accessibilityLabel={`View receipt for ${row.doctorName}, ${formatAmount(row.amount)}`}
+            activeOpacity={0.65}
+          >
             <View style={styles.rowIcon}>
               <Ionicons name="wallet-outline" size={16} color={tone('#5B6EF5')} />
             </View>
@@ -122,9 +132,37 @@ export const TransactionsSection: React.FC = () => {
                 </Text>
               </View>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
+          </TouchableOpacity>
         ))}
       </View>
+
+      {/* ── Receipt popup (tap a transaction) ── */}
+      <Modal
+        visible={receiptRow !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReceiptRow(null)}
+      >
+        <View style={styles.receiptOverlay}>
+          <View style={styles.receiptCard}>
+            {receiptRow && (
+              <PaymentReceipt
+                receipt={{
+                  reference: receiptRow.reference,
+                  createdAt: receiptRow.createdAt,
+                  amount: receiptRow.amount,
+                  method: receiptRow.method,
+                  status: receiptRow.status,
+                  payeeName: receiptRow.doctorName,
+                  scheduledFor: receiptRow.scheduledFor,
+                }}
+                onBack={() => setReceiptRow(null)}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -165,6 +203,16 @@ const makeStyles = () => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
   },
+
+  /* Receipt popup */
+  receiptOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  receiptCard: { width: '100%', maxWidth: 420 },
   rowIcon: {
     width: 36,
     height: 36,
