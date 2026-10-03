@@ -166,13 +166,18 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         </View>
 
         {/* ── Verified help in-app ── */}
-        <View style={styles.clinicCard}>
+        <TouchableOpacity
+          style={styles.clinicCard}
+          onPress={() => onNavigateTab?.('clinics')}
+          disabled={!onNavigateTab}
+          activeOpacity={0.75}
+        >
           <View style={styles.clinicHeaderRow}>
             <Ionicons name="people" size={16} color={tone('#E05C5C')} />
             <Text style={styles.clinicCardTitle}>Verified telehealth professionals</Text>
           </View>
-          <Text style={styles.clinicCardSub}>Open the Clinics tab to browse real clinicians and book a session.</Text>
-        </View>
+          <Text style={styles.clinicCardSub}>Tap to open the Clinics tab and browse real clinicians to book a session.</Text>
+        </TouchableOpacity>
 
         {/* ── Emergency Hotlines ── */}
         <View style={styles.card}>

@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { requireUser } from './session';
 import { loadNotificationPrefs } from './notificationPrefs';
+import { fetchAvatarUrls } from './avatars';
 import {
   ChatAttachment,
   ChatMessageBase,
@@ -19,6 +20,8 @@ export interface TelehealthClinician {
   name: string;
   specialty: string;
   avatar: string;
+  /** Profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   verified: boolean;
   bio: string;
   tags: string[];
@@ -57,6 +60,8 @@ export interface MyBooking {
   doctorId: string;
   doctorName: string;
   specialty: string;
+  /** Doctor's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   scheduledFor: string; // "Aug 31, 2026 at 3:30 PM"
   status: AppointmentState;
   declineReason?: string;
@@ -184,7 +189,7 @@ export const isDateUnavailable = (
   return blockedDates.includes(toIsoDate(date));
 };
 
-const toClinician = (row: any): TelehealthClinician => {
+const toClinician = (row: any, avatarUrl: string | null = null): TelehealthClinician => {
   const embedded = Array.isArray(row.doctor_profiles) ? row.doctor_profiles[0] : row.doctor_profiles;
   const baseName =
     `${row.full_name || ''}`.trim() ||
@@ -203,6 +208,7 @@ const toClinician = (row: any): TelehealthClinician => {
     name: displayName,
     specialty: embedded?.specialization || 'Mental Health Professional',
     avatar,
+    avatarUrl,
     verified: Boolean(embedded?.is_verified),
     bio: embedded?.bio || 'No bio provided yet.',
     tags: Array.isArray(embedded?.tags) ? embedded.tags : [],
@@ -225,6 +231,8 @@ export interface PanelDoctor {
   name: string;
   specialty: string;
   contactNumber: string;
+  /** Profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
 }
 
 /**
@@ -262,9 +270,13 @@ export const fetchDoctorPanel = async (limit = 4): Promise<PanelDoctor[]> => {
       name: /^dr\.?\s/i.test(baseName) ? baseName : `Dr. ${baseName}`,
       specialty: embedded.specialization || 'Mental Health Professional',
       contactNumber: (embedded.contact_number || '').trim(),
+      avatarUrl: null,
     });
     if (panel.length >= limit) break;
   }
+
+  const avatars = await fetchAvatarUrls(panel.map((doc) => doc.id));
+  for (const doc of panel) doc.avatarUrl = avatars.get(doc.id) ?? null;
   return panel;
 };
 
@@ -278,7 +290,9 @@ export const fetchClinicians = async (): Promise<TelehealthClinician[]> => {
   if (error) {
     throw new Error(error.message);
   }
-  return (data ?? []).map(toClinician);
+  const rows = (data ?? []) as any[];
+  const avatars = await fetchAvatarUrls(rows.map((row) => String(row.id)));
+  return rows.map((row) => toClinician(row, avatars.get(String(row.id)) ?? null));
 };
 
 export const fetchClinicianById = async (id: string): Promise<TelehealthClinician | null> => {
@@ -291,7 +305,9 @@ export const fetchClinicianById = async (id: string): Promise<TelehealthClinicia
   if (error) {
     throw new Error(error.message);
   }
-  return data ? toClinician(data) : null;
+  if (!data) return null;
+  const avatars = await fetchAvatarUrls([id]);
+  return toClinician(data, avatars.get(id) ?? null);
 };
 
 // The Messages tab talks to the doctor of the patient's most recent appointment.
@@ -487,8 +503,10 @@ export const fetchPatientConversations = async (): Promise<PatientConversation[]
     .in('id', [...clinicianIds]);
   if (profilesError) throw new Error(profilesError.message);
 
+  const clinicianRows = (profiles ?? []) as any[];
+  const avatars = await fetchAvatarUrls(clinicianRows.map((row) => String(row.id)));
   const cliniciansById = new Map(
-    ((profiles ?? []) as any[]).map((row) => [String(row.id), toClinician(row)]),
+    clinicianRows.map((row) => [String(row.id), toClinician(row, avatars.get(String(row.id)) ?? null)]),
   );
 
   return [...clinicianIds]
@@ -541,6 +559,7 @@ export const fetchMyBookings = async (): Promise<MyBooking[]> => {
   }
   const doctorById = new Map<string, any>();
   (doctors ?? []).forEach((doc) => doctorById.set(String(doc.id), doc));
+  const avatars = await fetchAvatarUrls(doctorIds);
 
   return rows.map((row) => {
     const doc = doctorById.get(String(row.doctor_id));
@@ -550,6 +569,7 @@ export const fetchMyBookings = async (): Promise<MyBooking[]> => {
       doctorId: String(row.doctor_id),
       doctorName: clinician?.name ?? 'Clinician',
       specialty: clinician?.specialty ?? 'Mental Health Professional',
+      avatarUrl: avatars.get(String(row.doctor_id)) ?? null,
       scheduledFor: String(row.scheduled_for || ''),
       status: (row.status ?? 'scheduled') as AppointmentState,
       declineReason: row.decline_reason ?? undefined,

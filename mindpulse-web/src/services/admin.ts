@@ -32,13 +32,45 @@ interface SessionRow {
   created_at: string;
 }
 
-/** Newest session per user (query must be ordered created_at desc). */
-const latestSessionsByUser = <T extends { user_id: string }>(rows: T[]): Map<string, T> => {
+/** Newest session per user — order-independent: keeps the row with the newest `created_at`. */
+const latestSessionsByUser = <T extends { user_id: string; created_at: string }>(rows: T[]): Map<string, T> => {
   const latest = new Map<string, T>();
   for (const row of rows) {
-    if (!latest.has(row.user_id)) latest.set(row.user_id, row);
+    const current = latest.get(row.user_id);
+    if (!current || new Date(row.created_at).getTime() > new Date(current.created_at).getTime()) {
+      latest.set(row.user_id, row);
+    }
   }
   return latest;
+};
+
+/**
+ * Fetches every row of a table — PostgREST caps a single response at 1000
+ * rows, so large tables are paged with `.range()` (newest first, `id` as a
+ * stable tiebreaker so pages never overlap or skip).
+ */
+const PAGE_SIZE = 1000;
+
+export const fetchAllRows = async <T>(
+  table: 'stress_sessions' | 'appointments',
+  columns: string,
+  filter?: { column: string; values: string[] },
+): Promise<T[]> => {
+  if (!supabase) throw notConfigured();
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = supabase.from(table).select(columns);
+    if (filter) query = query.in(filter.column, filter.values);
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as unknown as T[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return rows;
 };
 
 export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
@@ -50,12 +82,7 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, created_at')
-    .order('created_at', { ascending: false });
-  if (sessionsError) throw new Error(sessionsError.message);
-  const sessionRows = (sessions ?? []) as SessionRow[];
+  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at');
 
   const { count: appointmentCount, error: appointmentsError } = await supabase
     .from('appointments')
@@ -141,15 +168,10 @@ const startOfUtcWeek = (value: Date | string) => {
 export const fetchAdminDashboardCharts = async (): Promise<AdminDashboardCharts> => {
   if (!supabase) throw notConfigured();
 
-  const [appointmentsResult, sessionsResult] = await Promise.all([
-    supabase.from('appointments').select('created_at, status'),
-    supabase.from('stress_sessions').select('created_at'),
+  const [appointmentRows, sessionRows] = await Promise.all([
+    fetchAllRows<{ created_at: string; status: string | null }>('appointments', 'created_at, status'),
+    fetchAllRows<{ created_at: string }>('stress_sessions', 'created_at'),
   ]);
-  if (appointmentsResult.error) throw appointmentsResult.error;
-  if (sessionsResult.error) throw sessionsResult.error;
-
-  const appointmentRows = (appointmentsResult.data ?? []) as { created_at: string; status: string | null }[];
-  const sessionRows = (sessionsResult.data ?? []) as { created_at: string }[];
 
   const counts = new Map<string, number>();
   appointmentRows.forEach((row) => {
@@ -239,29 +261,26 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
 
   const ids = rows.map((row) => row.id);
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, stress_level, created_at')
-    .in('user_id', ids)
-    .order('created_at', { ascending: false });
-  if (sessionsError) throw new Error(sessionsError.message);
-  const latest = latestSessionsByUser(
-    (sessions ?? []) as { user_id: string; score: number | null; stress_level: string | null; created_at: string }[],
+  const sessionRows = await fetchAllRows<{ user_id: string; score: number | null; stress_level: string | null; created_at: string }>(
+    'stress_sessions',
+    'user_id, score, stress_level, created_at',
+    { column: 'user_id', values: ids },
   );
+  const latest = latestSessionsByUser(sessionRows);
 
   const sessionCounts = new Map<string, number>();
-  for (const row of (sessions ?? []) as SessionRow[]) {
+  for (const row of sessionRows as SessionRow[]) {
     sessionCounts.set(row.user_id, (sessionCounts.get(row.user_id) ?? 0) + 1);
   }
 
   const appointmentCounts = new Map<string, number>();
   if (role === 'doctor') {
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('doctor_id')
-      .in('doctor_id', ids);
-    if (appointmentsError) throw new Error(appointmentsError.message);
-    for (const row of (appointments ?? []) as { doctor_id: string }[]) {
+    const appointmentRows = await fetchAllRows<{ doctor_id: string }>(
+      'appointments',
+      'doctor_id',
+      { column: 'doctor_id', values: ids },
+    );
+    for (const row of appointmentRows) {
       appointmentCounts.set(row.doctor_id, (appointmentCounts.get(row.doctor_id) ?? 0) + 1);
     }
   }
@@ -361,14 +380,7 @@ export interface AdminResultRow {
 export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
   if (!supabase) throw notConfigured();
 
-  const { data: sessions, error } = await supabase
-    .from('stress_sessions')
-    .select(
-      'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at',
-    )
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  const rows = (sessions ?? []) as {
+  const rows = await fetchAllRows<{
     id: string;
     user_id: string;
     score: number | null;
@@ -379,7 +391,10 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
     emotion: string | null;
     face_confidence: number | null;
     created_at: string;
-  }[];
+  }>(
+    'stress_sessions',
+    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at',
+  );
   if (!rows.length) return [];
 
   const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
@@ -441,7 +456,13 @@ export interface AdminAnalytics {
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export const fetchAdminAnalytics = async (months = 6): Promise<AdminAnalytics> => {
+/**
+ * `months = 0` → All Time (default). Any other value filters **every** metric
+ * (totals, average, bands, assessed students, engagement) to those calendar
+ * months ending this month, so the page stays consistent with the dashboard
+ * when left on All Time.
+ */
+export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> => {
   if (!supabase) throw notConfigured();
 
   const { data: profiles, error: profilesError } = await supabase
@@ -450,38 +471,71 @@ export const fetchAdminAnalytics = async (months = 6): Promise<AdminAnalytics> =
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, created_at')
-    .order('created_at', { ascending: true });
-  if (sessionsError) throw new Error(sessionsError.message);
-  const sessionRows = (sessions ?? []) as SessionRow[];
+  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at');
+
+  const now = new Date();
+  const periodStart = months > 0 ? new Date(now.getFullYear(), now.getMonth() - (months - 1), 1) : null;
+  const inPeriod = periodStart
+    ? sessionRows.filter((row) => new Date(row.created_at).getTime() >= periodStart.getTime())
+    : sessionRows;
 
   const students = profileRows.filter((row) => row.role === 'student').length;
-  const latest = latestSessionsByUser(sessionRows);
+
+  // Same definition as the dashboard's "assessed" counter: one student counts
+  // once, from their newest session in the selected period, and only when it
+  // carries a score.
+  const latest = latestSessionsByUser(inPeriod);
   let low = 0;
   let moderate = 0;
   let high = 0;
+  let assessed = 0;
   let scoreSum = 0;
   let scoreCount = 0;
   Array.from(latest.values()).forEach((session) => {
     if (session.score == null) return;
+    assessed += 1;
     const band = bandForScore(session.score);
     if (band === 'low') low += 1;
     else if (band === 'moderate') moderate += 1;
     else high += 1;
   });
-  for (const session of sessionRows) {
+  for (const session of inPeriod) {
     if (session.score == null) continue;
     scoreSum += session.score;
     scoreCount += 1;
   }
 
-  const now = new Date();
   const buckets: { year: number; month: number; label: string }[] = [];
-  for (let offset = months - 1; offset >= 0; offset -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    buckets.push({ year: date.getFullYear(), month: date.getMonth(), label: MONTH_LABELS[date.getMonth()] });
+  const bucketLabel = (year: number, month: number) =>
+    `${MONTH_LABELS[month]} '${String(year).slice(-2)}`;
+  if (months > 0) {
+    for (let offset = months - 1; offset >= 0; offset -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      buckets.push({ year: date.getFullYear(), month: date.getMonth(), label: bucketLabel(date.getFullYear(), date.getMonth()) });
+    }
+  } else {
+    // All Time: every calendar month from the first session up to this month.
+    let earliestYear = now.getFullYear();
+    let earliestMonth = now.getMonth();
+    for (const row of sessionRows) {
+      const created = new Date(row.created_at);
+      if (Number.isNaN(created.getTime())) continue;
+      if (
+        created.getFullYear() < earliestYear ||
+        (created.getFullYear() === earliestYear && created.getMonth() < earliestMonth)
+      ) {
+        earliestYear = created.getFullYear();
+        earliestMonth = created.getMonth();
+      }
+    }
+    const cursor = new Date(earliestYear, earliestMonth, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    let guard = 0;
+    while (cursor <= end && guard < 240) {
+      buckets.push({ year: cursor.getFullYear(), month: cursor.getMonth(), label: bucketLabel(cursor.getFullYear(), cursor.getMonth()) });
+      cursor.setMonth(cursor.getMonth() + 1);
+      guard += 1;
+    }
   }
 
   const monthly = buckets.map((bucket) => {
@@ -500,14 +554,14 @@ export const fetchAdminAnalytics = async (months = 6): Promise<AdminAnalytics> =
   });
 
   return {
-    totalSessions: sessionRows.length,
+    totalSessions: inPeriod.length,
     avgScore: scoreCount ? Math.round(scoreSum / scoreCount) : null,
     low,
     moderate,
     high,
     students,
-    assessedStudents: latest.size,
-    engagementPct: students ? Math.round((latest.size / students) * 100) : 0,
+    assessedStudents: assessed,
+    engagementPct: students ? Math.round((assessed / students) * 100) : 0,
     monthly,
   };
 };

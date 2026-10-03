@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { normalizeWeekdays } from './appointments';
+import { fetchAvatarUrls } from './avatars';
 import {
   ChatAttachment,
   ChatMessageBase,
@@ -23,6 +24,8 @@ export interface DoctorConsultation {
   declineReason?: string;
   notes?: string;
   avatarInitials: string;
+  /** Patient's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   patientEmail: string;
 }
 
@@ -123,6 +126,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
       student_no: string | null;
     }[]).map((profile) => [profile.id, profile]),
   );
+  const avatars = await fetchAvatarUrls(patientIds);
 
   return rows.map((row) => {
     const profile = byId.get(row.patient_id);
@@ -140,6 +144,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
       declineReason: row.decline_reason ?? undefined,
       notes: row.notes ?? undefined,
       avatarInitials: initialsOf(name),
+      avatarUrl: avatars.get(row.patient_id) ?? null,
       patientEmail: profile?.email || 'No email',
     };
   });

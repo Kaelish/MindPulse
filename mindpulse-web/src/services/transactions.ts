@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { fetchAvatarUrls } from './avatars';
 
 export type PaymentMethod = 'card' | 'gcash' | 'maya';
 export type PaymentStatus = 'paid' | 'refunded';
@@ -15,6 +16,8 @@ export interface DoctorTransactionItem {
   scheduledFor: string | null;
   appointmentStatus: string | null;
   patientName: string;
+  /** Patient's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
 }
 
 interface AppointmentEmbed {
@@ -91,6 +94,7 @@ export const fetchDoctorTransactions = async (): Promise<DoctorTransactionItem[]
   );
 
   const patientNames = new Map<string, string>();
+  const avatars = patientIds.length > 0 ? await fetchAvatarUrls(patientIds) : new Map();
   if (patientIds.length > 0) {
     const { data: patients, error: patientsError } = await supabase
       .from('profiles')
@@ -121,6 +125,7 @@ export const fetchDoctorTransactions = async (): Promise<DoctorTransactionItem[]
       scheduledFor: appointment?.scheduled_for ?? null,
       appointmentStatus: appointment?.status ?? null,
       patientName: (appointment && patientNames.get(appointment.patient_id)) || 'Patient',
+      avatarUrl: (appointment && avatars.get(appointment.patient_id)) ?? null,
     };
   });
 };

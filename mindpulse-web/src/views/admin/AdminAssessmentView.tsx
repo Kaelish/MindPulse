@@ -295,9 +295,9 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               <>
                 <div className="assessment-stat-grid">
                   <article className="assessment-stat-card">
-                    <span>Total Assessments</span>
+                    <span>Assessments This Month</span>
                     <strong>{outcomes.totalThisMonth}</strong>
-                    <small>This Month</small>
+                    <small>Since month start</small>
                   </article>
                   <article className="assessment-stat-card">
                     <span>Students Assessed</span>

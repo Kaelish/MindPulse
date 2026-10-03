@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client';
-import { AdminResultRow, bandForScore, fetchAdminResults } from './admin';
+import { AdminResultRow, bandForScore, fetchAdminResults, fetchAllRows } from './admin';
 import { fetchAtRiskStudents, levelForScore } from './adminRecords';
 
 const notConfigured = () =>
@@ -155,14 +155,13 @@ const buildStressOverview = async (options: ReportOptions): Promise<BuiltReport>
     .order('created_at', { ascending: false });
   if (profilesError) throw new Error(profilesError.message);
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, stress_level, created_at')
-    .order('created_at', { ascending: false });
-  if (sessionsError) throw new Error(sessionsError.message);
+  const sessions = await fetchAllRows<{ user_id: string; score: number | null; stress_level: string | null; created_at: string }>(
+    'stress_sessions',
+    'user_id, score, stress_level, created_at',
+  );
 
   const byStudent = new Map<string, { score: number | null; created_at: string }[]>();
-  for (const row of (sessions ?? []) as { user_id: string; score: number | null; created_at: string }[]) {
+  for (const row of sessions) {
     if (!inRange(row.created_at, options)) continue;
     const list = byStudent.get(row.user_id) ?? [];
     list.push(row);
@@ -327,13 +326,13 @@ const buildDoctorPerformance = async (options: ReportOptions): Promise<BuiltRepo
     ),
   );
 
-  const { data: appointments, error: appointmentsError } = await supabase
-    .from('appointments')
-    .select('doctor_id, patient_id, status, created_at');
-  if (appointmentsError) throw new Error(appointmentsError.message);
+  const appointments = await fetchAllRows<{ doctor_id: string; patient_id: string; status: string; created_at: string }>(
+    'appointments',
+    'doctor_id, patient_id, status, created_at',
+  );
 
   const perDoctor = new Map<string, { total: number; completed: number; patients: Set<string> }>();
-  for (const row of (appointments ?? []) as { doctor_id: string; patient_id: string; status: string; created_at: string }[]) {
+  for (const row of appointments) {
     if (!inRange(row.created_at, options)) continue;
     const bucket = perDoctor.get(row.doctor_id) ?? { total: 0, completed: 0, patients: new Set<string>() };
     bucket.total += 1;
@@ -387,11 +386,10 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const buildMonthlyTrends = async (options: ReportOptions): Promise<BuiltReport> => {
   if (!supabase) throw notConfigured();
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, created_at')
-    .order('created_at', { ascending: true });
-  if (sessionsError) throw new Error(sessionsError.message);
+  const sessions = await fetchAllRows<{ user_id: string; score: number | null; created_at: string }>(
+    'stress_sessions',
+    'user_id, score, created_at',
+  );
 
   interface Bucket {
     label: string;
@@ -406,7 +404,7 @@ const buildMonthlyTrends = async (options: ReportOptions): Promise<BuiltReport> 
   }
   const buckets = new Map<string, Bucket>();
 
-  for (const row of (sessions ?? []) as { user_id: string; score: number | null; created_at: string }[]) {
+  for (const row of sessions) {
     if (!inRange(row.created_at, options)) continue;
     if (options.filter === 'scored' && row.score == null) continue;
     const date = new Date(row.created_at);

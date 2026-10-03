@@ -205,7 +205,11 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
                     onClick={() => void openCase(item)}
                     disabled={!onViewCase || openingCase === item.userId}
                   >
-                    <span className="avatar">{item.initials}</span>
+                    <span className="avatar">
+                      {item.avatarUrl
+                        ? <img src={item.avatarUrl} alt="" className="avatar-img" />
+                        : item.initials}
+                    </span>
                     <span className="dash-case-body">
                       <span className="patient-name">{item.name}</span>
                       <span className="dash-case-meta">

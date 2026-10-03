@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -262,7 +263,9 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                   style={[styles.patientRow, index === arr.length - 1 && styles.rowLast]}
                 >
                   <View style={styles.patientAvatar}>
-                    <Text style={styles.patientAvatarText}>{patient.initials}</Text>
+                    {patient.avatarUrl
+                      ? <Image source={{ uri: patient.avatarUrl }} style={styles.patientAvatarImage} />
+                      : <Text style={styles.patientAvatarText}>{patient.initials}</Text>}
                   </View>
                   <View style={styles.patientBody}>
                     <Text style={styles.patientName} numberOfLines={1}>
@@ -473,6 +476,7 @@ const makeStyles = () => StyleSheet.create({
   },
   patientAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: toneBg('#E8ECFA'), alignItems: 'center', justifyContent: 'center' },
   patientAvatarText: { fontSize: 13, fontWeight: '800', color: tone('#5B6EF5') },
+  patientAvatarImage: { width: 38, height: 38, borderRadius: 19 },
   patientBody: { flex: 1, gap: 3 },
   patientName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   patientScore: { fontSize: 11.5, color: Colors.textSecondary },

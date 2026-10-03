@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { fetchAvatarUrls } from './avatars';
 
 export interface WebConsultationItem {
   id: string;
@@ -12,6 +13,8 @@ export interface WebConsultationItem {
   declineReason?: string;
   notes?: string;
   avatarInitials: string;
+  /** Patient's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   patientEmail: string;
 }
 
@@ -270,6 +273,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
       student_no: string | null;
     }[]).map((profile) => [profile.id, profile]),
   );
+  const avatars = await fetchAvatarUrls(patientIds);
 
   return rows.map((row) => {
     const profile = byId.get(row.patient_id);
@@ -287,6 +291,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
       declineReason: row.decline_reason ?? undefined,
       notes: row.notes ?? undefined,
       avatarInitials: initialsOf(name),
+      avatarUrl: avatars.get(row.patient_id) ?? null,
       patientEmail: profile?.email || 'No email',
     };
   });
@@ -360,6 +365,7 @@ export const saveDoctorScheduleAppointment = async (
     rawStatus: 'scheduled',
     notes: inserted.notes ?? undefined,
     avatarInitials: initialsOf(name),
+    avatarUrl: null,
     patientEmail: patient.email || booking.patientEmail,
   };
 };

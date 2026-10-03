@@ -287,18 +287,52 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
             {clinicsExpanded && (
               <View style={styles.clinicsContent}>
-                {/* Guidance placeholder — no fabricated locations or distances */}
-                <View style={styles.mapPlaceholder}>
-                  <Ionicons name="people-outline" size={32} color={tone('#D32F2F')} style={{ position: 'absolute', top: 44, alignSelf: 'center' }} />
-                </View>
+                {panelLoading && (
+                  <ActivityIndicator size="small" color={tone('#D32F2F')} style={{ marginVertical: 14 }} />
+                )}
 
-                <View style={styles.clinicItem}>
-                  <View style={styles.clinicInfo}>
-                    <Text style={styles.clinicName}>Verified telehealth professionals</Text>
-                    <Text style={styles.clinicHours}>Open the Clinics tab to browse real clinicians and book a session.</Text>
-                    <View style={styles.clinicTag}><Text style={styles.clinicTagText}>In-app directory</Text></View>
-                  </View>
-                </View>
+                {!panelLoading && panel.length === 0 && (
+                  <Text style={styles.clinicsEmpty}>
+                    No clinicians are listed right now. Open the Clinics tab to browse the directory.
+                  </Text>
+                )}
+
+                {/* Real verified clinicians — tap a row to open the Clinics tab */}
+                {!panelLoading &&
+                  panel.map((doc) => (
+                    <TouchableOpacity
+                      key={doc.id}
+                      style={styles.clinicItem}
+                      onPress={onBookSession}
+                      disabled={!onBookSession}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.doctorAvatar}>
+                        {doc.avatarUrl ? (
+                          <Image source={{ uri: doc.avatarUrl }} style={styles.doctorAvatarImage} />
+                        ) : (
+                          <Text style={styles.doctorAvatarText}>
+                            {doc.name.replace(/^Dr\.?\s+/i, '').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={[styles.clinicInfo, { marginHorizontal: 10 }]}>
+                        <Text style={styles.clinicName}>{doc.name}</Text>
+                        <Text style={styles.clinicHours} numberOfLines={1}>{doc.specialty}</Text>
+                        <View style={styles.clinicTag}>
+                          <Text style={styles.clinicTagText}>Tap to view in Clinics</Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={tone('#D32F2F')} />
+                    </TouchableOpacity>
+                  ))}
+
+                {onBookSession && (
+                  <TouchableOpacity style={styles.doctorBookBtn} onPress={onBookSession} activeOpacity={0.85}>
+                    <Text style={styles.doctorBookText}>Open Clinics to book</Text>
+                    <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -479,7 +513,7 @@ const makeStyles = () => StyleSheet.create({
   clinicsTitle: { fontSize: 14, fontWeight: '800', color: tone('#D32F2F') },
   clinicsSub: { fontSize: 11, color: tone('#D32F2F') },
   clinicsContent: { padding: 16, paddingTop: 0 },
-  mapPlaceholder: { height: 120, backgroundColor: toneBg('#FFF'), borderRadius: 12, marginBottom: 16, opacity: 0.8 },
+  clinicsEmpty: { fontSize: 12, color: tone('#8A6A6A'), marginVertical: 12, lineHeight: 18 },
   clinicItem: { backgroundColor: toneBg('#FFF'), borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   clinicInfo: { flex: 1 },
   clinicName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), marginBottom: 2 },
@@ -497,8 +531,9 @@ const makeStyles = () => StyleSheet.create({
   doctorPanelSub: { fontSize: 11, color: tone('#8A6A6A'), marginTop: 2 },
   doctorPanelEmpty: { fontSize: 12, color: tone('#8A6A6A'), marginVertical: 12, lineHeight: 18 },
   doctorRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#FFF'), borderRadius: 12, padding: 12, marginTop: 12, borderWidth: 1, borderColor: toneBg('#FBE9E7') },
-  doctorAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#FDECE6'), alignItems: 'center', justifyContent: 'center' },
+  doctorAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#FDECE6'), alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   doctorAvatarText: { fontSize: 13, fontWeight: '800', color: tone('#D32F2F') },
+  doctorAvatarImage: { width: 40, height: 40, borderRadius: 20 },
   doctorName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A') },
   doctorSpec: { fontSize: 11, color: tone('#666'), marginTop: 2 },
   doctorCallBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: toneBg('#E53935'), paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginLeft: 8 },

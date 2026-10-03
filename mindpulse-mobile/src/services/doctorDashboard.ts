@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { fetchAvatarUrls } from './avatars';
 
 export type DoctorPatientStatus = 'Stable' | 'Watch' | 'Critical' | 'Unassessed';
 
@@ -7,6 +8,8 @@ export interface DoctorPatientRow {
   id: string;
   name: string;
   initials: string;
+  /** Patient's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   score: number | null;
   status: DoctorPatientStatus;
 }
@@ -154,6 +157,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
   ).length;
 
   const patientIds = Array.from(new Set(appointmentRows.map((row) => row.patient_id)));
+  const avatars = patientIds.length ? await fetchAvatarUrls(patientIds) : new Map<string, string>();
   let profileRows: ProfileRow[] = [];
   const latestScores = new Map<string, number | null>();
 
@@ -185,6 +189,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
       id: profile.id,
       name,
       initials: initialsOf(name, profile.email || ''),
+      avatarUrl: avatars.get(profile.id) ?? null,
       score,
       status: statusForScore(score),
     };

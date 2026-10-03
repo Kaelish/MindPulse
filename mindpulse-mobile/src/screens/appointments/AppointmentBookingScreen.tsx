@@ -212,10 +212,12 @@ const SUPPORT_HOTLINES: SupportHotline[] = [
 ];
 
 // ─── Avatar circle ────────────────────────────────────────────────────────────
-const ClinicianAvatar = ({ initials }: { initials: string }) => (
+const ClinicianAvatar = ({ initials, avatarUrl }: { initials: string; avatarUrl?: string | null }) => (
   <View style={styles.avatarWrap}>
     <View style={styles.avatarCircle}>
-      <Text style={styles.avatarInitials}>{initials}</Text>
+      {avatarUrl
+        ? <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+        : <Text style={styles.avatarInitials}>{initials}</Text>}
     </View>
     <View style={[styles.avatarDot, { backgroundColor: toneBg('#27AE60') }]} />
   </View>
@@ -226,7 +228,7 @@ const ClinicianCard = ({
   clinician, onConnect,
 }: { clinician: TelehealthClinician; onConnect: () => void }) => (
   <View style={styles.clinicianCard}>
-    <ClinicianAvatar initials={clinician.avatar} />
+    <ClinicianAvatar initials={clinician.avatar} avatarUrl={clinician.avatarUrl} />
     <View style={styles.clinicianInfo}>
       <View style={styles.nameRow}>
         <Text style={styles.clinicianName}>{clinician.name}</Text>
@@ -847,7 +849,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             return (
               <View key={b.id} style={styles.bookingCard}>
                 <View style={styles.bookingTop}>
-                  <ClinicianAvatar initials={initials} />
+                  <ClinicianAvatar initials={initials} avatarUrl={b.avatarUrl} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.clinicianName}>{b.doctorName}</Text>
                     <Text style={styles.clinicianSpec}>{b.specialty}</Text>
@@ -947,7 +949,9 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   onPress={() => openConversation(row)}
                 >
                   <View style={styles.convoAvatar}>
-                    <Text style={styles.convoAvatarText}>{row.clinician?.avatar ?? 'DR'}</Text>
+                    {row.clinician?.avatarUrl
+                      ? <Image source={{ uri: row.clinician.avatarUrl }} style={styles.convoAvatarImage} />
+                      : <Text style={styles.convoAvatarText}>{row.clinician?.avatar ?? 'DR'}</Text>}
                   </View>
                   <View style={styles.convoInfo}>
                     <Text style={styles.convoName} numberOfLines={1}>
@@ -1597,6 +1601,7 @@ const makeStyles = () => StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitials: { fontSize: 16, fontWeight: '800', color: ACCENT },
+  avatarImage: { width: 48, height: 48, borderRadius: 24 },
   avatarDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: toneBg('#FFF') },
   clinicianInfo: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1629,6 +1634,7 @@ const makeStyles = () => StyleSheet.create({
   },
   convoAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: toneBg('#EAF0FB'), alignItems: 'center', justifyContent: 'center' },
   convoAvatarText: { fontSize: 14, fontWeight: '800', color: ACCENT },
+  convoAvatarImage: { width: 44, height: 44, borderRadius: 22 },
   convoInfo: { flex: 1 },
   convoName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   convoPreview: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },

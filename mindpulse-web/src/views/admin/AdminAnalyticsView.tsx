@@ -13,7 +13,7 @@ interface AdminAnalyticsViewProps {
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOut, onNavigate }) => {
-  const [months, setMonths] = useState('6');
+  const [months, setMonths] = useState('0');
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -79,7 +79,11 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
 
   const metrics = analytics
     ? [
-        { label: 'Total Assessments', value: String(analytics.totalSessions), note: 'All recorded sessions' },
+        {
+          label: 'Total Assessments',
+          value: String(analytics.totalSessions),
+          note: months === '0' ? 'All recorded sessions' : 'In selected period',
+        },
         { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : '—', note: 'Score out of 100' },
         { label: 'Assessed Students', value: `${analytics.assessedStudents} of ${analytics.students}`, note: `${analytics.students} students` },
         { label: 'Engagement', value: `${analytics.engagementPct}%`, note: `${analytics.assessedStudents} of ${analytics.students} students` },
@@ -114,6 +118,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
               {showNotifications && <NotificationPanel />}
             </div>
             <select className="analytics-select" value={months} onChange={(event) => setMonths(event.target.value)} aria-label="Analytics period">
+              <option value="0">All Time</option>
               <option value="6">Last 6 Months</option>
               <option value="12">Last 12 Months</option>
               <option value="1">This Month</option>

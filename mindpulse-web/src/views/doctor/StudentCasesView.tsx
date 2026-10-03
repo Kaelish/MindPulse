@@ -155,7 +155,11 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
                       <tr key={student.id}>
                         <td>
                           <div className="case-student">
-                            <span className="case-avatar">{student.initials}</span>
+                            <span className="case-avatar">
+                        {student.avatarUrl
+                          ? <img src={student.avatarUrl} alt="" className="avatar-img" />
+                          : student.initials}
+                      </span>
                             <strong>{student.name}</strong>
                           </div>
                         </td>

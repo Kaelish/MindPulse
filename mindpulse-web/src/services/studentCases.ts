@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { fetchAvatarUrls } from './avatars';
 
 export type StudentCaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk' | 'No Assessment';
 
@@ -8,6 +9,8 @@ export interface StudentCaseRecord {
   name: string;
   id: string;
   initials: string;
+  /** Student's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   email: string;
   phone: string;
   location: string;
@@ -75,6 +78,8 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
   const profileRows = (profiles ?? []) as ProfileRow[];
   if (!profileRows.length) return [];
 
+  const avatars = await fetchAvatarUrls(profileRows.map((profile) => profile.id));
+
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
     .select('user_id, score, created_at')
@@ -112,6 +117,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
       name,
       id: profile.student_no || profile.id.slice(0, 8).toUpperCase(),
       initials: name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
+      avatarUrl: avatars.get(profile.id) ?? null,
       email: profile.email || 'No email',
       phone: '—',
       location: '—',

@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client';
-import { bandForScore } from './admin';
+import { bandForScore, fetchAllRows } from './admin';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -96,17 +96,17 @@ const pullBundles = async (): Promise<Bundles> => {
   if (profilesError) throw new Error(profilesError.message);
   const students = (profiles ?? []) as StudentProfileRow[];
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('stress_sessions')
-    .select('user_id, score, created_at')
-    .order('created_at', { ascending: false });
-  if (sessionsError) throw new Error(sessionsError.message);
+  const sessions = await fetchAllRows<{ user_id: string; score: number | null; created_at: string }>(
+    'stress_sessions',
+    'user_id, score, created_at',
+  );
 
-  const { data: appointments, error: appointmentsError } = await supabase
-    .from('appointments')
-    .select('patient_id, doctor_id, status, created_at')
-    .order('created_at', { ascending: false });
-  if (appointmentsError) throw new Error(appointmentsError.message);
+  const appointments = await fetchAllRows<{
+    patient_id: string;
+    doctor_id: string;
+    status: string;
+    created_at: string;
+  }>('appointments', 'patient_id, doctor_id, status, created_at');
 
   const { data: doctorProfiles, error: doctorProfilesError } = await supabase.from('doctor_profiles').select('user_id');
   if (doctorProfilesError) throw new Error(doctorProfilesError.message);
@@ -132,10 +132,10 @@ const pullBundles = async (): Promise<Bundles> => {
   return {
     students,
     sessionsByUser: groupNewestFirst(
-      ((sessions ?? []) as SessionLite[]).map((row) => ({ ...row, key: row.user_id })),
+      (sessions as SessionLite[]).map((row) => ({ ...row, key: row.user_id })),
     ),
     appointmentsByPatient: groupNewestFirst(
-      ((appointments ?? []) as AppointmentLite[]).map((row) => ({ ...row, key: row.patient_id })),
+      (appointments as AppointmentLite[]).map((row) => ({ ...row, key: row.patient_id })),
     ),
     doctorNames,
   };

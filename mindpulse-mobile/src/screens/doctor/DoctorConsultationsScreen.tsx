@@ -527,7 +527,9 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
       <View key={item.id} style={styles.card}>
         <View style={styles.cardTop}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{item.avatarInitials}</Text>
+            {item.avatarUrl
+              ? <Image source={{ uri: item.avatarUrl }} style={styles.avatarImage} />
+              : <Text style={styles.avatarText}>{item.avatarInitials}</Text>}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardName} numberOfLines={1}>
@@ -847,7 +849,9 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
                 return (
                   <TouchableOpacity key={item.patientId} style={styles.patientRow} onPress={() => void openThread(item)}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{item.avatarInitials}</Text>
+                      {item.avatarUrl
+                        ? <Image source={{ uri: item.avatarUrl }} style={styles.avatarImage} />
+                        : <Text style={styles.avatarText}>{item.avatarInitials}</Text>}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardName}>{item.patientName}</Text>
@@ -1221,6 +1225,7 @@ const makeStyles = () => StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#E8ECFA'), alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 13, fontWeight: '800', color: tone('#5B6EF5') },
+  avatarImage: { width: 40, height: 40, borderRadius: 20 },
   cardName: { fontSize: 14.5, fontWeight: '800', color: Colors.textPrimary },
   cardMeta: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   statusPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.full },

@@ -922,8 +922,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                         textAlign: 'left',
                       }}
                     >
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', color: 'var(--doc-ink)', flexShrink: 0 }}>
-                        {item.avatarInitials}
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', color: 'var(--doc-ink)', flexShrink: 0, overflow: 'hidden' }}>
+                        {item.avatarUrl
+                          ? <img src={item.avatarUrl} alt="" className="avatar-img" />
+                          : item.avatarInitials}
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
@@ -978,7 +980,11 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               <>
                 <div style={{ padding: '12px 16px', background: 'var(--doc-panel)', borderBottom: '1px solid var(--doc-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{chatTarget.avatarInitials}</div>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--doc-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, overflow: 'hidden' }}>
+                      {chatTarget.avatarUrl
+                        ? <img src={chatTarget.avatarUrl} alt="" className="avatar-img" />
+                        : chatTarget.avatarInitials}
+                    </div>
                     <div>
                       <strong style={{ fontSize: '0.95rem', color: 'var(--doc-ink)' }}>{chatTarget.patientName}</strong>
                       <div style={{ fontSize: '0.75rem', color: 'var(--doc-muted)' }}>{chatTarget.patientEmail} · {chatTarget.studentId}</div>
@@ -1095,7 +1101,11 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               <div key={item.id} className="consult-item-row">
                 <div className="consult-item-main">
                   <div className="consult-item-left">
-                    <div className="consult-avatar">{item.avatarInitials}</div>
+                    <div className="consult-avatar">
+                      {item.avatarUrl
+                        ? <img src={item.avatarUrl} alt="" className="avatar-img" />
+                        : item.avatarInitials}
+                    </div>
                     <div className="consult-info">
                       <div className="consult-patient-name">{item.patientName}</div>
                       <div className="consult-student-id">{item.studentId} · {item.patientEmail}</div>

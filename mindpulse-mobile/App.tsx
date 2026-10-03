@@ -566,6 +566,7 @@ function App() {
             reaction={reactionResult}
             onBack={handleBack}
             onDone={handleFinalResultsDone}
+            onNavigateTab={handleTabNavigate}
           />
         )}
 

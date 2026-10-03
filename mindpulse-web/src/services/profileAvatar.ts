@@ -62,6 +62,19 @@ export const uploadProfileAvatar = async (file: File): Promise<string> => {
   });
   if (metadataError) throw new Error(metadataError.message);
 
+  // Mirror onto public.profiles so other users (patients / other doctors) can
+  // read it through RLS — auth metadata is only visible to its own user.
+  // Best effort: a failed mirror must not fail the upload itself.
+  try {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', userId);
+    if (profileError) console.warn('profiles.avatar_url mirror skipped:', profileError.message);
+  } catch (err) {
+    console.warn('profiles.avatar_url mirror skipped:', err);
+  }
+
   window.localStorage.setItem('mindpulse.profileAvatarUrl', avatarUrl);
   window.dispatchEvent(new CustomEvent('mindpulse:avatar-updated', { detail: { avatarUrl } }));
   return avatarUrl;

@@ -104,5 +104,18 @@ export const uploadProfilePhoto = async (photo: PickedPhoto): Promise<string> =>
   });
   if (metadataError) throw new Error(metadataError.message);
 
+  // Mirror onto public.profiles so other users (the doctor, other patients)
+  // can read it through RLS — auth metadata is only visible to its own user.
+  // Best effort: a failed mirror must not fail the upload itself.
+  try {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', userId);
+    if (profileError) console.warn('profiles.avatar_url mirror skipped:', profileError.message);
+  } catch (err) {
+    console.warn('profiles.avatar_url mirror skipped:', err);
+  }
+
   return avatarUrl;
 };

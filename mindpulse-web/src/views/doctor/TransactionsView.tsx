@@ -156,7 +156,11 @@ export const TransactionsView: React.FC = () => {
           return <article className="assessment-card" key={transaction.id}>
             <div className="assessment-card-header">
               <div className="assessment-student">
-                <span className="account-avatar">{(transaction.patientName || 'Patient').trim().charAt(0).toUpperCase()}</span>
+                <span className="account-avatar">
+                        {transaction.avatarUrl
+                          ? <img src={transaction.avatarUrl} alt="" className="avatar-img" />
+                          : (transaction.patientName || 'Patient').trim().charAt(0).toUpperCase()}
+                      </span>
                 <div>
                   <span className="scan-label">{transaction.patientName}</span>
                   <strong>{transaction.reference}</strong>

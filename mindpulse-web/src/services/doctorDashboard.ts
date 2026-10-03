@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { fetchAvatarUrls } from './avatars';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -26,6 +27,8 @@ export interface DashboardRecentCase {
   userId: string;
   name: string;
   initials: string;
+  /** Student's profile photo; null when unset (or migration 0017 not applied). */
+  avatarUrl: string | null;
   studentNo: string;
   stress: number | null;
   risk: DashboardRisk;
@@ -36,6 +39,7 @@ export interface DashboardConsultation {
   id: string;
   patientName: string;
   initials: string;
+  avatarUrl: string | null;
   status: DashboardConsultStatus;
   statusLabel: string;
   whenLabel: string;
@@ -186,6 +190,11 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   const sessions = (sessionRows ?? []) as SessionRow[];
   const appointments = (appointmentRows ?? []) as AppointmentRow[];
 
+  const avatars = await fetchAvatarUrls([
+    ...profiles.map((profile) => profile.id),
+    ...appointments.map((row) => row.patient_id),
+  ]);
+
   // Latest stress result + most recent session per student (sessions come newest first).
   const latestScore = new Map<string, number | null>();
   const latestAt = new Map<string, string>();
@@ -212,6 +221,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       userId: profile.id,
       name,
       initials: initialsOf(name, profile.email || ''),
+      avatarUrl: avatars.get(profile.id) ?? null,
       studentNo: profile.student_no || profile.id.slice(0, 8).toUpperCase(),
       stress: score,
       risk: riskForScore(score),
@@ -271,6 +281,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
         id: row.id,
         patientName: patientNames.get(row.patient_id) || 'Unknown student',
         initials: patientInitials.get(row.patient_id) || '??',
+        avatarUrl: avatars.get(row.patient_id) ?? null,
         status: row.status,
         statusLabel: statusLabel[row.status] ?? row.status,
         whenLabel: whenLabelFor(parsed, row.scheduled_for),
