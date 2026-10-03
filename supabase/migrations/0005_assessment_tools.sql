@@ -59,16 +59,16 @@ select
   'Multi-Modal (Survey + Facial + Heart Rate + Reaction Time)',
   'Multi-Modal', 'active', 15,
   '[
-    {"id": 1,  "text": "In the last month, how often have you been upset because of something that happened unexpectedly?"},
-    {"id": 2,  "text": "In the last month, how often have you felt that you were unable to control the important things in your life?"},
-    {"id": 3,  "text": "In the last month, how often have you felt nervous and stressed?"},
-    {"id": 4,  "text": "In the last month, how often have you felt confident about your ability to handle your personal problems?", "reverse": true},
-    {"id": 5,  "text": "In the last month, how often have you felt that things were going your way?", "reverse": true},
-    {"id": 6,  "text": "In the last month, how often have you found that you could not cope with all the things that you had to do?"},
-    {"id": 7,  "text": "In the last month, how often have you been able to control irritations in your life?", "reverse": true},
-    {"id": 8,  "text": "In the last month, how often have you felt that you were on top of things?", "reverse": true},
-    {"id": 9,  "text": "In the last month, how often have you been angered because of things that were outside of your control?"},
-    {"id": 10, "text": "In the last month, how often have you felt difficulties were piling up so high that you could not overcome them?"}
+    {"id": 1,  "text": "In the last 24 hours, how often have you been upset because of something that happened unexpectedly?"},
+    {"id": 2,  "text": "In the last 24 hours, how often have you felt that you were unable to control the important things in your life?"},
+    {"id": 3,  "text": "In the last 24 hours, how often have you felt nervous and stressed?"},
+    {"id": 4,  "text": "In the last 24 hours, how often have you felt confident about your ability to handle your personal problems?", "reverse": true},
+    {"id": 5,  "text": "In the last 24 hours, how often have you felt that things were going your way?", "reverse": true},
+    {"id": 6,  "text": "In the last 24 hours, how often have you found that you could not cope with all the things that you had to do?"},
+    {"id": 7,  "text": "In the last 24 hours, how often have you been able to control irritations in your life?", "reverse": true},
+    {"id": 8,  "text": "In the last 24 hours, how often have you felt that you were on top of things?", "reverse": true},
+    {"id": 9,  "text": "In the last 24 hours, how often have you been angered because of things that were outside of your control?"},
+    {"id": 10, "text": "In the last 24 hours, how often have you felt difficulties were piling up so high that you could not overcome them?"}
   ]'::jsonb
 where not exists (select 1 from public.assessment_tools where title = 'PSS-10 Stress Assessment');
 

@@ -7,11 +7,12 @@ import {
   AssessmentStatus,
   AssessmentTool,
   AssessmentToolInput,
+  AssessmentToolQuestion,
   createAssessmentTool,
   deleteAssessmentTool,
   fetchAssessmentTools,
-  linesToQuestions,
-  questionsToLines,
+  nextQuestionId,
+  sanitizeQuestions,
   updateAssessmentTool,
 } from '../../services/assessmentTools';
 import { AssessmentOutcomes, fetchAssessmentOutcomes } from '../../services/assessmentOutcomes';
@@ -33,7 +34,7 @@ interface ToolForm {
   category: AssessmentCategory;
   status: AssessmentStatus;
   durationMinutes: string;
-  questionLines: string;
+  questions: AssessmentToolQuestion[];
 }
 
 const EMPTY_FORM: ToolForm = {
@@ -42,7 +43,7 @@ const EMPTY_FORM: ToolForm = {
   category: 'Supplementary',
   status: 'active',
   durationMinutes: '5',
-  questionLines: '',
+  questions: [{ id: 1, text: '' }],
 };
 
 const COMPONENT_COLORS: Record<string, string> = {
@@ -124,7 +125,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM });
+    setForm({ ...EMPTY_FORM, questions: EMPTY_FORM.questions.map((question) => ({ ...question })) });
     setFormError('');
     setFormOpen(true);
   };
@@ -137,23 +138,54 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
       category: tool.category,
       status: tool.status,
       durationMinutes: String(tool.durationMinutes),
-      questionLines: questionsToLines(tool.questions),
+      questions: tool.questions.map((question) => ({ ...question })),
     });
     setFormError('');
     setFormOpen(true);
   };
 
+  /** Patch a single question box; every other box (and its metadata) is untouched. */
+  const updateQuestion = (id: number, patch: Partial<AssessmentToolQuestion>) =>
+    setForm((current) => ({
+      ...current,
+      questions: current.questions.map((question) =>
+        question.id === id ? { ...question, ...patch } : question,
+      ),
+    }));
+
+  const removeQuestion = (id: number) =>
+    setForm((current) => ({
+      ...current,
+      questions: current.questions.filter((question) => question.id !== id),
+    }));
+
+  const addQuestion = () =>
+    setForm((current) => ({
+      ...current,
+      questions: [...current.questions, { id: nextQuestionId(current.questions), text: '' }],
+    }));
+
+  const moveQuestion = (id: number, direction: -1 | 1) =>
+    setForm((current) => {
+      const index = current.questions.findIndex((question) => question.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.questions.length) return current;
+      const questions = [...current.questions];
+      questions[index] = current.questions[target];
+      questions[target] = current.questions[index];
+      return { ...current, questions };
+    });
+
   const saveTool = async () => {
     const duration = parseInt(form.durationMinutes, 10);
-    const previous = editingId ? tools.find((tool) => tool.id === editingId)?.questions ?? [] : [];
-    const questions = linesToQuestions(form.questionLines, previous);
+    const questions = sanitizeQuestions(form.questions);
 
     if (!form.title.trim()) {
       setFormError('Give the assessment a title.');
       return;
     }
     if (!questions.length) {
-      setFormError('Add at least one question (one per line).');
+      setFormError('Add at least one question.');
       return;
     }
     if (!Number.isFinite(duration) || duration < 1) {
@@ -471,19 +503,82 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               </label>
             </div>
 
-            <label className="assessment-field">
-              <span>Questions — one per line</span>
-              <textarea
-                rows={8}
-                value={form.questionLines}
-                onChange={(event) => setForm({ ...form, questionLines: event.target.value })}
-                placeholder={'How often have you felt nervous and stressed?'}
-              />
+            {form.category === 'Multi-Modal' && (
+              <div className="assessment-note">
+                ℹ Multi-Modal tools open the student’s daily 4-step check-in, whose survey step uses the
+                app’s built-in PSS-10 rather than these questions. Switch to Supplementary or Brief to have
+                students answer this tool’s own questions.
+              </div>
+            )}
+
+            <div className="assessment-field">
+              <span>{form.questions.length ? `Questions (${form.questions.length})` : 'Questions'}</span>
+              <div className="question-box-list">
+                {form.questions.length === 0 && (
+                  <div className="question-box-empty">No questions yet — add the first one below.</div>
+                )}
+                {form.questions.map((question, index) => (
+                  <div className="question-box" key={question.id}>
+                    <div className="question-box-head">
+                      <span className="question-box-index">Q{index + 1}</span>
+                      <label
+                        className="question-box-reverse"
+                        title="Negatively worded item (PSS-style): the score is inverted (max − answer) when scoring."
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(question.reverse)}
+                          onChange={(event) =>
+                            updateQuestion(question.id, { reverse: event.target.checked || undefined })
+                          }
+                        />
+                        Reverse-scored
+                      </label>
+                      <div className="question-box-tools">
+                        <button
+                          type="button"
+                          aria-label="Move question up"
+                          disabled={index === 0}
+                          onClick={() => moveQuestion(question.id, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move question down"
+                          disabled={index === form.questions.length - 1}
+                          onClick={() => moveQuestion(question.id, 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="question-box-remove"
+                          aria-label="Delete question"
+                          onClick={() => removeQuestion(question.id)}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={question.text}
+                      placeholder="e.g. How often have you felt nervous and stressed?"
+                      onChange={(event) => updateQuestion(question.id, { text: event.target.value })}
+                    />
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="question-add-button" onClick={addQuestion}>
+                ＋ Add question
+              </button>
               <small>
-                Answered on a 0–4 scale (Never → Very Often). Lines keep their position, so existing
-                reverse-scored items stay reverse-scored when you edit wording.
+                Students answer on a 0–4 scale (Never → Very Often) unless the question defines its own
+                options. Tick “Reverse-scored” for negatively worded items so they score correctly.
+                Changes go live for students once you save.
               </small>
-            </label>
+            </div>
 
             {formError && <div className="assessment-banner error">{formError}</div>}
 

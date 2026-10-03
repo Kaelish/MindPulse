@@ -106,27 +106,27 @@ export const deleteAssessmentTool = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-/** Questions → one text per line for the modal textarea. */
-export const questionsToLines = (questions: AssessmentToolQuestion[]): string =>
-  questions.map((question) => question.text).join('\n');
+/** Next free numeric id for a question inside one tool (ids are per-tool). */
+export const nextQuestionId = (questions: AssessmentToolQuestion[]): number =>
+  questions.reduce((max, question) => Math.max(max, Number(question.id) || 0), 0) + 1;
 
 /**
- * Textarea lines → questions. Metadata (reverse flag, custom options, pill)
- * is preserved by index so editing the wording of existing items does not
- * silently drop reverse-scored PSS-style entries.
+ * Prepare the question boxes for saving: trim wording, drop blank boxes and
+ * guarantee unique ids. Each question carries its own metadata (reverse flag,
+ * pill, custom options) on the object itself — nothing is matched by position,
+ * so deleting a middle question can never shift a reverse-scored flag onto a
+ * different question.
  */
-export const linesToQuestions = (lines: string, previous: AssessmentToolQuestion[] = []): AssessmentToolQuestion[] =>
-  lines
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((text, index) => {
-      const prior = previous[index];
-      return {
-        id: index + 1,
-        text,
-        ...(prior?.pill ? { pill: prior.pill } : {}),
-        ...(prior?.reverse ? { reverse: true } : {}),
-        ...(prior?.options ? { options: prior.options } : {}),
-      };
-    });
+export const sanitizeQuestions = (questions: AssessmentToolQuestion[]): AssessmentToolQuestion[] => {
+  const seen = new Set<number>();
+  const cleaned: AssessmentToolQuestion[] = [];
+  for (const question of questions) {
+    const text = (question.text ?? '').trim();
+    if (!text) continue;
+    let id = Number(question.id);
+    if (!Number.isFinite(id) || id < 1 || seen.has(id)) id = nextQuestionId(cleaned);
+    seen.add(id);
+    cleaned.push({ ...question, id, text });
+  }
+  return cleaned;
+};
