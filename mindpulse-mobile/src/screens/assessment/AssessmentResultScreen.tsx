@@ -17,9 +17,11 @@ import {
 } from '../../services/selfCareTips';
 import { CALM_TRACKS } from '../../services/calmAudio';
 import { exerciseById, ExerciseId, totalSeconds } from '../../services/guidedExercises';
+import { JournalId, journalTemplateById } from '../../services/journal';
 import { BoxBreathingModal } from '../../components/BoxBreathingModal';
 import { CalmMusicModal } from '../../components/CalmMusicModal';
 import { GuidedExerciseModal } from '../../components/GuidedExerciseModal';
+import { JournalModal } from '../../components/JournalModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
@@ -47,7 +49,7 @@ const LAUNCHER_COPY: Record<ResultBand, { title: string; sub: string }> = {
 };
 
 /** Fixed launcher order so the buttons never reshuffle between bands. */
-const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise'];
+const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise', 'journal'];
 
 /** Presentation for each tool. The tip bank decides *which* show up. */
 const TOOL_UI: Record<ToolAction, {
@@ -85,6 +87,15 @@ const TOOL_UI: Record<ToolAction, {
     bg: '#F3E5F5',
     cta: 'Begin',
   },
+  journal: {
+    label: 'Journal',
+    // Computed at render — which prompt this band is offering.
+    meta: 'On this device',
+    icon: 'create-outline',
+    fg: '#E65100',
+    bg: '#FFF3E0',
+    cta: 'Write',
+  },
 };
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
@@ -111,6 +122,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const [musicOpen, setMusicOpen] = useState(false);
   const [exerciseOpen, setExerciseOpen] = useState(false);
   const [exerciseId, setExerciseId] = useState<string | undefined>(undefined);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalId, setJournalId] = useState<JournalId | undefined>(undefined);
 
   // Hotlines sit *inside* the help block, so it needs its own offset too.
   const hotlinesY = useRef<number | null>(null);
@@ -204,6 +217,22 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         ? `${totalSeconds(firstExercise)}s guided`
         : 'Step-by-step';
 
+  // Which prompt does this band's journal tip open? Every band ships exactly
+  // one today; the `> 1` branch keeps the button honest if that ever changes.
+  const journalTips = toolTips.filter((t) => t.action === 'journal');
+  const firstJournalId = journalTips[0]?.journalId;
+  const firstJournal = firstJournalId ? journalTemplateById(firstJournalId) : undefined;
+  // Always the tip for the prompt actually on screen, not merely the band's first.
+  const activeJournalTip = journalTips.find((t) => t.journalId === journalId);
+  const journalMeta =
+    journalTips.length > 1 ? `${journalTips.length} prompts` : firstJournal?.meta ?? 'On this device';
+
+  /** Default id each launcher button hands to `runAction`. */
+  const defaultIdFor = (action: ToolAction): string | undefined =>
+    action === 'exercise' ? firstExercise?.id
+      : action === 'journal' ? firstJournalId
+        : undefined;
+
   const isRoutingAction = (action?: SelfCareAction): action is 'clinics' | 'hotline' =>
     action === 'clinics' || action === 'hotline';
   const isRoutingTip = (tip: SelfCareTip) => isRoutingAction(tip.action);
@@ -224,6 +253,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       case 'exercise':
         setExerciseId(toolId);
         setExerciseOpen(true);
+        break;
+      case 'journal':
+        setJournalId(toolId ? (toolId as JournalId) : undefined);
+        setJournalOpen(true);
         break;
       case 'clinics':
         goToClinics();
@@ -555,14 +588,15 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <View style={styles.toolsRow}>
             {launcherActions.map((action) => {
               const ui = TOOL_UI[action];
-              const meta = action === 'exercise' ? exerciseMeta : ui.meta;
+              const meta =
+                action === 'exercise' ? exerciseMeta
+                  : action === 'journal' ? journalMeta
+                    : ui.meta;
               return (
                 <TouchableOpacity
                   key={action}
                   style={styles.toolBtn}
-                  onPress={() =>
-                    runAction(action, action === 'exercise' ? firstExercise?.id : undefined)
-                  }
+                  onPress={() => runAction(action, defaultIdFor(action))}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.toolIcon, { backgroundColor: toneBg(ui.bg) }]}>
@@ -779,6 +813,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         exerciseIds={exerciseTips.map((t) => t.toolId).filter((id): id is ExerciseId => !!id)}
         initialId={exerciseId}
       />
+      <JournalModal
+        visible={journalOpen}
+        onClose={() => setJournalOpen(false)}
+        templateId={journalId}
+        hint={activeJournalTip?.desc}
+      />
 
     </StressAnalysisLayout>
   );
@@ -823,8 +863,10 @@ const makeStyles = () => StyleSheet.create({
   toolsCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
   toolsTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
   toolsSub: { fontSize: 12, color: tone('#777'), lineHeight: 17, marginTop: 4, marginBottom: 14 },
-  toolsRow: { flexDirection: 'row', gap: 10 },
-  toolBtn: { flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, borderRadius: 14, backgroundColor: toneBg('#F7F8FC'), borderWidth: 1, borderColor: toneBg('#ECEEF5') },
+  toolsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  // Two per row at every supported width (47%*2 + 10px gap always fits, so the
+  // fourth button wraps cleanly instead of squeezing four into one line).
+  toolBtn: { width: '47%', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, borderRadius: 14, backgroundColor: toneBg('#F7F8FC'), borderWidth: 1, borderColor: toneBg('#ECEEF5') },
   toolIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   toolName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), textAlign: 'center' },
   toolMeta: { fontSize: 10.5, color: tone('#8A8A8A'), marginTop: 3, textAlign: 'center' },

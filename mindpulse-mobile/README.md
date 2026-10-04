@@ -33,6 +33,39 @@ uses the survey, heart rate and reaction test only). The `@tensorflow/tfjs` and
 ### 3. Transparent Images
 Custom flood-fill scripts were used to process assets (like the meditation figure) to ensure transparent backgrounds fit the UI themes correctly.
 
+### 4. Self-care journal is stored locally, on purpose
+The three journal prompts on the assessment result screen — gratitude note
+(low), worry journal (moderate), next small step (high) — write to
+`AsyncStorage` (`src/services/journal.ts`) and are **never** sent to Supabase.
+This is a deliberate data-governance decision, not a missing migration:
+
+- **Free text is the most sensitive and least bounded data in the app.** A
+  PSS-10 answer is a structured item from a validated instrument that the
+  patient deliberately completed as part of an assessment they chose to run;
+  its lifecycle is defined by the instrument. A "worry journal" has no
+  boundaries — for a high-stress user it can contain things no clinician ever
+  asked to see. Sending it to a shared table would drag in consent scope,
+  retention windows and row-level security obligations that structured scores
+  do not carry.
+- **The app already ships crisis hotlines** (988 / 1553 / 741741) for exactly
+  that population. Being conservative where users are most vulnerable is
+  design maturity, not laziness.
+- **The value is the writing act, not the record.** `stress_sessions` exists
+  to be read — by the patient, by the doctor, as a trend over time. A
+  gratitude note exists to be written. Different data, different lifecycle.
+- **It matches an existing principle in this codebase.** The demo face scan
+  result is already "intentionally not persisted" and excluded from scoring
+  (§2 above). Data with no consumer should not be retained.
+
+*Accepted tradeoffs, stated openly:* entries do not survive a reinstall or a
+device change (there is no sync), and a clinician cannot read them during a
+session. Mitigated in-product by a "Stored on this device only" line on every
+sheet and a one-tap delete on every entry.
+
+*If this is ever revisited*, it needs a `journal_entries` table with row-level
+security scoped to the owning patient, an explicit consent toggle at write
+time, and a documented retention window — not a bare insert.
+
 ## Future Implementation Requirements
 
 ### Video Calling Integration

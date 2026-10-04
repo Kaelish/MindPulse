@@ -9,6 +9,7 @@
  */
 
 import type { ExerciseId } from './guidedExercises';
+import type { JournalId } from './journal';
 
 export type StressBand = 'low' | 'moderate' | 'high' | null;
 
@@ -17,15 +18,16 @@ export type StressBand = 'low' | 'moderate' | 'high' | null;
  * advice; tips with one become tappable rows in the app. Widen this union as
  * new tools ship — nothing else needs to change to register one.
  *
- * `breathe` / `music` / `exercise` open a self-guided player and get a button
- * in the launcher card. `clinics` / `hotline` only *navigate* to something that
- * is already on this screen, so they render as a tappable checklist row instead
- * of a button.
+ * `breathe` / `music` / `exercise` / `journal` open a self-guided player and
+ * get a button in the launcher card. `clinics` / `hotline` only *navigate* to
+ * something that is already on this screen, so they render as a tappable
+ * checklist row instead of a button.
  */
 export type SelfCareAction =
   | 'breathe'
   | 'music'
   | 'exercise'
+  | 'journal'
   | 'clinics'
   | 'hotline';
 
@@ -39,13 +41,22 @@ export interface SelfCareTip {
   action?: SelfCareAction;
   /** Required when `action` is 'exercise' — which exercise to open. */
   toolId?: ExerciseId;
+  /**
+   * Required when `action` is 'journal' — which prompt sheet to open. Kept
+   * separate from `toolId` so each field stays a literal union of only the
+   * ids that tool accepts.
+   */
+  journalId?: JournalId;
 }
 
 /** Actions that open a self-guided player — these belong in the launcher card. */
-export type ToolAction = 'breathe' | 'music' | 'exercise';
+export type ToolAction = 'breathe' | 'music' | 'exercise' | 'journal';
 
 export const isToolAction = (action: SelfCareAction): action is ToolAction =>
-  action === 'breathe' || action === 'music' || action === 'exercise';
+  action === 'breathe' ||
+  action === 'music' ||
+  action === 'exercise' ||
+  action === 'journal';
 
 const findBand = (text: string): StressBand => {
   const t = text.toLowerCase();
@@ -87,6 +98,8 @@ const LOW_TIPS: SelfCareTip[] = [
     icon: 'create-outline',
     title: 'Start a gratitude note',
     desc: 'Write down 3 things that went well today. Gratitude journaling is one of the CDC\u2019s recommended daily stress buffers.',
+    action: 'journal',
+    journalId: 'gratitude',
   },
   {
     icon: 'walk-outline',
@@ -163,6 +176,8 @@ const MODERATE_TIPS: SelfCareTip[] = [
     icon: 'create-outline',
     title: 'Worry journal + one next step',
     desc: 'Write the worry down, then the smallest next action you can take. Externalizing worries plus one action is core CBT-style coping.',
+    action: 'journal',
+    journalId: 'worry',
   },
   {
     icon: 'walk-outline',
@@ -239,6 +254,8 @@ const HIGH_TIPS: SelfCareTip[] = [
     icon: 'create-outline',
     title: 'Write down the next small step',
     desc: 'When everything feels urgent, write just the single next thing you need to do \u2014 delay the rest until after you\u2019ve rested.',
+    action: 'journal',
+    journalId: 'nextStep',
   },
   {
     icon: 'moon-outline',
