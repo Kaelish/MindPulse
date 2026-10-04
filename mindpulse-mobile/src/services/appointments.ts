@@ -225,7 +225,7 @@ const toClinician = (row: any, avatarUrl: string | null = null): TelehealthClini
   };
 };
 
-/** One verified clinician shown on the high-stress "doctor panel" card. */
+/** One verified clinician listed under the result screen's "Find Nearby Psych Clinics" card. */
 export interface PanelDoctor {
   id: string;
   name: string;

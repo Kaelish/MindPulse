@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, Linking, LayoutChangeEvent } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,12 +19,24 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const [clinicsExpanded, setClinicsExpanded] = useState(false);
   const [stateData, setStateData] = useState<AssessmentState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  // "Get Help" must never be a dead button: it reveals the resource cards even
-  // for a low-stress result, where they are otherwise hidden.
+  // "Get Help" reveals the resource cards for a low-stress result (moderate and
+  // high already show them) and then scrolls them into view. The button sits at
+  // the very bottom of a long screen, so a change that happens above it is
+  // invisible unless we actively move the user to it.
   const [helpRequested, setHelpRequested] = useState(false);
-  // High-stress results offer a tap-to-call panel before the crisis hotlines.
+  // Verified clinicians listed inside "Find Nearby Psych Clinics".
   const [panel, setPanel] = useState<PanelDoctor[]>([]);
   const [panelLoading, setPanelLoading] = useState(false);
+
+  // Scroll plumbing for Get Help: the resource block's offset inside the content.
+  const scrollRef = useRef<ScrollView>(null);
+  const helpSectionY = useRef<number | null>(null);
+  const pendingHelpScroll = useRef(false);
+  const helpScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -88,9 +100,34 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
   const showHelpResources = helpRequested || isHighStress || isModerateStress;
 
+  const jumpToHelp = () => {
+    if (helpSectionY.current == null) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, helpSectionY.current - 8), animated: true });
+  };
+
   const handleGetHelp = () => {
     setHelpRequested(true);
     setClinicsExpanded(true);
+
+    pendingHelpScroll.current = true;
+    if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
+    // Fallback for when the cards are already mounted: the block may not resize,
+    // so its onLayout never re-fires — nudge the scroll once the reveal settles.
+    helpScrollTimer.current = setTimeout(() => {
+      if (!pendingHelpScroll.current) return;
+      pendingHelpScroll.current = false;
+      jumpToHelp();
+    }, 350);
+  };
+
+  // The accurate moment to scroll: the block just mounted (low stress) or the
+  // clinics list expanded. Beats the timer above, so it cancels it.
+  const handleHelpSectionLayout = (e: LayoutChangeEvent) => {
+    helpSectionY.current = e.nativeEvent.layout.y;
+    if (!pendingHelpScroll.current) return;
+    pendingHelpScroll.current = false;
+    if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
+    requestAnimationFrame(jumpToHelp);
   };
 
   const getTheme = () => {
@@ -136,6 +173,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       activeModule="reaction"
       heartRateDone
       onBack={onBack}
+      scrollViewRef={scrollRef}
     >
       {/* Final Stress Score Card */}
       <View style={[styles.scoreCard, { backgroundColor: theme.bg }]}>
@@ -275,7 +313,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
       {/* Conditional Resources */}
       {showHelpResources && (
-        <>
+        <View onLayout={handleHelpSectionLayout}>
           <View style={styles.clinicsCard}>
             <TouchableOpacity 
               style={styles.clinicsHeader} 
@@ -344,61 +382,6 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             )}
           </View>
 
-          {/* High stress: reach a real doctor before the crisis hotlines */}
-          {isHighStress && (
-            <View style={styles.doctorPanelCard}>
-              <View style={styles.doctorPanelHeader}>
-                <View style={styles.doctorPanelIconWrap}>
-                  <Ionicons name="medkit-outline" size={18} color={tone('#FFF')} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.doctorPanelTitle}>Call One of Our Doctors</Text>
-                  <Text style={styles.doctorPanelSub}>Verified professionals on the MindPulse panel</Text>
-                </View>
-              </View>
-
-              {panelLoading && (
-                <ActivityIndicator size="small" color={tone('#D32F2F')} style={{ marginVertical: 12 }} />
-              )}
-
-              {!panelLoading && panel.length === 0 && (
-                <Text style={styles.doctorPanelEmpty}>
-                  No panel doctors are listed right now. Please use the crisis hotlines below.
-                </Text>
-              )}
-
-              {!panelLoading &&
-                panel.map((doc) => (
-                  <View key={doc.id} style={styles.doctorRow}>
-                    <View style={styles.doctorAvatar}>
-                      <Text style={styles.doctorAvatarText}>
-                        {doc.name.replace(/^Dr\.?\s+/i, '').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.doctorName}>{doc.name}</Text>
-                      <Text style={styles.doctorSpec} numberOfLines={1}>{doc.specialty}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.doctorCallBtn, !doc.contactNumber && { opacity: 0.5 }]}
-                      onPress={() => doc.contactNumber && Linking.openURL(`tel:${doc.contactNumber}`).catch(() => {})}
-                      disabled={!doc.contactNumber}
-                      activeOpacity={0.8}>
-                      <Ionicons name="call" size={13} color={tone('#FFF')} />
-                      <Text style={styles.doctorCallText}>Call</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-              {onBookSession && (
-                <TouchableOpacity style={styles.doctorBookBtn} onPress={onBookSession} activeOpacity={0.85}>
-                  <Text style={styles.doctorBookText}>Book a session</Text>
-                  <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
           <View style={styles.hotlinesCard}>
             <Text style={styles.hotlinesTitle}>Emergency Mental Health Hotlines</Text>
             
@@ -458,10 +441,20 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               </View>
             </TouchableOpacity>
           </View>
-        </>
+        </View>
       )}
 
-      {/* Bottom Action Buttons */}
+      {/* Not-saved indicator + actions. Get Help deliberately does NOT record
+          anything — only Save Result writes the session to the backend. */}
+      {!alreadySavedToday && !isSaving && (
+        <View style={styles.unsavedBanner}>
+          <Ionicons name="alert-circle-outline" size={16} color={tone('#B26A00')} />
+          <Text style={styles.unsavedText}>
+            Not saved yet — tap Save Result to record today's assessment.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.actionsRow}>
         <TouchableOpacity 
           style={[styles.saveBtn, (isSaving || alreadySavedToday) && { opacity: 0.7 }]} 
@@ -472,11 +465,31 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             {isSaving ? 'Saving...' : alreadySavedToday ? 'Saved for today' : 'Save Result'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.helpBtn} onPress={handleGetHelp}>
-          <Text style={styles.helpBtnText}>Get Help</Text>
-          <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
+        <TouchableOpacity
+          style={[styles.helpBtn, helpRequested && styles.helpBtnActive]}
+          onPress={handleGetHelp}
+        >
+          <Text style={styles.helpBtnText}>{helpRequested ? 'Help shown' : 'Get Help'}</Text>
+          <Ionicons
+            name={helpRequested ? 'checkmark-circle' : 'arrow-forward'}
+            size={16}
+            color={tone('#FFF')}
+          />
         </TouchableOpacity>
       </View>
+
+      {/* Skipping is always allowed: the raw numbers stay on the device, so the
+          patient can reopen "View Final Results" and save later. */}
+      {!alreadySavedToday && (
+        <TouchableOpacity
+          style={styles.skipBtn}
+          onPress={onBack}
+          disabled={isSaving}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.skipBtnText}>Don't save this result</Text>
+        </TouchableOpacity>
+      )}
 
     </StressAnalysisLayout>
   );
@@ -531,20 +544,9 @@ const makeStyles = () => StyleSheet.create({
   callBtnText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700', marginLeft: 4 },
   clinicDist: { fontSize: 10, color: tone('#D32F2F'), fontWeight: '600' },
 
-  doctorPanelCard: { backgroundColor: toneBg('#FFF5F5'), borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#FFCDD2') },
-  doctorPanelHeader: { flexDirection: 'row', alignItems: 'center' },
-  doctorPanelIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: toneBg('#D32F2F'), alignItems: 'center', justifyContent: 'center' },
-  doctorPanelTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
-  doctorPanelSub: { fontSize: 11, color: tone('#8A6A6A'), marginTop: 2 },
-  doctorPanelEmpty: { fontSize: 12, color: tone('#8A6A6A'), marginVertical: 12, lineHeight: 18 },
-  doctorRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#FFF'), borderRadius: 12, padding: 12, marginTop: 12, borderWidth: 1, borderColor: toneBg('#FBE9E7') },
   doctorAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: toneBg('#FDECE6'), alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   doctorAvatarText: { fontSize: 13, fontWeight: '800', color: tone('#D32F2F') },
   doctorAvatarImage: { width: 40, height: 40, borderRadius: 20 },
-  doctorName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A') },
-  doctorSpec: { fontSize: 11, color: tone('#666'), marginTop: 2 },
-  doctorCallBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: toneBg('#E53935'), paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginLeft: 8 },
-  doctorCallText: { color: tone('#FFF'), fontSize: 12, fontWeight: '700' },
   doctorBookBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, backgroundColor: toneBg('#D32F2F'), borderRadius: 23, marginTop: 14 },
   doctorBookText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
 
@@ -557,10 +559,15 @@ const makeStyles = () => StyleSheet.create({
   hotlineDesc: { fontSize: 11, color: tone('#666'), marginTop: 2 },
 
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: toneBg('#FFF8E1'), borderWidth: 1, borderColor: toneBg('#FFE082'), borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8 },
+  unsavedText: { flex: 1, fontSize: 12, lineHeight: 17, color: tone('#B26A00'), fontWeight: '600' },
   saveBtn: { flex: 1, height: 50, backgroundColor: toneBg('#81C784'), borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
   helpBtn: { flex: 1, height: 50, backgroundColor: toneBg('#6B79F2'), borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  helpBtnActive: { backgroundColor: toneBg('#3F51B5') },
   helpBtnText: { color: tone('#FFF'), fontSize: 14, fontWeight: '700' },
+  skipBtn: { height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: toneBg('#D0D0D0'), backgroundColor: toneBg('#FFF'), marginTop: 4 },
+  skipBtnText: { fontSize: 13, fontWeight: '600', color: tone('#777') },
 });
 
 let styles = makeStyles();

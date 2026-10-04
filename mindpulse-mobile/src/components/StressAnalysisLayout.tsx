@@ -40,6 +40,13 @@ interface Props {
   heartRateDone?: boolean;
   onBack?: () => void;
   subtitle?: string;
+  /**
+   * Optional escape hatch: hands back this screen's internal ScrollView so a
+   * child can jump to a section (e.g. the result screen's "Get Help" scrolls to
+   * the resource cards, which sit far above the button that reveals them).
+   * Omit it and nothing changes — every other caller is unaffected.
+   */
+  scrollViewRef?: React.Ref<ScrollView>;
 }
 
 // ─── Module step tabs (top row of 4 chips) ────────────────────────────────────
@@ -98,6 +105,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   heartRateDone,
   onBack,
   subtitle = 'Complete all steps then view your fused result',
+  scrollViewRef,
 }) => {
   const [stepStatus, setStepStatus] = useState<Record<ModuleTab, AssessmentStepStatus>>({
     survey: 'locked',
@@ -176,6 +184,7 @@ export const StressAnalysisLayout: React.FC<Props> = ({
 
         {/* ── Scrollable content ── */}
         <ScrollView
+          ref={scrollViewRef}
           style={layout.scroll}
           contentContainerStyle={layout.scrollContent}
           showsVerticalScrollIndicator={false}
