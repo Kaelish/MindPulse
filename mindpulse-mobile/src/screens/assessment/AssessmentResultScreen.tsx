@@ -361,7 +361,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
    * event as the first argument, which would otherwise be taken for `after`.
    */
   const handleSaveResult = async (after?: () => void) => {
-    if (alreadySavedToday) return;
+    if (alreadySavedToday || isSaving) return;
     setIsSaving(true);
     try {
       // Same notes shape the standalone tools use ("Completed assessment: …")
@@ -381,12 +381,24 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
       // Today is now spent: keep the numbers for review, close every step, and
       // let the hub show "Today's assessment is complete!" until midnight.
-      await saveAssessmentState(markDayComplete(stateData));
+      const completed = markDayComplete(stateData);
+      await saveAssessmentState(completed);
+      // Mirror it into this screen's own state as well. Navigation below
+      // unmounts us today, but the double-save guard should not *depend* on
+      // that: with `completedOn` set locally, the button reads "Saved for
+      // today" and stays disabled even if we somehow remain mounted.
+      setStateData(completed);
 
       if (after) after();
       else onBack();
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      // Reachable only when the insert itself failed. saveAssessmentState
+      // swallows its own errors, and every step after the insert inside
+      // saveNewStressSession is non-throwing (prefs, notification and plant
+      // writes are all best-effort) — so no row exists on this path and a
+      // retry writes exactly one, never two.
+      Alert.alert('Error', e?.message ?? 'Could not save your result. Try again.');
+    } finally {
       setIsSaving(false);
     }
   };
