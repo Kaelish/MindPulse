@@ -197,6 +197,16 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
           );
         })}
 
+        {/* CC0 needs no credit, but keeping the licence visible means nobody
+            has to archaeologically dig for it later. */}
+        {!!(track.license || track.origin) && (
+          <Text style={m.credits} numberOfLines={2}>
+            {track.title}
+            {track.license ? ` · ${track.license}` : ''}
+            {track.origin ? ` · ${track.origin}` : ''}
+          </Text>
+        )}
+
         <Pressable style={m.doneLink} onPress={onClose} accessibilityLabel="Close calming music">
           <Text style={m.doneLinkText}>Done</Text>
         </Pressable>
@@ -377,6 +387,14 @@ const makeStyles = () =>
     rowSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
     doneLink: { alignItems: 'center', paddingVertical: 10 },
     doneLinkText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+    credits: {
+      fontSize: 10,
+      lineHeight: 14,
+      color: Colors.textHint,
+      textAlign: 'center',
+      paddingHorizontal: 6,
+      paddingBottom: 2,
+    },
 
     empty: { alignItems: 'center', paddingHorizontal: 26, paddingVertical: 34, gap: 8 },
     emptyTitle: { fontSize: 14, fontWeight: '900', color: Colors.textPrimary },

@@ -10,12 +10,21 @@
 
 export type StressBand = 'low' | 'moderate' | 'high' | null;
 
+/**
+ * In-app tool that performs a suggestion. Tips without an action stay plain
+ * advice; tips with one become tappable rows in the app. Widen this union as
+ * new tools ship — nothing else needs to change to register one.
+ */
+export type SelfCareAction = 'breathe' | 'music';
+
 export interface SelfCareTip {
   icon: string;
   title: string;
   desc: string;
   /** Render with MaterialCommunityIcons instead of Ionicons (e.g. 'lungs'). */
   material?: boolean;
+  /** Which built-in tool performs this tip, if any. */
+  action?: SelfCareAction;
 }
 
 const findBand = (text: string): StressBand => {
@@ -52,6 +61,7 @@ const LOW_TIPS: SelfCareTip[] = [
     icon: 'leaf-outline',
     title: 'Keep your wind-down ritual',
     desc: 'Low stress is a good moment to lock in a habit: 5 slow minutes of breathing or stretching at the same time daily makes it automatic for hard days.',
+    action: 'breathe',
   },
   {
     icon: 'create-outline',
@@ -84,6 +94,12 @@ const LOW_TIPS: SelfCareTip[] = [
     desc: 'Music, art, a hobby, a sport \u2014 enjoyable activities are a recognized stress-management tool, not a luxury.',
   },
   {
+    icon: 'headset-outline',
+    title: 'Put on a calming track',
+    desc: 'A few minutes of slow, familiar music keeps a good day from tipping over. Low stress is the easiest time to build the habit of using it.',
+    action: 'music',
+  },
+  {
     icon: 'partly-sunny-outline',
     title: 'Spend time outdoors',
     desc: 'Time in daylight or nature lowers tension and improves focus. Even a short break outside counts.',
@@ -107,6 +123,7 @@ const MODERATE_TIPS: SelfCareTip[] = [
     material: true,
     title: 'Box breathing for 5 minutes',
     desc: 'Breathe in 4s, hold 4s, out 4s, hold 4s. Research shows slow, paced breathing (5+ minutes) meaningfully lowers stress and anxiety.',
+    action: 'breathe',
   },
   {
     icon: 'body-outline',
@@ -137,6 +154,7 @@ const MODERATE_TIPS: SelfCareTip[] = [
     icon: 'headset-outline',
     title: 'Listen to calming music',
     desc: 'Put on slow, familiar music or a guided meditation for 5\u201310 minutes. Music and peer support rank among the most effective student interventions.',
+    action: 'music',
   },
   {
     icon: 'list-outline',
@@ -172,6 +190,13 @@ const HIGH_TIPS: SelfCareTip[] = [
     material: true,
     title: 'Box breathing until you feel steadier',
     desc: 'In 4s, hold 4s, out 4s, hold 4s \u2014 for 5 minutes. Slow breathing helps calm the body while you arrange support.',
+    action: 'breathe',
+  },
+  {
+    icon: 'headset-outline',
+    title: 'Put on something calming',
+    desc: 'Low, familiar music settles your body while you decide who to reach out to. It is not a replacement for support \u2014 it is a bridge to it.',
+    action: 'music',
   },
   {
     icon: 'people-outline',
@@ -241,6 +266,17 @@ export const tipsForBand = (band: StressBand): SelfCareTip[] => {
   if (band === 'low') return [...LOW_TIPS, ...SHARED_TIPS];
   return [...MODERATE_TIPS, ...SHARED_TIPS];
 };
+
+/**
+ * The band's tips that a built-in tool can genuinely perform — returned with
+ * `action` narrowed so callers get a discriminated union instead of a cast.
+ */
+export const actionableTipsFor = (
+  band: StressBand,
+): (SelfCareTip & { action: SelfCareAction })[] =>
+  tipsForBand(band).filter(
+    (tip): tip is SelfCareTip & { action: SelfCareAction } => !!tip.action,
+  );
 
 /** Deterministic 3-tip preview for the Home card (varies by latest score). */
 export const previewTipsFor = (band: StressBand, seed: number): SelfCareTip[] => {

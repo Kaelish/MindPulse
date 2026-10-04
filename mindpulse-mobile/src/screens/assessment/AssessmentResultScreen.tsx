@@ -7,6 +7,8 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
 import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
+import { actionableTipsFor, tipsForBand, SelfCareAction } from '../../services/selfCareTips';
+import { CALM_TRACKS } from '../../services/calmAudio';
 import { BoxBreathingModal } from '../../components/BoxBreathingModal';
 import { CalmMusicModal } from '../../components/CalmMusicModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
@@ -16,6 +18,53 @@ interface Props {
   /** Opens the Clinics tab so the patient can book with one of the panel doctors. */
   onBookSession?: () => void;
 }
+
+type ResultBand = 'low' | 'moderate' | 'high';
+
+/** Band-specific framing for the tool launcher — same tools, different pitch. */
+const LAUNCHER_COPY: Record<ResultBand, { title: string; sub: string }> = {
+  low: {
+    title: 'Keep the habit',
+    sub: 'Two quiet minutes now make tomorrow’s check-in easier to keep low.',
+  },
+  moderate: {
+    title: 'Unwind right now',
+    sub: 'Pick one and give it a few minutes before you decide whether to save.',
+  },
+  high: {
+    title: 'Bridge to support',
+    sub: 'Settle your body first, then reach out through the cards below.',
+  },
+};
+
+/** Presentation for each tool. The tip bank decides *which* show up. */
+const TOOL_UI: Record<SelfCareAction, {
+  label: string;
+  meta: string;
+  icon: string;
+  material?: boolean;
+  bg: string;
+  fg: string;
+  cta: string;
+}> = {
+  breathe: {
+    label: 'Box breathing',
+    meta: '4·4·4·4 guided · 5 min',
+    icon: 'lungs',
+    material: true,
+    bg: '#E8F0FE',
+    fg: '#1976D2',
+    cta: 'Start',
+  },
+  music: {
+    label: 'Calming music',
+    meta: `${CALM_TRACKS.length} tracks · loops`,
+    icon: 'musical-notes-outline',
+    fg: '#00897B',
+    bg: '#E0F2F1',
+    cta: 'Listen',
+  },
+};
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
   const [clinicsExpanded, setClinicsExpanded] = useState(false);
@@ -105,6 +154,17 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const isLowStress = finalScore <= 35;
 
   const showHelpResources = helpRequested || isHighStress || isModerateStress;
+
+  // Every suggestion on this screen comes out of the shared tip bank, so the
+  // result page, the Home card and the self-care popup never drift apart.
+  const band: ResultBand = isHighStress ? 'high' : isModerateStress ? 'moderate' : 'low';
+  const toolTips = actionableTipsFor(band);
+  const readTips = tipsForBand(band).filter((tip) => !tip.action).slice(0, 4);
+
+  const openTool = (action: SelfCareAction) => {
+    if (action === 'breathe') setBreathingOpen(true);
+    if (action === 'music') setMusicOpen(true);
+  };
 
   const jumpToHelp = () => {
     if (helpSectionY.current == null) return;
@@ -276,18 +336,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <Text style={styles.advisoryBody}>
             Maintain healthy routines — good sleep, regular physical activity, and social connections keep stress low.
           </Text>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
-            <Text style={styles.advisoryCheckText}>Keep up your sleep schedule</Text>
-          </View>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
-            <Text style={styles.advisoryCheckText}>Stay hydrated and eat well</Text>
-          </View>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
-            <Text style={styles.advisoryCheckText}>Continue positive activities you enjoy</Text>
-          </View>
+          {readTips.map((tip) => (
+            <View key={tip.title} style={styles.advisoryCheck}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
+              <Text style={styles.advisoryCheckText}>{tip.title}</Text>
+            </View>
+          ))}
         </View>
       ) : (
         <View style={[styles.advisoryCard, { backgroundColor: toneBg('#FDECE6') }]}>
@@ -298,74 +352,49 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <Text style={styles.advisoryBody}>
             Try resting or practicing relaxation techniques. Consider reaching out to a mental health professional for support.
           </Text>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-            <Text style={styles.advisoryCheckText}>Rest and avoid overloading tasks</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.advisoryCheck}
-            onPress={() => setBreathingOpen(true)}
-            activeOpacity={0.65}
-          >
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-            <Text style={styles.advisoryCheckText}>Practice deep breathing or meditation</Text>
-            <View style={styles.advisorySpacer} />
-            <View style={styles.advisoryGo}>
-              <Text style={styles.advisoryGoText}>Start</Text>
-              <Ionicons name="arrow-forward" size={12} color={tone('#D32F2F')} />
+          {readTips.map((tip) => (
+            <View key={tip.title} style={styles.advisoryCheck}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
+              <Text style={styles.advisoryCheckText}>{tip.title}</Text>
             </View>
-          </TouchableOpacity>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-            <Text style={styles.advisoryCheckText}>Reach out to campus counseling</Text>
-          </View>
-          <View style={styles.advisoryCheck}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-            <Text style={styles.advisoryCheckText}>Consider a telehealth consultation</Text>
-          </View>
+          ))}
         </View>
       )}
 
       {/* Self-guided versions of the advice above — no booking, no saving. */}
-      <View style={styles.toolsCard}>
-        <Text style={styles.toolsTitle}>Try it now</Text>
-        <Text style={styles.toolsSub}>
-          Two things you can do in the next few minutes, before you decide whether to save.
-        </Text>
-        <View style={styles.toolsRow}>
-          <TouchableOpacity
-            style={styles.toolBtn}
-            onPress={() => setBreathingOpen(true)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.toolIcon, { backgroundColor: toneBg('#E8F0FE') }]}>
-              <MaterialCommunityIcons name="lungs" size={22} color={tone('#1976D2')} />
-            </View>
-            <Text style={styles.toolName}>Box breathing</Text>
-            <Text style={styles.toolMeta}>4·4·4·4 guided · 5 min</Text>
-            <View style={styles.toolGo}>
-              <Ionicons name="play" size={12} color={tone('#FFF')} />
-              <Text style={styles.toolGoText}>Start</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolBtn}
-            onPress={() => setMusicOpen(true)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.toolIcon, { backgroundColor: toneBg('#E0F2F1') }]}>
-              <Ionicons name="musical-notes-outline" size={22} color={tone('#00897B')} />
-            </View>
-            <Text style={styles.toolName}>Calming music</Text>
-            <Text style={styles.toolMeta}>Looping ambience</Text>
-            <View style={styles.toolGo}>
-              <Ionicons name="play" size={12} color={tone('#FFF')} />
-              <Text style={styles.toolGoText}>Listen</Text>
-            </View>
-          </TouchableOpacity>
+      {toolTips.length > 0 && (
+        <View style={styles.toolsCard}>
+          <Text style={styles.toolsTitle}>{LAUNCHER_COPY[band].title}</Text>
+          <Text style={styles.toolsSub}>{LAUNCHER_COPY[band].sub}</Text>
+          <View style={styles.toolsRow}>
+            {toolTips.map((tip) => {
+              const ui = TOOL_UI[tip.action];
+              return (
+                <TouchableOpacity
+                  key={tip.action}
+                  style={styles.toolBtn}
+                  onPress={() => openTool(tip.action)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.toolIcon, { backgroundColor: toneBg(ui.bg) }]}>
+                    {ui.material ? (
+                      <MaterialCommunityIcons name={ui.icon as any} size={22} color={tone(ui.fg)} />
+                    ) : (
+                      <Ionicons name={ui.icon as any} size={22} color={tone(ui.fg)} />
+                    )}
+                  </View>
+                  <Text style={styles.toolName}>{ui.label}</Text>
+                  <Text style={styles.toolMeta}>{ui.meta}</Text>
+                  <View style={[styles.toolGo, { backgroundColor: tone(ui.fg) }]}>
+                    <Ionicons name="play" size={12} color={tone('#FFF')} />
+                    <Text style={styles.toolGoText}>{ui.cta}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Conditional Resources */}
       {showHelpResources && (
@@ -586,9 +615,6 @@ const makeStyles = () => StyleSheet.create({
   advisoryBody: { fontSize: 13, color: tone('#666'), lineHeight: 20, marginBottom: 16 },
   advisoryCheck: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   advisoryCheckText: { fontSize: 12, color: tone('#555') },
-  advisorySpacer: { flex: 1 },
-  advisoryGo: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  advisoryGoText: { fontSize: 11, fontWeight: '800', color: tone('#D32F2F') },
 
   toolsCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
   toolsTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
