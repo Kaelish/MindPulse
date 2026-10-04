@@ -7,6 +7,8 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
 import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
+import { BoxBreathingModal } from '../../components/BoxBreathingModal';
+import { CalmMusicModal } from '../../components/CalmMusicModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
@@ -33,6 +35,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const helpSectionY = useRef<number | null>(null);
   const pendingHelpScroll = useRef(false);
   const helpScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Self-guided tools behind the advisory suggestions.
+  const [breathingOpen, setBreathingOpen] = useState(false);
+  const [musicOpen, setMusicOpen] = useState(false);
 
   useEffect(() => () => {
     if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
@@ -296,10 +302,19 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Rest and avoid overloading tasks</Text>
           </View>
-          <View style={styles.advisoryCheck}>
+          <TouchableOpacity
+            style={styles.advisoryCheck}
+            onPress={() => setBreathingOpen(true)}
+            activeOpacity={0.65}
+          >
             <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Practice deep breathing or meditation</Text>
-          </View>
+            <View style={styles.advisorySpacer} />
+            <View style={styles.advisoryGo}>
+              <Text style={styles.advisoryGoText}>Start</Text>
+              <Ionicons name="arrow-forward" size={12} color={tone('#D32F2F')} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.advisoryCheck}>
             <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
             <Text style={styles.advisoryCheckText}>Reach out to campus counseling</Text>
@@ -310,6 +325,47 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           </View>
         </View>
       )}
+
+      {/* Self-guided versions of the advice above — no booking, no saving. */}
+      <View style={styles.toolsCard}>
+        <Text style={styles.toolsTitle}>Try it now</Text>
+        <Text style={styles.toolsSub}>
+          Two things you can do in the next few minutes, before you decide whether to save.
+        </Text>
+        <View style={styles.toolsRow}>
+          <TouchableOpacity
+            style={styles.toolBtn}
+            onPress={() => setBreathingOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: toneBg('#E8F0FE') }]}>
+              <MaterialCommunityIcons name="lungs" size={22} color={tone('#1976D2')} />
+            </View>
+            <Text style={styles.toolName}>Box breathing</Text>
+            <Text style={styles.toolMeta}>4·4·4·4 guided · 5 min</Text>
+            <View style={styles.toolGo}>
+              <Ionicons name="play" size={12} color={tone('#FFF')} />
+              <Text style={styles.toolGoText}>Start</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolBtn}
+            onPress={() => setMusicOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: toneBg('#E0F2F1') }]}>
+              <Ionicons name="musical-notes-outline" size={22} color={tone('#00897B')} />
+            </View>
+            <Text style={styles.toolName}>Calming music</Text>
+            <Text style={styles.toolMeta}>Looping ambience</Text>
+            <View style={styles.toolGo}>
+              <Ionicons name="play" size={12} color={tone('#FFF')} />
+              <Text style={styles.toolGoText}>Listen</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Conditional Resources */}
       {showHelpResources && (
@@ -491,6 +547,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         </TouchableOpacity>
       )}
 
+      {/* Self-guided tools — independent of saving, always closable. */}
+      <BoxBreathingModal visible={breathingOpen} onClose={() => setBreathingOpen(false)} />
+      <CalmMusicModal visible={musicOpen} onClose={() => setMusicOpen(false)} />
+
     </StressAnalysisLayout>
   );
 };
@@ -526,6 +586,20 @@ const makeStyles = () => StyleSheet.create({
   advisoryBody: { fontSize: 13, color: tone('#666'), lineHeight: 20, marginBottom: 16 },
   advisoryCheck: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   advisoryCheckText: { fontSize: 12, color: tone('#555') },
+  advisorySpacer: { flex: 1 },
+  advisoryGo: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  advisoryGoText: { fontSize: 11, fontWeight: '800', color: tone('#D32F2F') },
+
+  toolsCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
+  toolsTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
+  toolsSub: { fontSize: 12, color: tone('#777'), lineHeight: 17, marginTop: 4, marginBottom: 14 },
+  toolsRow: { flexDirection: 'row', gap: 10 },
+  toolBtn: { flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, borderRadius: 14, backgroundColor: toneBg('#F7F8FC'), borderWidth: 1, borderColor: toneBg('#ECEEF5') },
+  toolIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
+  toolName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), textAlign: 'center' },
+  toolMeta: { fontSize: 10.5, color: tone('#8A8A8A'), marginTop: 3, textAlign: 'center' },
+  toolGo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, backgroundColor: tone('#6B79F2'), paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
+  toolGoText: { fontSize: 11, fontWeight: '800', color: tone('#FFF') },
 
   clinicsCard: { backgroundColor: toneBg('#FDECE6'), borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
   clinicsHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },

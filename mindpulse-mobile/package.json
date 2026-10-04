@@ -17,6 +17,7 @@
     "@vladmandic/face-api": "^1.7.15",
     "babel-preset-expo": "^57.0.10",
     "expo": "^57.0.20",
+    "expo-audio": "~57.0.5",
     "expo-camera": "~57.0.4",
     "expo-document-picker": "^57.0.2",
     "expo-gl": "~57.0.2",
