@@ -7,10 +7,19 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
 import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
-import { actionableTipsFor, tipsForBand, SelfCareAction } from '../../services/selfCareTips';
+import {
+  actionableTipsFor,
+  tipsForBand,
+  isToolAction,
+  SelfCareAction,
+  SelfCareTip,
+  ToolAction,
+} from '../../services/selfCareTips';
 import { CALM_TRACKS } from '../../services/calmAudio';
+import { exerciseById, ExerciseId, totalSeconds } from '../../services/guidedExercises';
 import { BoxBreathingModal } from '../../components/BoxBreathingModal';
 import { CalmMusicModal } from '../../components/CalmMusicModal';
+import { GuidedExerciseModal } from '../../components/GuidedExerciseModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
@@ -37,8 +46,11 @@ const LAUNCHER_COPY: Record<ResultBand, { title: string; sub: string }> = {
   },
 };
 
+/** Fixed launcher order so the buttons never reshuffle between bands. */
+const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise'];
+
 /** Presentation for each tool. The tip bank decides *which* show up. */
-const TOOL_UI: Record<SelfCareAction, {
+const TOOL_UI: Record<ToolAction, {
   label: string;
   meta: string;
   icon: string;
@@ -64,6 +76,15 @@ const TOOL_UI: Record<SelfCareAction, {
     bg: '#E0F2F1',
     cta: 'Listen',
   },
+  exercise: {
+    label: 'Guided exercises',
+    // Computed at render — how many the current band offers.
+    meta: '',
+    icon: 'body-outline',
+    fg: '#7B1FA2',
+    bg: '#F3E5F5',
+    cta: 'Begin',
+  },
 };
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
@@ -88,6 +109,11 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   // Self-guided tools behind the advisory suggestions.
   const [breathingOpen, setBreathingOpen] = useState(false);
   const [musicOpen, setMusicOpen] = useState(false);
+  const [exerciseOpen, setExerciseOpen] = useState(false);
+  const [exerciseId, setExerciseId] = useState<string | undefined>(undefined);
+
+  // Hotlines sit *inside* the help block, so it needs its own offset too.
+  const hotlinesY = useRef<number | null>(null);
 
   useEffect(() => () => {
     if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
@@ -158,12 +184,54 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   // Every suggestion on this screen comes out of the shared tip bank, so the
   // result page, the Home card and the self-care popup never drift apart.
   const band: ResultBand = isHighStress ? 'high' : isModerateStress ? 'moderate' : 'low';
-  const toolTips = actionableTipsFor(band);
-  const readTips = tipsForBand(band).filter((tip) => !tip.action).slice(0, 4);
+  const bank = tipsForBand(band);
 
-  const openTool = (action: SelfCareAction) => {
-    if (action === 'breathe') setBreathingOpen(true);
-    if (action === 'music') setMusicOpen(true);
+  // Players get a button in the launcher; routing tips stay as tappable rows in
+  // the checklist, because their destination is already on this screen.
+  type ToolTip = SelfCareTip & { action: ToolAction };
+  const toolTips = actionableTipsFor(band).filter(
+    (tip): tip is ToolTip => isToolAction(tip.action),
+  );
+  const launcherActions = LAUNCHER_ORDER.filter((a) => toolTips.some((t) => t.action === a));
+  const exerciseTips = toolTips.filter((t) => t.action === 'exercise');
+  const firstExercise = exerciseTips[0]?.toolId
+    ? exerciseById(exerciseTips[0].toolId)
+    : undefined;
+  const exerciseMeta =
+    exerciseTips.length > 1
+      ? `${exerciseTips.length} available`
+      : firstExercise
+        ? `${totalSeconds(firstExercise)}s guided`
+        : 'Step-by-step';
+
+  const isRoutingAction = (action?: SelfCareAction): action is 'clinics' | 'hotline' =>
+    action === 'clinics' || action === 'hotline';
+  const isRoutingTip = (tip: SelfCareTip) => isRoutingAction(tip.action);
+
+  const candidates = bank.filter((tip) => !tip.action || isRoutingTip(tip));
+  const picked = candidates.slice(0, 4);
+  // A safety-relevant row must never fall outside the cap.
+  const readTips = [...picked, ...bank.filter((tip) => isRoutingTip(tip) && !picked.includes(tip))];
+
+  const runAction = (action: SelfCareAction, toolId?: string) => {
+    switch (action) {
+      case 'breathe':
+        setBreathingOpen(true);
+        break;
+      case 'music':
+        setMusicOpen(true);
+        break;
+      case 'exercise':
+        setExerciseId(toolId);
+        setExerciseOpen(true);
+        break;
+      case 'clinics':
+        goToClinics();
+        break;
+      case 'hotline':
+        goToHotlines();
+        break;
+    }
   };
 
   const jumpToHelp = () => {
@@ -194,6 +262,38 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
     pendingHelpScroll.current = false;
     if (helpScrollTimer.current) clearTimeout(helpScrollTimer.current);
     requestAnimationFrame(jumpToHelp);
+  };
+
+  /**
+   * "Book a session" → the Clinics tab. Falls back to opening the on-page panel
+   * when no tab handler is wired up, so the row can never be a dead button.
+   */
+  const goToClinics = () => {
+    if (onBookSession) {
+      onBookSession();
+      return;
+    }
+    setClinicsExpanded(true);
+    if (helpSectionY.current != null) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, helpSectionY.current - 8), animated: true });
+    } else {
+      handleGetHelp();
+    }
+  };
+
+  /**
+   * "Use the free hotlines" → the hotlines card further down. Its offset is
+   * relative to the help block, so the two measured values are added together.
+   */
+  const goToHotlines = () => {
+    const wrapper = helpSectionY.current;
+    const inner = hotlinesY.current;
+    if (wrapper != null && inner != null) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, wrapper + inner - 8), animated: true });
+      return;
+    }
+    // Block not laid out (or hidden at low stress): reveal it instead of doing nothing.
+    handleGetHelp();
   };
 
   const getTheme = () => {
@@ -336,12 +436,32 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <Text style={styles.advisoryBody}>
             Maintain healthy routines — good sleep, regular physical activity, and social connections keep stress low.
           </Text>
-          {readTips.map((tip) => (
-            <View key={tip.title} style={styles.advisoryCheck}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
-              <Text style={styles.advisoryCheckText}>{tip.title}</Text>
-            </View>
-          ))}
+          {readTips.map((tip) => {
+            const routing = isRoutingTip(tip);
+            return (
+              <TouchableOpacity
+                key={tip.title}
+                style={styles.advisoryCheck}
+                disabled={!routing}
+                onPress={routing ? () => runAction(tip.action as SelfCareAction) : undefined}
+                activeOpacity={0.65}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
+                <Text style={styles.advisoryCheckText}>{tip.title}</Text>
+                {routing && (
+                  <>
+                    <View style={styles.advisorySpacer} />
+                    <View style={styles.advisoryGo}>
+                      <Text style={[styles.advisoryGoText, { color: tone('#2E7D32') }]}>
+                        {tip.action === 'clinics' ? 'Open' : 'Go'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={12} color={tone('#2E7D32')} />
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ) : (
         <View style={[styles.advisoryCard, { backgroundColor: toneBg('#FDECE6') }]}>
@@ -352,12 +472,32 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <Text style={styles.advisoryBody}>
             Try resting or practicing relaxation techniques. Consider reaching out to a mental health professional for support.
           </Text>
-          {readTips.map((tip) => (
-            <View key={tip.title} style={styles.advisoryCheck}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-              <Text style={styles.advisoryCheckText}>{tip.title}</Text>
-            </View>
-          ))}
+          {readTips.map((tip) => {
+            const routing = isRoutingTip(tip);
+            return (
+              <TouchableOpacity
+                key={tip.title}
+                style={styles.advisoryCheck}
+                disabled={!routing}
+                onPress={routing ? () => runAction(tip.action as SelfCareAction) : undefined}
+                activeOpacity={0.65}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
+                <Text style={styles.advisoryCheckText}>{tip.title}</Text>
+                {routing && (
+                  <>
+                    <View style={styles.advisorySpacer} />
+                    <View style={styles.advisoryGo}>
+                      <Text style={[styles.advisoryGoText, { color: tone('#D32F2F') }]}>
+                        {tip.action === 'clinics' ? 'Open' : 'Go'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={12} color={tone('#D32F2F')} />
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
 
@@ -367,13 +507,16 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <Text style={styles.toolsTitle}>{LAUNCHER_COPY[band].title}</Text>
           <Text style={styles.toolsSub}>{LAUNCHER_COPY[band].sub}</Text>
           <View style={styles.toolsRow}>
-            {toolTips.map((tip) => {
-              const ui = TOOL_UI[tip.action];
+            {launcherActions.map((action) => {
+              const ui = TOOL_UI[action];
+              const meta = action === 'exercise' ? exerciseMeta : ui.meta;
               return (
                 <TouchableOpacity
-                  key={tip.action}
+                  key={action}
                   style={styles.toolBtn}
-                  onPress={() => openTool(tip.action)}
+                  onPress={() =>
+                    runAction(action, action === 'exercise' ? firstExercise?.id : undefined)
+                  }
                   activeOpacity={0.8}
                 >
                   <View style={[styles.toolIcon, { backgroundColor: toneBg(ui.bg) }]}>
@@ -384,7 +527,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                     )}
                   </View>
                   <Text style={styles.toolName}>{ui.label}</Text>
-                  <Text style={styles.toolMeta}>{ui.meta}</Text>
+                  <Text style={styles.toolMeta}>{meta}</Text>
                   <View style={[styles.toolGo, { backgroundColor: tone(ui.fg) }]}>
                     <Ionicons name="play" size={12} color={tone('#FFF')} />
                     <Text style={styles.toolGoText}>{ui.cta}</Text>
@@ -467,7 +610,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             )}
           </View>
 
-          <View style={styles.hotlinesCard}>
+          <View
+            style={styles.hotlinesCard}
+            onLayout={(e) => {
+              hotlinesY.current = e.nativeEvent.layout.y;
+            }}
+          >
             <Text style={styles.hotlinesTitle}>Emergency Mental Health Hotlines</Text>
             
             <TouchableOpacity
@@ -579,6 +727,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       {/* Self-guided tools — independent of saving, always closable. */}
       <BoxBreathingModal visible={breathingOpen} onClose={() => setBreathingOpen(false)} />
       <CalmMusicModal visible={musicOpen} onClose={() => setMusicOpen(false)} />
+      <GuidedExerciseModal
+        visible={exerciseOpen}
+        onClose={() => setExerciseOpen(false)}
+        exerciseIds={exerciseTips.map((t) => t.toolId).filter((id): id is ExerciseId => !!id)}
+        initialId={exerciseId}
+      />
 
     </StressAnalysisLayout>
   );
@@ -615,6 +769,10 @@ const makeStyles = () => StyleSheet.create({
   advisoryBody: { fontSize: 13, color: tone('#666'), lineHeight: 20, marginBottom: 16 },
   advisoryCheck: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   advisoryCheckText: { fontSize: 12, color: tone('#555') },
+  // Present only on checklist rows that navigate (routing tips).
+  advisorySpacer: { flex: 1 },
+  advisoryGo: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  advisoryGoText: { fontSize: 11, fontWeight: '800' },
 
   toolsCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
   toolsTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },

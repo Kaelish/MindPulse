@@ -8,14 +8,26 @@
  * support, mindfulness, and CBT-style task breakdown rank strongest.
  */
 
+import type { ExerciseId } from './guidedExercises';
+
 export type StressBand = 'low' | 'moderate' | 'high' | null;
 
 /**
  * In-app tool that performs a suggestion. Tips without an action stay plain
  * advice; tips with one become tappable rows in the app. Widen this union as
  * new tools ship — nothing else needs to change to register one.
+ *
+ * `breathe` / `music` / `exercise` open a self-guided player and get a button
+ * in the launcher card. `clinics` / `hotline` only *navigate* to something that
+ * is already on this screen, so they render as a tappable checklist row instead
+ * of a button.
  */
-export type SelfCareAction = 'breathe' | 'music';
+export type SelfCareAction =
+  | 'breathe'
+  | 'music'
+  | 'exercise'
+  | 'clinics'
+  | 'hotline';
 
 export interface SelfCareTip {
   icon: string;
@@ -25,7 +37,15 @@ export interface SelfCareTip {
   material?: boolean;
   /** Which built-in tool performs this tip, if any. */
   action?: SelfCareAction;
+  /** Required when `action` is 'exercise' — which exercise to open. */
+  toolId?: ExerciseId;
 }
+
+/** Actions that open a self-guided player — these belong in the launcher card. */
+export type ToolAction = 'breathe' | 'music' | 'exercise';
+
+export const isToolAction = (action: SelfCareAction): action is ToolAction =>
+  action === 'breathe' || action === 'music' || action === 'exercise';
 
 const findBand = (text: string): StressBand => {
   const t = text.toLowerCase();
@@ -129,11 +149,15 @@ const MODERATE_TIPS: SelfCareTip[] = [
     icon: 'body-outline',
     title: 'Progressive muscle relaxation',
     desc: 'Tense each muscle group for 5 seconds, then release for 10 seconds, head to toe. Releases physical tension that feeds stress.',
+    action: 'exercise',
+    toolId: 'pmr',
   },
   {
     icon: 'eye-outline',
     title: 'Ground yourself: 5-4-3-2-1',
     desc: 'Name 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste. Pulls your mind out of worry loops into the present.',
+    action: 'exercise',
+    toolId: 'grounding',
   },
   {
     icon: 'create-outline',
@@ -165,6 +189,8 @@ const MODERATE_TIPS: SelfCareTip[] = [
     icon: 'happy-outline',
     title: 'Self-compassion break',
     desc: 'Say to yourself: "This is hard right now, and that\u2019s okay \u2014 everyone struggles sometimes." Kind self-talk lowers stress reactivity.',
+    action: 'exercise',
+    toolId: 'compassion',
   },
   {
     icon: 'color-palette-outline',
@@ -207,6 +233,7 @@ const HIGH_TIPS: SelfCareTip[] = [
     icon: 'call-outline',
     title: 'Book a session with a professional',
     desc: 'A clinician can help you make a plan. High or prolonged stress is exactly what student counseling and telehealth sessions are for.',
+    action: 'clinics',
   },
   {
     icon: 'create-outline',
@@ -222,6 +249,7 @@ const HIGH_TIPS: SelfCareTip[] = [
     icon: 'shield-checkmark-outline',
     title: 'In crisis? Use the free hotlines',
     desc: 'Call or text 988 (Suicide & Crisis Lifeline) or contact your campus guidance office. Help is free, confidential, and available 24/7.',
+    action: 'hotline',
   },
 ];
 
@@ -231,6 +259,8 @@ const SHARED_TIPS: SelfCareTip[] = [
     icon: 'body-outline',
     title: 'Unclench and reset your body',
     desc: 'Drop your shoulders, unclench your jaw, roll your neck. Physical calm signals safety to your brain.',
+    action: 'exercise',
+    toolId: 'unclench',
   },
   {
     icon: 'water-outline',
