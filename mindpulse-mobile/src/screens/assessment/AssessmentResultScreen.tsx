@@ -18,10 +18,12 @@ import {
 import { CALM_TRACKS } from '../../services/calmAudio';
 import { exerciseById, ExerciseId, totalSeconds } from '../../services/guidedExercises';
 import { JournalId, journalTemplateById } from '../../services/journal';
+import { PAUSE_META } from '../../services/pauseTimer';
 import { BoxBreathingModal } from '../../components/BoxBreathingModal';
 import { CalmMusicModal } from '../../components/CalmMusicModal';
 import { GuidedExerciseModal } from '../../components/GuidedExerciseModal';
 import { JournalModal } from '../../components/JournalModal';
+import { PauseTimerModal } from '../../components/PauseTimerModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 interface Props {
@@ -49,7 +51,7 @@ const LAUNCHER_COPY: Record<ResultBand, { title: string; sub: string }> = {
 };
 
 /** Fixed launcher order so the buttons never reshuffle between bands. */
-const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise', 'journal'];
+const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise', 'journal', 'pause'];
 
 /** Presentation for each tool. The tip bank decides *which* show up. */
 const TOOL_UI: Record<ToolAction, {
@@ -96,6 +98,15 @@ const TOOL_UI: Record<ToolAction, {
     bg: '#FFF3E0',
     cta: 'Write',
   },
+  pause: {
+    label: 'No-screen pause',
+    // Derived from PAUSE_SECONDS so the button can't disagree with the timer.
+    meta: PAUSE_META,
+    icon: 'eye-off-outline',
+    fg: '#455A64',
+    bg: '#ECEFF1',
+    cta: 'Rest',
+  },
 };
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
@@ -124,6 +135,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const [exerciseId, setExerciseId] = useState<string | undefined>(undefined);
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalId, setJournalId] = useState<JournalId | undefined>(undefined);
+  const [pauseOpen, setPauseOpen] = useState(false);
 
   // Hotlines sit *inside* the help block, so it needs its own offset too.
   const hotlinesY = useRef<number | null>(null);
@@ -257,6 +269,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       case 'journal':
         setJournalId(toolId ? (toolId as JournalId) : undefined);
         setJournalOpen(true);
+        break;
+      case 'pause':
+        setPauseOpen(true);
         break;
       case 'clinics':
         goToClinics();
@@ -819,6 +834,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         templateId={journalId}
         hint={activeJournalTip?.desc}
       />
+      <PauseTimerModal visible={pauseOpen} onClose={() => setPauseOpen(false)} />
 
     </StressAnalysisLayout>
   );
@@ -863,9 +879,10 @@ const makeStyles = () => StyleSheet.create({
   toolsCard: { backgroundColor: toneBg('#FFF'), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: toneBg('#EEE') },
   toolsTitle: { fontSize: 15, fontWeight: '800', color: tone('#1A1A1A') },
   toolsSub: { fontSize: 12, color: tone('#777'), lineHeight: 17, marginTop: 4, marginBottom: 14 },
-  toolsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  // Two per row at every supported width (47%*2 + 10px gap always fits, so the
-  // fourth button wraps cleanly instead of squeezing four into one line).
+  toolsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
+  // Two per row at every supported width (47%*2 + 10px gap always fits), and
+  // centering each wrapped line leaves a fifth button sitting neatly on its
+  // own row instead of hugging the left edge.
   toolBtn: { width: '47%', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, borderRadius: 14, backgroundColor: toneBg('#F7F8FC'), borderWidth: 1, borderColor: toneBg('#ECEEF5') },
   toolIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   toolName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), textAlign: 'center' },

@@ -18,16 +18,17 @@ export type StressBand = 'low' | 'moderate' | 'high' | null;
  * advice; tips with one become tappable rows in the app. Widen this union as
  * new tools ship — nothing else needs to change to register one.
  *
- * `breathe` / `music` / `exercise` / `journal` open a self-guided player and
- * get a button in the launcher card. `clinics` / `hotline` only *navigate* to
- * something that is already on this screen, so they render as a tappable
- * checklist row instead of a button.
+ * `breathe` / `music` / `exercise` / `journal` / `pause` open a self-guided
+ * player and get a button in the launcher card. `clinics` / `hotline` only
+ * *navigate* to something that is already on this screen, so they render as a
+ * tappable checklist row instead of a button.
  */
 export type SelfCareAction =
   | 'breathe'
   | 'music'
   | 'exercise'
   | 'journal'
+  | 'pause'
   | 'clinics'
   | 'hotline';
 
@@ -50,13 +51,14 @@ export interface SelfCareTip {
 }
 
 /** Actions that open a self-guided player — these belong in the launcher card. */
-export type ToolAction = 'breathe' | 'music' | 'exercise' | 'journal';
+export type ToolAction = 'breathe' | 'music' | 'exercise' | 'journal' | 'pause';
 
 export const isToolAction = (action: SelfCareAction): action is ToolAction =>
   action === 'breathe' ||
   action === 'music' ||
   action === 'exercise' ||
-  action === 'journal';
+  action === 'journal' ||
+  action === 'pause';
 
 const findBand = (text: string): StressBand => {
   const t = text.toLowerCase();
@@ -288,6 +290,7 @@ const SHARED_TIPS: SelfCareTip[] = [
     icon: 'time-outline',
     title: 'Take a 5-minute no-screen pause',
     desc: 'Look away from all screens, stare into the distance, and breathe. Your eyes and nervous system both get a break.',
+    action: 'pause',
   },
   {
     icon: 'sunny-outline',

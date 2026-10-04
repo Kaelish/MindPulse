@@ -66,6 +66,27 @@ sheet and a one-tap delete on every entry.
 security scoped to the owning patient, an explicit consent toggle at write
 time, and a documented retention window — not a bare insert.
 
+### 5. The no-screen pause timer lets the screen sleep
+`PauseTimerModal` powers the "Take a 5-minute no-screen pause" suggestion.
+Three deliberate choices worth knowing before changing them:
+
+- **No `expo-keep-awake`.** The tip is to *stop looking at the screen*, so
+  letting the OS sleep the display is the point, not a defect. Adding a
+  keep-awake dependency would work against the feature.
+- **Wall-clock timing, not a tick counter.** `GuidedExerciseModal` does
+  `elapsedRef.current += TICK_MS`, which is safe because an exercise is a few
+  minutes of someone watching the screen. A pause suspends JavaScript
+  partway through, so an accumulating counter would freeze at ~3:47 and hang
+  forever. The pause stores *when the run started* and derives every reading
+  from `Date.now()`, so the first tick after resume computes the true elapsed
+  time and finishes correctly. The maths lives in `pauseTimer.ts` and is
+  covered by transition tests (including a simulated 10-minute suspension).
+- **No sound and no haptics.** Completion is visual, matching
+  `GuidedExerciseModal`. A vibration would need `android.permission.VIBRATE`,
+  which is not declared in `app.json`, and a chime would need another licensed
+  audio asset — neither is worth a failure at the one moment the user is
+  waiting on.
+
 ## Future Implementation Requirements
 
 ### Video Calling Integration
