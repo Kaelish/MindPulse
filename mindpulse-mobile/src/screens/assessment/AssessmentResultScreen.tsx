@@ -270,7 +270,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
    */
   const goToClinics = () => {
     if (onBookSession) {
-      onBookSession();
+      requestBookSession();
       return;
     }
     setClinicsExpanded(true);
@@ -304,7 +304,15 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
   const theme = getTheme();
 
-  const handleSaveResult = async () => {
+  /**
+   * `after` runs only when the save actually succeeded — used when saving is a
+   * detour on the way to somewhere else (booking a session). Left undefined it
+   * does the usual thing and returns to the hub.
+   *
+   * Must always be called as `handleSaveResult()`: React Native passes the press
+   * event as the first argument, which would otherwise be taken for `after`.
+   */
+  const handleSaveResult = async (after?: () => void) => {
     if (alreadySavedToday) return;
     setIsSaving(true);
     try {
@@ -327,11 +335,49 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       // let the hub show "Today's assessment is complete!" until midnight.
       await saveAssessmentState(markDayComplete(stateData));
 
-      onBack();
+      if (after) after();
+      else onBack();
     } catch (e: any) {
       Alert.alert('Error', e.message);
       setIsSaving(false);
     }
+  };
+
+  /**
+   * Every route off this screen toward the Clinics tab passes through here.
+   *
+   * Switching tabs unmounts AssessmentNavigator (App.tsx renders it under
+   * `currentTab === 'analysis'`), which drops the navigator's local `screen`
+   * state — so an unsaved result loses not just its data but the amber banner
+   * warning about it. The result stays reachable from the hub via
+   * `canViewResults`, so this is a warning gap rather than data loss: make the
+   * user choose instead of walking them out of the room silently.
+   *
+   * Already saved (or saving) means there is nothing to lose — go straight
+   * through, so the prompt never becomes a tax on an ordinary booking.
+   */
+  const requestBookSession = () => {
+    if (!onBookSession) return;
+    if (alreadySavedToday || isSaving) {
+      onBookSession();
+      return;
+    }
+    Alert.alert(
+      'Save your result first?',
+      "Your result hasn't been saved yet. Saving shares it with your doctor; leaving now keeps it on this device only — you can still come back and save it from the hub.",
+      [
+        {
+          text: 'Save & book',
+          onPress: () => handleSaveResult(() => onBookSession!()),
+        },
+        {
+          text: 'Leave without saving',
+          style: 'destructive',
+          onPress: onBookSession,
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   };
 
   return (
@@ -576,7 +622,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                     <TouchableOpacity
                       key={doc.id}
                       style={styles.clinicItem}
-                      onPress={onBookSession}
+                      onPress={requestBookSession}
                       disabled={!onBookSession}
                       activeOpacity={0.75}
                     >
@@ -601,7 +647,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                   ))}
 
                 {onBookSession && (
-                  <TouchableOpacity style={styles.doctorBookBtn} onPress={onBookSession} activeOpacity={0.85}>
+                  <TouchableOpacity style={styles.doctorBookBtn} onPress={requestBookSession} activeOpacity={0.85}>
                     <Text style={styles.doctorBookText}>Open Clinics to book</Text>
                     <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
                   </TouchableOpacity>
@@ -691,7 +737,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       <View style={styles.actionsRow}>
         <TouchableOpacity 
           style={[styles.saveBtn, (isSaving || alreadySavedToday) && { opacity: 0.7 }]} 
-          onPress={handleSaveResult}
+          onPress={() => handleSaveResult()}
           disabled={isSaving || alreadySavedToday}
         >
           <Text style={styles.saveBtnText}>
