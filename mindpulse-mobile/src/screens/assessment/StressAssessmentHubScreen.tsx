@@ -105,6 +105,23 @@ export const saveAssessmentState = async (state: AssessmentState) => {
   }
 };
 
+/**
+ * Muted palette for steps that are not available yet. A step is greyed out
+ * rather than "locked": the padlock is gone, but the gating is unchanged — a
+ * tap still explains what has to be finished first. Values run through
+ * tone()/toneBg() so they follow the active theme.
+ */
+const LOCKED = {
+  cardBg: '#FAFBFC',
+  iconBg: '#EEF1F5',
+  iconFg: '#A9B2C0',
+  badge: '#C6CDD9',
+  title: '#6B7A99',
+  subtitle: '#B0B8C8',
+  flagBg: '#F2F4F7',
+  flagText: '#9AA3B2',
+} as const;
+
 interface StepCardProps {
   title: string;
   subtitle: string;
@@ -116,12 +133,14 @@ interface StepCardProps {
   weight: string;
   /** Short hint pill: Required steps gate the results, Skippable ones do not. */
   flag?: 'required' | 'skippable';
+  /** Explains what to finish first when a greyed-out step is tapped. */
+  lockedHint?: string;
   /** Today's run is already saved — tapping explains why it is closed. */
   dayComplete?: boolean;
 }
 
 const StepCard = ({
-  title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, dayComplete,
+  title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, lockedHint, dayComplete,
 }: StepCardProps) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
@@ -138,7 +157,10 @@ const StepCard = ({
             'You already finished today’s check-in. The next one unlocks tomorrow.',
           );
         } else if (isLocked) {
-          Alert.alert('Locked', 'Complete the previous assessment first to unlock this assessment.');
+          Alert.alert(
+            'Not available yet',
+            lockedHint ?? 'Finish the previous step to unlock this one.',
+          );
         } else if (isCompleted) {
           // The checkmark has to mean something: a stray tap must not look
           // like progress was lost. Retaking stays possible mid-run (before
@@ -157,20 +179,20 @@ const StepCard = ({
         }
       }}
     >
-      <View style={[styles.iconBox, { backgroundColor: iconBg, opacity: isLocked ? 0.5 : 1 }]}>
-        <MaterialCommunityIcons name={icon} size={28} color={iconColor} />
-        <View style={[styles.weightBadge, { backgroundColor: iconColor }]}>
+      <View style={[styles.iconBox, { backgroundColor: isLocked ? toneBg(LOCKED.iconBg) : iconBg }]}>
+        <MaterialCommunityIcons name={icon} size={28} color={isLocked ? tone(LOCKED.iconFg) : iconColor} />
+        <View style={[styles.weightBadge, { backgroundColor: isLocked ? tone(LOCKED.badge) : iconColor }]}>
           <Text style={styles.weightText}>{weight}</Text>
         </View>
       </View>
       
       <View style={styles.stepTextContent}>
         <Text style={[styles.stepTitle, isLocked && styles.stepTitleLocked]}>{title}</Text>
-        <Text style={styles.stepSubtitle}>{subtitle}</Text>
+        <Text style={[styles.stepSubtitle, isLocked && styles.stepSubtitleLocked]}>{subtitle}</Text>
         {flag && (
-          <View style={[styles.flagPill, flag === 'required' ? styles.flagRequired : styles.flagSkippable]}>
+          <View style={[styles.flagPill, flag === 'required' ? styles.flagRequired : styles.flagSkippable, isLocked && styles.flagPillLocked]}>
             <Text
-              style={[styles.flagText, flag === 'required' ? styles.flagTextRequired : styles.flagTextSkippable]}
+              style={[styles.flagText, flag === 'required' ? styles.flagTextRequired : styles.flagTextSkippable, isLocked && styles.flagTextLocked]}
             >
               {flag === 'required' ? 'Required' : 'Skippable'}
             </Text>
@@ -179,7 +201,6 @@ const StepCard = ({
       </View>
 
       <View style={styles.statusIndicator}>
-        {isLocked && <Ionicons name="lock-closed-outline" size={20} color={Colors.textHint} />}
         {isCompleted && <Ionicons name="checkmark-circle" size={24} color={tone('#4CAF50')} />}
         {status === 'unlocked' && <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />}
         {isSkipped && (
@@ -395,6 +416,7 @@ export const StressAssessmentHubScreen = ({
             status={displayStatus(state.faceScan)}
             weight="20%"
             flag="skippable"
+            lockedHint="Finish the Stress Survey first — the Face Emotion Scan unlocks right after it."
             dayComplete={dayComplete}
             onPress={() => onNavigate('FaceScan')}
           />
@@ -407,6 +429,7 @@ export const StressAssessmentHubScreen = ({
             status={displayStatus(state.heartRate)}
             weight="20%"
             flag="required"
+            lockedHint="Finish the Stress Survey first — the Heart Rate step unlocks right after it."
             dayComplete={dayComplete}
             onPress={() => onNavigate('HeartRate')}
           />
@@ -419,6 +442,7 @@ export const StressAssessmentHubScreen = ({
             status={displayStatus(state.reaction)}
             weight="20%"
             flag="required"
+            lockedHint="Finish the Heart Rate step first — the Reaction Time Game unlocks right after it."
             dayComplete={dayComplete}
             onPress={() => onNavigate('ReactionGame')}
           />
@@ -523,7 +547,10 @@ const makeStyles = () => StyleSheet.create({
     elevation: 2,
   },
   stepCardLocked: {
-    backgroundColor: toneBg('#FDFCFB'),
+    backgroundColor: toneBg(LOCKED.cardBg),
+    // No raised shadow while greyed out — keeps it looking inset/inactive.
+    shadowOpacity: 0,
+    elevation: 0,
   },
   iconBox: {
     width: 60,
@@ -550,14 +577,17 @@ const makeStyles = () => StyleSheet.create({
   },
   stepTextContent: { flex: 1 },
   stepTitle: { ...Typography.h3, color: Colors.textPrimary, marginBottom: 2 },
-  stepTitleLocked: { color: Colors.textSecondary },
+  stepTitleLocked: { color: tone(LOCKED.title) },
   stepSubtitle: { ...Typography.body2, color: Colors.textSecondary, fontSize: 13 },
+  stepSubtitleLocked: { color: tone(LOCKED.subtitle) },
   flagPill: { alignSelf: 'flex-start', borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 2, marginTop: 5 },
   flagRequired: { backgroundColor: toneBg('#EEF0FD') },
   flagSkippable: { backgroundColor: toneBg('#FFF3E0') },
+  flagPillLocked: { backgroundColor: toneBg(LOCKED.flagBg) },
   flagText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   flagTextRequired: { color: tone('#4C5EE5') },
   flagTextSkippable: { color: tone('#E08A00') },
+  flagTextLocked: { color: tone(LOCKED.flagText) },
   statusIndicator: { minWidth: 32, alignItems: 'flex-end', justifyContent: 'center' },
   skippedPill: { backgroundColor: toneBg('#F1F5F9'), borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
   skippedPillText: { color: Colors.textHint, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.3 },
