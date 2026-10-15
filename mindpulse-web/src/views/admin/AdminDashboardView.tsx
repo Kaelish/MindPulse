@@ -7,6 +7,7 @@ import { AdminProfileSettingsView } from './AdminProfileSettingsView';
 import { AdminSystemSettingsView } from './AdminSystemSettingsView';
 import { AdminAssessmentView } from './AdminAssessmentView';
 import { AdminRecordsView } from './AdminRecordsView';
+import { AdminSuggestionsView } from './AdminSuggestionsView';
 import { AdminGenerateReportsView } from './AdminGenerateReportsView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
@@ -31,6 +32,7 @@ type AdminView =
   | 'analytics'
   | 'profile'
   | 'settings'
+  | 'suggestions'
   | 'notifications';
 
 const viewFromPath = (pathname: string): AdminView => {
@@ -39,6 +41,7 @@ const viewFromPath = (pathname: string): AdminView => {
     case 'assessment-tools': return 'assessment';
     case 'results': return 'results';
     case 'records': return 'records';
+    case 'suggestions': return 'suggestions';
     case 'analytics': return 'analytics';
     case 'settings': return 'settings';
     case 'notifications': return 'notifications';
@@ -54,6 +57,7 @@ const pathForView = (view: AdminView): string => {
     case 'records': return '/records';
     case 'reports':
     case 'analytics': return '/analytics';
+    case 'suggestions': return '/suggestions';
     case 'profile':
     case 'settings': return '/settings';
     case 'notifications': return '/notifications';
@@ -130,6 +134,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   if (activeView === 'assessment') return <AdminAssessmentView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'results') return <AdminResultsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'records') return <AdminRecordsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'suggestions') return <AdminSuggestionsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'reports') return <AdminGenerateReportsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'profile') return <AdminProfileSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'settings') return <AdminSystemSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;

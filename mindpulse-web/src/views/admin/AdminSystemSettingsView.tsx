@@ -18,7 +18,7 @@ type SettingsTab = 'general' | 'detection' | 'notification' | 'security' | 'data
 
 interface AdminSystemSettingsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 const TABS: { key: SettingsTab; label: string }[] = [

@@ -12,7 +12,7 @@ import { StudentCaseDetailView } from './views/doctor/StudentCaseDetailView';
 import { AssessmentResultsView } from './views/doctor/AssessmentResultsView';
 import { ConsultationsView, ConsultationsTabRequest } from './views/doctor/ConsultationsView';
 import { TransactionsView } from './views/doctor/TransactionsView';
-import { RecommendationsView } from './views/doctor/RecommendationsView';
+import { SuggestionsView } from './views/doctor/SuggestionsView';
 import { DoctorProfileSettingView } from './views/doctor/DoctorProfileSettingView';
 import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
 import { HelpView } from './views/doctor/HelpView';
@@ -86,7 +86,7 @@ function DoctorPortal({ onSignOut }: { onSignOut: () => void }) {
       case 'transactions':
         return <TransactionsView />;
       case 'recommendations':
-        return <RecommendationsView />;
+        return <SuggestionsView />;
       case 'help':
         return <HelpView onNavigate={setActiveView} />;
       case 'profile-setting':

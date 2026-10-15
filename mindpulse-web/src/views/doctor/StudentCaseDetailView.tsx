@@ -11,7 +11,12 @@ import {
   StudentConsultationNoteRecord,
   StudentSessionRecord,
 } from '../../services/studentCases';
-import { createRecommendation } from '../../services/recommendations';
+import {
+  createRecommendation,
+  DoctorRecommendation,
+  fetchDoctorRecommendations,
+  updateRecommendation,
+} from '../../services/recommendations';
 import {
   PATIENT_FILE_CATEGORIES,
   PatientFileCategory,
@@ -30,7 +35,7 @@ interface StudentCaseDetailViewProps {
   student: StudentCase;
 }
 
-type DetailTab = 'Overview' | 'Assessment Results' | 'Consultations' | 'Files' | 'Add Recommendation';
+type DetailTab = 'Overview' | 'Assessment Results' | 'Consultations' | 'Files' | 'Recommendations';
 
 const CATEGORIES = ['General', 'Therapy', 'Academic', 'Lifestyle', 'Wellness'];
 const PRIORITIES: RecommendationPriority[] = ['Low', 'Medium', 'High'];
@@ -62,6 +67,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const [sessions, setSessions] = useState<StudentSessionRecord[]>([]);
   const [consultations, setConsultations] = useState<StudentAppointmentRecord[]>([]);
   const [consultNotes, setConsultNotes] = useState<Record<string, StudentConsultationNoteRecord>>({});
+  const [recommendations, setRecommendations] = useState<DoctorRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
@@ -89,11 +95,13 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       fetchStudentSessions(student.userId),
       fetchStudentConsultations(student.userId),
       fetchStudentConsultationNotes(student.userId),
+      fetchDoctorRecommendations(student.userId),
     ])
-      .then(([sessionRows, consultationRows, noteRows]) => {
+      .then(([sessionRows, consultationRows, noteRows, recommendationRows]) => {
         if (!active) return;
         setSessions(sessionRows);
         setConsultations(consultationRows);
+        setRecommendations(recommendationRows);
         setConsultNotes(
           noteRows.reduce<Record<string, StudentConsultationNoteRecord>>((lookup, note) => {
             lookup[note.appointmentId] = note;
@@ -199,6 +207,11 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       await createRecommendation({ studentId: student.userId, category, priority, note: note.trim() });
       setNote('');
       setSaved(true);
+      fetchDoctorRecommendations(student.userId)
+        .then(setRecommendations)
+        .catch(() => {
+          /* the list is cosmetic here — the save already succeeded */
+        });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to save the recommendation.');
     } finally {
@@ -212,6 +225,16 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
     setNote('');
     setSaved(false);
     setSaveError('');
+  };
+
+  const completeRecommendation = async (id: string) => {
+    setSaveError('');
+    try {
+      await updateRecommendation(id, { status: 'Completed' });
+      setRecommendations(await fetchDoctorRecommendations(student.userId));
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Unable to update the recommendation.');
+    }
   };
 
   const resetFileForm = () => {
@@ -279,7 +302,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                         </div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
         <div className="student-contact-row"><span>{student.email}</span><span>{student.phone}</span><span>{student.location}</span></div>
       </section>
-      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Files', 'Add Recommendation'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
+      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Files', 'Recommendations'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
       {isLoading && <DoctorLoading label="Loading case data…" />}
       {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
       {!isLoading && !loadError && <>
@@ -406,8 +429,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             const note = consultNotes[consultation.id];
             return (
               <section className="detail-panel consultation-detail" key={consultation.id}>
-                <h2>Consultation <span className={pillClass}>{statusLabel}</span></h2>
-                <small>{consultation.scheduledFor || formatDateTime(consultation.createdAt)}</small>
+                <h2>{consultation.scheduledFor || formatDateTime(consultation.createdAt)} <span className={pillClass}>{statusLabel}</span></h2>
                 {consultation.notes && (<><h3>Booking note</h3><p>{consultation.notes}</p></>)}
                 {note ? (
                   <div className="consult-summary">
@@ -480,9 +502,37 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             )}
           </section>
         </div>}
-        {activeTab === 'Add Recommendation' && <div className="student-detail-content">
+        {activeTab === 'Recommendations' && <div className="student-detail-content">
+          <section className="detail-panel">
+            <h2>Past recommendations ({recommendations.length})</h2>
+            {recommendations.length === 0 ? (
+              <p className="empty-table">No recommendations yet for this student. They appear here after you save one.</p>
+            ) : (
+              <ul className="patient-file-list">
+                {recommendations.map((item) => (
+                  <li className="patient-file-row" key={item.id}>
+                    <div className="patient-file-info">
+                      <strong>{item.category} · {item.priority}</strong>
+                      <span>{item.note}</span>
+                      <small>
+                        {formatDateTime(item.createdAt)}
+                        {item.status === 'Completed' ? ' · Completed' : ' · Active'}
+                      </small>
+                    </div>
+                    <div className="patient-file-actions">
+                      {item.status !== 'Completed' && (
+                        <button type="button" className="ghost-button" onClick={() => void completeRecommendation(item.id)}>
+                          Mark completed
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <section className="detail-panel notes-detail">
-            <h2>Add Recommendation</h2>
+            <h2>Add recommendation</h2>
             <label htmlFor="recommendation-category">Category</label>
             <select id="recommendation-category" value={category} onChange={(event) => setCategory(event.target.value)}>{CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select>
             <label htmlFor="recommendation-priority">Priority</label>

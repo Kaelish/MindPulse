@@ -25,6 +25,7 @@ interface AdminRecordsViewProps {
       | 'assessment'
       | 'results'
       | 'records'
+      | 'suggestions'
       | 'analytics'
       | 'profile'
       | 'settings'

@@ -48,7 +48,7 @@ const formatDate = (value: string) => {
 
 interface AdminProfileSettingsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> = ({ onSignOut, onNavigate }) => {

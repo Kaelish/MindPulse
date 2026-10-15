@@ -7,12 +7,12 @@ import '../../views/admin/admin-theme.css';
 
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings' | 'notifications';
-  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings') => void;
+  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings' | 'notifications';
+  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
 }
 
 interface NavEntry {
-  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'settings';
+  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'settings';
   icon: string;
   label: string;
 }
@@ -23,6 +23,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'assessment', icon: '▣', label: 'Assessment tools' },
   { key: 'results', icon: '▤', label: 'Results' },
   { key: 'records', icon: '▥', label: 'Records' },
+  { key: 'suggestions', icon: '✦', label: 'Doctor Suggestions' },
   { key: 'analytics', icon: '◌', label: 'Analytics' },
   { key: 'settings', icon: '⚙', label: 'Settings' },
 ];

@@ -1,0 +1,217 @@
+/* Admin → Doctor Suggestions inbox */
+
+.suggestions-admin-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 30px 40px;
+  overflow-y: auto;
+}
+
+.suggestions-admin-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.suggestions-admin-topbar h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--doc-ink, #1a2e44);
+}
+
+.suggestions-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestions-filters button {
+  border: 1px solid var(--doc-line, #dbe6f7);
+  background: var(--doc-panel, #fff);
+  color: var(--doc-ink-2, #374151);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.suggestions-filters button.active {
+  background: var(--primary-strong, #5b6ef5);
+  border-color: var(--primary-strong, #5b6ef5);
+  color: #fff;
+}
+
+.suggestions-banner {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.suggestions-banner.is-error {
+  background: rgba(214, 69, 80, 0.12);
+  border: 1px solid rgba(214, 69, 80, 0.4);
+  color: #b03440;
+}
+
+.suggestions-panel {
+  background: var(--doc-panel, #fff);
+  border: 1px solid var(--doc-line, #dbe6f7);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.suggestions-list {
+  display: grid;
+  gap: 14px;
+}
+
+.suggestion-card {
+  border: 1px solid var(--doc-line, #e4e8f0);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.suggestion-card-head h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--doc-ink, #1a2e44);
+}
+
+.suggestion-from {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--doc-muted, #7a90a8);
+}
+
+.suggestion-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.suggestion-chip {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: rgba(91, 110, 245, 0.12);
+  color: #4756c4;
+}
+
+.suggestion-chip.priority-high {
+  background: rgba(214, 69, 80, 0.14);
+  color: #b03440;
+}
+
+.suggestion-chip.priority-low {
+  background: rgba(15, 157, 99, 0.14);
+  color: #0e7f57;
+}
+
+.suggestion-chip.status-open {
+  background: rgba(224, 166, 58, 0.16);
+  color: #9a6c12;
+}
+
+.suggestion-chip.status-in-progress {
+  background: rgba(91, 110, 245, 0.14);
+  color: #4756c4;
+}
+
+.suggestion-chip.status-resolved {
+  background: rgba(15, 157, 99, 0.14);
+  color: #0e7f57;
+}
+
+.suggestion-message {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--doc-ink-2, #374151);
+}
+
+.suggestion-date {
+  font-size: 0.68rem;
+  color: var(--doc-muted, #7a90a8);
+}
+
+.suggestion-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--doc-line, #e4e8f0);
+}
+
+.suggestion-reply-form label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--doc-muted, #64748b);
+}
+
+.suggestion-reply-form textarea,
+.suggestion-status-select select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--doc-line, #dbe6f7);
+  border-radius: 8px;
+  background: var(--doc-panel, #fff);
+  color: inherit;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.suggestion-reply-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.suggestion-status-select {
+  min-width: 160px;
+}
+
+.suggestion-save-button {
+  border: 1px solid var(--primary-strong, #5b6ef5);
+  background: var(--primary-strong, #5b6ef5);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.suggestion-save-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .suggestions-admin-main {
+    padding: 18px 16px 32px;
+  }
+}

@@ -71,15 +71,20 @@ const nameOf = (profile: StudentProfileRow | undefined, fallbackId: string) => {
   return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
 };
 
-export const fetchDoctorRecommendations = async (): Promise<DoctorRecommendation[]> => {
+/**
+ * This doctor's recommendations, newest first. Pass `studentId` to scope the
+ * list to a single student (used by the student case view).
+ */
+export const fetchDoctorRecommendations = async (studentId?: string): Promise<DoctorRecommendation[]> => {
   if (!supabase) throw notConfigured();
   const doctorId = await requireUserId();
 
-  const { data: rows, error } = await supabase
+  let query = supabase
     .from('recommendations')
     .select('id, student_id, doctor_id, category, priority, note, status, created_at')
-    .eq('doctor_id', doctorId)
-    .order('created_at', { ascending: false });
+    .eq('doctor_id', doctorId);
+  if (studentId) query = query.eq('student_id', studentId);
+  const { data: rows, error } = await query.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   const recommendations = (rows ?? []) as RecommendationRow[];
   if (!recommendations.length) return [];

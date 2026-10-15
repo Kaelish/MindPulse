@@ -13,7 +13,7 @@ import './AdminRecordsView.css';
 interface AdminGenerateReportsViewProps {
   onSignOut: () => void;
   onNavigate: (
-    view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'analytics' | 'profile' | 'settings',
+    view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings',
   ) => void;
 }
 

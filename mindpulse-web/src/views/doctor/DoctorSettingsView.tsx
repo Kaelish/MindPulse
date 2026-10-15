@@ -14,7 +14,7 @@ const LANDING_OPTIONS: { value: DoctorLandingView; label: string }[] = [
   { value: 'dashboard', label: 'Dashboard' },
   { value: 'student-cases', label: 'Student Cases' },
   { value: 'assessment-results', label: 'Assessment Results' },
-  { value: 'recommendations', label: 'Recommendations' },
+  { value: 'recommendations', label: 'Suggestions' },
 ];
 
 interface NotificationPrefs {

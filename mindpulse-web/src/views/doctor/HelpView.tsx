@@ -24,7 +24,7 @@ const HELP_TOPICS: HelpTopic[] = [
     hint: 'Where everything lives, from the sidebar to your profile card.',
     keywords: 'navigation sidebar menu where is home profile sign out landing',
     steps: [
-      'The sidebar on the left is your main menu: Dashboard, Student Cases, Assessment Results, Consultations, Transactions, Recommendations, Help & Guide, and Settings.',
+      'The sidebar on the left is your main menu: Dashboard, Student Cases, Assessment Results, Consultations, Transactions, Suggestions, Help & Guide, and Settings.',
       'Your photo card at the bottom of the sidebar opens Profile Setting (photo, bio, contact, fee, availability).',
       'Sign Out is right below your photo card.',
       "Can't find a feature? Type it in the search box above — this guide covers every page.",
@@ -56,7 +56,7 @@ const HELP_TOPICS: HelpTopic[] = [
     steps: [
       'Student Cases → View on any row opens the full case record.',
       'From Consultations, every booking row has a 📊 Assessments button that jumps straight into that patient\'s history.',
-      'Inside a case, use the tabs: Overview (profile + latest score), Assessments (session history, trends, per-question survey answers), Consultations (bookings you share), Files, and Recommendations.',
+      'Inside a case, use the tabs: Overview (profile + latest score), Assessments (session history, trends, per-question survey answers), Consultations (bookings you share), Files, and Recommendations (past and new).',
       'The Back button returns you to whichever page you came from — dashboard, list, or booking.',
     ],
     linkTo: 'student-cases',
@@ -124,16 +124,28 @@ const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'recommendations',
     icon: '❋',
-    title: 'Sending recommendations',
+    title: 'Student recommendations',
     hint: 'Tailored self-care guidance for a student.',
-    keywords: 'recommendation self care tips assign suggest advice student',
+    keywords: 'recommendation self care tips assign suggest advice student case history',
     steps: [
-      'Recommendations lets you send tailored self-care guidance to students.',
+      'Open a student case and use the Recommendations tab to give tailored self-care guidance — the tab also lists every past recommendation for that student.',
       'Match the recommendation to the student\'s latest band — Low, Moderate, or High — from their case record.',
       'Students receive it in their app alongside their own assessment tips.',
     ],
+  },
+  {
+    id: 'suggestions',
+    icon: '✦',
+    title: 'Suggestions for the admin',
+    hint: 'Ask for features, improvements, or report issues.',
+    keywords: 'suggestion admin feature request improve issue bug system feedback recommend add',
+    steps: [
+      'Open Suggestions in the sidebar to send the clinic admin a feature request, an improvement idea, or a report about the system.',
+      'Add a title, category, priority, and details, then press Send to admin.',
+      'The admin replies and updates the status (Open, In progress, Resolved) — you get a notification and can read the reply on the card.',
+    ],
     linkTo: 'recommendations',
-    linkLabel: 'Go to Recommendations',
+    linkLabel: 'Go to Suggestions',
   },
   {
     id: 'profile',
@@ -156,7 +168,7 @@ const HELP_TOPICS: HelpTopic[] = [
     keywords: 'settings dark mode appearance theme landing page light',
     steps: [
       'Settings → Appearance: toggle dark mode for the doctor portal only — it never changes what the admin portal looks like.',
-      'Settings → Landing page: choose which view opens first when you sign in (Dashboard, Consultations, Student Cases, Assessment Results, or Recommendations).',
+      'Settings → Landing page: choose which view opens first when you sign in (Dashboard, Consultations, Student Cases, Assessment Results, or Suggestions).',
     ],
     linkTo: 'settings',
     linkLabel: 'Go to Settings',
@@ -171,7 +183,7 @@ const HELP_TOPICS: HelpTopic[] = [
       "You see a student's assessment history through their booking with you — access stays scoped to that relationship.",
       'Students only ever see their own data; administrators manage accounts, verification, and aggregated analytics.',
       'Sessions recorded before per-question answers were stored simply show no answer list — the score and history still appear.',
-      'Everything you write (summaries, recommendations) is visible to the student it belongs to.',
+      'Consultation notes stay private to you unless you choose to share them with the student; recommendations are visible to the student they belong to.',
     ],
   },
 ];

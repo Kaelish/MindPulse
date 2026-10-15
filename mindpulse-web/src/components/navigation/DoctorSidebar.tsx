@@ -83,7 +83,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     { key: 'assessment-results', label: 'Assessment Results', icon: '\u25A3' },
     { key: 'consultations', label: 'Consultations', icon: '\u25A4' },
     { key: 'transactions', label: 'Transactions', icon: '\u25C8' },
-    { key: 'recommendations', label: 'Recommendations', icon: '\u25CE' },
+    { key: 'recommendations', label: 'Suggestions', icon: '\u25CE' },
     { key: 'help', label: 'Help & Guide', icon: '\u24D8' },
     { key: 'settings', label: 'Settings', icon: '\u2699' },
   ];
