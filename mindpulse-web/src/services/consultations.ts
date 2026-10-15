@@ -671,13 +671,266 @@ export interface ConsultationNote {
   appointmentId: string;
   doctorId: string;
   patientId: string;
+  /** Legacy roll-up fields — kept in sync on save so old readers keep working. */
   summary: string;
   observations: string;
   recommendation: string;
   followUp: string | null;
+  /** Therapy progress note — header. */
+  sessionDate: string;
+  sessionLocation: string;
+  durationMinutes: number | null;
+  clientName: string;
+  clientDob: string;
+  psychologist: string;
+  /** Therapy progress note — sections. */
+  presentingProblem: string;
+  sessionContent: string;
+  interventions: string;
+  clientResponse: string;
+  therapistObservations: string;
+  mentalStatusExam: string;
+  riskAssessment: string;
+  diagnosticImpressions: string;
+  planNextSession: string;
+  returnToClinic: string;
+  /** Drawn signature (data URL) + scanned handwritten note attachment. */
+  signature: string | null;
+  signedAt: string | null;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  /** FALSE (default) = private to the doctor and admins. TRUE = patient may read it. */
+  sharedWithPatient: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+const NOTE_COLUMNS =
+  'appointment_id, doctor_id, patient_id, summary, observations, recommendation, follow_up, ' +
+  'session_date, session_location, duration_minutes, client_name, client_dob, psychologist, ' +
+  'presenting_problem, session_content, interventions, client_response, therapist_observations, ' +
+  'mental_status_exam, risk_assessment, diagnostic_impressions, plan_next_session, return_to_clinic, ' +
+  'signature, signed_at, attachment_path, attachment_name, shared_with_patient, created_at, updated_at';
+
+type ConsultationNoteRow = {
+  appointment_id: string;
+  doctor_id: string;
+  patient_id: string;
+  summary: string | null;
+  observations: string | null;
+  recommendation: string | null;
+  follow_up: string | null;
+  session_date: string | null;
+  session_location: string | null;
+  duration_minutes: number | null;
+  client_name: string | null;
+  client_dob: string | null;
+  psychologist: string | null;
+  presenting_problem: string | null;
+  session_content: string | null;
+  interventions: string | null;
+  client_response: string | null;
+  therapist_observations: string | null;
+  mental_status_exam: string | null;
+  risk_assessment: string | null;
+  diagnostic_impressions: string | null;
+  plan_next_session: string | null;
+  return_to_clinic: string | null;
+  signature: string | null;
+  signed_at: string | null;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  shared_with_patient: boolean | null;
+  created_at?: string;
+  updated_at?: string | null;
+};
+
+const mapConsultationNoteRow = (row: ConsultationNoteRow): ConsultationNote => ({
+  appointmentId: row.appointment_id,
+  doctorId: row.doctor_id,
+  patientId: row.patient_id,
+  summary: row.summary ?? '',
+  observations: row.observations ?? '',
+  recommendation: row.recommendation ?? '',
+  followUp: row.follow_up ?? null,
+  sessionDate: row.session_date ?? '',
+  sessionLocation: row.session_location ?? 'Virtual (Teleconsultation)',
+  durationMinutes: row.duration_minutes ?? null,
+  clientName: row.client_name ?? '',
+  clientDob: row.client_dob ?? '',
+  psychologist: row.psychologist ?? '',
+  presentingProblem: row.presenting_problem ?? '',
+  sessionContent: row.session_content ?? '',
+  interventions: row.interventions ?? '',
+  clientResponse: row.client_response ?? '',
+  therapistObservations: row.therapist_observations ?? '',
+  mentalStatusExam: row.mental_status_exam ?? '',
+  riskAssessment: row.risk_assessment ?? '',
+  diagnosticImpressions: row.diagnostic_impressions ?? '',
+  planNextSession: row.plan_next_session ?? '',
+  returnToClinic: row.return_to_clinic ?? '',
+  signature: row.signature ?? null,
+  signedAt: row.signed_at ?? null,
+  attachmentPath: row.attachment_path ?? null,
+  attachmentName: row.attachment_name ?? null,
+  sharedWithPatient: !!row.shared_with_patient,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at ?? undefined,
+});
+
+/** True when a therapy-progress-note row (or a legacy row) has any content. */
+export const consultationNoteHasContent = (
+  note: Pick<
+    ConsultationNote,
+    | 'summary'
+    | 'observations'
+    | 'recommendation'
+    | 'followUp'
+    | 'presentingProblem'
+    | 'sessionContent'
+    | 'interventions'
+    | 'clientResponse'
+    | 'therapistObservations'
+    | 'mentalStatusExam'
+    | 'riskAssessment'
+    | 'diagnosticImpressions'
+    | 'planNextSession'
+    | 'returnToClinic'
+  > | null,
+): boolean =>
+  !!note &&
+  [
+    note.presentingProblem,
+    note.sessionContent,
+    note.interventions,
+    note.clientResponse,
+    note.therapistObservations,
+    note.mentalStatusExam,
+    note.riskAssessment,
+    note.diagnosticImpressions,
+    note.planNextSession,
+    note.returnToClinic,
+    note.summary,
+    note.observations,
+    note.recommendation,
+    note.followUp,
+  ].some((part) => (part ?? '').trim().length > 0);
+
+/** Consultation duration in whole minutes, from the video session timestamps. */
+export const fetchConsultationDurationMinutes = async (
+  appointmentId: string,
+): Promise<number | null> => {
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase
+      .from('video_sessions')
+      .select('started_at, ended_at')
+      .eq('appointment_id', appointmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data?.started_at) return null;
+    const start = new Date(data.started_at).getTime();
+    const end = data.ended_at ? new Date(data.ended_at).getTime() : Date.now();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+    return Math.max(1, Math.round((end - start) / 60000));
+  } catch {
+    return null;
+  }
+};
+
+/** Signed-in doctor's display name, used to prefill the note header. */
+export const fetchCurrentDoctorDisplayName = async (): Promise<string> => {
+  if (!supabase) return '';
+  try {
+    const doctorId = await requireUserId();
+    const { data } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, full_name')
+      .eq('id', doctorId)
+      .maybeSingle();
+    const full = (data?.full_name ?? '').trim();
+    if (full) return full;
+    return [data?.first_name, data?.last_name].filter(Boolean).join(' ').trim();
+  } catch {
+    return '';
+  }
+};
+
+const CONSULTATION_DOCS_BUCKET = 'consultation-docs';
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
+
+/** Uploads a scanned/photographed handwritten note; returns the storage path. */
+export const uploadConsultationAttachment = async (
+  item: WebConsultationItem,
+  file: File,
+): Promise<string> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error('That file is larger than 15 MB. Please attach a smaller scan or photo.');
+  }
+  const doctorId = await requireUserId();
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '_');
+  const path = `${item.patientId}/${doctorId}/${Date.now()}_${safeName}`;
+  const { error } = await supabase.storage
+    .from(CONSULTATION_DOCS_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (error) throw new Error(error.message);
+  return path;
+};
+
+const ATTACHMENT_URL_TTL_SECONDS = 600;
+
+/** Best-effort delete of an uploaded scan (used when the doctor removes it). */
+export const removeConsultationAttachment = async (storagePath: string): Promise<void> => {
+  if (!supabase || !storagePath) return;
+  try {
+    await supabase.storage.from(CONSULTATION_DOCS_BUCKET).remove([storagePath]);
+  } catch {
+    /* the row no longer references it — orphan cleanup is not critical */
+  }
+};
+
+export const createConsultationAttachmentUrl = async (storagePath: string): Promise<string> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { data, error } = await supabase.storage
+    .from(CONSULTATION_DOCS_BUCKET)
+    .createSignedUrl(storagePath, ATTACHMENT_URL_TTL_SECONDS);
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Could not open the attachment.');
+  return data.signedUrl;
+};
+
+/**
+ * Flip the patient-visibility of a saved note. When the note is shared the
+ * patient gets a notification; when it is made private again nothing is sent.
+ * Returns the refreshed note so callers can update local state.
+ */
+export const setConsultationNoteSharing = async (
+  appointmentId: string,
+  shared: boolean,
+): Promise<ConsultationNote> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .update({ shared_with_patient: shared, updated_at: new Date().toISOString() })
+    .eq('appointment_id', appointmentId)
+    .select(NOTE_COLUMNS)
+    .single();
+  if (error || !data) throw new Error(error?.message ?? 'The sharing setting could not be saved.');
+
+  if (shared) {
+    const row = data as unknown as ConsultationNoteRow;
+    const noticeError = await supabase.from('notifications').insert({
+      user_id: row.patient_id,
+      title: 'Consultation notes shared',
+      message: 'Your doctor has shared their consultation notes with you. Open the booking to read them.',
+      type: 'appointment',
+    });
+    void noticeError;
+  }
+
+  return mapConsultationNoteRow(data as unknown as ConsultationNoteRow);
+};
 
 export const startVideoConsultation = async (item: WebConsultationItem): Promise<VideoRoom> => {
   if (!supabase) throw new Error('Supabase is not configured.');
@@ -713,31 +966,39 @@ export const fetchConsultationNote = async (appointmentId: string): Promise<Cons
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('consultation_notes')
-    .select(
-      'appointment_id, doctor_id, patient_id, summary, observations, recommendation, follow_up, created_at, updated_at',
-    )
+    .select(NOTE_COLUMNS)
     .eq('appointment_id', appointmentId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  return {
-    appointmentId: data.appointment_id,
-    doctorId: data.doctor_id,
-    patientId: data.patient_id,
-    summary: data.summary ?? '',
-    observations: data.observations ?? '',
-    recommendation: data.recommendation ?? '',
-    followUp: data.follow_up ?? null,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
+  return mapConsultationNoteRow(data as unknown as ConsultationNoteRow);
 };
 
 export interface ConsultationNoteDraft {
-  summary: string;
-  observations: string;
-  recommendation: string;
-  followUp: string | null;
+  /** Therapy progress note — header. */
+  sessionDate: string;
+  sessionLocation: string;
+  durationMinutes: number | null;
+  clientName: string;
+  clientDob: string;
+  psychologist: string;
+  /** Sections. */
+  presentingProblem: string;
+  sessionContent: string;
+  interventions: string;
+  clientResponse: string;
+  therapistObservations: string;
+  mentalStatusExam: string;
+  riskAssessment: string;
+  diagnosticImpressions: string;
+  planNextSession: string;
+  returnToClinic: string;
+  /** Drawn signature data URL and/or scanned-note attachment path. */
+  signature: string | null;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  /** Patient visibility — FALSE (default) keeps the note private to the doctor. */
+  sharedWithPatient: boolean;
 }
 
 export const fetchDoctorConsultationNotes = async (): Promise<ConsultationNote[]> => {
@@ -745,52 +1006,72 @@ export const fetchDoctorConsultationNotes = async (): Promise<ConsultationNote[]
   await requireUserId();
   const { data, error } = await supabase
     .from('consultation_notes')
-    .select(
-      'appointment_id, doctor_id, patient_id, summary, observations, recommendation, follow_up, created_at, updated_at',
-    )
+    .select(NOTE_COLUMNS)
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return ((data ?? []) as {
-    appointment_id: string;
-    doctor_id: string;
-    patient_id: string;
-    summary: string;
-    observations: string;
-    recommendation: string;
-    follow_up: string | null;
-    created_at?: string;
-    updated_at: string;
-  }[]).map((row) => ({
-    appointmentId: row.appointment_id,
-    doctorId: row.doctor_id,
-    patientId: row.patient_id,
-    summary: row.summary ?? '',
-    observations: row.observations ?? '',
-    recommendation: row.recommendation ?? '',
-    followUp: row.follow_up ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+  return ((data ?? []) as unknown as ConsultationNoteRow[]).map(mapConsultationNoteRow);
 };
 
 export const saveConsultationNote = async (
   item: WebConsultationItem,
   draft: ConsultationNoteDraft,
-): Promise<void> => {
+): Promise<ConsultationNote> => {
   if (!supabase) throw new Error('Supabase is not configured.');
   const doctorId = await requireUserId();
+  const trim = (value: string | null | undefined) => (value ?? '').trim();
+  const presentingProblem = trim(draft.presentingProblem);
+  const sessionContent = trim(draft.sessionContent);
+
+  // Legacy roll-ups: keep the old 4 columns meaningful for readers that have
+  // not been migrated yet (admin records, older clients).
+  const legacySummary = [presentingProblem, sessionContent].filter(Boolean).join('\n\n');
+
   const payload = {
     appointment_id: item.id,
     doctor_id: doctorId,
     patient_id: item.patientId,
-    summary: draft.summary.trim(),
-    observations: draft.observations.trim(),
-    recommendation: draft.recommendation.trim(),
-    follow_up: draft.followUp?.trim() || null,
+    summary: legacySummary,
+    observations: trim(draft.therapistObservations),
+    recommendation: trim(draft.planNextSession),
+    follow_up: trim(draft.returnToClinic) || null,
+    session_date: trim(draft.sessionDate),
+    session_location: trim(draft.sessionLocation) || 'Virtual (Teleconsultation)',
+    duration_minutes: draft.durationMinutes,
+    client_name: trim(draft.clientName) || item.patientName,
+    client_dob: trim(draft.clientDob),
+    psychologist: trim(draft.psychologist),
+    presenting_problem: presentingProblem,
+    session_content: sessionContent,
+    interventions: trim(draft.interventions),
+    client_response: trim(draft.clientResponse),
+    therapist_observations: trim(draft.therapistObservations),
+    mental_status_exam: trim(draft.mentalStatusExam),
+    risk_assessment: trim(draft.riskAssessment),
+    diagnostic_impressions: trim(draft.diagnosticImpressions),
+    plan_next_session: trim(draft.planNextSession),
+    return_to_clinic: trim(draft.returnToClinic),
+    signature: draft.signature,
+    signed_at: draft.signature ? new Date().toISOString() : null,
+    attachment_path: draft.attachmentPath,
+    attachment_name: draft.attachmentName,
+    shared_with_patient: draft.sharedWithPatient,
     updated_at: new Date().toISOString(),
   };
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('consultation_notes')
-    .upsert(payload, { onConflict: 'appointment_id' });
-  if (error) throw new Error(error.message);
+    .upsert(payload, { onConflict: 'appointment_id' })
+    .select(NOTE_COLUMNS)
+    .single();
+  if (error || !data) throw new Error(error?.message ?? 'The note could not be saved.');
+  const note = mapConsultationNoteRow(data as unknown as ConsultationNoteRow);
+  if (draft.sharedWithPatient) {
+    const noticeError = await supabase.from('notifications').insert({
+      user_id: item.patientId,
+      title: 'Consultation notes shared',
+      message: 'Your doctor has shared their consultation notes with you. Open the booking to read them.',
+      type: 'appointment',
+    });
+    void noticeError;
+  }
+  return note;
 };

@@ -25,6 +25,7 @@ import {
   saveDoctorAvailability,
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
+  setConsultationNoteSharing,
   toIsoDate,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
@@ -1852,7 +1853,27 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             </div>
             <div className="web-chat-modal-body">
               {consultNotes[summaryTarget.id] ? (
-                <ConsultationSummaryView note={consultNotes[summaryTarget.id]} />
+                <ConsultationSummaryView
+                  note={consultNotes[summaryTarget.id]}
+                  shareBusy={decisionBusy === `share-${summaryTarget.id}`}
+                  onToggleShare={async (shared) => {
+                    const appointmentId = summaryTarget.id;
+                    setDecisionBusy(`share-${appointmentId}`);
+                    setActionError(null);
+                    try {
+                      const updated = await setConsultationNoteSharing(appointmentId, shared);
+                      setConsultNotes((prev) => ({ ...prev, [appointmentId]: updated }));
+                    } catch (err) {
+                      setActionError(
+                        err instanceof Error
+                          ? err.message
+                          : 'The sharing setting could not be saved.',
+                      );
+                    } finally {
+                      setDecisionBusy(null);
+                    }
+                  }}
+                />
               ) : (
                 <ConsultationSummaryEmpty message="No after-visit summary has been written for this consultation yet." />
               )}

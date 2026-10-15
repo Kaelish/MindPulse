@@ -13,10 +13,27 @@ export interface IncomingCall {
 export interface StudentConsultationNote {
   appointmentId: string;
   doctorId: string;
+  /** Legacy roll-up fields. */
   summary: string;
   observations: string;
   recommendation: string;
   followUp: string | null;
+  /** Therapy progress note — header. */
+  sessionDate: string;
+  durationMinutes: number | null;
+  clientName: string;
+  psychologist: string;
+  /** Therapy progress note — patient-facing sections (the rest stay with the doctor). */
+  presentingProblem: string;
+  sessionContent: string;
+  interventions: string;
+  clientResponse: string;
+  planNextSession: string;
+  returnToClinic: string;
+  /** Drawn signature + optional scanned handwritten note. */
+  signature: string | null;
+  attachmentPath: string | null;
+  attachmentName: string | null;
   updatedAt: string | null;
 }
 
@@ -112,31 +129,72 @@ export const declineIncomingCall = async (call: IncomingCall): Promise<void> => 
   }
 };
 
+const STUDENT_NOTE_COLUMNS =
+  'appointment_id, doctor_id, summary, observations, recommendation, follow_up, ' +
+  'session_date, duration_minutes, client_name, psychologist, ' +
+  'presenting_problem, session_content, interventions, client_response, ' +
+  'plan_next_session, return_to_clinic, signature, attachment_path, attachment_name, updated_at';
+
 export const fetchConsultationNote = async (
   appointmentId: string,
 ): Promise<StudentConsultationNote | null> => {
   if (!appointmentId) return null;
+  // Row-level security only returns the row when the doctor has shared it,
+  // so a null result means "not written yet" OR "kept private by the doctor".
   const { data, error } = await supabase
     .from('consultation_notes')
-    .select(
-      'appointment_id, doctor_id, summary, observations, recommendation, follow_up, updated_at',
-    )
+    .select(STUDENT_NOTE_COLUMNS)
     .eq('appointment_id', appointmentId)
     .maybeSingle();
   if (error || !data) return null;
+  const row = data as Record<string, any>;
   return {
-    appointmentId: data.appointment_id,
-    doctorId: data.doctor_id,
-    summary: data.summary ?? '',
-    observations: data.observations ?? '',
-    recommendation: data.recommendation ?? '',
-    followUp: data.follow_up ?? null,
-    updatedAt: data.updated_at ?? null,
+    appointmentId: row.appointment_id,
+    doctorId: row.doctor_id,
+    summary: row.summary ?? '',
+    observations: row.observations ?? '',
+    recommendation: row.recommendation ?? '',
+    followUp: row.follow_up ?? null,
+    sessionDate: row.session_date ?? '',
+    durationMinutes: row.duration_minutes ?? null,
+    clientName: row.client_name ?? '',
+    psychologist: row.psychologist ?? '',
+    presentingProblem: row.presenting_problem ?? '',
+    sessionContent: row.session_content ?? '',
+    interventions: row.interventions ?? '',
+    clientResponse: row.client_response ?? '',
+    planNextSession: row.plan_next_session ?? '',
+    returnToClinic: row.return_to_clinic ?? '',
+    signature: row.signature ?? null,
+    attachmentPath: row.attachment_path ?? null,
+    attachmentName: row.attachment_name ?? null,
+    updatedAt: row.updated_at ?? null,
   };
+};
+
+const CONSULTATION_DOCS_BUCKET = 'consultation-docs';
+const SIGNED_URL_TTL_SECONDS = 600;
+
+/** Short-lived signed URL for the doctor's attached handwritten scan. */
+export const createConsultationAttachmentUrl = async (storagePath: string): Promise<string> => {
+  const { data, error } = await supabase.storage
+    .from(CONSULTATION_DOCS_BUCKET)
+    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Could not open the attachment.');
+  return data.signedUrl;
 };
 
 export const hasConsultationContent = (note: StudentConsultationNote | null): boolean =>
   !!note &&
-  [note.summary, note.observations, note.recommendation, note.followUp].some((part) =>
-    (part ?? '').trim().length > 0,
-  );
+  [
+    note.summary,
+    note.observations,
+    note.recommendation,
+    note.followUp,
+    note.presentingProblem,
+    note.sessionContent,
+    note.interventions,
+    note.clientResponse,
+    note.planNextSession,
+    note.returnToClinic,
+  ].some((part) => (part ?? '').trim().length > 0);

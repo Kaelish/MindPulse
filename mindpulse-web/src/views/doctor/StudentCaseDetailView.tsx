@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StudentCase } from './StudentCasesView';
 import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
+import { ConsultationSummaryView } from '../../components/ConsultationSummaryView';
 import './StudentCaseDetailView.css';
 import {
   fetchStudentConsultationNotes,
@@ -351,7 +352,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             const riskClass = (session.stressLevel ?? band ?? '').toLowerCase();
             return (
               <section className="detail-assessment-card" key={session.id}>
-                <div><h2>Assessment <span className={`risk-badge ${riskClass}`}>{riskLabel}</span></h2><p>{formatDateTime(session.createdAt)}</p></div>
+                <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span></h2></div>
                 <strong className={band ? `score-${band}` : ''}>{session.score == null ? '—' : `${session.score}%`}<small>Stress Level</small></strong>
                 <div className="detail-emotion-bars">
                   <SessionMetric label="Heart rate" value={session.heartRate == null ? '—' : `${session.heartRate} bpm`} />
@@ -410,12 +411,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                 {consultation.notes && (<><h3>Booking note</h3><p>{consultation.notes}</p></>)}
                 {note ? (
                   <div className="consult-summary">
-                    <h3>Session summary</h3>
-                    <p>{note.summary}</p>
-                    {note.observations && (<><h3>Observations</h3><p>{note.observations}</p></>)}
-                    {note.recommendation && (<><h3>Recommendation</h3><p>{note.recommendation}</p></>)}
-                    {note.followUp && (<><h3>Follow-up</h3><p>{note.followUp}</p></>)}
-                    <small className="consult-summary-stamp">After-visit summary · saved {formatDateTime(note.updatedAt)}</small>
+                    <ConsultationSummaryView note={note} />
                   </div>
                 ) : consultation.status === 'completed' ? (
                   <p className="consult-summary-pending">This consultation is completed, but no after-visit summary has been written yet.</p>

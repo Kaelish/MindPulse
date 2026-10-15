@@ -16,6 +16,17 @@
     -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <!--
+      Handwriting-style font used by the Therapy Progress Note pad. If this
+      cannot load (offline), the CSS stack falls back to local handwriting
+      fonts such as Segoe Print / Bradley Hand.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap"
+    />
+    <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
       Only files inside the `public` folder can be referenced from the HTML.

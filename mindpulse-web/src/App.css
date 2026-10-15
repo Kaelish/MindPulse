@@ -1766,6 +1766,298 @@ button {
   line-height: 1.5;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Therapy progress note — paper pad + form styling                        */
+/* ---------------------------------------------------------------------- */
+
+.therapy-pad-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.therapy-pad {
+  --therapy-hand: 'Patrick Hand', 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+  background: #ffffff;
+  color: #10151c;
+  border: 2px solid #10151c;
+  outline: 1px solid #10151c;
+  outline-offset: 3px;
+  border-radius: 2px;
+  padding: 22px 24px;
+  font-family: var(--therapy-hand);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+}
+
+.tp-pad-title {
+  margin: 0 0 16px;
+  padding: 6px 10px;
+  text-align: center;
+  font-family: var(--therapy-hand);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: #e9ebee;
+  border: 1px solid #c9ced6;
+}
+
+.tp-pad-subhead {
+  margin: 16px 0 0;
+  padding: 5px 10px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #e9ebee;
+  border: 1px solid #c9ced6;
+  border-bottom: none;
+}
+
+.tp-pad-grid,
+.tp-pad-row {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  border: 1px solid #c9ced6;
+}
+
+.tp-pad-subhead + .tp-pad-grid {
+  border-top: none;
+}
+
+.tp-pad-row + .tp-pad-row {
+  border-top: none;
+}
+
+.tp-pad-cell,
+.tp-pad-label {
+  padding: 7px 10px;
+}
+
+.tp-pad-cell-label,
+.tp-pad-label {
+  background: #f0f1f4;
+  border-right: 1px solid #c9ced6;
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tp-pad-cell-value,
+.tp-pad-value {
+  padding: 7px 12px;
+  font-size: 0.98rem;
+}
+
+.tp-pad-value {
+  white-space: pre-wrap;
+}
+
+.tp-pad-safety {
+  margin: 14px 0 0;
+  font-style: italic;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #2b3440;
+}
+
+.tp-pad-scan {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed #b9c0ca;
+}
+
+.tp-pad-scan-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tp-pad-scan a { color: #1d4ed8; }
+
+.tp-pad-scan-img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border: 1px solid #d7dbe1;
+}
+
+.tp-pad-scan-missing {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.tp-pad-sign {
+  margin-top: 24px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-pad-sign-img {
+  max-height: 64px;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  mix-blend-mode: multiply;
+}
+
+.tp-pad-sign-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  border-top: 1px solid #10151c;
+  padding-top: 4px;
+}
+
+.tp-pad-sign-name { font-weight: 700; }
+.tp-pad-sign-date { font-size: 0.85rem; }
+
+.tp-pad-stamp {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.tp-pad-print { align-self: flex-start; }
+
+/* form-only helpers ----------------------------------------------------- */
+
+.therapy-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.therapy-safety-footer {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--doc-muted);
+  line-height: 1.5;
+}
+
+.therapy-sign-pad {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  aspect-ratio: 640 / 200;
+  touch-action: none;
+  cursor: crosshair;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.therapy-sign-preview {
+  display: block;
+  max-width: 320px;
+  max-height: 110px;
+  object-fit: contain;
+  object-position: left center;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background: #fff;
+  mix-blend-mode: multiply;
+}
+
+.therapy-scan-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.therapy-clinician-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.therapy-share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: var(--doc-panel, rgba(255, 255, 255, 0.04));
+}
+
+.therapy-share-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+  flex: 1;
+}
+
+.therapy-share-copy strong { font-size: 0.88rem; }
+
+.therapy-share-copy span {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--doc-muted);
+}
+
+/* printing: only the pad goes to paper / PDF ---------------------------- */
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .therapy-pad,
+  .therapy-pad * {
+    visibility: visible !important;
+  }
+
+  .therapy-pad {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+    border-width: 1px;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .therapy-share-row,
+  .tp-pad-print {
+    display: none !important;
+  }
+}
+
 .sidebar-profile-card {
   margin-top: auto;
   background: #ffffff;

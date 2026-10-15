@@ -304,12 +304,42 @@ export const fetchStudentConsultations = async (
 
 export interface StudentConsultationNoteRecord {
   appointmentId: string;
+  /** Legacy roll-up fields. */
   summary: string;
   observations: string;
   recommendation: string;
   followUp: string | null;
+  /** Therapy progress note. */
+  sessionDate: string;
+  sessionLocation: string;
+  durationMinutes: number | null;
+  clientName: string;
+  clientDob: string;
+  psychologist: string;
+  presentingProblem: string;
+  sessionContent: string;
+  interventions: string;
+  clientResponse: string;
+  therapistObservations: string;
+  mentalStatusExam: string;
+  riskAssessment: string;
+  diagnosticImpressions: string;
+  planNextSession: string;
+  returnToClinic: string;
+  signature: string | null;
+  signedAt: string | null;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  sharedWithPatient: boolean;
   updatedAt: string;
 }
+
+const STUDENT_NOTE_COLUMNS =
+  'appointment_id, summary, observations, recommendation, follow_up, ' +
+  'session_date, session_location, duration_minutes, client_name, client_dob, psychologist, ' +
+  'presenting_problem, session_content, interventions, client_response, therapist_observations, ' +
+  'mental_status_exam, risk_assessment, diagnostic_impressions, plan_next_session, return_to_clinic, ' +
+  'signature, signed_at, attachment_path, attachment_name, shared_with_patient, updated_at';
 
 export const fetchStudentConsultationNotes = async (
   studentId: string,
@@ -321,24 +351,66 @@ export const fetchStudentConsultationNotes = async (
 
   const { data, error } = await supabase
     .from('consultation_notes')
-    .select('appointment_id, summary, observations, recommendation, follow_up, updated_at')
+    .select(STUDENT_NOTE_COLUMNS)
     .eq('patient_id', studentId)
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as {
+  return ((data ?? []) as unknown as {
     appointment_id: string;
-    summary: string;
-    observations: string;
-    recommendation: string;
+    summary: string | null;
+    observations: string | null;
+    recommendation: string | null;
     follow_up: string | null;
+    session_date: string | null;
+    session_location: string | null;
+    duration_minutes: number | null;
+    client_name: string | null;
+    client_dob: string | null;
+    psychologist: string | null;
+    presenting_problem: string | null;
+    session_content: string | null;
+    interventions: string | null;
+    client_response: string | null;
+    therapist_observations: string | null;
+    mental_status_exam: string | null;
+    risk_assessment: string | null;
+    diagnostic_impressions: string | null;
+    plan_next_session: string | null;
+    return_to_clinic: string | null;
+    signature: string | null;
+    signed_at: string | null;
+    attachment_path: string | null;
+    attachment_name: string | null;
+    shared_with_patient: boolean | null;
     updated_at: string;
   }[]).map((row) => ({
     appointmentId: row.appointment_id,
-    summary: row.summary,
-    observations: row.observations,
-    recommendation: row.recommendation,
-    followUp: row.follow_up,
+    summary: row.summary ?? '',
+    observations: row.observations ?? '',
+    recommendation: row.recommendation ?? '',
+    followUp: row.follow_up ?? null,
+    sessionDate: row.session_date ?? '',
+    sessionLocation: row.session_location ?? 'Virtual (Teleconsultation)',
+    durationMinutes: row.duration_minutes ?? null,
+    clientName: row.client_name ?? '',
+    clientDob: row.client_dob ?? '',
+    psychologist: row.psychologist ?? '',
+    presentingProblem: row.presenting_problem ?? '',
+    sessionContent: row.session_content ?? '',
+    interventions: row.interventions ?? '',
+    clientResponse: row.client_response ?? '',
+    therapistObservations: row.therapist_observations ?? '',
+    mentalStatusExam: row.mental_status_exam ?? '',
+    riskAssessment: row.risk_assessment ?? '',
+    diagnosticImpressions: row.diagnostic_impressions ?? '',
+    planNextSession: row.plan_next_session ?? '',
+    returnToClinic: row.return_to_clinic ?? '',
+    signature: row.signature ?? null,
+    signedAt: row.signed_at ?? null,
+    attachmentPath: row.attachment_path ?? null,
+    attachmentName: row.attachment_name ?? null,
+    sharedWithPatient: !!row.shared_with_patient,
     updatedAt: row.updated_at,
   }));
 };

@@ -1860,6 +1860,22 @@
   color: var(--doc-ink-2);
 }
 
+/* Therapy progress note stays paper-white even in the dark doctor theme. */
+.doctor-scope .therapy-pad {
+  background: #ffffff;
+  color: #10151c;
+}
+
+.doctor-scope .therapy-clinician-tag {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.doctor-scope .therapy-scan-chip {
+  border-color: var(--doc-line);
+}
+
 .doctor-scope .decide-btn {
   display: inline-flex;
   align-items: center;
