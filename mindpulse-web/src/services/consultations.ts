@@ -90,6 +90,25 @@ export const isDateUnavailable = (
   return blockedDates.includes(toIsoDate(date));
 };
 
+/**
+ * True when the slot's start time has already passed in real time.
+ * dateStr uses the display format ("Oct 2, 2026") and time the slot format
+ * ("5:30 PM"); unknown formats are treated as bookable so a format change can
+ * never lock the doctor out of booking. Mirrors the patient app's isSlotInPast
+ * so both sides agree on what counts as a past slot.
+ */
+export const isSlotInPast = (dateStr: string, time: string, now: Date = new Date()): boolean => {
+  const date = parseDisplayDate(dateStr);
+  const match = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec(time.trim());
+  if (!date || !match) return false;
+
+  let hour = Number(match[1]) % 12;
+  if (match[3].toLowerCase() === 'pm') hour += 12;
+  const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, Number(match[2]));
+
+  return slotStart.getTime() <= now.getTime();
+};
+
 export type PaymentMethod = 'card' | 'gcash' | 'maya';
 
 export interface VideoRoom {
@@ -297,6 +316,51 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
   });
 };
 
+/** A patient account a walk-in booking will attach to, matched by email. */
+export interface PatientAccountMatch {
+  id: string;
+  name: string;
+  email: string;
+  studentNo: string | null;
+}
+
+/** Escapes LIKE wildcards so "john_doe@…" matches that address, not "johnDoe@…". */
+const escapeEmailPattern = (value: string) => value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+
+/**
+ * Finds the account a walk-in booking attaches to, matched case-insensitively
+ * by email. Returns null when no account uses the email — shared by the
+ * Step-1 pre-check and the booking itself so both always give the same answer.
+ * (appointments.patient_id is a required foreign key, so a booking can only
+ * ever point at an account that exists.)
+ */
+export const findPatientAccountByEmail = async (
+  email: string,
+): Promise<PatientAccountMatch | null> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const trimmed = email.trim();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, student_no')
+    .ilike('email', escapeEmailPattern(trimmed))
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const row = data as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    student_no: string | null;
+  };
+  return {
+    id: row.id,
+    name: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+    email: row.email || trimmed,
+    studentNo: row.student_no,
+  };
+};
+
 /**
  * Books a consultation for an existing MindPulse account (matched by email).
  * Throws when Supabase errors, the account is missing, or the slot is taken.
@@ -307,16 +371,17 @@ export const saveDoctorScheduleAppointment = async (
   if (!supabase) throw new Error('Supabase is not configured.');
   const doctorId = await requireUserId();
 
-  const { data: patient, error: patientError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email, student_no')
-    .ilike('email', booking.patientEmail)
-    .maybeSingle();
-  if (patientError) throw new Error(patientError.message);
+  const patient = await findPatientAccountByEmail(booking.patientEmail);
   if (!patient) {
     throw new Error(
       `No MindPulse account matches ${booking.patientEmail}. The patient must register before you can book them.`,
     );
+  }
+
+  // Never book a slot whose start time has already passed (same rule the
+  // patient app applies — this is the authority, the UI is only the mirror).
+  if (isSlotInPast(booking.selectedDate, booking.selectedTime)) {
+    throw new Error('That time slot has already passed. Pick a later one.');
   }
 
   const scheduledFor = `${booking.selectedDate} at ${booking.selectedTime}`;
@@ -351,22 +416,19 @@ export const saveDoctorScheduleAppointment = async (
     .single();
   if (insertError) throw new Error(insertError.message);
 
-  const name =
-    `${patient.first_name || ''} ${patient.last_name || ''}`.trim() ||
-    patient.email ||
-    'Unknown patient';
+  const name = patient.name || patient.email || 'Unknown patient';
   return {
     id: inserted.id,
     patientId: inserted.patient_id,
     patientName: name,
-    studentId: patient.student_no || 'No student no.',
+    studentId: patient.studentNo || 'No student no.',
     scheduledTime: inserted.scheduled_for || scheduledFor,
     status: 'Scheduled',
     rawStatus: 'scheduled',
     notes: inserted.notes ?? undefined,
     avatarInitials: initialsOf(name),
     avatarUrl: null,
-    patientEmail: patient.email || booking.patientEmail,
+    patientEmail: patient.email,
   };
 };
 

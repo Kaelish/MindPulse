@@ -1,6 +1,6 @@
 import { supabase } from '../supabase/client';
 
-export type PaymentMethod = 'card' | 'gcash' | 'maya';
+export type PaymentMethod = 'card' | 'gcash' | 'maya' | 'cash';
 export type PaymentStatus = 'paid' | 'refunded';
 
 export interface TransactionItem {

@@ -10,6 +10,7 @@ const METHOD_LABELS: Record<string, string> = {
   card: 'Card',
   gcash: 'GCash',
   maya: 'Maya',
+  cash: 'Cash',
 };
 
 const formatAmount = (amount: number): string =>

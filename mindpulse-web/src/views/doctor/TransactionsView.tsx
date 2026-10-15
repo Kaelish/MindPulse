@@ -3,14 +3,21 @@ import { DoctorEmpty, DoctorError, DoctorLoading, DoctorNotifications, DoctorRes
 import {
   DoctorTransactionItem,
   PAYMENT_METHOD_LABELS,
+  PayableAppointment,
+  PaymentMethod,
   fetchDoctorTransactions,
+  fetchPayableAppointments,
   formatTransactionAmount,
   formatTransactionDate,
+  recordWalkInPayment,
 } from '../../services/transactions';
+import { fetchDoctorAvailability } from '../../services/consultations';
 import './TransactionsView.css';
 
-const METHOD_FILTERS = ['All Methods', 'Card', 'GCash', 'Maya'];
+const METHOD_FILTERS = ['All Methods', 'Card', 'GCash', 'Maya', 'Cash'];
 const STATUS_FILTERS = ['All Statuses', 'Paid', 'Refunded'];
+/** Methods a doctor can record for a walk-in (Cash is the usual one). */
+const WALK_IN_METHODS: PaymentMethod[] = ['cash', 'card', 'gcash', 'maya'];
 
 export const TransactionsView: React.FC = () => {
   const [transactions, setTransactions] = useState<DoctorTransactionItem[]>([]);
@@ -23,6 +30,17 @@ export const TransactionsView: React.FC = () => {
   /** The clicked transaction — its receipt opens in a dialog. */
   const [receiptTx, setReceiptTx] = useState<DoctorTransactionItem | null>(null);
 
+  // ── Walk-in payment dialog ──
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [payable, setPayable] = useState<PayableAppointment[]>([]);
+  const [payableLoaded, setPayableLoaded] = useState(false);
+  const [walkInAppointmentId, setWalkInAppointmentId] = useState('');
+  const [walkInAmount, setWalkInAmount] = useState('');
+  const [walkInMethod, setWalkInMethod] = useState<PaymentMethod>('cash');
+  const [walkInSaving, setWalkInSaving] = useState(false);
+  const [walkInError, setWalkInError] = useState('');
+  const [walkInNotice, setWalkInNotice] = useState('');
+
   // Back button: Esc closes the receipt dialog.
   useEffect(() => {
     if (!receiptTx) return;
@@ -32,6 +50,80 @@ export const TransactionsView: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [receiptTx]);
+
+  /** Load the payable bookings + the default amount the first time it opens. */
+  const openWalkIn = useCallback(async () => {
+    setWalkInError('');
+    setWalkInNotice('');
+    setWalkInOpen(true);
+    if (!payableLoaded) {
+      try {
+        const [appointments, availability] = await Promise.all([
+          fetchPayableAppointments(),
+          fetchDoctorAvailability().catch(() => null),
+        ]);
+        setPayable(appointments);
+        setPayableLoaded(true);
+        setWalkInAppointmentId(appointments[0]?.id ?? '');
+        if (availability && availability.fee) setWalkInAmount(String(availability.fee));
+      } catch (error) {
+        setWalkInError(
+          error instanceof Error ? error.message : 'Unable to load your bookings.',
+        );
+      }
+    }
+  }, [payableLoaded]);
+
+  const closeWalkIn = useCallback(() => {
+    if (walkInSaving) return;
+    setWalkInOpen(false);
+    setWalkInError('');
+  }, [walkInSaving]);
+
+  // Esc closes the walk-in dialog too.
+  useEffect(() => {
+    if (!walkInOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeWalkIn();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [walkInOpen, closeWalkIn]);
+
+  const submitWalkIn = useCallback(async () => {
+    if (walkInSaving) return;
+    const amount = Number.parseFloat(walkInAmount);
+    if (!walkInAppointmentId) {
+      setWalkInError('Choose the booking this payment is for.');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setWalkInError('Enter the amount the patient paid.');
+      return;
+    }
+    setWalkInSaving(true);
+    setWalkInError('');
+    try {
+      await recordWalkInPayment(walkInAppointmentId, amount, walkInMethod);
+      const target = payable.find((item) => item.id === walkInAppointmentId);
+      setWalkInOpen(false);
+      setWalkInAmount('');
+      // The booking is now confirmed, so it is no longer payable — refetch next time.
+      setPayableLoaded(false);
+      setWalkInNotice(
+        `Payment of ${formatTransactionAmount(amount)} recorded for ${
+          target?.patientName ?? 'the patient'
+        } — the booking is now confirmed.`,
+      );
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      setWalkInError(
+        error instanceof Error ? error.message : 'Unable to record the payment.',
+      );
+    } finally {
+      setWalkInSaving(false);
+    }
+  }, [walkInAmount, walkInAppointmentId, walkInMethod, payable, walkInSaving]);
 
   useEffect(() => {
     let active = true;
@@ -105,6 +197,15 @@ export const TransactionsView: React.FC = () => {
       <div className="header-actions">
         <button
           type="button"
+          className="ghost-button walk-in-button"
+          onClick={openWalkIn}
+          disabled={isLoading || !!loadError}
+          title="Record a payment a patient made in person (walk-in booking)"
+        >
+          + Record walk-in payment
+        </button>
+        <button
+          type="button"
           className="ghost-button"
           onClick={exportCsv}
           disabled={isLoading || !!loadError || visibleTransactions.length === 0}
@@ -115,6 +216,12 @@ export const TransactionsView: React.FC = () => {
         <DoctorNotifications />
       </div>
     </header>
+
+    {walkInNotice && (
+      <p className="walk-in-notice" role="status">
+        {walkInNotice}
+      </p>
+    )}
 
     <section className="assessment-summary-grid" aria-label="Transaction summary">
       <article className="assessment-summary-card green">
@@ -303,6 +410,136 @@ export const TransactionsView: React.FC = () => {
               🖨 Print
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Walk-in payment dialog ── */}
+    {walkInOpen && (
+      <div
+        className="tx-walkin-overlay"
+        role="presentation"
+        onClick={closeWalkIn}
+      >
+        <div
+          className="tx-walkin-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Record walk-in payment"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="tx-walkin-head">
+            <div>
+              <h2>Record Walk-in Payment</h2>
+              <p>
+                For a patient who booked — and paid — in person. Recording it also
+                confirms their online booking.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="tx-receipt-back"
+              aria-label="Close"
+              onClick={closeWalkIn}
+              disabled={walkInSaving}
+            >
+              ×
+            </button>
+          </header>
+
+          {walkInError && (
+            <p className="walk-in-error" role="alert">{walkInError}</p>
+          )}
+
+          {payable.length === 0 && !walkInError ? (
+            <div className="walk-in-empty">
+              <p>
+                You have no bookings awaiting payment. Book the walk-in patient
+                first from <strong>Consultations → + Schedule Consultation</strong>,
+                then record their payment here.
+              </p>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={closeWalkIn}
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <div className="walk-in-form">
+              <label className="walk-in-field">
+                <span>Booking</span>
+                <select
+                  value={walkInAppointmentId}
+                  onChange={(event) => setWalkInAppointmentId(event.target.value)}
+                  disabled={walkInSaving}
+                >
+                  {payable.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.patientName} —{' '}
+                      {item.scheduledTime ? formatTransactionDate(item.scheduledTime) : 'No date set'} ·{' '}
+                      {item.rawStatus === 'awaiting_payment' ? 'Awaiting payment' : 'Scheduled'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="walk-in-field">
+                <span>Amount received</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={walkInAmount}
+                  placeholder="e.g. 1500"
+                  onChange={(event) => setWalkInAmount(event.target.value)}
+                  disabled={walkInSaving}
+                  autoFocus
+                />
+              </label>
+
+              <label className="walk-in-field">
+                <span>Payment method</span>
+                <select
+                  value={walkInMethod}
+                  onChange={(event) => setWalkInMethod(event.target.value as PaymentMethod)}
+                  disabled={walkInSaving}
+                >
+                  {WALK_IN_METHODS.map((option) => (
+                    <option key={option} value={option}>
+                      {PAYMENT_METHOD_LABELS[option]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="walk-in-hint">
+                A <strong>MP-WALKIN-…</strong> reference is generated automatically so
+                manual records are always distinguishable from in-app payments.
+              </p>
+
+              <div className="tx-receipt-actions">
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={closeWalkIn}
+                  disabled={walkInSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button walk-in-submit"
+                  onClick={submitWalkIn}
+                  disabled={walkInSaving}
+                >
+                  {walkInSaving ? 'Recording…' : 'Record payment & confirm'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )}

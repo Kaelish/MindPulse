@@ -18,7 +18,9 @@ import {
   fetchWebChatMessages,
   fetchWebChatThreads,
   fetchWebConsultations,
+  findPatientAccountByEmail,
   isDateUnavailable,
+  isSlotInPast,
   markWebThreadRead,
   normalizeWeekdays,
   parseDisplayDate,
@@ -149,6 +151,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   // Manual Schedule Consultation Modal State
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
   const [scheduleStep, setScheduleStep] = useState<1 | 2>(1);
+  const [scheduleChecking, setScheduleChecking] = useState<boolean>(false);
   const [patientName, setPatientName] = useState<string>('');
   const [patientAge, setPatientAge] = useState<string>('');
   const [patientEmail, setPatientEmail] = useState<string>('');
@@ -493,6 +496,15 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       setEditError('That date is a day off for you — pick another date.');
       return;
     }
+    // Past times are already disabled in the grid, except the appointment's
+    // own slot (which may itself be in the past when rescheduling a missed
+    // session). This guard covers time passing while the dialog sits open.
+    const ownParts = editTarget.scheduledTime.split(' at ');
+    const isOwnSlot = editTime === (ownParts[1] || '').trim() && editDate === currentDate;
+    if (!isOwnSlot && isSlotInPast(editDate, editTime)) {
+      setEditError('That time slot has already passed. Pick a later one.');
+      return;
+    }
     setEditBusy(true);
     setEditError(null);
     try {
@@ -593,6 +605,38 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     setAvailError(null);
   };
 
+  /**
+   * Step 1 → 2: verify the typed email belongs to an existing account NOW,
+   * while the walk-in patient is still at the desk — instead of after the
+   * doctor has picked a slot. The booking itself re-checks on submit.
+   */
+  const handleSchedulePatientInfoNext = async () => {
+    if (scheduleChecking) return;
+    const email = patientEmail.trim();
+    if (!patientName.trim() || !email) {
+      setScheduleError('Please enter the patient full name and email to continue.');
+      return;
+    }
+    setScheduleError(null);
+    setScheduleChecking(true);
+    try {
+      const account = await findPatientAccountByEmail(email);
+      if (!account) {
+        setScheduleError(
+          `No MindPulse account uses ${email}. Ask the patient to register on the MindPulse app with this exact email — the booking will attach to their account automatically as soon as they do.`,
+        );
+        return;
+      }
+      setScheduleStep(2);
+    } catch (err) {
+      setScheduleError(
+        err instanceof Error ? err.message : 'Could not check that email. Please try again.',
+      );
+    } finally {
+      setScheduleChecking(false);
+    }
+  };
+
   const handleConfirmSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleError(null);
@@ -608,6 +652,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     }
     if (isDayOff(selectedDate)) {
       setScheduleError('That date is a day off — pick another date.');
+      return;
+    }
+    if (isSlotInPast(selectedDate, selectedTime)) {
+      setScheduleError('That time slot has already passed. Pick a later one.');
       return;
     }
 
@@ -630,6 +678,13 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       setScheduleError(err instanceof Error ? err.message : 'Unable to schedule the consultation.');
     }
   };
+
+  /** Chosen slot is no longer bookable (already taken, or its time passed). */
+  const selectedSlotBlocked =
+    !!selectedDate &&
+    !!selectedTime &&
+    (bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ||
+      isSlotInPast(selectedDate, selectedTime));
 
   const upcomingConsultations = useMemo(
     () => consultations.filter((c) => (UPCOMING_STATUSES as readonly string[]).includes(c.rawStatus)),
@@ -1316,26 +1371,33 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                 {timeSlots.map((t) => {
                   const slotKey = `${editDate}_${t}`;
                   const isBooked = bookedSlotKeys.has(slotKey) && slotKey !== editTarget.scheduledTime.replace(' at ', '_');
+                  // Keep the appointment's own slot pickable even if its time
+                  // has passed (rescheduling a missed session back to itself).
+                  const ownParts = editTarget.scheduledTime.split(' at ');
+                  const isOwnSlot = t === (ownParts[1] || '').trim() && editDate === ownParts[0];
+                  const isPast = !isOwnSlot && isSlotInPast(editDate, t);
+                  const isUnavailable = isBooked || isPast;
                   const isSelected = editTime === t;
                   return (
                     <button
                       key={t}
                       type="button"
-                      disabled={isBooked}
+                      disabled={isUnavailable}
+                      title={isBooked ? 'Already booked' : isPast ? 'That time has already passed' : undefined}
                       style={{
                         padding: '10px 4px',
                         borderRadius: '8px',
-                        border: isBooked ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
-                        background: isBooked ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
-                        color: isBooked ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
+                        border: isUnavailable ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                        background: isUnavailable ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
+                        color: isUnavailable ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
                         fontWeight: 700,
                         fontSize: '0.8rem',
-                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                        cursor: isUnavailable ? 'not-allowed' : 'pointer',
                         textAlign: 'center',
                       }}
-                      onClick={() => !isBooked && setEditTime(t)}
+                      onClick={() => !isUnavailable && setEditTime(t)}
                     >
-                      {t} {isBooked ? 'Booked' : ''}
+                      {t} {isBooked ? 'Booked' : isPast ? 'Past' : ''}
                     </button>
                   );
                 })}
@@ -1687,17 +1749,11 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
 
                 <button
                   type="button"
-                  style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
-                  onClick={() => {
-                    if (patientName.trim() && patientEmail.trim()) {
-                      setScheduleError(null);
-                      setScheduleStep(2);
-                    } else {
-                      setScheduleError('Please enter the patient full name and email to continue.');
-                    }
-                  }}
+                  style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: scheduleChecking ? 'wait' : 'pointer', marginTop: '10px', opacity: scheduleChecking ? 0.7 : 1 }}
+                  onClick={handleSchedulePatientInfoNext}
+                  disabled={scheduleChecking}
                 >
-                  Proceed to Date & Time Slot →
+                  {scheduleChecking ? 'Checking email…' : 'Proceed to Date & Time Slot →'}
                 </button>
               </div>
             ) : (
@@ -1731,6 +1787,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                           onClick={() => {
                             if (disabled) return;
                             setSelectedDate(d.dateStr);
+                            // The kept time may have passed on the new date.
+                            if (selectedTime && isSlotInPast(d.dateStr, selectedTime)) {
+                              setSelectedTime('');
+                            }
                           }}
                         >
                           {d.label}
@@ -1749,27 +1809,30 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     {timeSlots.map((t) => {
                       const slotKey = `${selectedDate}_${t}`;
                       const isBooked = bookedSlotKeys.has(slotKey);
+                      const isPast = isSlotInPast(selectedDate, t);
+                      const isUnavailable = isBooked || isPast;
                       const isSelected = selectedTime === t;
 
                       return (
                         <button
                           key={t}
                           type="button"
-                          disabled={isBooked}
+                          disabled={isUnavailable}
+                          title={isBooked ? 'Already booked' : isPast ? 'That time has already passed' : undefined}
                           style={{
                             padding: '10px 4px',
                             borderRadius: '8px',
-                            border: isBooked ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
-                            background: isBooked ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
-                            color: isBooked ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
+                            border: isUnavailable ? '1px dashed var(--doc-line-strong)' : isSelected ? '2px solid var(--primary-strong)' : '1px solid var(--doc-line-strong)',
+                            background: isUnavailable ? 'var(--doc-soft)' : isSelected ? 'var(--primary-strong)' : 'var(--doc-panel)',
+                            color: isUnavailable ? 'var(--doc-muted)' : isSelected ? '#ffffff' : 'var(--doc-ink)',
                             fontWeight: 700,
                             fontSize: '0.8rem',
-                            cursor: isBooked ? 'not-allowed' : 'pointer',
+                            cursor: isUnavailable ? 'not-allowed' : 'pointer',
                             textAlign: 'center',
                           }}
-                          onClick={() => !isBooked && setSelectedTime(t)}
+                          onClick={() => !isUnavailable && setSelectedTime(t)}
                         >
-                          {t} {isBooked ? 'Booked (Unavailable)' : ''}
+                          {t} {isBooked ? 'Booked (Unavailable)' : isPast ? 'Past' : ''}
                         </button>
                       );
                     })}
@@ -1803,16 +1866,16 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
 
                   <button
                     type="submit"
-                    disabled={bookedSlotKeys.has(`${selectedDate}_${selectedTime}`)}
+                    disabled={selectedSlotBlocked}
                     style={{
                       flex: 2,
-                      background: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? 'var(--doc-muted)' : 'var(--primary-strong)',
+                      background: selectedSlotBlocked ? 'var(--doc-muted)' : 'var(--primary-strong)',
                       color: '#ffffff',
                       border: 'none',
                       padding: '12px',
                       borderRadius: '10px',
                       fontWeight: 700,
-                      cursor: bookedSlotKeys.has(`${selectedDate}_${selectedTime}`) ? 'not-allowed' : 'pointer',
+                      cursor: selectedSlotBlocked ? 'not-allowed' : 'pointer',
                     }}
                   >
                     Confirm booking

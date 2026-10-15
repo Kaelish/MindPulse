@@ -2,7 +2,7 @@ import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
 
-export type PaymentMethod = 'card' | 'gcash' | 'maya';
+export type PaymentMethod = 'card' | 'gcash' | 'maya' | 'cash';
 export type PaymentStatus = 'paid' | 'refunded';
 
 export interface DoctorTransactionItem {
@@ -49,6 +49,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   card: 'Card',
   gcash: 'GCash',
   maya: 'Maya',
+  cash: 'Cash',
 };
 
 export const formatTransactionDate = (value: string): string => {
@@ -128,4 +129,78 @@ export const fetchDoctorTransactions = async (): Promise<DoctorTransactionItem[]
       avatarUrl: (appointment && avatars.get(appointment.patient_id)) ?? null,
     };
   });
+};
+
+/** Bookings a walk-in payment can be recorded against (not yet paid/confirmed). */
+export interface PayableAppointment {
+  id: string;
+  patientName: string;
+  /** Raw ISO timestamp, or null when the slot has no date yet. */
+  scheduledTime: string | null;
+  rawStatus: string;
+}
+
+export const fetchPayableAppointments = async (): Promise<PayableAppointment[]> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const doctorId = await requireUserId();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, patient_id, scheduled_for, status')
+    .eq('doctor_id', doctorId)
+    .in('status', ['scheduled', 'awaiting_payment'])
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as {
+    id: string;
+    patient_id: string;
+    scheduled_for: string | null;
+    status: string;
+  }[];
+  if (!rows.length) return [];
+
+  const patientIds = Array.from(new Set(rows.map((row) => row.patient_id)));
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, first_name, last_name')
+    .in('id', patientIds);
+  const names = new Map<string, string>();
+  for (const profile of (profiles ?? []) as {
+    id: string;
+    full_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  }[]) {
+    const name =
+      profile.full_name?.trim() ||
+      [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim();
+    if (name) names.set(profile.id, name);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    patientName: names.get(row.patient_id) || 'Patient',
+    scheduledTime: row.scheduled_for,
+    rawStatus: row.status,
+  }));
+};
+
+/**
+ * Records a walk-in payment for one of this doctor's bookings and confirms
+ * the appointment. Guarded in SQL (record_walkin_payment) so a doctor can
+ * only ever record a payment for their own, still-unpaid booking.
+ */
+export const recordWalkInPayment = async (
+  appointmentId: string,
+  amount: number,
+  method: PaymentMethod,
+): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { error } = await supabase.rpc('record_walkin_payment', {
+    p_appointment_id: appointmentId,
+    p_amount: amount,
+    p_method: method,
+  });
+  if (error) throw new Error(error.message);
 };
