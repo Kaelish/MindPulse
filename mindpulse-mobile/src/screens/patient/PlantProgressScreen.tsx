@@ -98,6 +98,16 @@ export const PlantProgressScreen: React.FC<PlantProgressScreenProps> = ({ onBack
         </View>
 
         <View style={styles.messageBox}><Text style={styles.message}>{STAGE_MESSAGES[stage.name] ?? 'Keep going — your plant is growing!'}</Text></View>
+
+        {/* Streak + freeze bank: one freeze covers one missed day, so the
+            streak (and the plant) survives a gap until the bank runs dry. */}
+        <View style={styles.streakBox}>
+          <Text style={styles.streakTitle}>🔥 {streak} day streak</Text>
+          <Text style={styles.streakSub}>
+            {progress?.freezes ?? 0} streak freeze{(progress?.freezes ?? 0) === 1 ? '' : 's'} · miss a day and one freeze covers it — run out and the streak restarts at 0.
+          </Text>
+        </View>
+
         <View style={styles.tipBox}><Text style={styles.tipTitle}>💡 GROWTH TIP</Text><Text style={styles.tipText}>🌿 Keep your streak going — each low-stress session helps it grow!</Text><Text style={styles.pointsText}>{progress?.totalGrowthPoints ?? 0} growth points</Text></View>
 
         <Text style={styles.sectionTitle}>ALL GROWTH STAGES</Text>
@@ -132,6 +142,9 @@ const makeStyles = () => StyleSheet.create({
   plantArt: { fontSize: 75 },
   messageBox: { margin: 12, padding: 13, borderWidth: 1, borderColor: toneBg('#8BE5AA'), borderRadius: 10, backgroundColor: toneBg('#E5FBEA') },
   message: { color: tone('#47705A'), fontSize: 10, lineHeight: 15 },
+  streakBox: { marginHorizontal: 12, marginBottom: 12, padding: 12, borderWidth: 1, borderColor: toneBg('#FFD9A0'), borderRadius: 10, backgroundColor: toneBg('#FFF8EC') },
+  streakTitle: { color: tone('#B4690E'), fontSize: 11, fontWeight: '800' },
+  streakSub: { color: tone('#8A7A63'), fontSize: 9, lineHeight: 13, marginTop: 4 },
   tipBox: { marginHorizontal: 12, padding: 12, borderWidth: 1, borderColor: toneBg('#DED5FF'), borderRadius: 10, backgroundColor: toneBg('#F7F4FF') },
   tipTitle: { color: tone('#7562DA'), fontSize: 8, fontWeight: '800', marginBottom: 5 },
   tipText: { color: tone('#647087'), fontSize: 9, lineHeight: 13 },

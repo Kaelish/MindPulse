@@ -446,7 +446,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
               <Text style={styles.plantTip}>
                 {plantError
                   ? plantError
-                  : <>🌱 {plant?.currentStreak ?? 0} day streak · {plant?.totalGrowthPoints ?? 0} growth points — each low-stress session helps it grow!</>}
+                  : <>🌱 {plant?.currentStreak ?? 0} day streak · ❄️ {plant?.freezes ?? 0} freeze{plant?.freezes === 1 ? '' : 's'} · {plant?.totalGrowthPoints ?? 0} growth points</>}
               </Text>
               {/* Stage dots */}
               <View style={styles.stageDots}>
