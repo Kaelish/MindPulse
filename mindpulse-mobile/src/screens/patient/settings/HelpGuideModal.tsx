@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -62,35 +62,37 @@ const HELP_TOPICS: HelpTopic[] = [
   {
     icon: 'calendar-outline',
     title: 'Booking a consultation',
-    keywords: 'book consultation clinics doctor search find pay payment receipt connect appointment schedule',
+    keywords: 'book consultation clinics doctor search find pay payment receipt connect appointment schedule cash walk in walkin gcash maya card',
     steps: [
       'Open the Clinics tab → Clinicians.',
       'Use the search bar to find a doctor by name or specialization.',
       'Tap a doctor\'s card to open their full profile — bio, verified status, fee, and availability (their license and personal contact stay private; chat happens in-app).',
-      'Pick a date and time inside their availability and confirm the booking.',
-      'Pay the consultation fee — your receipt pops up right after payment and has a back button.',
+      'Pick a date and time inside their availability and confirm the booking. Times that have already passed are greyed out.',
+      'Pay the consultation fee with GCash, Maya, or card — your receipt pops up right after payment and has a back button.',
+      'Walked in and paid at the clinic instead? The doctor records the payment for you — it appears in your transactions as Cash with an MP-WALKIN reference, and the booking confirms automatically.',
       'Wait for the doctor to approve; you\'ll get a notification when it\'s confirmed.',
     ],
   },
   {
     icon: 'chatbubbles-outline',
     title: 'Bookings & messages',
-    keywords: 'bookings status chat message clinic declined approved upcoming history',
+    keywords: 'bookings status chat message clinic declined approved upcoming history note summary shared',
     steps: [
       'Clinics → Bookings lists your appointments and their current status.',
       'Clinics → Messages is your chat with the clinic — send files as well as text.',
       'If a booking is declined, the doctor\'s reason is shown on that booking.',
-      'Tap a booking to see its details, summary, and receipt.',
+      'Tap a booking to see its details and receipt — plus the doctor\'s consultation note once it is shared with you.',
     ],
   },
   {
     icon: 'videocam-outline',
     title: 'Your video session',
-    keywords: 'video call session join jitsi confirmed meeting telehealth',
+    keywords: 'video call session join jitsi confirmed meeting telehealth therapy progress note summary shared pending',
     steps: [
       'When the session time arrives and your booking is confirmed, join from your booking or notification.',
       'Keep the app open and your connection stable during the call.',
-      'After the session, the doctor\'s summary and any shared files appear with the booking.',
+      'After the session the doctor writes a Therapy Progress Note. You see its patient-facing parts once the doctor shares it with you — until then the booking simply shows that a note is pending, and you\'ll get a notification when it\'s shared.',
+      'Any files the doctor shares appear with the same booking.',
     ],
   },
   {
@@ -127,6 +129,8 @@ const HELP_TOPICS: HelpTopic[] = [
 
 export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ visible, onClose }) => {
   const [query, setQuery] = useState('');
+  /** Expanded FAQ items — everything starts collapsed so the list stays scannable. */
+  const [openTitles, setOpenTitles] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -137,6 +141,30 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ visible, onClose
       ),
     );
   }, [query]);
+
+  // While searching, every match expands so the answer is visible immediately.
+  useEffect(() => {
+    if (!query.trim()) return;
+    setOpenTitles(new Set(filtered.map((topic) => topic.title)));
+  }, [query, filtered]);
+
+  // Reopening starts from a clean, collapsed list.
+  useEffect(() => {
+    if (!visible) {
+      setQuery('');
+      setOpenTitles(new Set());
+    }
+  }, [visible]);
+
+  const toggleTopic = (title: string) =>
+    setOpenTitles((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+
+  const allOpen = filtered.length > 0 && filtered.every((topic) => openTitles.has(topic.title));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -152,7 +180,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ visible, onClose
               </View>
               <View>
                 <Text style={styles.headerTitle}>Help & Guide</Text>
-                <Text style={styles.headerSub}>How to use MindPulse — step by step</Text>
+                <Text style={styles.headerSub}>Tap a topic to expand it</Text>
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -180,28 +208,55 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ visible, onClose
               )}
             </View>
 
-            <Text style={styles.resultCount}>
-              {filtered.length} of {HELP_TOPICS.length} guides
-            </Text>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultCount}>
+                {filtered.length} of {HELP_TOPICS.length} guides
+              </Text>
+              {filtered.length > 0 && (
+                <Pressable
+                  onPress={() =>
+                    setOpenTitles(allOpen ? new Set() : new Set(filtered.map((topic) => topic.title)))
+                  }
+                  hitSlop={8}
+                >
+                  <Text style={styles.expandAll}>{allOpen ? 'Collapse all' : 'Expand all'}</Text>
+                </Pressable>
+              )}
+            </View>
 
-            {filtered.map((topic) => (
-              <View style={styles.card} key={topic.title}>
-                <View style={styles.cardHead}>
-                  <View style={styles.cardIconBox}>
-                    <Ionicons name={topic.icon as any} size={16} color={tone('#5B6EF5')} />
-                  </View>
-                  <Text style={styles.cardTitle}>{topic.title}</Text>
-                </View>
-                {topic.steps.map((step, index) => (
-                  <View style={styles.stepRow} key={index}>
-                    <View style={styles.stepDot}>
-                      <Text style={styles.stepDotText}>{index + 1}</Text>
+            {filtered.map((topic) => {
+              const open = openTitles.has(topic.title);
+              return (
+                <View style={[styles.card, open && styles.cardOpen]} key={topic.title}>
+                  <Pressable
+                    style={styles.cardHead}
+                    onPress={() => toggleTopic(topic.title)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: open }}
+                    hitSlop={4}
+                  >
+                    <View style={styles.cardIconBox}>
+                      <Ionicons name={topic.icon as any} size={16} color={tone('#5B6EF5')} />
                     </View>
-                    <Text style={styles.stepText}>{step}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
+                    <Text style={styles.cardTitle}>{topic.title}</Text>
+                    <Ionicons
+                      name={open ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={tone('#94A3B8')}
+                    />
+                  </Pressable>
+                  {open &&
+                    topic.steps.map((step, index) => (
+                      <View style={styles.stepRow} key={index}>
+                        <View style={styles.stepDot}>
+                          <Text style={styles.stepDotText}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.stepText}>{step}</Text>
+                      </View>
+                    ))}
+                </View>
+              );
+            })}
 
             {filtered.length === 0 && (
               <View style={styles.emptyBox}>
@@ -282,14 +337,24 @@ const styles = StyleSheet.create({
     height: 44,
   },
   searchInput: { flex: 1, fontSize: 13.5, color: Colors.textPrimary, paddingVertical: 0 },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    marginBottom: 2,
+  },
   resultCount: {
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: '#94A3B8',
-    marginTop: 14,
-    marginBottom: 2,
+  },
+  expandAll: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#5B6EF5',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -300,7 +365,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 9,
   },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cardOpen: {
+    borderColor: '#C9D2F8',
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
   cardIconBox: {
     width: 30,
     height: 30,

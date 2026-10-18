@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DoctorEmpty } from '../../components/doctor/DoctorChrome';
 import type { DoctorView } from '../../components/navigation/DoctorSidebar';
 import './HelpView.css';
@@ -81,29 +81,33 @@ const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'bookings',
     icon: '▣',
-    title: 'Handling bookings',
-    hint: 'Approve, decline, reschedule, or message — the full booking flow.',
-    keywords: 'consultation booking approve decline reschedule message start session payment confirmed awaiting pending history upcoming',
+    title: 'Handling bookings & walk-ins',
+    hint: 'Approve, decline, reschedule — plus booking a walk-in patient.',
+    keywords: 'consultation booking approve decline reschedule message start session payment confirmed awaiting pending history upcoming walk in walkin schedule cash desk appointment',
     steps: [
       'Consultations → Upcoming shows pending and active bookings; History shows completed, declined, and cancelled ones.',
       'Approve a pending booking, Decline it (a reason is required and is sent to the student), or Reschedule it to a new date and time.',
       'After you approve, the student pays — the booking moves through Awaiting Payment to Confirmed.',
       'Confirmed bookings show Message and Start Session. The video call opens right in the portal.',
       'Each row has a 📊 Assessments button to review the student\'s history before or after the session.',
+      '+ Schedule Consultation books a walk-in in two steps: their details, then the date and time. The email must match a registered account — if the patient has not registered yet, they do it on their phone (about a minute) and the booking attaches to that account automatically.',
+      'Time slots whose start time has already passed are greyed out as "Past" — you can only book forward, and so can students on the app.',
     ],
     linkTo: 'consultations',
     linkLabel: 'Go to Consultations',
   },
   {
-    id: 'messages',
+    id: 'notes',
     icon: '✎',
-    title: 'Messages, summaries & files',
-    hint: 'Chat with a patient and document what happened.',
-    keywords: 'chat message summary note files upload attachment my files document after call',
+    title: 'Messages & consultation notes',
+    hint: 'Chat with a patient, then document the session privately.',
+    keywords: 'chat message note therapy progress summary private share signature handwritten scan files upload attachment document after call observations mse risk',
     steps: [
       'Consultations → Messages opens your chat threads; the list refreshes automatically while you read.',
       'Attach a file while chatting — send to the chat only, or also file it into the patient\'s My Files.',
-      'Open a booking and use the Consultation Summary to record what was discussed and the next steps; the student can read it too.',
+      'Open a confirmed booking to write the Consultation Note — a structured Therapy Progress Note (presenting problem, session content, interventions, client response, observations, MSE, risk, impressions, plan) ending with your drawn signature.',
+      'Notes are PRIVATE BY DEFAULT. They stay on your side until you switch on "Share with patient" — the student then sees only the patient-facing sections, never your observations, MSE, risk assessment, or diagnostic impressions.',
+      'Prefer paper? Attach a scanned or photographed handwritten note to the shared note — it opens from the booking on both sides.',
       'Files uploaded here stay attached to the student\'s case, so the next provider has continuity.',
     ],
   },
@@ -111,11 +115,13 @@ const HELP_TOPICS: HelpTopic[] = [
     id: 'transactions',
     icon: '◈',
     title: 'Transactions & receipts',
-    hint: 'Every consultation payment, with its receipt.',
-    keywords: 'transaction payment receipt refund money paid billing cost fee',
+    hint: 'Every consultation payment — in-app or recorded at the desk.',
+    keywords: 'transaction payment receipt refund money paid billing cost fee walk in walkin cash manual record desk gcash maya card',
     steps: [
-      'Transactions lists each consultation payment with amount, date, status, and receipt details.',
+      'Transactions lists each consultation payment with amount, date, method, status, and receipt details.',
       'The student\'s receipt is generated automatically after payment and is available on both the app and this portal.',
+      'Walk-in patient paid at the desk? + Record walk-in payment lets you pick their unpaid booking, enter the amount, and choose Cash (or card, GCash, Maya). Recording it also confirms that booking so the student can join the session.',
+      'Walk-in payments carry an MP-WALKIN-… reference, so manual records are always easy to tell apart from in-app payments — in the list, the receipt, and the CSV export.',
       'If a figure looks off, match it against the booking status in Consultations — a payment only appears once it is actually captured.',
     ],
     linkTo: 'transactions',
@@ -126,10 +132,11 @@ const HELP_TOPICS: HelpTopic[] = [
     icon: '❋',
     title: 'Student recommendations',
     hint: 'Tailored self-care guidance for a student.',
-    keywords: 'recommendation self care tips assign suggest advice student case history',
+    keywords: 'recommendation self care tips assign suggest advice student case history priority category completed active',
     steps: [
       'Open a student case and use the Recommendations tab to give tailored self-care guidance — the tab also lists every past recommendation for that student.',
       'Match the recommendation to the student\'s latest band — Low, Moderate, or High — from their case record.',
+      'Mark a past recommendation Completed once the student has acted on it; the rest stay listed as Active.',
       'Students receive it in their app alongside their own assessment tips.',
     ],
   },
@@ -143,6 +150,7 @@ const HELP_TOPICS: HelpTopic[] = [
       'Open Suggestions in the sidebar to send the clinic admin a feature request, an improvement idea, or a report about the system.',
       'Add a title, category, priority, and details, then press Send to admin.',
       'The admin replies and updates the status (Open, In progress, Resolved) — you get a notification and can read the reply on the card.',
+      'Changed your mind? You can withdraw a suggestion any time before it is resolved.',
     ],
     linkTo: 'recommendations',
     linkLabel: 'Go to Suggestions',
@@ -178,12 +186,12 @@ const HELP_TOPICS: HelpTopic[] = [
     icon: '⌾',
     title: 'Privacy & who sees what',
     hint: 'Why you can see a history — and what others see.',
-    keywords: 'privacy security access scope consent records visibility data who can see rls',
+    keywords: 'privacy security access scope consent records visibility data who can see rls private share',
     steps: [
       "You see a student's assessment history through their booking with you — access stays scoped to that relationship.",
       'Students only ever see their own data; administrators manage accounts, verification, and aggregated analytics.',
       'Sessions recorded before per-question answers were stored simply show no answer list — the score and history still appear.',
-      'Consultation notes stay private to you unless you choose to share them with the student; recommendations are visible to the student they belong to.',
+      'Consultation notes stay private to you unless you switch on "Share with patient"; a shared note shows the student only its patient-facing sections. Recommendations are visible to the student they belong to.',
     ],
   },
 ];
@@ -197,6 +205,8 @@ const normalize = (value: string) => value.toLowerCase();
 
 export const HelpView: React.FC<HelpViewProps> = ({ onNavigate }) => {
   const [query, setQuery] = useState('');
+  /** Expanded FAQ items. Everything starts collapsed so the page stays scannable. */
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     const needle = normalize(query.trim());
@@ -208,13 +218,29 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate }) => {
     );
   }, [query]);
 
+  // While searching, every match expands so the answer is visible immediately.
+  useEffect(() => {
+    if (!query.trim()) return;
+    setOpenIds(new Set(filtered.map((topic) => topic.id)));
+  }, [query, filtered]);
+
+  const toggleTopic = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const allOpen = filtered.length > 0 && filtered.every((topic) => openIds.has(topic.id));
+
   return (
     <main className="main-panel">
       <header className="topbar">
         <div>
           <h1>Help &amp; Guide</h1>
           <p className="page-subtitle">
-            How to use the doctor portal — search a topic or follow a guide below
+            Search a topic, then tap a guide to expand it
           </p>
         </div>
       </header>
@@ -226,7 +252,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate }) => {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search: e.g. approve a booking, bands, receipts, dark mode…"
+            placeholder="Search: e.g. approve a booking, bands, receipts, walk-in…"
             aria-label="Search help topics"
           />
           {query && (
@@ -236,41 +262,70 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate }) => {
           )}
         </div>
 
-        <p className="help-result-count" aria-live="polite">
-          {filtered.length} of {HELP_TOPICS.length} guides
-        </p>
+        <div className="help-toolbar">
+          <p className="help-result-count" aria-live="polite">
+            {filtered.length} of {HELP_TOPICS.length} guides
+          </p>
+          {filtered.length > 0 && (
+            <button
+              type="button"
+              className="help-expand-all"
+              onClick={() =>
+                setOpenIds(allOpen ? new Set() : new Set(filtered.map((topic) => topic.id)))
+              }
+            >
+              {allOpen ? 'Collapse all' : 'Expand all'}
+            </button>
+          )}
+        </div>
 
-        <div className="help-grid">
-          {filtered.map((topic) => (
-            <article className="guide-card" key={topic.id}>
-              <div className="guide-head">
-                <span className="guide-icon" aria-hidden="true">{topic.icon}</span>
-                <div>
-                  <h3>{topic.title}</h3>
-                  <p>{topic.hint}</p>
-                </div>
-              </div>
-              <ol className="guide-steps">
-                {topic.steps.map((step, index) => (
-                  <li key={index}>{step}</li>
-                ))}
-              </ol>
-              {topic.linkTo && topic.linkLabel && onNavigate && (
+        <div className="help-list">
+          {filtered.map((topic) => {
+            const isOpen = openIds.has(topic.id);
+            const bodyId = `guide-body-${topic.id}`;
+            return (
+              <article className={`guide-card${isOpen ? ' is-open' : ''}`} key={topic.id}>
                 <button
                   type="button"
-                  className="guide-link"
-                  onClick={() => onNavigate(topic.linkTo as DoctorView)}
+                  className="guide-toggle"
+                  aria-expanded={isOpen}
+                  aria-controls={bodyId}
+                  onClick={() => toggleTopic(topic.id)}
                 >
-                  {topic.linkLabel} →
+                  <span className="guide-icon" aria-hidden="true">{topic.icon}</span>
+                  <span className="guide-heading">
+                    <span className="guide-title">{topic.title}</span>
+                    <span className="guide-hint">{topic.hint}</span>
+                  </span>
+                  <span className="guide-chevron" aria-hidden="true">▾</span>
                 </button>
-              )}
-            </article>
-          ))}
+
+                {isOpen && (
+                  <div className="guide-body" id={bodyId}>
+                    <ol className="guide-steps">
+                      {topic.steps.map((step, index) => (
+                        <li key={index}>{step}</li>
+                      ))}
+                    </ol>
+                    {topic.linkTo && topic.linkLabel && onNavigate && (
+                      <button
+                        type="button"
+                        className="guide-link"
+                        onClick={() => onNavigate(topic.linkTo as DoctorView)}
+                      >
+                        {topic.linkLabel} →
+                      </button>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
 
           {filtered.length === 0 && (
             <DoctorEmpty
               title="No matching guides"
-              description="Try another keyword — e.g. “booking”, “bands”, “receipts”, or “availability”."
+              description="Try another keyword — e.g. “booking”, “bands”, “receipts”, or “walk-in”."
             />
           )}
         </div>
