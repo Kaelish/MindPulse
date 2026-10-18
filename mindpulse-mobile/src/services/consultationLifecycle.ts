@@ -30,10 +30,9 @@ export interface StudentConsultationNote {
   clientResponse: string;
   planNextSession: string;
   returnToClinic: string;
-  /** Drawn signature + optional scanned handwritten note. */
+  /** Drawn signature. The scanned handwritten note is doctor-only and is
+   *  never selected here (storage denies patients outright since 0024). */
   signature: string | null;
-  attachmentPath: string | null;
-  attachmentName: string | null;
   updatedAt: string | null;
 }
 
@@ -129,11 +128,13 @@ export const declineIncomingCall = async (call: IncomingCall): Promise<void> => 
   }
 };
 
+// attachment_path / attachment_name are deliberately NOT selected: scanned
+// handwritten notes are private clinical documents that stay with the doctor.
 const STUDENT_NOTE_COLUMNS =
   'appointment_id, doctor_id, summary, observations, recommendation, follow_up, ' +
   'session_date, duration_minutes, client_name, psychologist, ' +
   'presenting_problem, session_content, interventions, client_response, ' +
-  'plan_next_session, return_to_clinic, signature, attachment_path, attachment_name, updated_at';
+  'plan_next_session, return_to_clinic, signature, updated_at';
 
 export const fetchConsultationNote = async (
   appointmentId: string,
@@ -166,22 +167,8 @@ export const fetchConsultationNote = async (
     planNextSession: row.plan_next_session ?? '',
     returnToClinic: row.return_to_clinic ?? '',
     signature: row.signature ?? null,
-    attachmentPath: row.attachment_path ?? null,
-    attachmentName: row.attachment_name ?? null,
     updatedAt: row.updated_at ?? null,
   };
-};
-
-const CONSULTATION_DOCS_BUCKET = 'consultation-docs';
-const SIGNED_URL_TTL_SECONDS = 600;
-
-/** Short-lived signed URL for the doctor's attached handwritten scan. */
-export const createConsultationAttachmentUrl = async (storagePath: string): Promise<string> => {
-  const { data, error } = await supabase.storage
-    .from(CONSULTATION_DOCS_BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
-  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Could not open the attachment.');
-  return data.signedUrl;
 };
 
 export const hasConsultationContent = (note: StudentConsultationNote | null): boolean =>

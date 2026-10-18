@@ -107,7 +107,7 @@ const HELP_TOPICS: HelpTopic[] = [
       'Attach a file while chatting — send to the chat only, or also file it into the patient\'s My Files.',
       'Open a confirmed booking to write the Consultation Note — a structured Therapy Progress Note (presenting problem, session content, interventions, client response, observations, MSE, risk, impressions, plan) ending with your drawn signature.',
       'Notes are PRIVATE BY DEFAULT. They stay on your side until you switch on "Share with patient" — the student then sees only the patient-facing sections, never your observations, MSE, risk assessment, or diagnostic impressions.',
-      'Prefer paper? Attach a scanned or photographed handwritten note to the shared note — it opens from the booking on both sides.',
+      'Prefer paper? Attach a scanned or photographed handwritten note — it stays in your portal: even when you share the note, the student never sees the scan, only the typed patient-facing sections.',
       'Files uploaded here stay attached to the student\'s case, so the next provider has continuity.',
     ],
   },

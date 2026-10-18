@@ -583,6 +583,10 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
                 {uploadingScan ? 'Uploading…' : 'Attach a photo or scan of handwritten notes'}
               </button>
             )}
+            <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#8a94a6', lineHeight: 1.5 }}>
+              Private to you: the scan never leaves your side — even a shared note shows the student only
+              the typed sections and your signature.
+            </p>
           </div>
 
           {/* ---------------- sharing ---------------- */}
@@ -591,7 +595,7 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
               <strong>Share with {appointment.patientName.split(' ')[0] || 'the student'}</strong>
               <span>
                 {sharedWithPatient
-                  ? 'The student can read the shared sections of this note in their app (observations, mental status exam, risk and diagnostics stay with you).'
+                  ? 'The student can read the shared sections of this note in their app (observations, mental status exam, risk, diagnostics, and any handwritten scan stay with you).'
                   : 'Off by default. This note stays private to you and the clinic administrators until you turn sharing on.'}
               </span>
             </div>

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   StudentConsultationNote,
-  createConsultationAttachmentUrl,
   fetchConsultationNote,
   hasConsultationContent,
 } from '../services/consultationLifecycle';
@@ -22,8 +21,6 @@ export const ConsultationSummaryCard: React.FC<ConsultationSummaryCardProps> = (
 }) => {
   const [state, setState] = useState<LoadState>('loading');
   const [note, setNote] = useState<StudentConsultationNote | null>(null);
-  const [scanUrl, setScanUrl] = useState<string | null>(null);
-  const [scanFailed, setScanFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,24 +34,6 @@ export const ConsultationSummaryCard: React.FC<ConsultationSummaryCardProps> = (
       cancelled = true;
     };
   }, [appointmentId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!note?.attachmentPath) {
-      setScanUrl(null);
-      return;
-    }
-    createConsultationAttachmentUrl(note.attachmentPath)
-      .then((url) => {
-        if (!cancelled) setScanUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setScanFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [note?.attachmentPath]);
 
   if (state === 'loading') {
     return (
@@ -132,29 +111,6 @@ export const ConsultationSummaryCard: React.FC<ConsultationSummaryCardProps> = (
           {has(n.psychologist) ? <Text style={styles.signName}>{n.psychologist}</Text> : null}
         </View>
       ) : null}
-
-      {n.attachmentPath ? (
-        <View style={styles.block}>
-          <Text style={styles.label}>Handwritten note</Text>
-          {scanUrl ? (
-            <TouchableOpacity
-              style={styles.scanButton}
-              onPress={() => void Linking.openURL(scanUrl)}
-            >
-              <Ionicons name="create-outline" size={14} color={tone('#5B6EF5')} />
-              <Text style={styles.scanButtonText}>
-                {n.attachmentName ? `View attached note (${n.attachmentName})` : 'View attached handwritten note'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.pending}>
-              {scanFailed
-                ? 'The attached handwritten note could not be opened.'
-                : 'Opening the attached handwritten note…'}
-            </Text>
-          )}
-        </View>
-      ) : null}
     </View>
   );
 };
@@ -185,18 +141,6 @@ const makeStyles = () => StyleSheet.create({
   value: { fontSize: 13, lineHeight: 19, color: tone('#334155') },
   signature: { width: '100%', height: 56, backgroundColor: '#fff', borderRadius: 8 },
   signName: { fontSize: 12, color: tone('#334155') },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: tone('#D7DEF0'),
-    backgroundColor: '#fff',
-  },
-  scanButtonText: { fontSize: 12.5, fontWeight: '700', color: tone('#5B6EF5'), flexShrink: 1 },
 });
 
 let styles = makeStyles();

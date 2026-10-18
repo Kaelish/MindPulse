@@ -205,7 +205,7 @@ export const ConsultationSummaryView = ({
         {/* handwritten scan */}
         {note.attachmentPath ? (
           <div className="tp-pad-scan">
-            <span className="tp-pad-scan-label">Handwritten note (attached scan)</span>
+            <span className="tp-pad-scan-label">Handwritten note (attached scan — private to you)</span>
             {scanUrl ? (
               scanUrl.toLowerCase().endsWith('.pdf') ? (
                 <a href={scanUrl} target="_blank" rel="noreferrer">
