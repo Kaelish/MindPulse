@@ -86,30 +86,30 @@ const PRIVACY_ITEMS = [
   {
     iconName: 'lock-closed-outline' as const,
     iconColor: '#10B981',
-    title: 'Nothing leaves your device',
-    desc: 'The demo scan does not capture or upload any camera data — it only shows a sample result.',
+    title: 'One photo, sent for analysis',
+    desc: 'A single photo is captured and sent over the network to the MindPulse server to estimate your expression.',
     bg: '#ECFDF5',
     border: '#A7F3D0',
   },
   {
     iconName: 'eye-off-outline' as const,
     iconColor: '#8B5CF6',
-    title: 'No biometric data collected',
-    desc: 'No camera feed is recorded and no face geometry is computed during the demo scan.',
+    title: 'Not stored on the server',
+    desc: 'The photo is processed for facial landmarks and emotion estimation, then discarded. No camera feed is recorded.',
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
   {
     iconName: 'shield-outline' as const,
     iconColor: '#F59E0B',
-    title: 'Demo result is not saved',
-    desc: 'The sample emotion result stays on this screen and is excluded from your saved stress score.',
+    title: 'Result is not saved',
+    desc: 'The emotion estimate is shown on the result screen and is excluded from your saved stress score.',
     bg: '#FFFBEB',
     border: '#FDE68A',
   },
 ];
 
-/* ─── Camera Preview Placeholder ─── */
+/* ─── Camera Preview ─── */
 const CameraPreview = () => (
   <View style={styles.cameraPreview}>
     {/* Grid lines */}
@@ -160,7 +160,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
         {/* Page Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Demo scan — camera analysis is not enabled yet</Text>
+          <Text style={styles.pageSubtitle}>Camera scan — your photo is analyzed by the MindPulse server</Text>
         </View>
 
         {/* Camera Preview Box */}

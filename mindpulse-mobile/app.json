@@ -3,7 +3,13 @@
     "name": "MindPulseMobile",
     "slug": "mindpulse-mobile",
     "plugins": [
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MindPulse uses the front camera to read your facial expression during the stress assessment."
+        }
+      ]
     ]
   }
 }

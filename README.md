@@ -4,6 +4,26 @@ MindPulse contains the web and mobile frontends plus an optional Django backend.
 Supabase is the single source of truth: both apps read and write the same
 Postgres database directly, protected by Row Level Security.
 
+## Run backend + mobile with one command (Windows)
+
+The mobile app's face scan calls the Django backend (which runs the emotion
+model), so both must be running. Start both at once:
+
+```
+start-dev.cmd
+```
+
+or, in PowerShell:
+
+```
+.\dev.ps1
+```
+
+Options: `-Port 8001`, `-NoBackend` (Expo only), `-NoExpo` (backend only),
+`-DryRun` (checks only). The script prints the correct
+`EXPO_PUBLIC_MINDPULSE_API_URL` for emulator / physical phone / web if it is
+missing from `mindpulse-mobile\.env`.
+
 ## Shared Supabase connection
 
 This project uses one shared Supabase project for the app and backend connection.

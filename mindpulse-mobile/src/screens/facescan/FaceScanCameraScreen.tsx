@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { analyzeFaceImage } from '../../services/emotionScan';
 
 interface Props {
   onComplete: (expression: string, confidence: number) => void;
@@ -13,32 +14,147 @@ interface Props {
 }
 
 export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) => {
-  const [progress, setProgress] = useState(0);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
 
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Scanning laser animates only while the backend is analysing the frame.
+  const laser = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    // Demo mode: simulate scan progress (no camera is opened, no model runs)
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          // Fixed sample result for the demo — never persisted to the assessment record
-          onComplete('stressed', 0.74);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 60); // approx 3 seconds total
+    if (!isAnalyzing) {
+      laser.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(laser, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(laser, { toValue: 0, duration: 900, useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isAnalyzing, laser]);
 
-    return () => clearInterval(interval);
-  }, [onComplete]);
+  const laserTop = laser.interpolate({ inputRange: [0, 1], outputRange: ['12%', '85%'] });
+
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || isCapturing || isAnalyzing) return;
+
+    setIsCapturing(true);
+    setError(null);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.6 });
+      if (!photo?.base64) {
+        throw new Error('Could not read the captured image. Please try again.');
+      }
+
+      setIsAnalyzing(true);
+      const result = await analyzeFaceImage(`data:image/jpeg;base64,${photo.base64}`);
+      onComplete(result.expression, result.confidence);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Face scan failed. Please try again.');
+    } finally {
+      setIsCapturing(false);
+      setIsAnalyzing(false);
+    }
+  }, [isCapturing, isAnalyzing, onComplete]);
+
+  const busy = isCapturing || isAnalyzing;
+
+  const renderCameraBody = () => {
+    if (!permission) {
+      return (
+        <View style={styles.centerFill}>
+          <ActivityIndicator color={tone('#9B90FF')} />
+        </View>
+      );
+    }
+
+    if (!permission.granted) {
+      return (
+        <View style={styles.permissionWrap}>
+          <Ionicons name="camera-outline" size={40} color={tone('#FFF')} />
+          <Text style={styles.permissionTitle}>Camera access needed</Text>
+          <Text style={styles.permissionText}>
+            MindPulse uses the front camera to read your facial expression during the stress
+            assessment.
+          </Text>
+          {permission.canAskAgain ? (
+            <TouchableOpacity
+              style={styles.permissionBtn}
+              onPress={requestPermission}
+              accessibilityRole="button"
+              accessibilityLabel="Allow camera access">
+              <Text style={styles.permissionBtnText}>Allow camera</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.permissionHint}>
+              Enable camera access for MindPulse in your device settings, then try again.
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="front" />
+
+        {/* Grid overlay */}
+        <View style={styles.gridOverlay} pointerEvents="none">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View key={`v-${i}`} style={[styles.gridLine, { left: `${(i + 1) * 16.6}%` }]} />
+          ))}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View key={`h-${i}`} style={[styles.gridLineHorizontal, { top: `${(i + 1) * 16.6}%` }]} />
+          ))}
+        </View>
+
+        {/* Badges */}
+        <View style={styles.badgesRow} pointerEvents="none">
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>{isAnalyzing ? 'ANALYZING' : 'LIVE'}</Text>
+          </View>
+          <View style={styles.aiBadge}>
+            <Ionicons name="flash" size={12} color={tone('#FFF')} />
+            <Text style={styles.aiText}>AI</Text>
+          </View>
+        </View>
+
+        {/* Framing guides */}
+        <View style={styles.scanGraphicWrap} pointerEvents="none">
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+        </View>
+
+        {/* Scanning laser (while analysing) */}
+        {isAnalyzing && (
+          <Animated.View style={[styles.laserLine, { top: laserTop }]} pointerEvents="none" />
+        )}
+
+        {busy && (
+          <View style={styles.busyOverlay} pointerEvents="none">
+            <ActivityIndicator color={tone('#FFF')} />
+          </View>
+        )}
+      </>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
-      {/* Top bar — the demo auto-advances after ~3s, so a back tap must be possible meanwhile */}
+      {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={onBack}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel="Back to face scan instructions">
           <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
@@ -49,66 +165,42 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
       {/* Header */}
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-        <Text style={styles.pageSubtitle}>Demo scan — camera analysis is not enabled yet</Text>
+        <Text style={styles.pageSubtitle}>Position your face in the frame, then capture</Text>
       </View>
 
       <View style={styles.content}>
-        {/* Fake Camera / Scanning Box */}
-        <View style={styles.cameraContainer}>
-          {/* Grid Background */}
-          <View style={styles.gridOverlay}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <View key={`v-${i}`} style={[styles.gridLine, { left: `${(i + 1) * 16.6}%` }]} />
-            ))}
-            {Array.from({ length: 6 }).map((_, i) => (
-              <View key={`h-${i}`} style={[styles.gridLineHorizontal, { top: `${(i + 1) * 16.6}%` }]} />
-            ))}
-          </View>
+        <View style={styles.cameraContainer}>{renderCameraBody()}</View>
 
-          {/* Badges */}
-          <View style={styles.badgesRow}>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>DEMO</Text>
-            </View>
-            <View style={styles.aiBadge}>
-              <Ionicons name="flash" size={12} color={tone('#FFF')} />
-              <Text style={styles.aiText}>SAMPLE</Text>
-            </View>
-          </View>
-
-          {/* Scan Graphic (Mock) */}
-          <View style={styles.scanGraphicWrap}>
-            {/* Corners */}
-            <View style={[styles.corner, styles.cornerTL]} />
-            <View style={[styles.corner, styles.cornerTR]} />
-            <View style={[styles.corner, styles.cornerBL]} />
-            <View style={[styles.corner, styles.cornerBR]} />
-
-            {/* Mock Face */}
-            <View style={styles.mockFace} />
-            <View style={styles.mockShoulders} />
-
-            {/* Scanning Laser Line */}
-            <View style={[styles.laserLine, { top: `${Math.max(10, progress)}%` }]} />
-          </View>
-
-          {/* Progress Bar under camera frame */}
-          <View style={styles.progressBarWrap}>
-            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-          </View>
-        </View>
-
-        {/* Processing Info */}
+        {/* Status card */}
         <View style={styles.processingCard}>
-          <MaterialCommunityIcons name="line-scan" size={24} color={tone('#6B79F2')} />
+          <MaterialCommunityIcons
+            name={isAnalyzing ? 'line-scan' : 'camera-outline'}
+            size={24}
+            color={tone('#6B79F2')}
+          />
           <View style={styles.processingTextWrap}>
-            <Text style={styles.processingTitle}>Running demo scan...</Text>
-            <Text style={styles.processingSub}>{progress}% processed</Text>
+            <Text style={styles.processingTitle}>
+              {isAnalyzing ? 'Analyzing your expression…' : 'Ready to scan'}
+            </Text>
+            <Text style={styles.processingSub}>
+              {isAnalyzing ? 'Reading facial landmarks and predicting emotion' : 'Hold steady and tap capture'}
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.statusText}>Demo in progress — no camera is used</Text>
+        {/* Shutter */}
+        <TouchableOpacity
+          style={[styles.shutter, busy && styles.shutterDisabled]}
+          onPress={handleCapture}
+          disabled={busy || !permission?.granted}
+          accessibilityRole="button"
+          accessibilityLabel="Capture and analyze face"
+          accessibilityState={{ disabled: busy || !permission?.granted }}>
+          <Ionicons name="scan" size={26} color={tone('#FFF')} />
+          <Text style={styles.shutterText}>{isAnalyzing ? 'Analyzing…' : 'Capture'}</Text>
+        </TouchableOpacity>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
     </SafeAreaView>
   );
@@ -133,11 +225,12 @@ const makeStyles = () => StyleSheet.create({
     position: 'relative',
     marginBottom: 24,
   },
+  centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   gridOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15 },
   gridLine: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: toneBg('#6B79F2') },
   gridLineHorizontal: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: toneBg('#6B79F2') },
 
-  badgesRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, zIndex: 10 },
+  badgesRow: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', padding: 16, zIndex: 10 },
   liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: toneBg('#E08A00'), paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: toneBg('#FFF'), marginRight: 4 },
   liveText: { color: tone('#FFF'), fontSize: 11, fontWeight: '800' },
@@ -155,9 +248,6 @@ const makeStyles = () => StyleSheet.create({
   cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
   cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
 
-  mockFace: { width: 70, height: 85, backgroundColor: toneBg('#FAD5C5'), borderRadius: 35, zIndex: 2 },
-  mockShoulders: { width: 110, height: 20, backgroundColor: toneBg('#5D9CEC'), borderTopLeftRadius: 40, borderTopRightRadius: 40, marginTop: -5, zIndex: 1 },
-
   laserLine: {
     position: 'absolute',
     left: -20, right: -20,
@@ -170,8 +260,22 @@ const makeStyles = () => StyleSheet.create({
     zIndex: 10,
   },
 
-  progressBarWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
-  progressBarFill: { height: '100%', backgroundColor: toneBg('#9B90FF') },
+  busyOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
+    zIndex: 20,
+  },
+
+  permissionWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  permissionTitle: { color: tone('#FFF'), fontSize: 18, fontWeight: '800', marginTop: 12 },
+  permissionText: { color: tone('#C9CCE6'), fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+  permissionHint: { color: tone('#C9CCE6'), fontSize: 12, textAlign: 'center', marginTop: 12, lineHeight: 18 },
+  permissionBtn: { backgroundColor: toneBg('#9B90FF'), paddingHorizontal: 24, height: 46, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  permissionBtnText: { color: tone('#FFF'), fontWeight: '800', fontSize: 15 },
 
   processingCard: {
     flexDirection: 'row',
@@ -182,11 +286,24 @@ const makeStyles = () => StyleSheet.create({
     width: '100%',
     marginBottom: 24,
   },
-  processingTextWrap: { marginLeft: 12 },
+  processingTextWrap: { marginLeft: 12, flex: 1 },
   processingTitle: { color: tone('#2C3473'), fontSize: 15, fontWeight: '700' },
   processingSub: { color: tone('#7E84B8'), fontSize: 13, marginTop: 2 },
 
-  statusText: { color: tone('#2C3473'), fontSize: 16, fontWeight: '700' },
+  shutter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 54,
+    paddingHorizontal: 32,
+    borderRadius: Radius.full,
+    backgroundColor: toneBg('#9B90FF'),
+  },
+  shutterDisabled: { opacity: 0.5 },
+  shutterText: { color: tone('#FFF'), fontWeight: '800', fontSize: 16 },
+
+  errorText: { color: tone('#D62E2E'), fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 16 },
 });
 
 let styles = makeStyles();

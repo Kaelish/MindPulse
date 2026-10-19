@@ -20,7 +20,7 @@ export const AssessmentNavigator = ({ onExit, onBookSession }: { onExit?: () => 
     const state = await loadAssessmentState();
     state.faceScan = 'completed';
     if (state.heartRate === 'locked') state.heartRate = 'unlocked';
-    // Demo scan result (data) is intentionally not persisted — it is excluded from scoring
+    // Face scan result (data) is intentionally not persisted — it is excluded from scoring
     void data;
     await saveAssessmentState(state);
     setScreen('hub');
