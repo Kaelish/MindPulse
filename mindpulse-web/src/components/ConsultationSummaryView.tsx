@@ -47,6 +47,11 @@ interface ConsultationSummaryViewProps {
    */
   onToggleShare?: (shared: boolean) => Promise<void>;
   shareBusy?: boolean;
+  /**
+   * When provided, an "Edit note" button is shown that reopens the editor
+   * prefilled with this note. Omit for read-only contexts.
+   */
+  onEdit?: () => void;
 }
 
 const formatStamp = (value?: string): string => {
@@ -101,6 +106,7 @@ export const ConsultationSummaryView = ({
   note,
   onToggleShare,
   shareBusy = false,
+  onEdit,
 }: ConsultationSummaryViewProps) => {
   const [scanUrl, setScanUrl] = useState<string | null>(null);
   const [scanError, setScanError] = useState(false);
@@ -241,13 +247,20 @@ export const ConsultationSummaryView = ({
         </div>
       </div>
 
-      <button
-        type="button"
-        className="text-button tp-pad-print"
-        onClick={() => window.print()}
-      >
-        Print / Save as PDF
-      </button>
+      <div className="tp-pad-actions">
+        {onEdit ? (
+          <button type="button" className="text-button tp-pad-print" onClick={onEdit}>
+            ✎ Edit note
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="text-button tp-pad-print"
+          onClick={() => window.print()}
+        >
+          Print / Save as PDF
+        </button>
+      </div>
     </div>
   );
 };

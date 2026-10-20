@@ -1929,6 +1929,7 @@ button {
 }
 
 .tp-pad-print { align-self: flex-start; }
+.tp-pad-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* form-only helpers ----------------------------------------------------- */
 
@@ -2053,6 +2054,7 @@ button {
   }
 
   .therapy-share-row,
+  .tp-pad-actions,
   .tp-pad-print {
     display: none !important;
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JitsiCallPanel } from '../../components/JitsiCallPanel';
-import { ConsultationSummaryEmpty, ConsultationSummaryView } from '../../components/ConsultationSummaryView';
+import { ConsultationSummaryView } from '../../components/ConsultationSummaryView';
+import { ConsultationSummaryForm } from '../../components/ConsultationSummaryForm';
 import {
   ALL_WEEKDAY_KEYS,
   ConsultationNote,
@@ -12,7 +13,9 @@ import {
   approveAppointment,
   declineAppointment,
   editAppointmentTime,
+  endVideoConsultation,
   fetchBookedSlotKeys,
+  fetchConsultationNote,
   fetchDoctorAvailability,
   fetchDoctorConsultationNotes,
   fetchWebChatMessages,
@@ -76,6 +79,13 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>(openTabRequest?.tab ?? 'upcoming');
   const [activeSessionItem, setActiveSessionItem] = useState<WebConsultationItem | null>(null);
   const [summaryTarget, setSummaryTarget] = useState<WebConsultationItem | null>(null);
+  /** True while the therapist-note editor is open for an already-saved note. */
+  const [summaryEditing, setSummaryEditing] = useState(false);
+
+  // Opening a different booking's summary always starts from the pad view.
+  useEffect(() => {
+    setSummaryEditing(false);
+  }, [summaryTarget?.id]);
   const [consultNotes, setConsultNotes] = useState<Record<string, ConsultationNote>>({});
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [webChatMessages, setWebChatMessages] = useState<WebChatMessage[]>([]);
@@ -447,6 +457,58 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     }
   };
 
+  /**
+   * Completes a booking whose session happened OUTSIDE the platform (Zoom,
+   * Google Meet, Teams, in person…) and opens the therapy progress note
+   * editor straight away — completing the session is only half the job,
+   * the doctor pressed this button to write the note.
+   * Reuses end_video_consultation, which needs no in-app room: it closes
+   * any stray session row, flips confirmed → completed, and notifies both
+   * sides.
+   */
+  const handleMarkCompleted = async (item: WebConsultationItem) => {
+    setActionError(null);
+    setDecisionBusy(item.id);
+    try {
+      await endVideoConsultation(item);
+      const completed: WebConsultationItem = {
+        ...item,
+        rawStatus: 'completed',
+        status: 'Completed',
+      };
+      patchConsultation(item.id, { rawStatus: 'completed', status: 'Completed' });
+      // Close any open chat/call modal, then open the note editor now.
+      setActiveSessionItem(null);
+      setShowVideoCall(false);
+      setSummaryTarget(completed);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Unable to mark the session completed.');
+    } finally {
+      setDecisionBusy(null);
+    }
+  };
+
+  /**
+   * After the note editor closes: reload the note so the modal flips from
+   * the editor back to the printable pad. "Later" with nothing saved (no
+   * note at all) closes the modal instead.
+   */
+  const handleSummaryFormDone = async () => {
+    const id = summaryTarget?.id;
+    if (!id) return;
+    try {
+      const note = await fetchConsultationNote(id);
+      if (note) {
+        setConsultNotes((prev) => ({ ...prev, [id]: note }));
+        setSummaryEditing(false);
+      } else {
+        setSummaryTarget(null);
+      }
+    } catch {
+      setSummaryTarget(null);
+    }
+  };
+
   const openDeclineModal = (item: WebConsultationItem) => {
     setDeclineTarget(item);
     setDeclineReason('');
@@ -803,6 +865,15 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             }}
           >
             Join Call
+          </button>
+          <button
+            type="button"
+            className="view-case-btn"
+            disabled={busy}
+            title="Session held on Zoom, Meet, Teams or in person? Completes the booking so you can write the consultation note."
+            onClick={() => void handleMarkCompleted(item)}
+          >
+            {busy ? 'Completing…' : '✓ Complete (held elsewhere)'}
           </button>
         </div>
       );
@@ -1915,10 +1986,11 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               </button>
             </div>
             <div className="web-chat-modal-body">
-              {consultNotes[summaryTarget.id] ? (
+              {consultNotes[summaryTarget.id] && !summaryEditing ? (
                 <ConsultationSummaryView
                   note={consultNotes[summaryTarget.id]}
                   shareBusy={decisionBusy === `share-${summaryTarget.id}`}
+                  onEdit={() => setSummaryEditing(true)}
                   onToggleShare={async (shared) => {
                     const appointmentId = summaryTarget.id;
                     setDecisionBusy(`share-${appointmentId}`);
@@ -1938,7 +2010,15 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                   }}
                 />
               ) : (
-                <ConsultationSummaryEmpty message="No after-visit summary has been written for this consultation yet." />
+                /* Either no note yet, or the doctor pressed Edit — the editor
+                   loads the saved note and prefills every field (its save
+                   button becomes "Update note"). Works for sessions held on
+                   Jitsi OR anywhere else (Zoom, Meet, Teams, in person). */
+                <ConsultationSummaryForm
+                  key={`${summaryTarget.id}-${summaryEditing ? 'edit' : 'new'}`}
+                  appointment={summaryTarget}
+                  onDone={() => void handleSummaryFormDone()}
+                />
               )}
               {summaryTarget.notes ? (
                 <div className="consult-notes-box">
