@@ -53,6 +53,10 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The RECENT row the reader opened — null keeps every preview at 2 lines. */
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  /** Rows whose preview genuinely overflows 2 lines — only those offer "read all". */
+  const [truncated, setTruncated] = useState<Record<string, boolean>>({});
 
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,6 +71,7 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
       setValues({});
       setError(null);
       setSaved(false);
+      setExpandedId(null);
       return;
     }
     let alive = true;
@@ -74,6 +79,8 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
     setError(null);
     setSaved(false);
     setEntries([]);
+    setExpandedId(null);
+    setTruncated({});
     loadJournalEntries(templateId)
       .then((loaded) => {
         if (alive) setEntries(loaded);
@@ -127,7 +134,7 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
     void deleteJournalEntry(id);
   };
 
-  const accent = tone(template.color);
+  const accent = toneBg(template.color);
   const recent = entries.slice(0, RECENT_LIMIT);
 
   return (
@@ -184,24 +191,61 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
               {recent.length > 0 && (
                 <View style={styles.recentBlock}>
                   <Text style={styles.recentLabel}>RECENT</Text>
-                  {recent.map((e) => (
-                    <View key={e.id} style={styles.recentRow}>
-                      <View style={styles.recentText}>
-                        <Text style={styles.recentPreview} numberOfLines={2}>
-                          {entryPreview(e)}
-                        </Text>
-                        <Text style={styles.recentStamp}>{entryStamp(e.createdAt)}</Text>
+                  {recent.map((e) => {
+                    const expanded = expandedId === e.id;
+                    const hint = expanded
+                      ? 'Tap to collapse'
+                      : truncated[e.id]
+                        ? 'Tap to read all'
+                        : '';
+                    return (
+                      <View key={e.id} style={styles.recentRow}>
+                        {/* The preview stays at 2 lines until tapped — a long
+                            note opens in place instead of being cut off. */}
+                        <TouchableOpacity
+                          style={styles.recentText}
+                          activeOpacity={0.7}
+                          onPress={() => setExpandedId(expanded ? null : e.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            expanded
+                              ? 'Collapse this note'
+                              : `Show the whole note. ${entryPreview(e)}`
+                          }
+                        >
+                          <Text
+                            style={styles.recentPreview}
+                            numberOfLines={expanded ? 0 : 2}
+                            onTextLayout={
+                              expanded
+                                ? undefined
+                                : (event) => {
+                                    const overflows = event.nativeEvent.lines.length > 2;
+                                    setTruncated((prev) =>
+                                      prev[e.id] === overflows
+                                        ? prev
+                                        : { ...prev, [e.id]: overflows },
+                                    );
+                                  }
+                            }
+                          >
+                            {entryPreview(e)}
+                          </Text>
+                          <Text style={styles.recentStamp}>
+                            {[entryStamp(e.createdAt), hint].filter(Boolean).join('  ·  ')}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => onDelete(e.id)}
+                          style={styles.deleteBtn}
+                          accessibilityLabel="Delete this note"
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={Colors.textHint} />
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => onDelete(e.id)}
-                        style={styles.deleteBtn}
-                        accessibilityLabel="Delete this note"
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={Colors.textHint} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </ScrollView>

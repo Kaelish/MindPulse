@@ -635,7 +635,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                   </View>
                   <Text style={styles.toolName}>{ui.label}</Text>
                   <Text style={styles.toolMeta}>{meta}</Text>
-                  <View style={[styles.toolGo, { backgroundColor: tone(ui.fg) }]}>
+                  <View style={[styles.toolGo, { backgroundColor: toneBg(ui.fg) }]}>
                     <Ionicons name="play" size={12} color={tone('#FFF')} />
                     <Text style={styles.toolGoText}>{ui.cta}</Text>
                   </View>
@@ -899,7 +899,7 @@ const makeStyles = () => StyleSheet.create({
   toolIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   toolName: { fontSize: 13, fontWeight: '800', color: tone('#1A1A1A'), textAlign: 'center' },
   toolMeta: { fontSize: 10.5, color: tone('#8A8A8A'), marginTop: 3, textAlign: 'center' },
-  toolGo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, backgroundColor: tone('#6B79F2'), paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
+  toolGo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, backgroundColor: toneBg('#6B79F2'), paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
   toolGoText: { fontSize: 11, fontWeight: '800', color: tone('#FFF') },
 
   clinicsCard: { backgroundColor: toneBg('#FDECE6'), borderRadius: 16, marginBottom: 16, overflow: 'hidden' },

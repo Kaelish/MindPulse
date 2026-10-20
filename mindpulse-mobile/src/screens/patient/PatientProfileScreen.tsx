@@ -33,7 +33,7 @@ import { HelpGuideModal } from './settings/HelpGuideModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { MyFilesSection } from './MyFilesSection';
 import { TransactionsSection } from './TransactionsSection';
-import { registerThemeStyles, setThemeMode, tone, toneBg, useThemeMode } from '../../theme/theme';
+import { registerThemeStyles, setThemeMode, tone, toneBg, toneBtn, useThemeMode } from '../../theme/theme';
 
 export type ProfileTabSegment = 'profile' | 'history' | 'files' | 'others' | 'settings';
 
@@ -185,7 +185,7 @@ const SettingRow = ({
   right?: React.ReactNode;
 }) => (
   <TouchableOpacity style={settingStyles.row} onPress={onPress}>
-    <View style={[settingStyles.iconBox, { backgroundColor: bg }]}>
+    <View style={[settingStyles.iconBox, { backgroundColor: toneBg(bg) }]}>
       <Ionicons name={icon} size={16} color={accent ? '#E05C5C' : Colors.textPrimary} />
     </View>
     <View style={{ flex: 1 }}>
@@ -395,31 +395,6 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
               <View style={styles.infoRow}>
                 <Text style={styles.infoKey}>Living With</Text>
                 <Text style={styles.infoVal}>{data.livingSituation ?? 'Not set'}</Text>
-              </View>
-            </View>
-
-            {/* Assessment stats grid */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Assessment Overview</Text>
-              <View style={styles.statsGrid}>
-                <View style={[styles.gridCell, { backgroundColor: toneBg('#EEEDFE') }]}>
-                  <Text style={[styles.gridVal, { color: tone('#5B6EF5') }]}>{metrics.totalAssessments}</Text>
-                  <Text style={[styles.gridLbl, { color: tone('#5B6EF5') }]}>Total Sessions</Text>
-                </View>
-                <View style={[styles.gridCell, { backgroundColor: toneBg('#FFF3CD') }]}>
-                  <Text style={[styles.gridVal, { color: tone('#E08A00') }]}>{metrics.avgStressScore ?? '—'}</Text>
-                  <Text style={[styles.gridLbl, { color: tone('#E08A00') }]}>Avg Stress</Text>
-                </View>
-                <View style={[styles.gridCell, { backgroundColor: toneBg('#FFD6D6') }]}>
-                  <Text style={[styles.gridVal, { color: tone('#E05C5C') }]}>
-                    {metrics.avgHeartRate !== null ? `${metrics.avgHeartRate} bpm` : '—'}
-                  </Text>
-                  <Text style={[styles.gridLbl, { color: tone('#E05C5C') }]}>Avg Heart Rate</Text>
-                </View>
-                <View style={[styles.gridCell, { backgroundColor: toneBg('#D6F5E3') }]}>
-                  <Text style={[styles.gridVal, { color: tone('#27AE60') }]}>{metrics.latestTrend ?? '—'}</Text>
-                  <Text style={[styles.gridLbl, { color: tone('#27AE60') }]}>Trend</Text>
-                </View>
               </View>
             </View>
 
@@ -652,7 +627,7 @@ const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
   loaderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: Colors.primary },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: toneBtn(Colors.primary) },
   retryText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
 
   /* Header */
@@ -710,17 +685,6 @@ const makeStyles = () => StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoKey: { fontSize: 13, color: Colors.textSecondary },
   infoVal: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
-
-  /* Stats grid */
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridCell: {
-    width: '47%',
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-  },
-  gridVal: { fontSize: 18, fontWeight: '800' },
-  gridLbl: { fontSize: 11, fontWeight: '600' },
 
   /* MindPlant */
   plantIllustration: { alignItems: 'center', paddingVertical: 12 },

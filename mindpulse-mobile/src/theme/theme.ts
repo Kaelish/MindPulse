@@ -213,6 +213,21 @@ export const tone = (hex: string): string => {
 };
 
 /**
+ * Button surface: in dark mode `Colors.*` button tokens are *lifted* so they
+ * keep contrast as borders/text on a dark page — but the white labels sitting
+ * on them then wash out. Pull any such lift back down to a depth where white
+ * still reads. Identity in light mode and on colours already dark enough.
+ */
+export const toneBtn = (hex: string): string => {
+  if (mode !== 'dark') return hex;
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const lum = luminance(rgb[0], rgb[1], rgb[2]);
+  if (lum <= 150) return hex;
+  return mix(rgb, 112, 'black');
+};
+
+/**
  * Background / border colour: in dark mode deepens pale surfaces (cards,
  * sheets, chips, dividers) into dark equivalents, leaving brand accents alone.
  */

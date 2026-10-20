@@ -368,7 +368,7 @@ const makeStyles = () => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: toneBg('#E0E0E0'),

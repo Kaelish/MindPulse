@@ -448,16 +448,18 @@ const makeStyles = () => StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: 12,
   },
+  // These accents sit on slide gradients that never change with the theme, so
+  // they must not be lifted either — a light-on-light wash in dark mode.
   purpleAccent: {
-    color: tone('#2B1E80'),
+    color: '#2B1E80',
     fontWeight: '800',
   },
   tealAccent: {
-    color: tone('#1A6B5A'),
+    color: '#1A6B5A',
     fontWeight: '800',
   },
   peachAccent: {
-    color: tone('#9E4510'),
+    color: '#9E4510',
     fontWeight: '800',
   },
   bodyText: {
@@ -530,7 +532,8 @@ const makeStyles = () => StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
   },
   signInLink: {
-    color: tone('#9E4510'),
+    // On the fixed gradient (see purpleAccent) — keep the shipped dark value.
+    color: '#9E4510',
     fontWeight: '700',
   },
 });

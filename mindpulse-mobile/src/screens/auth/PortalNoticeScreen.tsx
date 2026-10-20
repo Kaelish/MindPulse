@@ -84,7 +84,9 @@ const makeStyles = () => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    backgroundColor: Colors.textPrimary,
+    // Fixed navy: `Colors.textPrimary` flips to near-white in dark mode, which
+    // would swallow the white label on this button.
+    backgroundColor: '#1A2340',
     borderRadius: Radius.md,
     paddingVertical: 14,
     marginBottom: Spacing.lg,

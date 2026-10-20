@@ -297,7 +297,31 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
 
             {nextCall && (
               <div className="dash-call-wide">
-                <JitsiCallPanel appointment={nextCall} />
+                {nextCall.consultationMode === 'in_person' ? (
+                  /* Face-to-face: there is no room to open — say so instead of
+                     handing the doctor a live Jitsi panel. */
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      padding: '16px 18px',
+                      borderRadius: '14px',
+                      border: '1.5px dashed var(--doc-line)',
+                      background: 'var(--doc-soft)',
+                    }}
+                  >
+                    <strong style={{ color: 'var(--doc-ink)' }}>
+                      Next session: face-to-face at the clinic
+                    </strong>
+                    <span style={{ color: 'var(--doc-muted)', fontSize: '0.85rem' }}>
+                      {nextCall.patientName} · {nextCall.scheduledTime} — there is no video call
+                      to join.
+                    </span>
+                  </div>
+                ) : (
+                  <JitsiCallPanel appointment={nextCall} />
+                )}
               </div>
             )}
           </section>

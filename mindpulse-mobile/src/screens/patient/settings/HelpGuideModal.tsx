@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
-import { tone } from '../../../theme/theme';
+import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface HelpGuideModalProps {
   visible: boolean;
@@ -281,10 +281,13 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ visible, onClose
   );
 };
 
-const styles = StyleSheet.create({
+// Built through a factory + registerThemeStyles like every other screen: the
+// old module-level StyleSheet captured light values once at import, so the
+// whole sheet stayed light in dark mode while its tone() icons re-lifted.
+const makeStyles = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: toneBg('#FFFFFF'),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: toneBg('#E2E8F0'),
     alignSelf: 'center',
     marginTop: 10,
   },
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#EEEDFE',
+    backgroundColor: toneBg('#EEEDFE'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: toneBg('#F1F5F9'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -330,10 +333,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F6F8FB',
+    backgroundColor: toneBg('#F6F8FB'),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E7EDF5',
+    borderColor: toneBg('#E7EDF5'),
     paddingHorizontal: 12,
     height: 44,
   },
@@ -355,26 +358,26 @@ const styles = StyleSheet.create({
   expandAll: {
     fontSize: 11.5,
     fontWeight: '800',
-    color: '#5B6EF5',
+    color: tone('#5B6EF5'),
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: toneBg('#FFFFFF'),
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E9EEF5',
+    borderColor: toneBg('#E9EEF5'),
     padding: 14,
     marginTop: 12,
     gap: 9,
   },
   cardOpen: {
-    borderColor: '#C9D2F8',
+    borderColor: toneBg('#C9D2F8'),
   },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
   cardIconBox: {
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: '#EEEDFE',
+    backgroundColor: toneBg('#EEEDFE'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -384,12 +387,12 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#EEEDFE',
+    backgroundColor: toneBg('#EEEDFE'),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
-  stepDotText: { fontSize: 10, fontWeight: '800', color: '#5B6EF5' },
+  stepDotText: { fontSize: 10, fontWeight: '800', color: tone('#5B6EF5') },
   stepText: { flex: 1, fontSize: 12.5, lineHeight: 18.5, color: Colors.textSecondary },
   emptyBox: { alignItems: 'center', gap: 6, paddingVertical: 30 },
   emptyTitle: { fontSize: 13.5, fontWeight: '800', color: Colors.textPrimary },
@@ -398,10 +401,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 9,
-    backgroundColor: '#FFF8EC',
+    backgroundColor: toneBg('#FFF8EC'),
     borderRadius: 14,
     padding: 12,
     marginTop: 14,
   },
-  tipText: { flex: 1, fontSize: 12, lineHeight: 18, color: '#8A6A2F' },
+  tipText: { flex: 1, fontSize: 12, lineHeight: 18, color: tone('#8A6A2F') },
 });
+
+let styles = makeStyles();
+registerThemeStyles(() => { styles = makeStyles(); });

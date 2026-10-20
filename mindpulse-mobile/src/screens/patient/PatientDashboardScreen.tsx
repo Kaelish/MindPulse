@@ -23,7 +23,7 @@ import { PatientNotifications } from '../../components/PatientNotifications';
 import { SelfCareModal } from '../../components/SelfCareModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { StressBand, bandLabel, previewTipsFor } from '../../services/selfCareTips';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -256,7 +256,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
           {/* Self-Care Ideas (band-aware) */}
           {latestBand && (
             <TouchableOpacity
-              style={[styles.careCard, { backgroundColor: tone(carePalette.bg) }]}
+              style={[styles.careCard, { backgroundColor: toneBg(carePalette.bg) }]}
               activeOpacity={0.85}
               onPress={() => setShowSelfCare(true)}
             >
@@ -339,7 +339,7 @@ const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.pageBg },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 },
   loadingText: { color: Colors.textSecondary, ...Typography.body2, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: Colors.btnBlue },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 22, backgroundColor: toneBtn(Colors.btnBlue) },
   retryText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
   sessionsEmpty: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingVertical: 14, fontStyle: 'italic' },
 
@@ -351,7 +351,7 @@ const makeStyles = () => StyleSheet.create({
   headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 16 },
   greetingEyebrow: { color: 'rgba(30,50,30,0.65)', fontSize: 14, fontWeight: '600' },
   nameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  greetingName: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
+  greetingName: { color: 'rgba(30,50,30,0.92)', fontSize: 26, fontWeight: '900' },
   waveEmoji: { fontSize: 22, marginLeft: 8 },
   dateText: { color: 'rgba(30,50,30,0.55)', fontSize: 13, marginTop: 4, fontWeight: '500' },
 
@@ -364,7 +364,7 @@ const makeStyles = () => StyleSheet.create({
   stressCardLabel: { color: tone('#7C4A3A'), fontSize: 13, fontWeight: '700' },
   stressCardLevel: { color: Colors.textPrimary, fontSize: 28, fontWeight: '900', marginTop: 4 },
   stressCardTrend: { color: tone('#E05C5C'), fontSize: 13, marginTop: 4, fontWeight: '600' },
-  scoreCircle: { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center' },
+  scoreCircle: { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: toneBg(Colors.white), alignItems: 'center', justifyContent: 'center' },
   scoreCircleNum: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
   scoreCircleLabel: { color: Colors.textSecondary, fontSize: 10, fontWeight: '600' },
 
@@ -390,7 +390,7 @@ const makeStyles = () => StyleSheet.create({
 
   /* Metrics */
   metricsRow: { flexDirection: 'row', gap: 12 },
-  metricCard: { flex: 1, backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, gap: 4 },
+  metricCard: { flex: 1, backgroundColor: toneBg(Colors.white), borderRadius: Radius.md, padding: Spacing.md, gap: 4 },
   metricLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metricEmoji: { fontSize: 16 },
   metricLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' },
@@ -420,7 +420,7 @@ const makeStyles = () => StyleSheet.create({
   sessionsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   seeAll: { color: Colors.btnBlue, fontSize: 13, fontWeight: '700' },
   sessionsList: { gap: 10 },
-  sessionRow: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  sessionRow: { backgroundColor: toneBg(Colors.white), borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 14 },
   sessionScoreCircle: { width: 52, height: 52, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   sessionScoreText: { fontSize: 18, fontWeight: '900' },
   sessionTextWrap: { flex: 1 },

@@ -673,7 +673,7 @@ const makeStyles = () => StyleSheet.create({
   },
 
   card: {
-    backgroundColor: CARD,
+    backgroundColor: toneBg(CARD),
     borderRadius: 28,
     width: '100%',
     maxWidth: 420,

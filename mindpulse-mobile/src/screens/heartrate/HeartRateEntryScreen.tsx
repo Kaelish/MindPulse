@@ -19,7 +19,7 @@ import {
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 interface Props {
   onBack: () => void;
@@ -261,7 +261,7 @@ const makeScreen = () => StyleSheet.create({
     marginTop: Spacing.xs,
   },
   calcBtnActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: toneBtn(Colors.primary),
     elevation: 3,
     ...Platform.select({
       web: { boxShadow: `${0}px ${4 }px ${8}px rgba(0,0,0,${0.3})` },

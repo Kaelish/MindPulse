@@ -474,6 +474,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
         status: 'paid',
         payeeName: payTarget.doctorName,
         scheduledFor: payTarget.scheduledFor,
+        consultationMode: payTarget.consultationMode,
       });
       void loadBookings(false);
       void fetchBookedSlotKeysQuietly();
@@ -923,6 +924,17 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                   </View>
                   <BookingPill status={b.status} />
                 </View>
+
+                {/* The mode, stated loudly so an in-person booking can never
+                    be mistaken for an online one (and vice versa). */}
+                {b.consultationMode === 'in_person' && (
+                  <View style={styles.f2fBanner}>
+                    <Ionicons name="business-outline" size={17} color={tone('#8A5A00')} />
+                    <Text style={styles.f2fBannerText}>
+                      FACE-TO-FACE · HELD AT THE CLINIC
+                    </Text>
+                  </View>
+                )}
 
                 {b.status === 'declined' && b.declineReason ? (
                   <View style={styles.reasonBox}>
@@ -1426,6 +1438,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                     status: 'paid',
                     payeeName: payDone.doctorName,
                     scheduledFor: payDone.scheduledFor,
+                    consultationMode: payDone.consultationMode,
                   }
                 }
                 showSuccessBanner
@@ -1433,6 +1446,15 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               />
             ) : (
               <>
+                {payTarget?.consultationMode === 'in_person' && (
+                  <View style={styles.f2fBanner}>
+                    <Ionicons name="business-outline" size={17} color={tone('#8A5A00')} />
+                    <Text style={styles.f2fBannerText}>
+                      FACE-TO-FACE · HELD AT THE CLINIC
+                    </Text>
+                  </View>
+                )}
+
                 <View style={styles.feeRow}>
                   <Ionicons name="wallet-outline" size={14} color={Colors.textSecondary} />
                   <Text style={styles.feeRowText}>
@@ -2087,6 +2109,25 @@ const makeStyles = () => StyleSheet.create({
   bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   bookingWhen: { fontSize: 12, color: Colors.textPrimary, fontWeight: '600', marginTop: 3 },
   bookingMode: { fontSize: 10.5, color: Colors.textSecondary, marginTop: 2 },
+  /* Loud mode banner — face-to-face must be unmistakable at a glance. */
+  f2fBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: tone('#E8C766'),
+    backgroundColor: toneBg('#FFF3CD'),
+  },
+  f2fBannerText: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    color: tone('#8A5A00'),
+  },
   pill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
   pillText: { fontSize: 10, fontWeight: '800' },
   reasonBox: {

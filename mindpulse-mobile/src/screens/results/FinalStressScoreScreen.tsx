@@ -14,7 +14,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { ReactionResult } from '../reaction/ReactionGameScreen';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 interface Props {
   heartRate: number;
@@ -182,10 +182,10 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         {/* ── Emergency Hotlines ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Emergency Mental Health Hotlines</Text>
-          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color={tone('#E05C5C')} tel="tel:988" />
-          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color={tone('#F5A623')} tel="tel:09175584673" />
-          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color={tone('#5B6EF5')} tel="tel:1553" />
-          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color={tone('#4A90D9')} tel="sms:741741" />
+          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color={toneBg('#E05C5C')} tel="tel:988" />
+          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color={toneBg('#F5A623')} tel="tel:09175584673" />
+          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color={toneBg('#5B6EF5')} tel="tel:1553" />
+          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color={toneBg('#4A90D9')} tel="sms:741741" />
         </View>
 
         {/* ── Action buttons ── */}
@@ -368,7 +368,7 @@ const makeStyles = () => StyleSheet.create({
   saveBtnText: { fontSize: 14, fontWeight: '700', color: tone('#FFF') },
   helpBtn: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: toneBtn(Colors.primary),
     borderRadius: Radius.lg,
     alignItems: 'center',
     paddingVertical: 14,

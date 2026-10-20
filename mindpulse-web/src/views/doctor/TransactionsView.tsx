@@ -359,6 +359,37 @@ export const TransactionsView: React.FC = () => {
             </span>
           </header>
 
+          {/* The mode, stated loudly so an in-person payment can never be
+              mistaken for an online one. */}
+          {receiptTx.consultationMode === 'in_person' && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '3px',
+                margin: '0 0 14px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: '1.5px dashed #E8C766',
+                background: '#FFF3CD',
+              }}
+            >
+              <strong
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.7px',
+                  color: '#8A5A00',
+                }}
+              >
+                FACE-TO-FACE SESSION
+              </strong>
+              <span style={{ fontSize: '0.82rem', color: '#8A5A00' }}>
+                Held in person at the clinic — not an online video call.
+              </span>
+            </div>
+          )}
+
           <div className="tx-receipt-amount">
             <span>{receiptTx.status === 'paid' ? 'AMOUNT PAID' : 'AMOUNT REFUNDED'}</span>
             <strong>{formatTransactionAmount(receiptTx.amount)}</strong>
@@ -379,7 +410,11 @@ export const TransactionsView: React.FC = () => {
             </div>
             <div>
               <dt>Service</dt>
-              <dd>Online consultation</dd>
+              <dd>
+                {receiptTx.consultationMode === 'in_person'
+                  ? 'Face-to-face consultation'
+                  : 'Online consultation'}
+              </dd>
             </div>
             {receiptTx.scheduledFor && (
               <div>
@@ -433,7 +468,7 @@ export const TransactionsView: React.FC = () => {
               <h2>Record Walk-in Payment</h2>
               <p>
                 For a patient who booked — and paid — in person. Recording it also
-                confirms their online booking.
+                confirms their booking.
               </p>
             </div>
             <button

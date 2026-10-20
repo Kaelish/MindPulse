@@ -22,6 +22,12 @@ export interface DoctorScheduleItem {
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   rawStatus: 'scheduled' | 'awaiting_payment' | 'declined' | 'confirmed' | 'completed' | 'cancelled';
   startsAt: Date | null;
+  /**
+   * Video call, or face-to-face at the clinic — the "next session" card only
+   * offers a call for online bookings (rows written before migration 0025
+   * were all online).
+   */
+  consultationMode: 'online' | 'in_person';
 }
 
 export interface DoctorDashboardStats {
@@ -61,6 +67,7 @@ interface AppointmentRow {
   status: string;
   created_at: string;
   updated_at: string | null;
+  consultation_mode?: string | null;
 }
 
 interface ProfileRow {
@@ -143,7 +150,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
 
   const { data: appointments, error } = await supabase
     .from('appointments')
-    .select('id, patient_id, scheduled_for, status, created_at, updated_at')
+    .select('id, patient_id, scheduled_for, status, created_at, updated_at, consultation_mode')
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -213,6 +220,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
         status: row.status === 'completed' ? 'Completed' : row.status === 'cancelled' ? 'Cancelled' : 'Scheduled',
         rawStatus: row.status as DoctorScheduleItem['rawStatus'],
         startsAt: parsed,
+        consultationMode: row.consultation_mode === 'in_person' ? 'in_person' : 'online',
       };
     })
     .filter((item) => item.rawStatus !== 'cancelled' && item.rawStatus !== 'declined')

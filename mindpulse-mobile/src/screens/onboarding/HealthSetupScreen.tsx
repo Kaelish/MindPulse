@@ -106,7 +106,7 @@ const CheckItem = ({ label, checked, onPress, color }: { label: string; checked:
 /* ─────────── Shared Category Card ─────────── */
 const CategoryCard = ({ iconName, title, subtitle, options, checkedList, toggleFn, themeColor, bgColor }: any) => (
   <View style={[styles.categoryCard, { borderColor: themeColor }]}>
-    <View style={[styles.categoryHeader, { backgroundColor: bgColor }]}>
+    <View style={[styles.categoryHeader, { backgroundColor: toneBg(bgColor) }]}>
       <View style={[styles.categoryIconWrap, { backgroundColor: themeColor }]}>
         <Ionicons name={iconName} size={18} color={Colors.white} />
       </View>
@@ -282,7 +282,7 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
 
 import { supabase } from '../../supabase/client';
 import { Alert } from 'react-native';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 /* ─────────── Main Screen ─────────── */
 export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName = 'friend', onContinue, onBack }) => {
@@ -438,7 +438,7 @@ const makeStyles = () => StyleSheet.create({
   
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   chip: { borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 24, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: Colors.surface },
-  chipActive: { backgroundColor: Colors.btnOrange, borderColor: Colors.btnOrange },
+  chipActive: { backgroundColor: toneBtn(Colors.btnOrange), borderColor: Colors.btnOrange },
   chipText: { color: Colors.textPrimary, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: Colors.white },
 
@@ -454,7 +454,7 @@ const makeStyles = () => StyleSheet.create({
   radioLabelActive: { color: Colors.textPrimary, fontWeight: '700' },
 
   continueBtn: { height: 56, borderRadius: 16, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginTop: 32 },
-  continueBtnActive: { backgroundColor: Colors.btnOrange },
+  continueBtnActive: { backgroundColor: toneBtn(Colors.btnOrange) },
   continueBtnSmall: { flex: 1, marginTop: 0 },
   continueBtnText: { color: tone('#94A3B8'), fontSize: 16, fontWeight: '800' },
   continueBtnTextActive: { color: Colors.white },

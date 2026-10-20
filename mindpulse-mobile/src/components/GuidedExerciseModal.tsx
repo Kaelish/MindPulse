@@ -207,7 +207,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
           accessibilityLabel="Close guided exercise"
         />
         <View style={styles.card}>
-          <View style={[styles.head, { backgroundColor: accent }]}>
+          <View style={[styles.head, { backgroundColor: toneBg(exercise.color) }]}>
             <View style={styles.headIcon}>
               <Ionicons name={exercise.icon as any} size={16} color="#FFFFFF" />
             </View>
@@ -235,7 +235,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
                 return (
                   <TouchableOpacity
                     key={ex.id}
-                    style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]}
+                    style={[styles.chip, on && { backgroundColor: toneBg(exercise.color), borderColor: toneBg(exercise.color) }]}
                     onPress={() => resetTo(i)}
                     activeOpacity={0.8}
                     disabled={running}
@@ -305,7 +305,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
           <View style={styles.actions}>
             {!done ? (
               <TouchableOpacity
-                style={[styles.primaryBtn, running && { backgroundColor: tone('#E08A00') }]}
+                style={[styles.primaryBtn, running && { backgroundColor: toneBg('#E08A00') }]}
                 onPress={running ? pause : start}
                 activeOpacity={0.85}
               >
@@ -320,7 +320,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={[styles.primaryBtn, { backgroundColor: accent }]}
+                style={[styles.primaryBtn, { backgroundColor: toneBg(exercise.color) }]}
                 onPress={() => resetTo(idx)}
                 activeOpacity={0.85}
               >
@@ -477,7 +477,7 @@ const makeStyles = () =>
       gap: 8,
       paddingVertical: 14,
       borderRadius: Radius.full,
-      backgroundColor: tone('#6B79F2'),
+      backgroundColor: toneBg('#6B79F2'),
     },
     primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
     secondaryRow: { flexDirection: 'row', gap: 8 },

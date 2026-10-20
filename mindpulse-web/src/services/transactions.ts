@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
+import { ConsultationMode } from './consultations';
 
 export type PaymentMethod = 'card' | 'gcash' | 'maya' | 'cash';
 export type PaymentStatus = 'paid' | 'refunded';
@@ -18,6 +19,12 @@ export interface DoctorTransactionItem {
   patientName: string;
   /** Patient's profile photo; null when unset (or migration 0017 not applied). */
   avatarUrl: string | null;
+  /**
+   * How the session happened — drives the receipt's Service row. Payments
+   * recorded before migration 0025 were all online bookings, so a missing
+   * column maps to 'online'.
+   */
+  consultationMode: ConsultationMode;
 }
 
 interface AppointmentEmbed {
@@ -25,6 +32,7 @@ interface AppointmentEmbed {
   scheduled_for: string;
   status: string;
   patient_id: string;
+  consultation_mode?: string | null;
 }
 
 interface PaymentRow {
@@ -80,7 +88,7 @@ export const fetchDoctorTransactions = async (): Promise<DoctorTransactionItem[]
   const { data, error } = await supabase
     .from('payments')
     .select(
-      'id, amount, method, reference, status, created_at, appointment_id, appointments(id, scheduled_for, status, patient_id)',
+      'id, amount, method, reference, status, created_at, appointment_id, appointments(id, scheduled_for, status, patient_id, consultation_mode)',
     )
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -127,6 +135,7 @@ export const fetchDoctorTransactions = async (): Promise<DoctorTransactionItem[]
       appointmentStatus: appointment?.status ?? null,
       patientName: (appointment && patientNames.get(appointment.patient_id)) || 'Patient',
       avatarUrl: (appointment && avatars.get(appointment.patient_id)) ?? null,
+      consultationMode: appointment?.consultation_mode === 'in_person' ? 'in_person' : 'online',
     };
   });
 };

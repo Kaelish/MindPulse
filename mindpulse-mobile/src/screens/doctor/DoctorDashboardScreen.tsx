@@ -22,7 +22,7 @@ import {
   fetchDoctorDashboard,
 } from '../../services/doctorDashboard';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 interface DoctorDashboardScreenProps {
   onNavigate?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
@@ -214,16 +214,28 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
             </View>
           )}
 
-          {/* Next confirmed call */}
+          {/* Next confirmed session — only an online booking offers a call */}
           {nextCall && (
             <View style={styles.nextCallCard}>
               <View style={styles.nextCallRow}>
                 <View style={styles.nextCallLeft}>
                   <View style={styles.nextCallIcon}>
-                    <Ionicons name="videocam" size={20} color={Colors.white} />
+                    <Ionicons
+                      name={
+                        nextCall.consultationMode === 'in_person'
+                          ? 'business-outline'
+                          : 'videocam'
+                      }
+                      size={20}
+                      color={Colors.white}
+                    />
                   </View>
                   <View style={styles.nextCallBody}>
-                    <Text style={styles.nextCallLabel}>Next video call</Text>
+                    <Text style={styles.nextCallLabel}>
+                      {nextCall.consultationMode === 'in_person'
+                        ? 'Next face-to-face session'
+                        : 'Next video call'}
+                    </Text>
                     <Text style={styles.nextCallPatient}>{nextCall.patientName}</Text>
                     <Text style={styles.nextCallTime}>
                       {nextCall.dayLabel} · {nextCall.timeLabel}
@@ -231,12 +243,24 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
                   </View>
                 </View>
                 <View style={styles.webOnlyPill}>
-                  <Ionicons name="globe-outline" size={13} color={tone('#5B6EF5')} />
-                  <Text style={styles.webOnlyPillText}>Join on the web</Text>
+                  <Ionicons
+                    name={
+                      nextCall.consultationMode === 'in_person'
+                        ? 'location-outline'
+                        : 'globe-outline'
+                    }
+                    size={13}
+                    color={tone('#5B6EF5')}
+                  />
+                  <Text style={styles.webOnlyPillText}>
+                    {nextCall.consultationMode === 'in_person' ? 'At the clinic' : 'Join on the web'}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.webOnlyHint}>
-                Log in to the MindPulse website to join this video call.
+                {nextCall.consultationMode === 'in_person'
+                  ? 'Meet your patient at the clinic — there is no call to join.'
+                  : 'Log in to the MindPulse website to join this video call.'}
               </Text>
             </View>
           )}
@@ -380,7 +404,7 @@ const makeStyles = () => StyleSheet.create({
 
   errorBox: { backgroundColor: Colors.tagRedBg, borderRadius: Radius.md, padding: Spacing.md, gap: 8 },
   errorText: { color: Colors.tagRedText, fontSize: 13, lineHeight: 18 },
-  retryBtn: { alignSelf: 'flex-start', backgroundColor: Colors.btnBlue, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18 },
+  retryBtn: { alignSelf: 'flex-start', backgroundColor: toneBtn(Colors.btnBlue), paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18 },
   retryText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
 
   staleBanner: {
@@ -428,7 +452,7 @@ const makeStyles = () => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     paddingHorizontal: 11,
     paddingVertical: 7,
     borderRadius: Radius.full,

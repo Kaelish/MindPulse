@@ -121,7 +121,7 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: tone(colors.accent) }]}
+              style={[styles.primaryBtn, { backgroundColor: toneBg(colors.accent) }]}
               onPress={() => {
                 onClose();
                 primary.onPress?.();

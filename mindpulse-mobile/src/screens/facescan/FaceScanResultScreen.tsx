@@ -183,7 +183,7 @@ const makeStyles = () => StyleSheet.create({
   resultPillText: { color: tone('#E87522'), fontWeight: '800', fontSize: 14 },
 
   infoCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     marginBottom: 16,

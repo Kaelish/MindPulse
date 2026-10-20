@@ -22,7 +22,7 @@ import {
 } from '../../services/doctorProfile';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
 import { DoctorNotificationsSettings } from './DoctorNotificationsSettings';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 interface DoctorProfileScreenProps {
   onSignOut?: () => void;
@@ -279,7 +279,7 @@ const makeStyles = () => StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: Colors.pageBg },
   loadingText: { color: Colors.textSecondary, fontSize: 13 },
   errorText: { color: Colors.tagRedText, fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
-  retryBtn: { backgroundColor: Colors.btnBlue, paddingHorizontal: 22, paddingVertical: 9, borderRadius: 18 },
+  retryBtn: { backgroundColor: toneBtn(Colors.btnBlue), paddingHorizontal: 22, paddingVertical: 9, borderRadius: 18 },
   retryBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
 
   headerSafe: { backgroundColor: Colors.surface },
@@ -347,7 +347,7 @@ const makeStyles = () => StyleSheet.create({
   },
   inputReadOnly: { backgroundColor: Colors.divider, color: Colors.textSecondary },
   saveBtn: {
-    backgroundColor: Colors.btnBlue,
+    backgroundColor: toneBtn(Colors.btnBlue),
     borderRadius: Radius.md,
     paddingVertical: 13,
     alignItems: 'center',

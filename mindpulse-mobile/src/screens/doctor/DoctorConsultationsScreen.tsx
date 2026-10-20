@@ -45,7 +45,7 @@ import {
   pickImageAttachment,
   previewLabelFor,
 } from '../../services/chat';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 import {
   PATIENT_FILE_CATEGORIES,
   PatientFileCategory,
@@ -611,12 +611,21 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
 
         {!showHistory && item.rawStatus === 'confirmed' && (
           <View style={styles.actionsRow}>
-            <View style={styles.webNotice}>
-              <Ionicons name="globe-outline" size={14} color={Colors.tagBlueText} />
-              <Text style={styles.webNoticeText}>
-                Join from the web — log in to the MindPulse website to start this call.
-              </Text>
-            </View>
+            {item.consultationMode === 'in_person' ? (
+              <View style={styles.webNotice}>
+                <Ionicons name="business-outline" size={14} color={Colors.tagBlueText} />
+                <Text style={styles.webNoticeText}>
+                  Face-to-face at the clinic — meet your patient in person. No call to join.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.webNotice}>
+                <Ionicons name="globe-outline" size={14} color={Colors.tagBlueText} />
+                <Text style={styles.webNoticeText}>
+                  Join from the web — log in to the MindPulse website to start this call.
+                </Text>
+              </View>
+            )}
             <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => void openEdit(item)}>
               <Ionicons name="time-outline" size={15} color={Colors.btnBlue} />
               <Text style={styles.editBtnText}>Edit time</Text>
@@ -1188,7 +1197,7 @@ const makeStyles = () => StyleSheet.create({
     borderRadius: Radius.full,
     backgroundColor: Colors.divider,
   },
-  tabPillActive: { backgroundColor: Colors.primary },
+  tabPillActive: { backgroundColor: toneBtn(Colors.primary) },
   tabPillText: { fontSize: 12.5, fontWeight: '700', color: Colors.textSecondary },
   tabPillTextActive: { color: Colors.white },
 
@@ -1208,7 +1217,7 @@ const makeStyles = () => StyleSheet.create({
   centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: Spacing.lg },
   centerText: { color: Colors.textSecondary, fontSize: 13 },
   centerError: { color: Colors.tagRedText, fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  retryBtn: { backgroundColor: Colors.btnBlue, paddingHorizontal: 22, paddingVertical: 9, borderRadius: 18 },
+  retryBtn: { backgroundColor: toneBtn(Colors.btnBlue), paddingHorizontal: 22, paddingVertical: 9, borderRadius: 18 },
   retryBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
 
   list: { flex: 1 },
@@ -1385,7 +1394,7 @@ const makeStyles = () => StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
     color: Colors.btnBlue,
-    backgroundColor: '#fff',
+    backgroundColor: toneBg('#fff'),
     borderWidth: 1,
     borderColor: toneBg('#D6DEFB'),
     borderRadius: 8,
@@ -1443,7 +1452,7 @@ const makeStyles = () => StyleSheet.create({
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 },
   cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   cancelBtnText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 13.5 },
-  confirmBtn: { backgroundColor: Colors.btnBlue, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+  confirmBtn: { backgroundColor: toneBtn(Colors.btnBlue), paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   confirmBtnText: { color: Colors.white, fontWeight: '800', fontSize: 13.5 },
   confirmDangerBtn: { backgroundColor: toneBg('#E05C5C'), paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   confirmDangerBtnText: { color: Colors.white, fontWeight: '800', fontSize: 13.5 },
@@ -1458,7 +1467,7 @@ const makeStyles = () => StyleSheet.create({
     alignItems: 'center',
     minWidth: 74,
   },
-  dateChipActive: { backgroundColor: Colors.primary },
+  dateChipActive: { backgroundColor: toneBtn(Colors.primary) },
   dateChipDisabled: { opacity: 0.45 },
   dateChipLabel: { fontSize: 11.5, fontWeight: '800', color: Colors.textPrimary },
   dateChipDate: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
@@ -1472,7 +1481,7 @@ const makeStyles = () => StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  slotChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  slotChipActive: { backgroundColor: toneBtn(Colors.primary), borderColor: toneBtn(Colors.primary) },
   slotChipDisabled: { opacity: 0.45 },
   slotChipText: { fontSize: 12.5, fontWeight: '700', color: Colors.textPrimary },
   slotChipTextDisabled: { color: Colors.textHint },
@@ -1495,7 +1504,7 @@ const makeStyles = () => StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  dayChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  dayChipActive: { backgroundColor: toneBtn(Colors.primary), borderColor: toneBtn(Colors.primary) },
   dayChipText: { fontSize: 12.5, fontWeight: '800', color: Colors.textPrimary },
 
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
@@ -1503,7 +1512,7 @@ const makeStyles = () => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: Colors.btnBlue,
+    backgroundColor: toneBtn(Colors.btnBlue),
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: Radius.md,

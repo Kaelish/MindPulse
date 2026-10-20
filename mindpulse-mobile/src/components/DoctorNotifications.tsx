@@ -24,7 +24,7 @@ import {
   notificationFullTime,
   subscribeToMyNotificationFeed,
 } from '../services/notifications';
-import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../theme/theme';
 
 interface DoctorNotificationsProps {
   /** onGradient sits on the purple dashboard header, onLight on white headers. */
@@ -374,7 +374,7 @@ const makeStyles = () => StyleSheet.create({
   stateText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
   retryBtn: {
     marginTop: 4,
-    backgroundColor: Colors.btnBlue,
+    backgroundColor: toneBtn(Colors.btnBlue),
     paddingHorizontal: 20,
     paddingVertical: 9,
     borderRadius: Radius.full,
@@ -411,7 +411,7 @@ const makeStyles = () => StyleSheet.create({
   unreadTag: {
     alignSelf: 'flex-start',
     marginTop: 2,
-    backgroundColor: Colors.btnBlue,
+    backgroundColor: toneBtn(Colors.btnBlue),
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: Radius.full,

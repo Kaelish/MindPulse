@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AssessmentTool,
   fetchActiveAssessmentTools,
-  loadToolCompletions,
 } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
@@ -213,41 +212,8 @@ const StepCard = ({
   );
 };
 
-interface ToolCardProps {
-  tool: AssessmentTool;
-  completedAt?: string;
-  onPress: () => void;
-}
-
-/** Assessment questionnaire published by the administrator (Supabase). */
-const ToolCard = ({ tool, completedAt, onPress }: ToolCardProps) => (
-  <TouchableOpacity style={styles.stepCard} activeOpacity={0.7} onPress={onPress}>
-    <View style={[styles.iconBox, { backgroundColor: toneBg('#EEF0FD') }]}>
-      <MaterialCommunityIcons name="clipboard-text-outline" size={26} color={tone('#6B79F2')} />
-    </View>
-
-    <View style={styles.stepTextContent}>
-      <Text style={styles.stepTitle}>{tool.title}</Text>
-      <Text style={styles.stepSubtitle}>
-        {tool.category} · {tool.questions.length} Questions · {tool.durationMinutes} min
-      </Text>
-    </View>
-
-    <View style={styles.statusIndicator}>
-      {completedAt ? (
-        <Ionicons name="checkmark-circle" size={24} color={tone('#4CAF50')} />
-      ) : (
-        <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-      )}
-    </View>
-  </TouchableOpacity>
-);
-
 interface HubExtras {
   tools: AssessmentTool[];
-  completions: Record<string, string>;
-  /** The tools query failed (offline/RLS) — show a retry instead of hiding. */
-  toolsFailed: boolean;
 }
 
 export const StressAssessmentHubScreen = ({
@@ -258,15 +224,16 @@ export const StressAssessmentHubScreen = ({
   onExit?: () => void;
 }) => {
   const [state, setState] = useState<AssessmentState | null>(null);
-  const [extras, setExtras] = useState<HubExtras>({ tools: [], completions: {}, toolsFailed: false });
-  const [toolsReloadKey, setToolsReloadKey] = useState(0);
+  // Still fetched: the Stress Survey step below hands the Multi-Modal tool
+  // definition to the survey screen. The standalone tool LIST is gone from
+  // this hub on purpose — those questionnaires live in the stress survey, so
+  // showing them here was a second entry point to the same work.
+  const [extras, setExtras] = useState<HubExtras>({ tools: [] });
 
   useEffect(() => {
     loadAssessmentState().then(setState);
-    Promise.all([fetchActiveAssessmentTools(), loadToolCompletions()]).then(([result, completions]) =>
-      setExtras({ tools: result.tools, completions, toolsFailed: result.failed }),
-    );
-  }, [toolsReloadKey]);
+    fetchActiveAssessmentTools().then((result) => setExtras({ tools: result.tools }));
+  }, []);
 
   if (!state) {
     return (
@@ -317,63 +284,6 @@ export const StressAssessmentHubScreen = ({
               <Text style={styles.dayCompleteSub}>
                 Your next daily check-in unlocks tomorrow. You can still review today's results.
               </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Questionnaires published by the administrator */}
-        {extras.tools.length > 0 && (
-          <View style={styles.stepsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>AVAILABLE ASSESSMENTS</Text>
-              <Text style={styles.progressText}>{extras.tools.length} Tools</Text>
-            </View>
-            <Text style={styles.sectionNote}>
-              Tap any assessment to take it now — each result is saved to your record.
-            </Text>
-            {extras.tools.map((tool) => (
-              <ToolCard
-                key={tool.id}
-                tool={tool}
-                completedAt={extras.completions[tool.id]}
-                onPress={() => {
-                  // Multi-Modal tools launch the full 4-step flow (survey →
-                  // scan → heart rate → reaction); surveys run standalone.
-                  if (tool.category === 'Multi-Modal') {
-                    if (dayComplete) {
-                      Alert.alert(
-                        'Today’s assessment is complete',
-                        'You already finished today’s check-in. The next one unlocks tomorrow.',
-                      );
-                      return;
-                    }
-                    onNavigate('StressSurvey', tool);
-                    return;
-                  }
-                  onNavigate('ToolSurvey', tool);
-                }}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Failed fetch must not look like "no assessments exist" — say so. */}
-        {extras.tools.length === 0 && extras.toolsFailed && (
-          <View style={styles.stepsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>AVAILABLE ASSESSMENTS</Text>
-            </View>
-            <View style={styles.loadErrorCard}>
-              <Ionicons name="cloud-offline-outline" size={22} color={Colors.textHint} />
-              <Text style={styles.loadErrorText}>
-                Couldn’t load your assessments. Check your connection and try again.
-              </Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => setToolsReloadKey((key) => key + 1)}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -515,27 +425,10 @@ const makeStyles = () => StyleSheet.create({
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   sectionTitle: { color: Colors.textHint, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
   sectionNote: { color: Colors.textHint, fontSize: 12, lineHeight: 17 },
-  loadErrorCard: {
-    alignItems: 'center',
-    gap: 10,
-    padding: 16,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  loadErrorText: { color: Colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  retryButton: {
-    backgroundColor: Colors.btnBlue,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-  },
-  retryButtonText: { color: Colors.white, fontSize: 13, fontWeight: '700' },
   progressText: { color: Colors.btnBlue, fontSize: 13, fontWeight: '700' },
   
   stepCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     borderRadius: Radius.lg,
     padding: Spacing.md,
     flexDirection: 'row',

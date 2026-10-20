@@ -386,7 +386,7 @@ const makeStyles = () => StyleSheet.create({
   facialCalloutTitle: { fontSize: 14, fontWeight: '800', color: tone('#0369A1') },
   facialCalloutDesc: { fontSize: 11.5, color: tone('#0284C7'), lineHeight: 17 },
 
-  safeguardItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 10, padding: 10 },
+  safeguardItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: toneBg('#F6FBFF'), borderRadius: 10, padding: 10 },
   sgTitle: { fontSize: 12, fontWeight: '800', color: tone('#0369A1') },
   sgDesc: { fontSize: 11, color: tone('#334155'), lineHeight: 16, marginTop: 1 },
 

@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 interface Props {
   onBack?: () => void;
@@ -412,7 +412,7 @@ const makeStyles = () => StyleSheet.create({
     gap: 10,
     height: 60,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.btnPurple,
+    backgroundColor: toneBtn(Colors.btnPurple),
     ...Platform.select({
       web: { boxShadow: '0px 6px 20px rgba(158,133,249,0.4)' },
       default: { shadowColor: Colors.btnPurple, shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 6 } },
@@ -440,7 +440,7 @@ registerThemeStyles(() => { styles = makeStyles(); });
 const makeSheet = () => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   container: {
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,

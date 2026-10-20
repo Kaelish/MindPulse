@@ -27,7 +27,7 @@ import {
 } from '../services/notifications';
 import { StressBand, stressBandFor } from '../services/selfCareTips';
 import { SelfCareModal } from './SelfCareModal';
-import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../theme/theme';
 
 export type PatientNotificationTab = 'home' | 'analysis' | 'clinics' | 'profile';
 
@@ -540,7 +540,7 @@ const makeStyles = () => StyleSheet.create({
   },
   retryBtn: {
     marginTop: 4,
-    backgroundColor: Colors.btnBlue,
+    backgroundColor: toneBtn(Colors.btnBlue),
     paddingHorizontal: 20,
     paddingVertical: 9,
     borderRadius: Radius.full,

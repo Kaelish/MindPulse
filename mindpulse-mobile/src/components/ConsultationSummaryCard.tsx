@@ -114,7 +114,9 @@ const makeStyles = () => StyleSheet.create({
   },
   value: { fontSize: 13, lineHeight: 19, color: tone('#334155') },
   signature: { width: '100%', height: 56, backgroundColor: '#fff', borderRadius: 8 },
-  signName: { fontSize: 12, color: tone('#334155') },
+  // The strip stays white in both modes so a dark-ink signature image stays
+  // legible — so this label keeps its shipped slate value instead of lifting.
+  signName: { fontSize: 12, color: '#334155' },
 });
 
 let styles = makeStyles();

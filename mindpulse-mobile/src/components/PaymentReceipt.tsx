@@ -2,8 +2,9 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
-import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../theme/theme';
 import { formatTransactionDate } from '../services/transactions';
+import { ConsultationMode } from '../services/appointments';
 
 /**
  * Everything a payment receipt needs. Built from a `payments` row (see
@@ -18,6 +19,11 @@ export interface PaymentReceiptData {
   /** Who received the money — the doctor's name on the patient side. */
   payeeName: string;
   scheduledFor?: string | null;
+  /**
+   * How the session happens. Absent on legacy rows → treated as online, which
+   * is how every payment recorded before migration 0025 actually was.
+   */
+  consultationMode?: ConsultationMode;
 }
 
 interface PaymentReceiptProps {
@@ -64,6 +70,8 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({
 }) => {
   const isPaid = receipt.status !== 'refunded';
   const statusLabel = isPaid ? 'Paid' : 'Refunded';
+  const isFaceToFace = receipt.consultationMode === 'in_person';
+  const serviceLabel = isFaceToFace ? 'Face-to-face consultation' : 'Online consultation';
 
   return (
     <View style={styles.wrap}>
@@ -95,6 +103,20 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({
           </View>
         )}
 
+        {/* The mode, stated loudly: a face-to-face receipt must never read as
+            an online one (and vice versa is handled by the Service row). */}
+        {isFaceToFace && (
+          <View style={styles.f2fBanner}>
+            <Ionicons name="business-outline" size={20} color={tone('#8A5A00')} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.f2fBannerTitle}>FACE-TO-FACE SESSION</Text>
+              <Text style={styles.f2fBannerSub}>
+                Held in person at the clinic — not an online video call.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.amountBlock}>
           <Text style={styles.amountLabel}>{isPaid ? 'AMOUNT PAID' : 'AMOUNT REFUNDED'}</Text>
           <Text style={styles.amount}>{formatAmount(receipt.amount)}</Text>
@@ -114,7 +136,7 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({
           <ReceiptRow label="Reference No." value={receipt.reference} emphasized />
           <ReceiptRow label="Date" value={formatTransactionDate(receipt.createdAt)} />
           <ReceiptRow label="Paid to" value={receipt.payeeName || 'Clinician'} />
-          <ReceiptRow label="Service" value="Online consultation" />
+          <ReceiptRow label="Service" value={serviceLabel} />
           {receipt.scheduledFor ? <ReceiptRow label="Session" value={receipt.scheduledFor} /> : null}
           <ReceiptRow label="Method" value={METHOD_LABELS[receipt.method] ?? receipt.method} />
           <ReceiptRow label="Status" value={statusLabel} last />
@@ -192,6 +214,30 @@ const makeStyles = () =>
     },
     successText: { flex: 1, fontSize: 12, fontWeight: '700', color: tone('#1E8E4E'), lineHeight: 17 },
 
+    f2fBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: tone('#E8C766'),
+      backgroundColor: toneBg('#FFF3CD'),
+    },
+    f2fBannerTitle: {
+      fontSize: 15,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+      color: tone('#8A5A00'),
+    },
+    f2fBannerSub: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: tone('#8A5A00'),
+      marginTop: 2,
+      lineHeight: 16,
+    },
+
     amountBlock: { alignItems: 'center', gap: 4 },
     amountLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: Colors.textHint },
     amount: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary },
@@ -235,7 +281,7 @@ const makeStyles = () =>
       paddingVertical: 12,
       borderRadius: 14,
       alignItems: 'center',
-      backgroundColor: Colors.primary,
+      backgroundColor: toneBtn(Colors.primary),
     },
     doneText: { fontSize: 13, fontWeight: '800', color: Colors.white },
   });

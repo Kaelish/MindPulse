@@ -257,7 +257,7 @@ const makeStyles = () =>
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
-      backgroundColor: tone('#6B79F2'),
+      backgroundColor: toneBg('#6B79F2'),
     },
     headIcon: {
       width: 32,
@@ -296,7 +296,7 @@ const makeStyles = () =>
       right: 18,
       bottom: 18,
       borderRadius: 100,
-      backgroundColor: tone('#6B79F2'),
+      backgroundColor: toneBg('#6B79F2'),
       opacity: 0.92,
     },
     blobContent: {
@@ -345,9 +345,9 @@ const makeStyles = () =>
       gap: 8,
       paddingVertical: 14,
       borderRadius: Radius.full,
-      backgroundColor: tone('#6B79F2'),
+      backgroundColor: toneBg('#6B79F2'),
     },
-    primaryBtnRunning: { backgroundColor: tone('#E08A00') },
+    primaryBtnRunning: { backgroundColor: toneBg('#E08A00') },
     primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
     secondaryRow: { flexDirection: 'row', gap: 8 },
     secondaryBtn: {

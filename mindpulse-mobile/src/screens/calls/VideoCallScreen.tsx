@@ -323,7 +323,19 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                   <Text style={styles.endedText}>This consultation has ended.</Text>
                 </View>
               ) : booking.status === 'confirmed' ? (
-                // Patients wait for the doctor to open the room; only the doctor
+                // A face-to-face session has no room to open — replacing the
+                // call controls with the instruction stops a doctor dialling a
+                // Jitsi room nobody else will ever join.
+                booking.consultationMode === 'in_person' ? (
+                  <View style={styles.modeNotice}>
+                    <Ionicons name="business-outline" size={16} color={tone('#8A5A00')} />
+                    <Text style={styles.modeNoticeText}>
+                      {isDoctor
+                        ? 'Face-to-face session — meet your patient at the clinic. There is no video call to join.'
+                        : 'Face-to-face session — arrive at the clinic at the scheduled time. There is no call to join.'}
+                    </Text>
+                  </View>
+                ) : // Patients wait for the doctor to open the room; only the doctor
                 // starts the call from here.
                 isDoctor ? (
                   <TouchableOpacity
@@ -495,6 +507,24 @@ const makeStyles = () => StyleSheet.create({
     marginTop: 4,
   },
   endedText: { fontSize: 13.5, fontWeight: '800', color: tone('#0F5C4A') },
+  /* In-person sessions replace the call controls with this instruction. */
+  modeNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+    padding: 11,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: tone('#E8C766'),
+    backgroundColor: toneBg('#FFF3CD'),
+  },
+  modeNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    color: tone('#8A5A00'),
+  },
 });
 
 let styles = makeStyles();

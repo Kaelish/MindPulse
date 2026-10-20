@@ -77,6 +77,32 @@ interface ConsultationsViewProps {
   onViewHistory?: (student: StudentCaseRecord) => void;
 }
 
+/**
+ * Face-to-face bookings have no Jitsi room to open, so every "Join Call" /
+ * "Start Video Call" control becomes this label instead. Keeps the slot the
+ * button used to fill while making it impossible to mistake an in-person
+ * session for an online one.
+ */
+const FaceToFaceChip: React.FC<{ compact?: boolean }> = ({ compact }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: compact ? '5px 10px' : '8px 16px',
+      borderRadius: '8px',
+      fontWeight: 700,
+      fontSize: compact ? '0.78rem' : '0.85rem',
+      whiteSpace: 'nowrap',
+      background: 'var(--doc-soft)',
+      border: '1px dashed var(--doc-line)',
+      color: 'var(--doc-muted)',
+    }}
+  >
+    Face-to-face · at the clinic
+  </span>
+);
+
 export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabRequest = null, onViewHistory }) => {
   const [consultations, setConsultations] = useState<WebConsultationItem[]>([]);
   const [consultTab, setConsultTab] = useState<'upcoming' | 'history' | 'messages'>(openTabRequest?.tab ?? 'upcoming');
@@ -876,16 +902,20 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           >
             Message
           </button>
-          <button
-            type="button"
-            className="start-session-btn"
-            onClick={() => {
-              setActiveSessionItem(item);
-              setShowVideoCall(true);
-            }}
-          >
-            Join Call
-          </button>
+          {item.consultationMode === 'in_person' ? (
+            <FaceToFaceChip />
+          ) : (
+            <button
+              type="button"
+              className="start-session-btn"
+              onClick={() => {
+                setActiveSessionItem(item);
+                setShowVideoCall(true);
+              }}
+            >
+              Join Call
+            </button>
+          )}
           <button
             type="button"
             className="view-case-btn"
@@ -1178,16 +1208,20 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
-                    onClick={() => {
-                      setActiveSessionItem(chatTarget);
-                      setShowVideoCall(true);
-                    }}
-                  >
-                    Start Video Call
-                  </button>
+                  {chatTarget.consultationMode === 'in_person' ? (
+                    <FaceToFaceChip compact />
+                  ) : (
+                    <button
+                      type="button"
+                      style={{ background: 'var(--primary-strong)', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                      onClick={() => {
+                        setActiveSessionItem(chatTarget);
+                        setShowVideoCall(true);
+                      }}
+                    >
+                      Start Video Call
+                    </button>
+                  )}
                 </div>
 
                 {/* Messages Thread Body */}
@@ -2107,21 +2141,25 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                 <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime} · {consultationModeLabel(activeSessionItem.consultationMode)} · {activeSessionItem.status}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  style={{
-                    background: 'var(--primary-strong)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                  }}
-                  onClick={() => setShowVideoCall(true)}
-                >
-                  Start Video Call
-                </button>
+                {activeSessionItem.consultationMode === 'in_person' ? (
+                  <FaceToFaceChip compact />
+                ) : (
+                  <button
+                    type="button"
+                    style={{
+                      background: 'var(--primary-strong)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                    }}
+                    onClick={() => setShowVideoCall(true)}
+                  >
+                    Start Video Call
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="Close consultation panel"

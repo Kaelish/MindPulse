@@ -301,7 +301,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
           }
         />
         <View style={styles.card} onTouchStart={dark ? pokeReveal : undefined}>
-          <View style={[styles.head, { backgroundColor: accent }]}>
+          <View style={[styles.head, { backgroundColor: toneBg(ACCENT) }]}>
             <View style={styles.headIcon}>
               <Ionicons name="eye-off-outline" size={16} color="#FFFFFF" />
             </View>
@@ -336,7 +336,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.primaryBtn, phase === 'running' && { backgroundColor: tone('#E08A00') }]}
+              style={[styles.primaryBtn, phase === 'running' && { backgroundColor: toneBg('#E08A00') }]}
               onPress={primary.onPress}
               activeOpacity={0.85}
             >
@@ -484,7 +484,7 @@ const makeStyles = () =>
       gap: 8,
       paddingVertical: 14,
       borderRadius: Radius.full,
-      backgroundColor: tone(ACCENT),
+      backgroundColor: toneBg(ACCENT),
     },
     primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
     secondaryBtn: {

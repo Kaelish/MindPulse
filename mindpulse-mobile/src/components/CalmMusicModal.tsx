@@ -100,7 +100,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
   return (
     <>
       <View style={m.nowPlaying}>
-        <View style={[m.art, { backgroundColor: tone(track.color) }]}>
+        <View style={[m.art, { backgroundColor: toneBg(track.color) }]}>
           <Ionicons name={track.icon as any} size={30} color="#FFFFFF" />
         </View>
 
@@ -144,7 +144,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[m.playBtn, { backgroundColor: tone(track.color) }]}
+            style={[m.playBtn, { backgroundColor: toneBg(track.color) }]}
             onPress={togglePlay}
             disabled={!status.isLoaded}
             activeOpacity={0.85}
@@ -290,7 +290,7 @@ const makeStyles = () =>
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
-      backgroundColor: tone('#00897B'),
+      backgroundColor: toneBg('#00897B'),
     },
     headIcon: {
       width: 32,

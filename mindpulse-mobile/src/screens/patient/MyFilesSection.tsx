@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
-import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 import {
   PATIENT_FILE_FILTERS,
   PatientFileCategory,
@@ -167,7 +167,7 @@ const makeStyles = () => StyleSheet.create({
 
   stateBox: { alignItems: 'center', gap: 8, paddingVertical: 18 },
   stateText: { fontSize: 13, color: Colors.textHint, textAlign: 'center', lineHeight: 19 },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 18, backgroundColor: Colors.primary },
+  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 18, backgroundColor: toneBtn(Colors.primary) },
   retryText: { fontSize: 12, fontWeight: '700', color: Colors.white },
 
   fileRow: {

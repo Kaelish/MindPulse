@@ -6,7 +6,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import { Typography, Spacing, Radius } from '../theme/typography';
-import { registerThemeStyles } from '../theme/theme';
+import { registerThemeStyles, toneBg } from '../theme/theme';
 
 interface Props {
   title: string;
@@ -92,7 +92,7 @@ const BACK_BTN_SIZE = 38;
 
 const makeStyles = () => StyleSheet.create({
   wrapper: {
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
