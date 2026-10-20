@@ -46,11 +46,11 @@ const BACKEND_LABEL_TO_EXPRESSION: Record<string, FaceEmotion> = {
 const REQUEST_TIMEOUT_MS = 20000;
 
 const getApiBaseUrl = (): string => {
-  const env = (globalThis as typeof globalThis & {
-    process?: { env?: Record<string, string | undefined> };
-  }).process?.env;
-
-  const baseUrl = env?.EXPO_PUBLIC_MINDPULSE_API_URL;
+  // Must be a literal `process.env.EXPO_PUBLIC_*` member access: babel-preset-expo
+  // only rewrites that exact shape (dev -> expo/virtual/env, prod -> inlined value).
+  // Reading it through `globalThis.process` hides it from that transform, so the
+  // .env value never reaches the app and capture always reports "not configured".
+  const baseUrl = process.env.EXPO_PUBLIC_MINDPULSE_API_URL;
   if (!baseUrl) {
     throw new Error(
       'Face scan is not configured. Set EXPO_PUBLIC_MINDPULSE_API_URL to the MindPulse backend URL.',

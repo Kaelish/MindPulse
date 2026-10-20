@@ -50,7 +50,9 @@ export const FaceScanNavigator: React.FC<Props> = ({ onBack, onFinishScan, onSki
             expression={expression}
             score={score}
             onBack={() => setStep('instructions')}
-            onRetry={() => setStep('instructions')}
+            // Rescan goes straight back to the camera — the checklist and privacy
+            // notice are one-time onboarding, they don't need to be re-acknowledged.
+            onRetry={() => setStep('camera')}
             onFinish={() => onFinishScan({ expression, score })}
           />
         );

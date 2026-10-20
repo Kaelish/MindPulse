@@ -26,12 +26,10 @@ export const createDailyVideoSession = async (
   doctorId: string,
   patientId: string,
 ): Promise<CallSessionPayload> => {
-  const env = (globalThis as typeof globalThis & {
-    process?: { env?: Record<string, string | undefined> };
-  }).process?.env;
-
-  const baseUrl = env?.EXPO_PUBLIC_DAILY_BASE_URL;
-  const token = env?.EXPO_PUBLIC_DAILY_TOKEN;
+  // Literal `process.env.EXPO_PUBLIC_*` accesses only — babel-preset-expo inlines
+  // these. Reading them via `globalThis.process` bypasses that transform.
+  const baseUrl = process.env.EXPO_PUBLIC_DAILY_BASE_URL;
+  const token = process.env.EXPO_PUBLIC_DAILY_TOKEN;
   if (!baseUrl || !token) {
     throw new Error(
       'Video calling is not configured. Set EXPO_PUBLIC_DAILY_BASE_URL and EXPO_PUBLIC_DAILY_TOKEN.',
