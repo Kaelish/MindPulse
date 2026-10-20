@@ -24,13 +24,13 @@ jest.mock('../../services/notifications', () => ({
 const overview: DoctorDashboardOverview = {
   activeCases: { value: 1, note: { text: 'No new cases this week', tone: 'neutral' } },
   pendingReviews: { value: 1, note: { text: 'Requires attention', tone: 'warning' } },
-  highRiskStudents: { value: 0, note: { text: 'No students at high risk', tone: 'positive' } },
+  highRiskStudents: { value: 0, note: { text: 'No patients at high risk', tone: 'positive' } },
   completedThisWeek: { value: 0, note: { text: 'No sessions completed yet', tone: 'neutral' } },
   recentCases: [
     {
       id: 'bd57192f',
       userId: 'bd57192f',
-      name: 'test student',
+      name: 'test patient',
       initials: 'TS',
       avatarUrl: null,
       studentNo: 'BD57192F',
@@ -53,13 +53,14 @@ const overview: DoctorDashboardOverview = {
   upcoming: [
     {
       id: 'appt-1',
-      patientName: 'test student',
+      patientName: 'test patient',
       initials: 'TS',
       avatarUrl: null,
       status: 'scheduled',
       statusLabel: 'Scheduled',
       whenLabel: 'Yesterday, 4:45 PM',
       typeLabel: 'Initial Assessment',
+      modeLabel: 'Online (Video Call)',
       startsAt: Date.now(),
     },
   ],
@@ -68,7 +69,7 @@ const overview: DoctorDashboardOverview = {
 const emptyOverview: DoctorDashboardOverview = {
   activeCases: { value: 0, note: { text: 'No new cases this week', tone: 'neutral' } },
   pendingReviews: { value: 0, note: { text: 'All caught up', tone: 'positive' } },
-  highRiskStudents: { value: 0, note: { text: 'No students at high risk', tone: 'positive' } },
+  highRiskStudents: { value: 0, note: { text: 'No patients at high risk', tone: 'positive' } },
   completedThisWeek: { value: 0, note: { text: 'No sessions completed yet', tone: 'neutral' } },
   recentCases: [],
   upcoming: [],
@@ -89,12 +90,12 @@ test('renders live metrics, recent cases and upcoming consultations', async () =
 
   expect(await screen.findByText('Active Cases')).toBeTruthy();
   expect(screen.getByText('Pending Reviews')).toBeTruthy();
-  expect(screen.getByText('High Risk Students')).toBeTruthy();
+  expect(screen.getByText('High Risk Patients')).toBeTruthy();
   expect(screen.getByText('Completed this week')).toBeTruthy();
   expect(screen.getByText('Requires attention')).toBeTruthy();
   expect(screen.getByText('No new cases this week')).toBeTruthy();
 
-  expect(screen.getAllByText('test student').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('test patient').length).toBeGreaterThan(0);
   expect(screen.getByText('BD57192F · No activity yet')).toBeTruthy();
   expect(screen.getByText('No assessment yet')).toBeTruthy();
 
@@ -103,7 +104,7 @@ test('renders live metrics, recent cases and upcoming consultations', async () =
   expect(screen.getAllByText('High Risk').length).toBeGreaterThan(0);
 
   expect(screen.getByText('Yesterday, 4:45 PM')).toBeTruthy();
-  expect(screen.getByText('Type: Initial Assessment')).toBeTruthy();
+  expect(screen.getByText('Type: Initial Assessment · Online (Video Call)')).toBeTruthy();
   expect(screen.getByText('Scheduled')).toBeTruthy();
 });
 
@@ -112,7 +113,7 @@ test('shows empty states when the database has no rows yet', async () => {
 
   render(<DoctorDashboardView />);
 
-  await waitFor(() => expect(screen.getByText('No student cases yet')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('No patient cases yet')).toBeTruthy());
   expect(screen.getByText('No consultations scheduled')).toBeTruthy();
   expect(screen.getAllByText('0').length).toBeGreaterThan(0);
 });

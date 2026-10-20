@@ -110,7 +110,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
         );
       })
       .catch((error) => {
-        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load this student case.');
+        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load this patient case.');
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -130,7 +130,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       .catch((error) => {
         if (!active) return;
         setFiles([]);
-        setFilesError(error instanceof Error ? error.message : 'Unable to load this student’s files.');
+        setFilesError(error instanceof Error ? error.message : 'Unable to load this patient’s files.');
       });
     return () => {
       active = false;
@@ -292,7 +292,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   return (
     <main className="main-panel student-detail-main">
-      <header className="student-detail-topbar"><strong>Student Cases</strong><DoctorNotifications /></header>
+      <header className="student-detail-topbar"><strong>Patient Cases</strong><DoctorNotifications /></header>
       <button type="button" className="back-to-cases" onClick={onBack}>← Back to Cases</button>
       <section className="student-profile-card">
         <div className="student-profile-heading"><div className="student-initials">
@@ -302,7 +302,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                         </div><div><h1>{student.name}</h1><span>{student.id}</span><p>{student.age || '—'} years, {student.sex}&nbsp;&nbsp; · &nbsp;&nbsp;{student.program}&nbsp;&nbsp; · &nbsp;&nbsp;{student.year}</p></div><div className={`student-risk tone-${riskTone}`}><span>{student.status}</span><strong>{student.score}%</strong><small>Current Stress Level</small></div></div>
         <div className="student-contact-row"><span>{student.email}</span><span>{student.phone}</span><span>{student.location}</span></div>
       </section>
-      <nav className="student-detail-tabs" aria-label="Student case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Files', 'Recommendations'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
+      <nav className="student-detail-tabs" aria-label="Patient case sections">{(['Overview', 'Assessment Results', 'Consultations', 'Files', 'Recommendations'] as DetailTab[]).map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => { setActiveTab(tab); setSaved(false); }}>{tab}</button>)}</nav>
       {isLoading && <DoctorLoading label="Loading case data…" />}
       {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
       {!isLoading && !loadError && <>
@@ -368,7 +368,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           </div>
         </div>}
         {activeTab === 'Assessment Results' && <div className="student-detail-content">
-          {sessions.length === 0 && <DoctorEmpty title="No assessment results yet" description="Completed stress assessments for this student will be listed here." />}
+          {sessions.length === 0 && <DoctorEmpty title="No assessment results yet" description="Completed stress assessments for this patient will be listed here." />}
           {sessions.map((session) => {
             const band = session.score == null ? null : bandForScore(session.score);
             const riskLabel = session.stressLevel ?? (session.score == null ? '—' : bandLabel(session.score));
@@ -418,7 +418,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           })}
         </div>}
         {activeTab === 'Consultations' && <div className="student-detail-content">
-          {consultations.length === 0 && <DoctorEmpty title="No consultations booked yet" description="Booked sessions with this student will appear here with their status and notes." />}
+          {consultations.length === 0 && <DoctorEmpty title="No consultations booked yet" description="Booked sessions with this patient will appear here with their status and notes." />}
           {consultations.map((consultation) => {
             const statusLabel = consultation.status ? consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1) : 'Scheduled';
             const pillClass = consultation.status === 'completed'
@@ -506,7 +506,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           <section className="detail-panel">
             <h2>Past recommendations ({recommendations.length})</h2>
             {recommendations.length === 0 ? (
-              <p className="empty-table">No recommendations yet for this student. They appear here after you save one.</p>
+              <p className="empty-table">No recommendations yet for this patient. They appear here after you save one.</p>
             ) : (
               <ul className="patient-file-list">
                 {recommendations.map((item) => (

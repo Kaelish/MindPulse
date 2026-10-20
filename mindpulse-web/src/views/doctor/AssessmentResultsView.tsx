@@ -64,7 +64,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
   const highRisk = results.filter((result) => bandOf(result) === 'high').length;
 
   const exportCsv = () => {
-    const header = ['Result ID', 'Student', 'Date', 'Score', 'Risk Level', 'Heart Rate', 'Survey Score', 'Reaction Time (ms)', 'Emotion'];
+    const header = ['Result ID', 'Patient', 'Date', 'Score', 'Risk Level', 'Heart Rate', 'Survey Score', 'Reaction Time (ms)', 'Emotion'];
     const rows = visibleResults.map((result) => [
       result.id,
       result.studentName,
@@ -91,7 +91,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
   const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   return <main className="main-panel assessment-results-main">
-    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze student stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv} disabled={isLoading || !!loadError || visibleResults.length === 0} title={visibleResults.length === 0 ? 'There are no results to export yet' : undefined}>Export</button><DoctorNotifications /></div></header>
+    <header className="topbar assessment-results-topbar"><div><h1>Assessment Results</h1><p className="page-subtitle">Review and analyze patient stress assessment results</p></div><div className="header-actions"><button type="button" className="ghost-button" onClick={exportCsv} disabled={isLoading || !!loadError || visibleResults.length === 0} title={visibleResults.length === 0 ? 'There are no results to export yet' : undefined}>Export</button><DoctorNotifications /></div></header>
     <section className="assessment-summary-grid">
       <Summary label="Total Assessments" value={String(results.length)} change="" tone="green" />
       <Summary label="High Risk" value={String(highRisk)} change="" tone="red" />
@@ -115,7 +115,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const isReviewed = reviewed.includes(result.id);
           return <article className="assessment-card" key={result.id}>
             <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Student').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small><small>{assessmentNameOf(result)}</small></div></div>
+              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small><small>{assessmentNameOf(result)}</small></div></div>
               <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
               <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
             </div>
@@ -130,7 +130,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           </article>;
         })}</div>}
         {visibleResults.length === 0 && (results.length === 0
-          ? <DoctorEmpty title="No assessment results yet" description="Results appear here as soon as students complete a stress assessment." />
+          ? <DoctorEmpty title="No assessment results yet" description="Results appear here as soon as patients complete a stress assessment." />
           : <DoctorEmpty
               title="No results match your filters"
               description="Try another search term or reset the level and emotion filters."

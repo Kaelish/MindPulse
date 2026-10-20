@@ -1872,6 +1872,13 @@
   border-color: rgba(245, 158, 11, 0.4);
 }
 
+/* "Patient-visible" tag on the one note field patients may read. */
+.doctor-scope .therapy-clinician-tag.is-patient {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
 .doctor-scope .therapy-scan-chip {
   border-color: var(--doc-line);
 }

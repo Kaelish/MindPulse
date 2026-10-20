@@ -67,7 +67,7 @@ registerThemeStyles(() => {
 const makeMetricCards = (): { key: keyof DoctorDashboardData['metrics']; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] => [
   { key: 'activeCases', label: 'Active Cases', icon: 'people-outline', color: tone('#5B6EF5') },
   { key: 'pendingReviews', label: 'Pending Reviews', icon: 'clipboard-outline', color: tone('#DB8D62') },
-  { key: 'highRiskStudents', label: 'High Risk Students', icon: 'warning-outline', color: tone('#E05C5C') },
+  { key: 'highRiskStudents', label: 'High Risk Patients', icon: 'warning-outline', color: tone('#E05C5C') },
   { key: 'completedThisWeek', label: 'Completed this week', icon: 'checkmark-done-outline', color: tone('#27AE60') },
 ];
 
@@ -251,7 +251,7 @@ export const DoctorDashboardScreen: React.FC<DoctorDashboardScreenProps> = ({
           <View style={styles.patientsCard}>
             {recentCases.length === 0 && (
               <Text style={styles.emptyText}>
-                Student cases appear here once they book a consultation with you.
+                Patient cases appear here once they book a consultation with you.
               </Text>
             )}
             {recentCases.map((patient, index, arr) => {

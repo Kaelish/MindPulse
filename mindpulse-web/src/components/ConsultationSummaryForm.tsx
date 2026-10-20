@@ -7,7 +7,7 @@ import {
   fetchCurrentDoctorDisplayName,
   removeConsultationAttachment,
   saveConsultationNote,
-  setConsultationNoteSharing,
+  setPatientNotePublication,
   uploadConsultationAttachment,
 } from '../services/consultations';
 
@@ -59,8 +59,12 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
   const [existing, setExisting] = useState<ConsultationNote | null>(null);
 
   // Header
+  const defaultSessionLocation =
+    appointment.consultationMode === 'in_person'
+      ? 'In person (at the clinic)'
+      : 'Virtual (Teleconsultation)';
   const [sessionDate, setSessionDate] = useState(appointment.scheduledTime);
-  const [sessionLocation, setSessionLocation] = useState('Virtual (Teleconsultation)');
+  const [sessionLocation, setSessionLocation] = useState(defaultSessionLocation);
   const [durationMinutes, setDurationMinutes] = useState<string>('');
   const [clientName, setClientName] = useState(appointment.patientName);
   const [clientDob, setClientDob] = useState('');
@@ -90,9 +94,10 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [uploadingScan, setUploadingScan] = useState(false);
 
-  // Sharing — private by default.
-  const [sharedWithPatient, setSharedWithPatient] = useState(false);
-  const [shareBusy, setShareBusy] = useState(false);
+  // The one field the patient may read — private until explicitly published.
+  const [patientNote, setPatientNote] = useState('');
+  const [patientNotePublished, setPatientNotePublished] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +108,7 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
         setExisting(note);
         if (note) {
           setSessionDate(note.sessionDate || appointment.scheduledTime);
-          setSessionLocation(note.sessionLocation || 'Virtual (Teleconsultation)');
+          setSessionLocation(note.sessionLocation || defaultSessionLocation);
           setDurationMinutes(
             note.durationMinutes != null && !Number.isNaN(note.durationMinutes)
               ? String(note.durationMinutes)
@@ -126,7 +131,8 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
           setPadActive(false);
           setAttachmentPath(note.attachmentPath);
           setAttachmentName(note.attachmentName);
-          setSharedWithPatient(note.sharedWithPatient);
+          setPatientNote(note.patientNote);
+          setPatientNotePublished(note.patientNotePublished);
         } else {
           setPadActive(true);
         }
@@ -152,7 +158,7 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
     return () => {
       cancelled = true;
     };
-  }, [appointment.id, appointment.scheduledTime, appointment.patientName]);
+  }, [appointment.id, appointment.scheduledTime, appointment.patientName, appointment.consultationMode, defaultSessionLocation]);
 
   // --- signature pad plumbing -------------------------------------------------
   useEffect(() => {
@@ -284,7 +290,8 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
         signature,
         attachmentPath,
         attachmentName,
-        sharedWithPatient,
+        patientNote,
+        patientNotePublished,
       });
       setSavedNote(note);
       setExisting(note);
@@ -295,24 +302,28 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
     }
   };
 
-  const handleShareToggle = async () => {
-    if (shareBusy) return;
-    const next = !sharedWithPatient;
-    setShareBusy(true);
-    setSharedWithPatient(next);
+  const handlePublishToggle = async () => {
+    if (publishBusy) return;
+    if (!trimmed(patientNote)) {
+      setError('Write the note for the patient first — an empty note cannot be published.');
+      return;
+    }
+    const next = !patientNotePublished;
+    setPublishBusy(true);
+    setPatientNotePublished(next);
     try {
       if (existing) {
-        // A saved note: persist immediately through the sharing endpoint.
-        const updated = await setConsultationNoteSharing(appointment.id, next);
+        // A saved note: persist immediately through the publication endpoint.
+        const updated = await setPatientNotePublication(appointment.id, next);
         setExisting(updated);
         setSavedNote((prev) => (prev ? updated : prev));
       }
       // Not saved yet — the flag rides along with the next save.
     } catch (err) {
-      setSharedWithPatient(!next);
-      setError(err instanceof Error ? err.message : 'The sharing setting could not be saved.');
+      setPatientNotePublished(!next);
+      setError(err instanceof Error ? err.message : 'The publication setting could not be saved.');
     } finally {
-      setShareBusy(false);
+      setPublishBusy(false);
     }
   };
 
@@ -331,7 +342,7 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
           {label}
         </label>
         {clinicianOnly ? (
-          <span className="therapy-clinician-tag" title="Never shown to the student, even when the note is shared.">
+          <span className="therapy-clinician-tag" title="Sensitive clinical detail — never shown to the patient. Like every section of this note, it stays with you and the clinic administrators.">
             Clinician only
           </span>
         ) : null}
@@ -357,6 +368,13 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
         {existing ? ' · previously saved' : ''}
       </div>
 
+      <p className="therapy-private-banner">
+        Private clinical record — from the presenting problem all the way down, every section of
+        this note is visible only to you and the clinic administrators. The patient never sees it.
+        The single exception is the <strong>Note for the patient</strong> field further down, which
+        only appears in their app after you publish it.
+      </p>
+
       {savedNote ? (
         <div>
           <div
@@ -369,9 +387,9 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
               lineHeight: 1.55,
             }}
           >
-            {savedNote.sharedWithPatient
-              ? `Therapy progress note saved and shared with ${appointment.patientName}. They can now read the shared sections in their app.`
-              : 'Therapy progress note saved. It is private to you and the clinic administrators — the student cannot see it unless you share it.'}
+            {savedNote.patientNotePublished && trimmed(savedNote.patientNote)
+              ? `Therapy progress note saved. It stays private to you and the clinic administrators — and your published note for ${appointment.patientName} is visible in their app.`
+              : 'Therapy progress note saved. The whole note is private to you and the clinic administrators — the patient never sees it. Anything the patient should read belongs in the "Note for the patient" field below.'}
           </div>
           <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
             <button type="button" className="primary-button" onClick={onDone}>
@@ -461,7 +479,7 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
             </div>
           </div>
 
-          {/* ---------------- patient-facing sections ---------------- */}
+          {/* ---------------- note sections (every section below is doctor-only) ---------------- */}
           {section('tp-presenting', 'Presenting problem', presentingProblem, setPresentingProblem,
             'What brought the client in? Main concern and timeframe.', 90)}
           {section('tp-content', 'Session content', sessionContent, setSessionContent,
@@ -478,8 +496,8 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
             'Appearance, behavior, speech, mood/affect, thought process, cognition.', 90, true)}
           {section('tp-risk', 'Risk assessment', riskAssessment, setRiskAssessment,
             'Suicidal or homicidal ideation, harm to self or others, protective factors.', 90, true)}
-          {section('tp-diagnosis', 'Diagnostic impressions', diagnosticImpressions, setDiagnosticImpressions,
-            'Working diagnoses — e.g. Generalized Anxiety Disorder.', 90, true)}
+          {section('tp-diagnosis', 'Clinical impressions', diagnosticImpressions, setDiagnosticImpressions,
+            'Working clinical impressions / diagnoses — e.g. Generalized Anxiety Disorder.', 90, true)}
 
           {section('tp-plan', 'Plan for next session', planNextSession, setPlanNextSession,
             'What to continue or begin next session, homework, skill practice.', 90)}
@@ -584,28 +602,52 @@ export const ConsultationSummaryForm = ({ appointment, onDone }: ConsultationSum
               </button>
             )}
             <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#8a94a6', lineHeight: 1.5 }}>
-              Private to you: the scan never leaves your side — even a shared note shows the student only
-              the typed sections and your signature.
+              Private to you: the scan never leaves your side. Nothing on this note reaches the
+              patient — only the "Note for the patient" field below does, and only once you publish
+              it.
             </p>
           </div>
 
-          {/* ---------------- sharing ---------------- */}
+          {/* ---------------- the one patient-readable field ---------------- */}
+          <div className="therapy-patient-note">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }} htmlFor="tp-patient-note">
+                Note for the patient
+              </label>
+              <span className="therapy-clinician-tag is-patient" title="This is the only field the patient can read, and only after you publish it.">
+                Patient-visible
+              </span>
+            </div>
+            <textarea
+              id="tp-patient-note"
+              style={{ ...inputStyle, minHeight: 96 }}
+              value={patientNote}
+              onChange={(e) => setPatientNote(e.target.value)}
+              placeholder="A short, plain-language note the patient will read in their app — e.g. how the session went, what to practise, when to come back."
+            />
+            <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#8a94a6', lineHeight: 1.5 }}>
+              Everything above stays with you and the clinic administrators. This field is the one
+              exception: it appears in {appointment.patientName.split(' ')[0] || 'their'} app only
+              when you switch it on.
+            </p>
+          </div>
+
           <div className="therapy-share-row">
             <div className="therapy-share-copy">
-              <strong>Share with {appointment.patientName.split(' ')[0] || 'the student'}</strong>
+              <strong>Publish note to {appointment.patientName.split(' ')[0] || 'the patient'}</strong>
               <span>
-                {sharedWithPatient
-                  ? 'The student can read the shared sections of this note in their app (observations, mental status exam, risk, diagnostics, and any handwritten scan stay with you).'
-                  : 'Off by default. This note stays private to you and the clinic administrators until you turn sharing on.'}
+                {patientNotePublished
+                  ? 'Published — the patient can read this note in their app. The therapy progress note above stays private.'
+                  : 'Off by default. Nothing reaches the patient until you publish this note.'}
               </span>
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={sharedWithPatient}
-              className={`doc-switch ${sharedWithPatient ? 'is-on' : ''}`}
-              onClick={() => void handleShareToggle()}
-              disabled={shareBusy}
+              aria-checked={patientNotePublished}
+              className={`doc-switch ${patientNotePublished ? 'is-on' : ''}`}
+              onClick={() => void handlePublishToggle()}
+              disabled={publishBusy}
             >
               <span className="doc-switch-knob" />
             </button>

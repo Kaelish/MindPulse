@@ -40,14 +40,14 @@ const TAB_META: Record<RecordsTab, { label: string; title: string; subtitle: str
     subtitle: 'Complete history of all assessments',
   },
   students: {
-    label: 'Student Records',
-    title: 'Maintain Student Records',
-    subtitle: 'Comprehensive student profile and history',
+    label: 'Patient Records',
+    title: 'Maintain Patient Records',
+    subtitle: 'Comprehensive patient profile and history',
   },
   'at-risk': {
-    label: 'At-Risk Students',
-    title: 'Identify At-Risk Students',
-    subtitle: 'Students requiring immediate attention and intervention',
+    label: 'At-Risk Patients',
+    title: 'Identify At-Risk Patients',
+    subtitle: 'Patients requiring immediate attention and intervention',
   },
   consultations: {
     label: 'Consultation Records',
@@ -324,7 +324,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                     <input
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search student name or session ID"
+                      placeholder="Search patient name or session ID"
                     />
                   </label>
                   <select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)} aria-label="Filter stress level">
@@ -347,7 +347,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                     <table className="data-table records-table">
                       <thead>
                         <tr>
-                          <th>Student</th>
+                          <th>Patient</th>
                           <th>Date</th>
                           <th>Assessment</th>
                           <th>Score</th>
@@ -401,7 +401,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                     <input
                       value={studentSearch}
                       onChange={(event) => setStudentSearch(event.target.value)}
-                      placeholder="Search name, student no, or email"
+                      placeholder="Search name, patient no, or email"
                     />
                   </label>
                   <select
@@ -416,20 +416,20 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                       </option>
                     ))}
                   </select>
-                  <span className="records-count">{filteredStudents.length} students</span>
+                  <span className="records-count">{filteredStudents.length} patients</span>
                 </div>
 
                 {filteredStudents.length === 0 ? (
                   <p className="empty-table">
-                    {data.students.length === 0 ? 'No student records yet.' : 'No students match your filters.'}
+                    {data.students.length === 0 ? 'No patient records yet.' : 'No patients match your filters.'}
                   </p>
                 ) : (
                   <div className="records-table-wrap">
                     <table className="data-table records-table">
                       <thead>
                         <tr>
-                          <th>Student</th>
-                          <th>Student No</th>
+                          <th>Patient</th>
+                          <th>Patient No</th>
                           <th>Program</th>
                           <th>Year</th>
                           <th>Assessments</th>
@@ -497,7 +497,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
               <>
                 <div className="records-stat-row">
                   <article className="records-stat">
-                    <span>At-Risk Students</span>
+                    <span>At-Risk Patients</span>
                     <strong>{riskCounts.total}</strong>
                   </article>
                   <article className="records-stat danger">
@@ -521,7 +521,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                       <input
                         value={riskSearch}
                         onChange={(event) => setRiskSearch(event.target.value)}
-                        placeholder="Search student name or ID"
+                        placeholder="Search patient name or ID"
                       />
                     </label>
                     <select value={tierFilter} onChange={(event) => setTierFilter(event.target.value)} aria-label="Filter risk tier">
@@ -529,14 +529,14 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                       <option value="critical">Critical only</option>
                       <option value="high">High only</option>
                     </select>
-                    <span className="records-count">{filteredAtRisk.length} students</span>
+                    <span className="records-count">{filteredAtRisk.length} patients</span>
                   </div>
 
                   {filteredAtRisk.length === 0 ? (
                     <p className="empty-table">
                       {data.atRisk.length === 0
-                        ? 'No students currently meet the at-risk criteria.'
-                        : 'No students match your filters.'}
+                        ? 'No patients currently meet the at-risk criteria.'
+                        : 'No patients match your filters.'}
                     </p>
                   ) : (
                     <div className="records-risk-grid">
@@ -583,7 +583,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                               <strong>{row.assignedDoctor ?? 'Not assigned'}</strong>
                             </div>
                             <div>
-                              <span>Student ID</span>
+                              <span>Patient ID</span>
                               <strong>{row.studentNo}</strong>
                             </div>
                           </div>
@@ -625,7 +625,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                     <input
                       value={consultSearch}
                       onChange={(event) => setConsultSearch(event.target.value)}
-                      placeholder="Search student or doctor name"
+                      placeholder="Search patient or doctor name"
                     />
                   </label>
                   <span className="records-count">{filteredConsultations.length} records</span>
@@ -642,7 +642,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                     <table className="data-table records-table">
                       <thead>
                         <tr>
-                          <th>Student</th>
+                          <th>Patient</th>
                           <th>Doctor</th>
                           <th>Appointment</th>
                           <th>Last Updated</th>
@@ -838,7 +838,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
             {!historyLoading && !historyError && historyRows && (
               <>
                 {historyRows.length === 0 ? (
-                  <p className="empty-table">This student has not completed any assessments yet.</p>
+                  <p className="empty-table">This patient has not completed any assessments yet.</p>
                 ) : (
                   <div className="records-table-wrap">
                     <table className="data-table records-table">

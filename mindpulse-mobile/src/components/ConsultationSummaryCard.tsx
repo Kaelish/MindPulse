@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  StudentConsultationNote,
+  PatientDoctorNote,
   fetchConsultationNote,
   hasConsultationContent,
 } from '../services/consultationLifecycle';
@@ -16,11 +16,17 @@ type LoadState = 'loading' | 'ready';
 
 const has = (value?: string | null): boolean => !!(value && value.trim());
 
+/**
+ * The patient's window into this appointment: the short note the doctor
+ * explicitly published. The therapy progress note itself is a private
+ * clinical record and is never fetched here — the service asks for
+ * patient_note through an RPC that cannot return anything else.
+ */
 export const ConsultationSummaryCard: React.FC<ConsultationSummaryCardProps> = ({
   appointmentId,
 }) => {
   const [state, setState] = useState<LoadState>('loading');
-  const [note, setNote] = useState<StudentConsultationNote | null>(null);
+  const [note, setNote] = useState<PatientDoctorNote | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,66 +54,34 @@ export const ConsultationSummaryCard: React.FC<ConsultationSummaryCardProps> = (
       <View style={styles.card}>
         <View style={styles.headRow}>
           <Ionicons name="document-text-outline" size={15} color={tone('#5B6EF5')} />
-          <Text style={styles.headTitle}>Consultation summary</Text>
+          <Text style={styles.headTitle}>Note from your doctor</Text>
         </View>
         <Text style={styles.pending}>
-          Your doctor has not shared a consultation summary for this appointment. Notes stay
-          private with your doctor unless they choose to share them with you.
+          Your doctor has not published a note for this appointment yet. Anything they write for
+          you will appear here — the rest of their clinical notes stay private with them.
         </Text>
       </View>
     );
   }
 
   const n = note!;
-  const rows: { label: string; value: string }[] = [
-    { label: 'Presenting problem', value: n.presentingProblem },
-    { label: 'Session content', value: n.sessionContent },
-    { label: 'Interventions', value: n.interventions },
-    { label: 'Client response', value: n.clientResponse },
-    { label: 'Plan for next session', value: n.planNextSession },
-    { label: 'Return to clinic', value: n.returnToClinic },
-  ].filter((row) => has(row.value));
-
-  // Legacy notes (written before the therapy progress note format) fall back
-  // to the old four labels when the new sections are empty.
-  if (rows.length === 0) {
-    rows.push(
-      { label: 'Session summary', value: n.summary },
-      { label: 'Observations', value: n.observations },
-      { label: 'Recommendation', value: n.recommendation },
-      { label: 'Follow-up', value: n.followUp ?? '' },
-    );
-    for (let i = rows.length - 1; i >= 0; i -= 1) {
-      if (!has(rows[i].value)) rows.splice(i, 1);
-    }
-  }
 
   return (
     <View style={styles.card}>
       <View style={styles.headRow}>
         <Ionicons name="document-text-outline" size={15} color={tone('#5B6EF5')} />
-        <Text style={styles.headTitle}>Consultation summary</Text>
+        <Text style={styles.headTitle}>Note from your doctor</Text>
       </View>
 
-      {n.sessionDate || n.durationMinutes != null ? (
-        <Text style={styles.meta}>
-          {n.sessionDate}
-          {n.sessionDate && n.durationMinutes != null ? ' · ' : ''}
-          {n.durationMinutes != null ? `${n.durationMinutes} minutes` : ''}
-        </Text>
-      ) : null}
+      {n.sessionDate ? <Text style={styles.meta}>{n.sessionDate}</Text> : null}
 
-      {rows.map((row) => (
-        <View key={row.label} style={styles.block}>
-          <Text style={styles.label}>{row.label}</Text>
-          <Text style={styles.value}>{row.value}</Text>
-        </View>
-      ))}
+      <Text style={styles.value}>{n.patientNote}</Text>
 
-      {n.signature ? (
+      {n.signature || has(n.psychologist) ? (
         <View style={styles.block}>
-          <Text style={styles.label}>Signed by</Text>
-          <Image source={{ uri: n.signature }} style={styles.signature} resizeMode="contain" />
+          {n.signature ? (
+            <Image source={{ uri: n.signature }} style={styles.signature} resizeMode="contain" />
+          ) : null}
           {has(n.psychologist) ? <Text style={styles.signName}>{n.psychologist}</Text> : null}
         </View>
       ) : null}

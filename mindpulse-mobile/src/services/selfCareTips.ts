@@ -111,7 +111,7 @@ const LOW_TIPS: SelfCareTip[] = [
   {
     icon: 'people-outline',
     title: 'Invest in your people',
-    desc: 'Social support is a strong buffer against student stress. Message a friend, eat with someone, or just check in on someone.',
+    desc: 'Social support is a strong buffer against everyday stress. Message a friend, eat with someone, or just check in on someone.',
   },
   {
     icon: 'moon-outline',
@@ -189,12 +189,12 @@ const MODERATE_TIPS: SelfCareTip[] = [
   {
     icon: 'call-outline',
     title: 'Talk to someone you trust',
-    desc: 'Tell a friend, family member, or schoolmate what you\u2019re feeling. Social support measurably reduces student stress and anxiety.',
+    desc: 'Tell a friend, family member, or colleague what you\u2019re feeling. Social support measurably reduces stress and anxiety.',
   },
   {
     icon: 'headset-outline',
     title: 'Listen to calming music',
-    desc: 'Put on slow, familiar music or a guided meditation for 5\u201310 minutes. Music and peer support rank among the most effective student interventions.',
+    desc: 'Put on slow, familiar music or a guided meditation for 5\u201310 minutes. Music and peer support rank among the most effective everyday interventions.',
     action: 'music',
   },
   {
@@ -212,7 +212,7 @@ const MODERATE_TIPS: SelfCareTip[] = [
   {
     icon: 'color-palette-outline',
     title: 'Create something for 10 minutes',
-    desc: 'Draw, doodle, play an instrument, or craft. Art-based interventions show some of the strongest stress-relief effects for students.',
+    desc: 'Draw, doodle, play an instrument, or craft. Art-based interventions show some of the strongest stress-relief effects for most people.',
   },
   {
     icon: 'cafe-outline',
@@ -244,12 +244,12 @@ const HIGH_TIPS: SelfCareTip[] = [
   {
     icon: 'people-outline',
     title: 'Reach out to someone now',
-    desc: 'Tell a trusted friend, family member, or school counselor how you\u2019re feeling today \u2014 you don\u2019t have to carry it alone.',
+    desc: 'Tell a trusted friend, family member, or counselor how you\u2019re feeling today \u2014 you don\u2019t have to carry it alone.',
   },
   {
     icon: 'call-outline',
     title: 'Book a session with a professional',
-    desc: 'A clinician can help you make a plan. High or prolonged stress is exactly what student counseling and telehealth sessions are for.',
+    desc: 'A clinician can help you make a plan. High or prolonged stress is exactly what counseling and telehealth sessions are for.',
     action: 'clinics',
   },
   {
@@ -267,7 +267,7 @@ const HIGH_TIPS: SelfCareTip[] = [
   {
     icon: 'shield-checkmark-outline',
     title: 'In crisis? Use the free hotlines',
-    desc: 'Call or text 988 (Suicide & Crisis Lifeline) or contact your campus guidance office. Help is free, confidential, and available 24/7.',
+    desc: 'Call or text 988 (Suicide & Crisis Lifeline) or contact a local counselor or crisis line. Help is free, confidential, and available 24/7.',
     action: 'hotline',
   },
 ];

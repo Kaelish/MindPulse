@@ -32,7 +32,7 @@ const feed: FeedNotification[] = [
     id: 'n-recent',
     userId: 'doctor',
     title: 'Appointment confirmed',
-    message: 'test student confirmed your consultation.',
+    message: 'test patient confirmed your consultation.',
     type: 'appointment',
     category: 'settings',
     read: false,

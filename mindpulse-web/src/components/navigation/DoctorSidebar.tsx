@@ -79,7 +79,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
 
   const navItems: { key: DoctorView; label: string; icon: string }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: '\u2302' },
-    { key: 'student-cases', label: 'Student Cases', icon: '\u25C9' },
+    { key: 'student-cases', label: 'Patient Cases', icon: '\u25C9' },
     { key: 'assessment-results', label: 'Assessment Results', icon: '\u25A3' },
     { key: 'consultations', label: 'Consultations', icon: '\u25A4' },
     { key: 'transactions', label: 'Transactions', icon: '\u25C8' },

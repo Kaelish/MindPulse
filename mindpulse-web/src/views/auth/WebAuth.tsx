@@ -458,7 +458,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
 
           <div className="auth-form-panel">
             <h1>Create your doctor account</h1>
-            <p>Students register through the MindPulse mobile app.</p>
+            <p>Patients register through the MindPulse mobile app.</p>
             <form className="auth-form" onSubmit={handleRegister}>
               <label>
                 <span>First name</span>

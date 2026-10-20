@@ -47,7 +47,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
     try {
       const rows = await fetchAdminResults();
       const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
-      const lines = [['Student', 'Date', 'Score', 'Level', 'Heart Rate', 'Survey Score', 'Reaction Time (ms)', 'Emotion'].map(escape).join(',')];
+      const lines = [['Patient', 'Date', 'Score', 'Level', 'Heart Rate', 'Survey Score', 'Reaction Time (ms)', 'Emotion'].map(escape).join(',')];
       rows.forEach((row) => {
         const level = row.score != null ? bandForScore(row.score) : (row.stressLevel ?? '');
         lines.push([
@@ -85,8 +85,8 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
           note: months === '0' ? 'All recorded sessions' : 'In selected period',
         },
         { label: 'Average Score', value: analytics.avgScore != null ? String(analytics.avgScore) : '—', note: 'Score out of 100' },
-        { label: 'Assessed Students', value: `${analytics.assessedStudents} of ${analytics.students}`, note: `${analytics.students} students` },
-        { label: 'Engagement', value: `${analytics.engagementPct}%`, note: `${analytics.assessedStudents} of ${analytics.students} students` },
+        { label: 'Assessed Patients', value: `${analytics.assessedStudents} of ${analytics.students}`, note: `${analytics.students} patients` },
+        { label: 'Engagement', value: `${analytics.engagementPct}%`, note: `${analytics.assessedStudents} of ${analytics.students} patients` },
       ]
     : [];
 
@@ -187,14 +187,14 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
               <article className="analytics-panel analytics-placeholder-panel">
                 <h2>Stress Levels Overview</h2>
                 {assessedTotal === 0 ? (
-                  <p className="empty-table">No assessed students yet.</p>
+                  <p className="empty-table">No assessed patients yet.</p>
                 ) : (
                   <>
                     <div className="analytics-placeholder-bars">
                       {stressBands.map((band) => (
                         <i
                           key={band.key}
-                          title={`${band.label}: ${band.count} students (${bandShare(band.count)}%)`}
+                          title={`${band.label}: ${band.count} patients (${bandShare(band.count)}%)`}
                           style={{ width: '18%', height: `${bandShare(band.count)}%`, background: band.color }}
                         />
                       ))}
@@ -218,7 +218,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onSignOu
                   <b>{analytics.engagementPct}%</b>
                 </div>
                 <p className="analytics-caption">
-                  {analytics.assessedStudents} of {analytics.students} students assessed
+                  {analytics.assessedStudents} of {analytics.students} patients assessed
                 </p>
               </article>
             </section>

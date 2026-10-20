@@ -53,7 +53,7 @@ const SECTIONS: ToggleSection[] = [
     rows: [
       {
         key: 'consultationUpdates',
-        title: 'Messages from students',
+        title: 'Messages from patients',
         sub: 'New chat messages and consultation updates',
       },
     ],

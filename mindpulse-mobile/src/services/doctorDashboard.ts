@@ -184,7 +184,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
 
   const patients: DoctorPatientRow[] = profileRows.map((profile) => {
     const name =
-      `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
+      `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient';
     const score = latestScores.has(profile.id) ? latestScores.get(profile.id) ?? null : null;
     return {
       id: profile.id,
@@ -201,8 +201,8 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
       const parsed = parseScheduledFor(row.scheduled_for);
       const profile = profileRows.find((candidate) => candidate.id === row.patient_id);
       const profileName = profile
-        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student'
-        : 'Unknown student';
+        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient'
+        : 'Unknown patient';
       return {
         id: row.id,
         timeLabel: parsed
@@ -253,7 +253,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
       value: riskAlerts,
       note:
         riskAlerts === 0
-          ? { text: 'No students at high risk', tone: 'positive' }
+          ? { text: 'No patients at high risk', tone: 'positive' }
           : { text: `${riskAlerts} need${riskAlerts === 1 ? 's' : ''} immediate review`, tone: 'danger' },
     },
     completedThisWeek: {

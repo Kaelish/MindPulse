@@ -125,7 +125,7 @@ function UnauthorizedView({ onSignOut }: { onSignOut: () => void }) {
         <div className="auth-form-panel">
           <h1>This account cannot open the web portal</h1>
           <p>
-            Your account does not have doctor or administrator access. Students use the
+            Your account does not have doctor or administrator access. Patients use the
             MindPulse mobile app. Sign out and sign in with a staff account if you were
             expecting portal access.
           </p>

@@ -36,8 +36,8 @@ export interface ReportDefinition {
 export const REPORT_DEFINITIONS: ReportDefinition[] = [
   {
     key: 'stress-overview',
-    title: 'Student Stress Overview',
-    description: 'Comprehensive stress level analytics per student',
+    title: 'Patient Stress Overview',
+    description: 'Comprehensive stress level analytics per patient',
     icon: '◉',
     filterLabel: 'Stress Level',
     filterOptions: [
@@ -62,12 +62,12 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
   },
   {
     key: 'at-risk',
-    title: 'At-Risk Students Report',
-    description: 'List of students requiring intervention',
+    title: 'At-Risk Patients Report',
+    description: 'List of patients requiring intervention',
     icon: '⚑',
     filterLabel: 'Risk Tier',
     filterOptions: [
-      { value: 'all', label: 'All at-risk students' },
+      { value: 'all', label: 'All at-risk patients' },
       { value: 'critical', label: 'Critical only' },
       { value: 'high', label: 'High only' },
     ],
@@ -182,7 +182,7 @@ const buildStressOverview = async (options: ReportOptions): Promise<BuiltReport>
       const latest = history.find((row) => row.score != null) ?? null;
       const level = latest && latest.score != null ? levelForScore(latest.score) : null;
       return {
-        name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.email || 'Unknown student',
+        name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.email || 'Unknown patient',
         studentNo: student.student_no || student.id.slice(0, 8).toUpperCase(),
         email: student.email || '',
         program: student.program || '',
@@ -198,8 +198,8 @@ const buildStressOverview = async (options: ReportOptions): Promise<BuiltReport>
 
   return {
     headers: [
-      'Student',
-      'Student No',
+      'Patient',
+      'Patient No',
       'Email',
       'Program',
       'Year',
@@ -235,7 +235,7 @@ const buildAssessmentSummary = async (options: ReportOptions): Promise<BuiltRepo
   return {
     headers: [
       'Date',
-      'Student',
+      'Patient',
       'Assessment',
       'Score',
       'Stress Level',
@@ -273,8 +273,8 @@ const buildAtRisk = async (options: ReportOptions): Promise<BuiltReport> => {
 
   return {
     headers: [
-      'Student',
-      'Student No',
+      'Patient',
+      'Patient No',
       'Email',
       'Program',
       'Year',
@@ -369,7 +369,7 @@ const buildDoctorPerformance = async (options: ReportOptions): Promise<BuiltRepo
     .sort((a, b) => b.appointments - a.appointments || a.name.localeCompare(b.name));
 
   return {
-    headers: ['Doctor', 'Email', 'Specialization', 'License No', 'Verified', 'Appointments', 'Completed', 'Unique Students'],
+    headers: ['Doctor', 'Email', 'Specialization', 'License No', 'Verified', 'Appointments', 'Completed', 'Unique Patients'],
     rows: rows.map((row) => [
       row.name,
       row.email,
@@ -438,7 +438,7 @@ const buildMonthlyTrends = async (options: ReportOptions): Promise<BuiltReport> 
   const rows = Array.from(buckets.values()).sort((a, b) => a.order.localeCompare(b.order));
 
   return {
-    headers: ['Month', 'Assessments', 'Unique Students', 'Average Score', 'Low', 'Moderate', 'High'],
+    headers: ['Month', 'Assessments', 'Unique Patients', 'Average Score', 'Low', 'Moderate', 'High'],
     rows: rows.map((bucket) => [
       bucket.label,
       bucket.count,

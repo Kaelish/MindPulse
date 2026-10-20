@@ -36,7 +36,7 @@ import {
   subscribeToDoctorAppointments,
   subscribeToDoctorMessages,
 } from '../../services/doctorConsultations';
-import { generateRealLifeDates, isDateUnavailable, isSlotInPast, WEEKDAY_KEYS } from '../../services/appointments';
+import { consultationModeLabel, generateRealLifeDates, isDateUnavailable, isSlotInPast, WEEKDAY_KEYS } from '../../services/appointments';
 import {
   ChatThreadSummary,
   PickedAttachment,
@@ -549,6 +549,15 @@ export const DoctorConsultationsScreen: React.FC<DoctorConsultationsScreenProps>
         <View style={styles.cardTimeRow}>
           <Ionicons name="calendar-outline" size={14} color={Colors.textSecondary} />
           <Text style={styles.cardTime}>{item.scheduledTime}</Text>
+        </View>
+
+        <View style={styles.cardTimeRow}>
+          <Ionicons
+            name={item.consultationMode === 'in_person' ? 'business-outline' : 'videocam-outline'}
+            size={14}
+            color={Colors.textSecondary}
+          />
+          <Text style={styles.cardTime}>{consultationModeLabel(item.consultationMode)}</Text>
         </View>
 
         {showHistory && item.rawStatus === 'declined' && !!item.declineReason && (

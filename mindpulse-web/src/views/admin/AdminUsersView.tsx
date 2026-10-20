@@ -115,7 +115,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
       <AdminSidebar onSignOut={onSignOut} activeView="users" onNavigate={onNavigate} />
       <main className="main-panel admin-users-main">
         <header className="topbar admin-users-topbar">
-          <div><div className="eyebrow">System Management</div><h1>Manage {activeRole === 'Doctors' ? 'Doctor' : 'Student'} Accounts</h1><p className="page-subtitle">Review and manage {activeRole.toLowerCase()} accounts</p></div>
+          <div><div className="eyebrow">System Management</div><h1>Manage {activeRole === 'Doctors' ? 'Doctor' : 'Patient'} Accounts</h1><p className="page-subtitle">Review and manage {activeRole === 'Doctors' ? 'doctor' : 'patient'} accounts</p></div>
           <div className="account-actions">
             <button type="button" className="notification-button" aria-label="View notifications" onClick={() => setShowNotifications((open) => !open)}><NotificationBell /></button>
             {showNotifications && <NotificationPanel />}
@@ -132,7 +132,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
         )}
 
         <section className="content-panel account-list-panel">
-          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Students</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button></div><label className="doctor-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole.toLowerCase()} name`} /></label></div>
+          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Patients</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button></div><label className="doctor-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole === 'Doctors' ? 'doctor' : 'patient'} name`} /></label></div>
           {actionError && <p className="error-inline">{actionError}</p>}
           {isLoading && <div className="loading-state"><span className="spinner" /></div>}
           {loadError && (
@@ -144,7 +144,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
           {!isLoading && !loadError && (
             <div className="table-wrap">
               <table className="data-table account-table">
-                <thead><tr><th>{activeRole === 'Doctors' ? 'Doctor' : 'Student'}</th><th>Contact</th><th>{activeRole === 'Doctors' ? 'Specialization' : 'Program'}</th>{activeRole === 'Students' && <th>Year</th>}{activeRole === 'Students' && <th>Stress Level</th>}{activeRole === 'Doctors' && <th>Patients</th>}<th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>{activeRole === 'Doctors' ? 'Doctor' : 'Patient'}</th><th>Contact</th><th>{activeRole === 'Doctors' ? 'Specialization' : 'Program'}</th>{activeRole === 'Students' && <th>Year</th>}{activeRole === 'Students' && <th>Stress Level</th>}{activeRole === 'Doctors' && <th>Patients</th>}<th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   {filteredAccounts.map((account) => {
                     const isSelf = myId !== null && account.id === myId;
@@ -215,7 +215,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                   })}
                 </tbody>
               </table>
-              {filteredAccounts.length === 0 && <p className="empty-table">{search ? 'No accounts match your search.' : `No ${activeRole.toLowerCase()} accounts yet.`}</p>}
+              {filteredAccounts.length === 0 && <p className="empty-table">{search ? 'No accounts match your search.' : `No ${activeRole === 'Doctors' ? 'doctor' : 'patient'} accounts yet.`}</p>}
             </div>
           )}
         </section>
@@ -256,7 +256,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
             <dl className="user-profile-grid">
               <div>
                 <dt>Role</dt>
-                <dd>{viewing.role === 'doctor' ? 'Doctor' : 'Student'}</dd>
+                <dd>{viewing.role === 'doctor' ? 'Doctor' : 'Patient'}</dd>
               </div>
               <div>
                 <dt>Joined</dt>
@@ -275,7 +275,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                     <dd>{viewing.year}</dd>
                   </div>
                   <div>
-                    <dt>Student No.</dt>
+                    <dt>Patient No.</dt>
                     <dd>{viewing.studentNo || '—'}</dd>
                   </div>
                   <div>

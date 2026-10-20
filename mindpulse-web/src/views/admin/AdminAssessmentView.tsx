@@ -218,7 +218,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   };
 
   const removeTool = async (tool: AssessmentTool) => {
-    if (!window.confirm(`Delete "${tool.title}"? Students will no longer see it.`)) return;
+    if (!window.confirm(`Delete "${tool.title}"? Patients will no longer see it.`)) return;
     try {
       await deleteAssessmentTool(tool.id);
       await loadTools();
@@ -333,9 +333,9 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                     <small>Since month start</small>
                   </article>
                   <article className="assessment-stat-card">
-                    <span>Students Assessed</span>
+                    <span>Patients Assessed</span>
                     <strong>{outcomes.uniqueStudents}</strong>
-                    <small>Unique Students</small>
+                    <small>Unique Patients</small>
                   </article>
                   <article className="assessment-stat-card">
                     <span>Avg Overall Score</span>
@@ -390,7 +390,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                       <table className="assessment-table">
                         <thead>
                           <tr>
-                            <th>Student</th>
+                            <th>Patient</th>
                             <th>Date</th>
                             <th>Assessment</th>
                             <th>Overall Score</th>
@@ -517,9 +517,9 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
 
             {form.category === 'Multi-Modal' && (
               <div className="assessment-note">
-                ℹ Multi-Modal tools open the student’s daily 4-step check-in, whose survey step uses the
+                ℹ Multi-Modal tools open the patient’s daily 4-step check-in, whose survey step uses the
                 app’s built-in PSS-10 rather than these questions. Switch to Supplementary or Brief to have
-                students answer this tool’s own questions.
+                patients answer this tool’s own questions.
               </div>
             )}
 
@@ -586,10 +586,10 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 ＋ Add question
               </button>
               <small>
-                Students answer on a 0–4 scale (Never → Very Often) unless the question defines its own
+                Patients answer on a 0–4 scale (Never → Very Often) unless the question defines its own
                 options. Tick “Reverse-scored” for positively worded items (e.g. “felt confident”) so they
                 score correctly.
-                Changes go live for students once you save.
+                Changes go live for patients once you save.
               </small>
             </div>
 

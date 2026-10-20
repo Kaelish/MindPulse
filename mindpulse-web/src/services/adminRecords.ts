@@ -50,7 +50,7 @@ interface Bundles {
 }
 
 const nameOf = (firstName: string | null, lastName: string | null, email: string | null) =>
-  `${firstName || ''} ${lastName || ''}`.trim() || email || 'Unknown student';
+  `${firstName || ''} ${lastName || ''}`.trim() || email || 'Unknown patient';
 
 const initialsOf = (name: string, email: string) => {
   const source = name || email || '?';

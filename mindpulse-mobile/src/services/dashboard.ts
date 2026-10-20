@@ -115,7 +115,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
   if (!userName && (metadata?.first_name || metadata?.last_name)) {
     userName = `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim();
   }
-  if (!userName) userName = 'Student';
+  if (!userName) userName = 'User';
 
   const userEmail = profile?.email || authEmail;
   const userInitials = initialsFor(userName);

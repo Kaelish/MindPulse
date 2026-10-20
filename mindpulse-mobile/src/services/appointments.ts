@@ -44,6 +44,17 @@ export type AppointmentState =
 
 export type PaymentMethod = 'card' | 'gcash' | 'maya';
 
+/** How a session happens: a video call, or face-to-face at the clinic. */
+export type ConsultationMode = 'online' | 'in_person';
+
+export const CONSULTATION_MODE_LABELS: Record<ConsultationMode, string> = {
+  online: 'Online (Video Call)',
+  in_person: 'Face-to-Face (In-Clinic)',
+};
+
+export const consultationModeLabel = (mode?: string | null): string =>
+  mode === 'in_person' ? CONSULTATION_MODE_LABELS.in_person : CONSULTATION_MODE_LABELS.online;
+
 export interface BookedAppointment {
   id: string;
   clinicianId: string;
@@ -51,6 +62,7 @@ export interface BookedAppointment {
   specialty: string;
   selectedDate: string; // e.g. "Aug 31, 2026"
   selectedTime: string; // e.g. "3:30 PM"
+  consultationMode: ConsultationMode;
   createdAt: string;
 }
 
@@ -66,6 +78,8 @@ export interface MyBooking {
   status: AppointmentState;
   declineReason?: string;
   fee: number;
+  /** How the session happens — 'online' for rows booked before migration 0025. */
+  consultationMode: ConsultationMode;
   createdAt: string;
 }
 
@@ -370,6 +384,7 @@ export const saveBookedAppointment = async (
       scheduled_for: `${appointment.selectedDate} at ${appointment.selectedTime}`,
       status: 'scheduled',
       notes: `Booked session with ${appointment.clinicianName}`,
+      consultation_mode: appointment.consultationMode === 'in_person' ? 'in_person' : 'online',
     })
     .select()
     .single();
@@ -377,6 +392,11 @@ export const saveBookedAppointment = async (
   if (error || !inserted) {
     throw new Error(error?.message || 'Could not book the appointment. Please try again.');
   }
+
+  const modeLabel =
+    appointment.consultationMode === 'in_person'
+      ? 'a face-to-face session'
+      : 'an online session';
 
   // Non-critical: a notification failure must not undo a booked appointment.
   // The patient's own notice honours their appointment-reminder preference;
@@ -386,7 +406,7 @@ export const saveBookedAppointment = async (
     const { error: patientNoticeError } = await supabase.from('notifications').insert({
       user_id: user.id,
       title: 'Appointment Requested',
-      message: `Your request for ${appointment.selectedDate} at ${appointment.selectedTime} with ${appointment.clinicianName} was sent for approval.`,
+      message: `Your request for ${modeLabel} on ${appointment.selectedDate} at ${appointment.selectedTime} with ${appointment.clinicianName} was sent for approval.`,
       type: 'appointment',
     });
     void patientNoticeError;
@@ -395,7 +415,7 @@ export const saveBookedAppointment = async (
   const { error: doctorNoticeError } = await supabase.from('notifications').insert({
     user_id: appointment.clinicianId,
     title: 'New Appointment Request',
-    message: `A student requested a session on ${appointment.selectedDate} at ${appointment.selectedTime}. Approve or decline it from the Consultations page.`,
+    message: `A patient requested ${modeLabel} on ${appointment.selectedDate} at ${appointment.selectedTime}. Approve or decline it from the Consultations page.`,
     type: 'appointment',
   });
   void doctorNoticeError;
@@ -539,7 +559,7 @@ export const fetchMyBookings = async (): Promise<MyBooking[]> => {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select('id, doctor_id, scheduled_for, status, decline_reason, created_at')
+    .select('id, doctor_id, scheduled_for, status, decline_reason, consultation_mode, created_at')
     .eq('patient_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -574,6 +594,7 @@ export const fetchMyBookings = async (): Promise<MyBooking[]> => {
       status: (row.status ?? 'scheduled') as AppointmentState,
       declineReason: row.decline_reason ?? undefined,
       fee: clinician?.fee ?? 500,
+      consultationMode: row.consultation_mode === 'in_person' ? 'in_person' : 'online',
       createdAt: row.created_at ?? new Date().toISOString(),
     } satisfies MyBooking;
   });

@@ -217,16 +217,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
         {!isLoading && !loadError && stats && (
           <>
             <section className="admin-dashboard-stat-grid">
-              <DashboardStat label="Low Stress (0–35)" value={String(stats.low)} note={`Students (${share(stats.low)}%)`} />
-              <DashboardStat label="Moderate (36–60)" value={String(stats.moderate)} note={`Students (${share(stats.moderate)}%)`} />
-              <DashboardStat label="High Stress (61–100)" value={String(stats.high)} note={`Students (${share(stats.high)}%)`} />
+              <DashboardStat label="Low Stress (0–35)" value={String(stats.low)} note={`Patients (${share(stats.low)}%)`} />
+              <DashboardStat label="Moderate (36–60)" value={String(stats.moderate)} note={`Patients (${share(stats.moderate)}%)`} />
+              <DashboardStat label="High Stress (61–100)" value={String(stats.high)} note={`Patients (${share(stats.high)}%)`} />
             </section>
 
             <section className="admin-dashboard-panels">
               <article className="admin-dashboard-panel">
                 <h2>Stress Distribution</h2>
                 {assessed === 0 ? (
-                  <p className="empty-table">No students have completed an assessment yet.</p>
+                  <p className="empty-table">No patients have completed an assessment yet.</p>
                 ) : (
                   <div className="admin-dashboard-chart">
                     {bands.map((band) => (
@@ -269,7 +269,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
               <article className="admin-dashboard-panel admin-dashboard-panel--wide">
                 <h2>Account Overview</h2>
                 <div className="admin-dashboard-legend admin-dashboard-legend--chips">
-                  <div><i /><span>Students: {stats.students}</span></div>
+                  <div><i /><span>Patients: {stats.students}</span></div>
                   <div><i className="moderate" /><span>Doctors: {stats.doctors}</span></div>
                   <div><i className="high" /><span>Admins: {stats.admins}</span></div>
                   <div><i /><span>Total Assessments: {stats.sessions}</span></div>

@@ -15,6 +15,7 @@ import { ConsultationSummaryCard } from '../../components/ConsultationSummaryCar
 import { InAppVideoCall, ensureMediaPermissions } from '../../components/InAppVideoCall';
 import { supabase } from '../../supabase/client';
 import {
+  ConsultationMode,
   MyBooking,
   fetchMyBookings,
   fetchVideoRoom,
@@ -53,6 +54,7 @@ interface LobbyView {
   status: string;
   declineReason?: string;
   fee: number;
+  consultationMode: ConsultationMode;
   roomDoctorId?: string;
 }
 
@@ -64,6 +66,7 @@ const fromPatientBooking = (booking: MyBooking): LobbyView => ({
   status: booking.status,
   declineReason: booking.declineReason,
   fee: booking.fee,
+  consultationMode: booking.consultationMode,
   roomDoctorId: booking.doctorId,
 });
 
@@ -75,6 +78,7 @@ const fromDoctorBooking = (booking: DoctorCallBooking): LobbyView => ({
   status: booking.status,
   declineReason: booking.declineReason,
   fee: booking.fee,
+  consultationMode: booking.consultationMode,
 });
 
 /**
@@ -195,7 +199,7 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
             setCallUrl(null);
             Alert.alert(
               'Consultation ended',
-              'The doctor has ended this consultation. You can review the summary in your bookings.',
+              'The doctor has ended this consultation. If they publish a note for you, you will find it in your bookings.',
             );
           }
         },
@@ -285,12 +289,27 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Ionicons name="videocam-outline" size={15} color={tone('#5B6EF5')} />
-                  <Text style={styles.infoText}>Jitsi room · mindpulse-appt-{booking.id.slice(0, 8)}…</Text>
+                  <Ionicons
+                    name={
+                      booking.consultationMode === 'in_person'
+                        ? 'business-outline'
+                        : 'videocam-outline'
+                    }
+                    size={15}
+                    color={tone('#5B6EF5')}
+                  />
+                  <Text style={styles.infoText}>
+                    {booking.consultationMode === 'in_person'
+                      ? 'Face-to-face · in person at the clinic'
+                      : `Jitsi room · mindpulse-appt-${booking.id.slice(0, 8)}…`}
+                  </Text>
                 </View>
               </View>
 
-              {booking.status === 'completed' ? (
+              {/* The patient's view of this appointment: only the note the
+                  doctor published (the progress note is never readable here).
+                  Doctors write their own note from the web portal. */}
+              {booking.status === 'completed' && !isDoctor ? (
                 <>
                   <View style={styles.endedBox}>
                     <Ionicons name="checkmark-circle" size={16} color={tone('#0F5C4A')} />
@@ -298,6 +317,11 @@ export const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
                   </View>
                   <ConsultationSummaryCard appointmentId={booking.id} />
                 </>
+              ) : booking.status === 'completed' ? (
+                <View style={styles.endedBox}>
+                  <Ionicons name="checkmark-circle" size={16} color={tone('#0F5C4A')} />
+                  <Text style={styles.endedText}>This consultation has ended.</Text>
+                </View>
               ) : booking.status === 'confirmed' ? (
                 // Patients wait for the doctor to open the room; only the doctor
                 // starts the call from here.

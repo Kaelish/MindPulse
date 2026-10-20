@@ -196,7 +196,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
                 <Text style={styles.facialCalloutTitle}>Strict Facial Data Guarantee</Text>
               </View>
               <Text style={styles.facialCalloutDesc}>
-                MindPulse handles facial analysis data with strict privacy safeguards designed for student mental health:
+                MindPulse handles facial analysis data with strict privacy safeguards designed for your mental health:
               </Text>
 
               <View style={styles.safeguardItem}>
@@ -229,7 +229,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             <View style={styles.card}>
               <View style={styles.dataTypeRow}>
                 <Text style={styles.dtTitle}>Personal Credentials</Text>
-                <Text style={styles.dtDesc}>Name, student email, and academic year level used strictly for account authentication and personalization.</Text>
+                <Text style={styles.dtDesc}>Name, email, and year level used strictly for account authentication and personalization.</Text>
               </View>
               <View style={styles.dataTypeRow}>
                 <Text style={styles.dtTitle}>Stress Questionnaire Data</Text>

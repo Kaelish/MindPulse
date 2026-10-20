@@ -4,6 +4,8 @@ import { ConsultationSummaryView } from '../../components/ConsultationSummaryVie
 import { ConsultationSummaryForm } from '../../components/ConsultationSummaryForm';
 import {
   ALL_WEEKDAY_KEYS,
+  CONSULTATION_MODE_LABELS,
+  ConsultationMode,
   ConsultationNote,
   DoctorAvailability,
   WebChatMessage,
@@ -11,6 +13,7 @@ import {
   WebThreadSummary,
   WEEKDAY_KEYS,
   approveAppointment,
+  consultationModeLabel,
   declineAppointment,
   editAppointmentTime,
   endVideoConsultation,
@@ -30,7 +33,7 @@ import {
   saveDoctorAvailability,
   saveDoctorScheduleAppointment,
   sendWebChatMessage,
-  setConsultationNoteSharing,
+  setPatientNotePublication,
   toIsoDate,
 } from '../../services/consultations';
 import { requireUserId } from '../../services/session';
@@ -113,7 +116,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     try {
       const record = await fetchStudentCaseById(item.patientId);
       if (record) onViewHistory(record);
-      else setActionError('No student profile exists for this patient yet.');
+      else setActionError('No profile exists for this patient yet.');
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Unable to open the assessment history.');
     } finally {
@@ -169,6 +172,8 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [bookedSlotKeys, setBookedSlotKeys] = useState<Set<string>>(new Set());
+  /** How the manually booked session happens — walk-ins are face-to-face by default. */
+  const [scheduleMode, setScheduleMode] = useState<ConsultationMode>('in_person');
 
   // Real-life date generation
   const realLifeDates = useMemo(() => {
@@ -215,6 +220,19 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     ? consultations.find((row) => row.patientId === selectedPatientId) ?? null
     : null;
   const chatTarget = selectedConsultation ?? activeSessionItem ?? consultations[0] ?? null;
+
+  // The conversations panel is per PATIENT ACCOUNT, not per consultation: a
+  // patient with five bookings must appear once, not five times. The first
+  // row kept for a patient is the same row `selectedConsultation` resolves to
+  // (`find` returns the first match), so the highlighted entry and the thread
+  // header always point at the same appointment.
+  const conversationItems: WebConsultationItem[] = [];
+  const seenPatientIds = new Set<string>();
+  for (const row of consultations) {
+    if (seenPatientIds.has(row.patientId)) continue;
+    seenPatientIds.add(row.patientId);
+    conversationItems.push(row);
+  }
 
   const totalUnread = webThreads.reduce((sum, row) => sum + row.unreadCount, 0);
 
@@ -729,12 +747,14 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
         notes: patientNotes.trim(),
         selectedDate,
         selectedTime,
+        consultationMode: scheduleMode,
       });
 
       setConsultations((prev) => [newConsult, ...prev]);
       setBookedSlotKeys((prev) => new Set([...Array.from(prev), slotKey]));
       setShowScheduleModal(false);
       setScheduleStep(1);
+      setScheduleMode('in_person');
       setScheduleError(null);
     } catch (err) {
       setScheduleError(err instanceof Error ? err.message : 'Unable to schedule the consultation.');
@@ -945,6 +965,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             onClick={() => {
               setScheduleStep(1);
               setScheduleError(null);
+              setScheduleMode('in_person');
               setShowScheduleModal(true);
             }}
           >
@@ -1059,17 +1080,17 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               <div style={{ padding: '10px 14px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--doc-muted)', borderBottom: '1px solid var(--doc-soft)' }}>
                 Conversations
               </div>
-              {consultations.length === 0 ? (
+              {conversationItems.length === 0 ? (
                 <div style={{ padding: '18px 14px', color: 'var(--doc-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
                   No consultations yet — schedule one to start a conversation.
                 </div>
               ) : (
-                consultations.map((item) => {
+                conversationItems.map((item) => {
                   const summary = threadFor(item.patientId);
                   const isSelected = chatTarget?.patientId === item.patientId;
                   return (
                     <button
-                      key={item.id}
+                      key={item.patientId}
                       type="button"
                       onClick={() => {
                         setSelectedPatientId(item.patientId);
@@ -1275,7 +1296,9 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     <div className="consult-info">
                       <div className="consult-patient-name">{item.patientName}</div>
                       <div className="consult-student-id">{item.studentId} · {item.patientEmail}</div>
-                      <div className="consult-time-str">{item.scheduledTime}</div>
+                      <div className="consult-time-str">
+                        {item.scheduledTime} · {consultationModeLabel(item.consultationMode)}
+                      </div>
                     </div>
                   </div>
 
@@ -1782,10 +1805,50 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                     <input
                       type="email"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--doc-line-strong)', fontSize: '0.9rem', outline: 'none' }}
-                      placeholder="student@example.com"
+                      placeholder="patient@example.com"
                       value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
+                    Consultation Type *
+                  </label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {(['in_person', 'online'] as ConsultationMode[]).map((mode) => {
+                      const active = scheduleMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setScheduleMode(mode)}
+                          style={{
+                            flex: 1,
+                            textAlign: 'left',
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            border: active
+                              ? '1.5px solid var(--primary-strong)'
+                              : '1px solid var(--doc-line-strong)',
+                            background: active ? 'rgba(59,130,246,0.10)' : 'transparent',
+                            color: 'var(--doc-ink)',
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>
+                            {CONSULTATION_MODE_LABELS[mode]}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--doc-muted)', marginTop: 2 }}>
+                            {mode === 'in_person'
+                              ? 'The patient comes in to the clinic.'
+                              : 'You meet the patient in the video room.'}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1830,6 +1893,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             ) : (
               /* STEP 2: REAL-LIFE DATE & TIME BOOKING WITH UNAVAILABILITY */
               <form onSubmit={handleConfirmSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--doc-muted)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--doc-ink)' }}>Consultation type: </span>
+                  {CONSULTATION_MODE_LABELS[scheduleMode]}
+                </div>
                 <div>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--doc-ink)', display: 'block', marginBottom: '6px' }}>
                     Select Real-Life Booking Date *
@@ -1989,20 +2056,20 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
               {consultNotes[summaryTarget.id] && !summaryEditing ? (
                 <ConsultationSummaryView
                   note={consultNotes[summaryTarget.id]}
-                  shareBusy={decisionBusy === `share-${summaryTarget.id}`}
+                  publishBusy={decisionBusy === `publish-${summaryTarget.id}`}
                   onEdit={() => setSummaryEditing(true)}
-                  onToggleShare={async (shared) => {
+                  onTogglePublish={async (published) => {
                     const appointmentId = summaryTarget.id;
-                    setDecisionBusy(`share-${appointmentId}`);
+                    setDecisionBusy(`publish-${appointmentId}`);
                     setActionError(null);
                     try {
-                      const updated = await setConsultationNoteSharing(appointmentId, shared);
+                      const updated = await setPatientNotePublication(appointmentId, published);
                       setConsultNotes((prev) => ({ ...prev, [appointmentId]: updated }));
                     } catch (err) {
                       setActionError(
                         err instanceof Error
                           ? err.message
-                          : 'The sharing setting could not be saved.',
+                          : 'The publication setting could not be saved.',
                       );
                     } finally {
                       setDecisionBusy(null);
@@ -2037,7 +2104,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             <div className="web-chat-modal-header">
               <div>
                 <h3>Consultation Session: {activeSessionItem.patientName}</h3>
-                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime} · {activeSessionItem.status}</p>
+                <p>{activeSessionItem.studentId} · {activeSessionItem.scheduledTime} · {consultationModeLabel(activeSessionItem.consultationMode)} · {activeSessionItem.status}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button

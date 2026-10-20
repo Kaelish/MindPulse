@@ -31,8 +31,8 @@ const sampleNotifications: FeedNotification[] = [
   {
     id: 'result-alert',
     userId: 'admin',
-    title: 'Critical Student Alert',
-    message: 'A student received a high stress score.',
+    title: 'Critical Patient Alert',
+    message: 'A patient received a high stress score.',
     type: 'alert',
     category: 'results',
     read: false,
@@ -57,7 +57,7 @@ test('shows only notifications for the active section', async () => {
   render(<div className="admin-scope"><NotificationPanel /></div>);
 
   expect(await screen.findByText('Doctor Capacity Reached')).toBeInTheDocument();
-  expect(screen.queryByText('Critical Student Alert')).not.toBeInTheDocument();
+  expect(screen.queryByText('Critical Patient Alert')).not.toBeInTheDocument();
 });
 
 test('shows a contextual empty state without a See all button', async () => {
@@ -80,7 +80,7 @@ test('See all opens the history popup without leaving the section', async () => 
   fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
 
   const dialog = await screen.findByRole('dialog', { name: 'View Notifications' });
-  expect(within(dialog).getByText('Critical Student Alert')).toBeInTheDocument();
+  expect(within(dialog).getByText('Critical Patient Alert')).toBeInTheDocument();
   expect(window.location.pathname).toBe('/results');
 });
 

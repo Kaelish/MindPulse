@@ -157,7 +157,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
     ? [
         { key: 'cases', label: 'Active Cases', metric: data.activeCases, tone: 'teal', icon: <IconUsers /> },
         { key: 'pending', label: 'Pending Reviews', metric: data.pendingReviews, tone: 'amber', icon: <IconClipboard /> },
-        { key: 'risk', label: 'High Risk Students', metric: data.highRiskStudents, tone: 'danger', icon: <IconAlert /> },
+        { key: 'risk', label: 'High Risk Patients', metric: data.highRiskStudents, tone: 'danger', icon: <IconAlert /> },
         { key: 'completed', label: 'Completed this week', metric: data.completedThisWeek, tone: 'success', icon: <IconCheck /> },
       ]
     : [];
@@ -201,7 +201,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
               <div className="panel-header">
                 <div className="dash-panel-heading">
                   <h2>Recent Cases</h2>
-                  <p>Students with the highest latest stress scores</p>
+                  <p>Patients with the highest latest stress scores</p>
                 </div>
                 {onViewAllCases && (
                   <button type="button" className="text-button" onClick={onViewAllCases}>
@@ -253,8 +253,8 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
 
                 {data.recentCases.length === 0 && (
                   <DoctorEmpty
-                    title="No student cases yet"
-                    description="Cases appear here as soon as a student registers."
+                    title="No patient cases yet"
+                    description="Cases appear here as soon as a patient registers."
                   />
                 )}
               </div>
@@ -281,7 +281,7 @@ export const DoctorDashboardView: React.FC<DoctorDashboardViewProps> = ({ onView
                     </div>
                     <div className="dash-consult-line">
                       <IconTag />
-                      <span>Type: {item.typeLabel}</span>
+                      <span>Type: {item.typeLabel} · {item.modeLabel}</span>
                     </div>
                   </article>
                 ))}

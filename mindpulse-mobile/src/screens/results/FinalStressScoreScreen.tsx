@@ -153,7 +153,7 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
             <>
               <GuidanceBullet text="Rest and avoid overloading tasks" color={level.color} />
               <GuidanceBullet text="Practice deep breathing or meditation" color={level.color} />
-              <GuidanceBullet text="Reach out to campus counseling" color={level.color} />
+              <GuidanceBullet text="Reach out to a counselor" color={level.color} />
               <GuidanceBullet text="Consider a telehealth consultation" color={level.color} />
             </>
           ) : (

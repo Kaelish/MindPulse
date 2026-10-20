@@ -67,8 +67,8 @@ export const fetchAppointmentStudents = async (): Promise<StudentProfileRow[]> =
 };
 
 const nameOf = (profile: StudentProfileRow | undefined, fallbackId: string) => {
-  if (!profile) return `Student ${fallbackId.slice(0, 8)}`;
-  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
+  if (!profile) return `Patient ${fallbackId.slice(0, 8)}`;
+  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient';
 };
 
 /**
@@ -105,7 +105,7 @@ export const fetchDoctorRecommendations = async (studentId?: string): Promise<Do
       id: row.id,
       studentId: row.student_id,
       studentName: nameOf(profile, row.student_id),
-      studentNo: profile?.student_no || 'No student no.',
+      studentNo: profile?.student_no || 'No patient no.',
       category: row.category,
       priority: row.priority,
       note: row.note,

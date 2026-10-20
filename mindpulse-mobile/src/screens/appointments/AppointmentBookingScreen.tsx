@@ -21,10 +21,13 @@ import { Spacing } from '../../theme/typography';
 import {
   BookedAppointment,
   ChatMessage,
+  CONSULTATION_MODE_LABELS,
+  ConsultationMode,
   MyBooking,
   PatientConversation,
   PaymentMethod,
   TelehealthClinician,
+  consultationModeLabel,
   fetchBookedSlotKeys,
   fetchChatMessages,
   fetchClinicians,
@@ -68,6 +71,27 @@ const TIME_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM',
   '1:30 PM', '2:15 PM', '3:30 PM',
   '4:45 PM', '5:30 PM',
+];
+
+/** The two ways a session can happen, offered side by side in the booking sheet. */
+const MODE_OPTIONS: {
+  mode: ConsultationMode;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  hint: string;
+}[] = [
+  {
+    mode: 'online',
+    icon: 'videocam-outline',
+    title: 'Online',
+    hint: 'Video call from wherever you are',
+  },
+  {
+    mode: 'in_person',
+    icon: 'business-outline',
+    title: 'Face-to-face',
+    hint: 'In person at the clinic',
+  },
 ];
 
 // ─── Philippine support hotlines (researched & verified) ─────────────────────
@@ -354,6 +378,8 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
   const [selectedHotline, setSelectedHotline] = useState<SupportHotline | null>(null);
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  /** How the session should happen — the patient picks it per booking. */
+  const [consultationMode, setConsultationMode] = useState<ConsultationMode>('online');
   const [bookingSaving, setBookingSaving] = useState(false);
   const [lastBooking, setLastBooking] = useState<BookedAppointment | null>(null);
   const [chatInput, setChatInput] = useState('');
@@ -619,6 +645,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
     );
     setSelectedDateIdx(firstOpen >= 0 ? firstOpen : 0);
     setSelectedTime(null);
+    setConsultationMode('online');
     setBookedKeys(new Set());
     setAvailabilityNotice(null);
     // Open immediately: the patient can pick a time while availability loads,
@@ -647,11 +674,13 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
         specialty: selectedClinician.specialty,
         selectedDate: date.dateStr,
         selectedTime,
+        consultationMode,
       });
       setLastBooking(booked);
       setShowBookingModal(false);
       setShowSuccessModal(true);
       setSelectedTime(null);
+      setConsultationMode('online');
 
       // Background refresh of availability and the conversation list (a brand
       // new booking opens a fresh thread row).
@@ -890,6 +919,7 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
                     <Text style={styles.clinicianName}>{b.doctorName}</Text>
                     <Text style={styles.clinicianSpec}>{b.specialty}</Text>
                     <Text style={styles.bookingWhen}>{b.scheduledFor}</Text>
+                    <Text style={styles.bookingMode}>{consultationModeLabel(b.consultationMode)}</Text>
                   </View>
                   <BookingPill status={b.status} />
                 </View>
@@ -918,15 +948,16 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
 
                 {b.status === 'confirmed' && (
                   <Text style={styles.waitNote}>
-                    Payment received. Wait for the doctor to call or the scheduled
-                    consultation.
+                    {b.consultationMode === 'in_person'
+                      ? 'Payment received. Your face-to-face session is confirmed — arrive at the clinic at the scheduled time.'
+                      : 'Payment received. Wait for the doctor to call or the scheduled consultation.'}
                   </Text>
                 )}
 
                 {b.status === 'completed' && (
                   <>
                     <Text style={styles.waitNote}>
-                      This consultation is complete. Here is what the doctor recorded.
+                      This consultation is complete. Here is the note your doctor published for you.
                     </Text>
                     <ConsultationSummaryCard appointmentId={b.id} />
                   </>
@@ -1184,6 +1215,34 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
               </View>
             ) : null}
 
+            <Text style={styles.modalSectionLabel}>Consultation Type</Text>
+            <View style={styles.modeGrid}>
+              {MODE_OPTIONS.map(option => {
+                const active = consultationMode === option.mode;
+                return (
+                  <TouchableOpacity
+                    key={option.mode}
+                    style={[styles.modeChip, active && styles.modeChipActive]}
+                    onPress={() => setConsultationMode(option.mode)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={17}
+                      color={active ? tone('#FFF') : Colors.textSecondary}
+                    />
+                    <Text style={[styles.modeChipTitle, active && styles.modeChipTitleActive]}>
+                      {option.title}
+                    </Text>
+                    <Text style={[styles.modeChipHint, active && styles.modeChipHintActive]}>
+                      {option.hint}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             <Text style={styles.modalSectionLabel}>Select Day</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1305,7 +1364,9 @@ export const AppointmentBookingScreen: React.FC<AppointmentBookingScreenProps> =
             </View>
             <Text style={styles.successTitle}>Request Sent!</Text>
             <Text style={styles.successBody}>
-              Your session with {lastBooking?.clinicianName || selectedClinician?.name}{' '}
+              Your{' '}
+              {lastBooking?.consultationMode === 'in_person' ? 'face-to-face' : 'online'} session
+              with {lastBooking?.clinicianName || selectedClinician?.name}{' '}
               {lastBooking
                 ? `on ${lastBooking.selectedDate} at ${lastBooking.selectedTime}`
                 : ''}{' '}
@@ -1927,6 +1988,23 @@ const makeStyles = () => StyleSheet.create({
   availabilityBannerText: { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
   availabilityRetry: { fontSize: 13, fontWeight: '800', color: Colors.btnBlue },
 
+  modeGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  modeChip: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.divider,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 3,
+  },
+  modeChipActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  modeChipTitle: { fontSize: 13.5, fontWeight: '800', color: Colors.textPrimary },
+  modeChipTitleActive: { color: tone('#FFF') },
+  modeChipHint: { fontSize: 10.5, color: Colors.textSecondary, lineHeight: 14 },
+  modeChipHintActive: { color: 'rgba(255,255,255,0.85)' },
+
   dateChip: {
     alignItems: 'center',
     backgroundColor: Colors.divider,
@@ -2008,6 +2086,7 @@ const makeStyles = () => StyleSheet.create({
   },
   bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   bookingWhen: { fontSize: 12, color: Colors.textPrimary, fontWeight: '600', marginTop: 3 },
+  bookingMode: { fontSize: 10.5, color: Colors.textSecondary, marginTop: 2 },
   pill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
   pillText: { fontSize: 10, fontWeight: '800' },
   reasonBox: {

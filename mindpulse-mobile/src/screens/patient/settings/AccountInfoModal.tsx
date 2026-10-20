@@ -344,7 +344,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                   placeholder="Enter email address"
                   placeholderTextColor={Colors.textHint}
                 />
-                <Text style={styles.fieldNote}>Email address is managed by student authentication.</Text>
+                <Text style={styles.fieldNote}>Email address is managed by your account sign-in.</Text>
               </View>
 
               <View style={styles.fieldGroup}>

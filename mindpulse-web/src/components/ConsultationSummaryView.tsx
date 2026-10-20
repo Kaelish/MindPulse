@@ -34,6 +34,10 @@ export interface ConsultationNoteViewData {
   signedAt: string | null;
   attachmentPath: string | null;
   attachmentName: string | null;
+  /** The only field a patient may read, and only once published. */
+  patientNote: string;
+  patientNotePublished: boolean;
+  /** Legacy flag from before the note became doctor-only. */
   sharedWithPatient: boolean;
   updatedAt?: string;
 }
@@ -41,12 +45,13 @@ export interface ConsultationNoteViewData {
 interface ConsultationSummaryViewProps {
   note: ConsultationNoteViewData;
   /**
-   * When provided, a sharing switch is rendered so the doctor can decide
-   * whether the student may read the patient-facing sections. Omit for
-   * read-only contexts.
+   * When provided, a publish switch is rendered so the doctor can decide
+   * whether the patient may read the short "Note for the patient". The
+   * progress note itself is never offered for sharing. Omit for read-only
+   * contexts.
    */
-  onToggleShare?: (shared: boolean) => Promise<void>;
-  shareBusy?: boolean;
+  onTogglePublish?: (published: boolean) => Promise<void>;
+  publishBusy?: boolean;
   /**
    * When provided, an "Edit note" button is shown that reopens the editor
    * prefilled with this note. Omit for read-only contexts.
@@ -104,8 +109,8 @@ const LegacyField = ({ label, value }: { label: string; value?: string | null })
 
 export const ConsultationSummaryView = ({
   note,
-  onToggleShare,
-  shareBusy = false,
+  onTogglePublish,
+  publishBusy = false,
   onEdit,
 }: ConsultationSummaryViewProps) => {
   const [scanUrl, setScanUrl] = useState<string | null>(null);
@@ -134,24 +139,28 @@ export const ConsultationSummaryView = ({
 
   return (
     <div className="therapy-pad-wrap">
-      {/* sharing bar (doctor only — rendered when a toggle handler is passed) */}
-      {onToggleShare ? (
+      {/* publish bar (doctor only — rendered when a toggle handler is passed) */}
+      {onTogglePublish ? (
         <div className="therapy-share-row">
           <div className="therapy-share-copy">
-            <strong>{note.sharedWithPatient ? 'Shared with the student' : 'Private note'}</strong>
+            <strong>
+              {note.patientNotePublished && has(note.patientNote)
+                ? 'Note for the patient is published'
+                : 'Note for the patient is a draft'}
+            </strong>
             <span>
-              {note.sharedWithPatient
-                ? 'The student can read the shared sections in their app. Observations, mental status exam, risk and diagnostics stay with you.'
-                : 'Only you and the clinic administrators can read this note. Turn sharing on if the student requests it.'}
+              {note.patientNotePublished && has(note.patientNote)
+                ? 'The patient can read that one note in their app. Everything on this pad — presenting problem through clinical impressions — stays with you and the clinic administrators.'
+                : 'Nothing on this record reaches the patient. Publish the note below if they should read something.'}
             </span>
           </div>
           <button
             type="button"
             role="switch"
-            aria-checked={note.sharedWithPatient}
-            className={`doc-switch ${note.sharedWithPatient ? 'is-on' : ''}`}
-            disabled={shareBusy}
-            onClick={() => void onToggleShare(!note.sharedWithPatient)}
+            aria-checked={note.patientNotePublished && has(note.patientNote)}
+            className={`doc-switch ${note.patientNotePublished && has(note.patientNote) ? 'is-on' : ''}`}
+            disabled={publishBusy || !has(note.patientNote)}
+            onClick={() => void onTogglePublish(!(note.patientNotePublished && has(note.patientNote)))}
           >
             <span className="doc-switch-knob" />
           </button>
@@ -200,11 +209,25 @@ export const ConsultationSummaryView = ({
             <PadSection label="Therapist's observations" value={note.therapistObservations} clinicianOnly />
             <PadSection label="Mental status examination" value={note.mentalStatusExam} clinicianOnly />
             <PadSection label="Risk assessment" value={note.riskAssessment} clinicianOnly />
-            <PadSection label="Diagnostic impressions" value={note.diagnosticImpressions} clinicianOnly />
+            <PadSection label="Clinical impressions" value={note.diagnosticImpressions} clinicianOnly />
             <PadSection label="Plan for next session" value={note.planNextSession} />
             <PadSection label="Return to clinic" value={note.returnToClinic} />
           </>
         )}
+
+        {/* The single field a patient may read — flagged so the doctor always
+            knows what can leave the chart. */}
+        {has(note.patientNote) ? (
+          <div className="tp-pad-row">
+            <div className="tp-pad-label">
+              Note for the patient
+              <span className={`therapy-clinician-tag ${note.patientNotePublished ? 'is-patient' : ''}`}>
+                {note.patientNotePublished ? 'Published' : 'Draft'}
+              </span>
+            </div>
+            <div className="tp-pad-value">{note.patientNote}</div>
+          </div>
+        ) : null}
 
         {has(SAFETY_FOOTER) ? <p className="tp-pad-safety">{SAFETY_FOOTER}</p> : null}
 
@@ -242,8 +265,8 @@ export const ConsultationSummaryView = ({
         </div>
 
         <div className="tp-pad-stamp">
-          Therapy progress note · saved {formatStamp(note.updatedAt)}
-          {note.sharedWithPatient ? ' · shared with the student' : ' · private'}
+          Therapy progress note · saved {formatStamp(note.updatedAt)} · private to the doctor and
+          clinic administrators{note.patientNotePublished && has(note.patientNote) ? ' · patient note published' : ''}
         </div>
       </div>
 

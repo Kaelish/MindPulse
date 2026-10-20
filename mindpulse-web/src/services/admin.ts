@@ -495,8 +495,8 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
   return rows.map((row) => {
     const profile = byId.get(row.user_id);
     const name = profile
-      ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student'
-      : 'Unknown student';
+      ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient'
+      : 'Unknown patient';
     return {
       id: row.id,
       studentId: row.user_id,

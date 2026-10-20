@@ -14,7 +14,7 @@ export type StudentCase = StudentCaseRecord;
 export const students: StudentCase[] = [];
 
 const CSV_COLUMNS: { key: keyof StudentCase; label: string }[] = [
-  { key: 'name', label: 'Student' },
+  { key: 'name', label: 'Patient' },
   { key: 'email', label: 'Email' },
   { key: 'program', label: 'Program' },
   { key: 'age', label: 'Age' },
@@ -37,7 +37,7 @@ const downloadCsv = (rows: StudentCase[]): void => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `student-cases-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `patient-cases-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -61,7 +61,7 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
         if (active) setLoadedStudents(records);
       })
       .catch((error) => {
-        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load student cases.');
+        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load patient cases.');
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -87,8 +87,8 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
     <main className="main-panel student-cases-main">
       <header className="topbar student-cases-topbar">
         <div>
-          <h1>Student Cases</h1>
-          <p className="page-subtitle">Manage and review all assigned student cases</p>
+          <h1>Patient Cases</h1>
+          <p className="page-subtitle">Manage and review all assigned patient cases</p>
         </div>
         <div className="header-actions">
           <button
@@ -117,7 +117,7 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by name, ID, or program"
-            aria-label="Search student cases"
+            aria-label="Search patient cases"
           />
         </label>
         <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter case status">
@@ -130,7 +130,7 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
       </section>
 
       <section className="case-table-panel">
-        {isLoading && <DoctorLoading label="Loading student cases…" variant="skeleton" rows={5} />}
+        {isLoading && <DoctorLoading label="Loading patient cases…" variant="skeleton" rows={5} />}
 
         {!isLoading && loadError && <DoctorError message={loadError} onRetry={retry} />}
 
@@ -141,7 +141,7 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
                 <table className="case-table">
                   <thead>
                     <tr>
-                      <th>Student</th>
+                      <th>Patient</th>
                       <th>Program</th>
                       <th>Status</th>
                       <th>Last Assessment</th>
@@ -193,8 +193,8 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
               </div>
             ) : loadedStudents.length === 0 ? (
               <DoctorEmpty
-                title="No student cases yet"
-                description="Assigned students will appear here once they book a session with you."
+                title="No patient cases yet"
+                description="Assigned patients will appear here once they book a session with you."
               />
             ) : (
               <DoctorEmpty

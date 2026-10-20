@@ -253,13 +253,13 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="Gender" value={draft.sex} editing={editing} onChange={(value) => updateDraft('sex', value)} placeholder="Not set" />
           <Field label="Living Situation" value={draft.living_situation} editing={editing} onChange={(value) => updateDraft('living_situation', value)} placeholder="Not set" />
           {profile.birth_date && <Field label="Date Of Birth" value={formatDate(profile.birth_date)} editing={false} />}
-          {showStudentFields && <><Field label="Student Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" /><Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" /><Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" /></>}
+          {showStudentFields && <><Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" /><Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" /><Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" /></>}
         </ProfileSection>}
         {activeTab === 'professional' && <ProfileSection title="Professional Details">
           <Field label="Department" value={draft.department} editing={editing} onChange={(value) => updateDraft('department', value)} placeholder="Not set" />
           <Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" />
           <Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" />
-          <Field label="Student Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" />
+          <Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" />
         </ProfileSection>}
         {activeTab === 'security' && <ProfileSection title="Change Password">
           <Field label="Current Password" value={currentPassword} editing onChange={(value) => setCurrentPassword(value)} placeholder="Enter current password" type="password" />

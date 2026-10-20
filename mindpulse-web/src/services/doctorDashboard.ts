@@ -2,6 +2,7 @@ import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
 import { fetchAllRows } from './admin';
+import { consultationModeLabel } from './consultations';
 
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
@@ -45,6 +46,8 @@ export interface DashboardConsultation {
   statusLabel: string;
   whenLabel: string;
   typeLabel: string;
+  /** How the session happens — "Online (Video Call)" or "Face-to-Face (In-Clinic)". */
+  modeLabel: string;
   startsAt: number | null;
 }
 
@@ -77,6 +80,7 @@ interface AppointmentRow {
   patient_id: string;
   scheduled_for: string | null;
   status: string;
+  consultation_mode?: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -99,7 +103,7 @@ const initialsOf = (name: string, email: string): string => {
 };
 
 const displayName = (row: { first_name: string | null; last_name: string | null; email: string | null }): string =>
-  `${row.first_name || ''} ${row.last_name || ''}`.trim() || row.email || 'Unknown student';
+  `${row.first_name || ''} ${row.last_name || ''}`.trim() || row.email || 'Unknown patient';
 
 /** Same bands as StudentCasesView so the portal never disagrees with itself. */
 const riskForScore = (score: number | null): DashboardRisk => {
@@ -174,7 +178,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       values: ['student'],
     }),
     fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at'),
-    fetchAllRows<AppointmentRow>('appointments', 'id, patient_id, scheduled_for, status, created_at, updated_at', {
+    fetchAllRows<AppointmentRow>('appointments', 'id, patient_id, scheduled_for, status, consultation_mode, created_at, updated_at', {
       column: 'doctor_id',
       values: [doctorId],
     }),
@@ -258,7 +262,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   for (const row of appointments) {
     if (patientNames.has(row.patient_id)) continue;
     const profile = nameById.get(row.patient_id);
-    const name = profile ? displayName(profile) : 'Unknown student';
+    const name = profile ? displayName(profile) : 'Unknown patient';
     patientNames.set(row.patient_id, name);
     patientInitials.set(row.patient_id, initialsOf(name, profile?.email || ''));
   }
@@ -280,13 +284,14 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       const parsed = parseScheduledFor(row.scheduled_for);
       return {
         id: row.id,
-        patientName: patientNames.get(row.patient_id) || 'Unknown student',
+        patientName: patientNames.get(row.patient_id) || 'Unknown patient',
         initials: patientInitials.get(row.patient_id) || '??',
         avatarUrl: avatars.get(row.patient_id) ?? null,
         status: row.status,
         statusLabel: statusLabel[row.status] ?? row.status,
         whenLabel: whenLabelFor(parsed, row.scheduled_for),
         typeLabel: completedByPatient.has(row.patient_id) ? 'Follow-up' : 'Initial Assessment',
+        modeLabel: consultationModeLabel(row.consultation_mode),
         startsAt: parsed ? parsed.getTime() : null,
       } as DashboardConsultation;
     })
@@ -339,7 +344,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       value: highRiskCount,
       note:
         highRiskCount === 0
-          ? { text: 'No students at high risk', tone: 'positive' }
+          ? { text: 'No patients at high risk', tone: 'positive' }
           : newAlertCount > 0
             ? { text: `${newAlertCount} new alert${newAlertCount === 1 ? '' : 's'}`, tone: 'danger' }
             : { text: 'No new alerts', tone: 'neutral' },

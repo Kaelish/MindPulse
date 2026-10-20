@@ -1,6 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
-import { normalizeWeekdays } from './appointments';
+import { ConsultationMode, normalizeWeekdays } from './appointments';
 import { fetchAvatarUrls } from './avatars';
 import {
   ChatAttachment,
@@ -27,6 +27,8 @@ export interface DoctorConsultation {
   /** Patient's profile photo; null when unset (or migration 0017 not applied). */
   avatarUrl: string | null;
   patientEmail: string;
+  /** How the session happens — 'online' for rows booked before migration 0025. */
+  consultationMode: ConsultationMode;
 }
 
 export interface DoctorAvailability {
@@ -49,6 +51,7 @@ export interface DoctorCallBooking {
   status: 'scheduled' | 'awaiting_payment' | 'declined' | 'confirmed' | 'completed' | 'cancelled';
   declineReason?: string;
   fee: number;
+  consultationMode: ConsultationMode;
 }
 
 const initialsOf = (name: string) =>
@@ -95,7 +98,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
 
   const { data: appointments, error } = await supabase
     .from('appointments')
-    .select('id, patient_id, scheduled_for, status, notes, decline_reason, created_at')
+    .select('id, patient_id, scheduled_for, status, notes, decline_reason, consultation_mode, created_at')
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -107,6 +110,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
     status: string;
     notes: string | null;
     decline_reason: string | null;
+    consultation_mode?: string | null;
   }[];
   if (!rows.length) return [];
 
@@ -137,7 +141,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
       id: row.id,
       patientId: row.patient_id,
       patientName: name,
-      studentId: profile?.student_no || 'No student no.',
+      studentId: profile?.student_no || 'No patient ID.',
       scheduledTime: row.scheduled_for || 'No date set',
       status: statusLabel(row.status),
       rawStatus: row.status as DoctorConsultation['rawStatus'],
@@ -146,6 +150,7 @@ export const fetchDoctorConsultations = async (): Promise<DoctorConsultation[]> 
       avatarInitials: initialsOf(name),
       avatarUrl: avatars.get(row.patient_id) ?? null,
       patientEmail: profile?.email || 'No email',
+      consultationMode: row.consultation_mode === 'in_person' ? 'in_person' : 'online',
     };
   });
 };
@@ -341,7 +346,7 @@ export const fetchDoctorCallBooking = async (appointmentId: string): Promise<Doc
 
   const { data: appointment, error } = await supabase
     .from('appointments')
-    .select('id, patient_id, doctor_id, scheduled_for, status, decline_reason')
+    .select('id, patient_id, doctor_id, scheduled_for, status, decline_reason, consultation_mode')
     .eq('id', appointmentId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -373,6 +378,10 @@ export const fetchDoctorCallBooking = async (appointmentId: string): Promise<Doc
     status: appointment.status as DoctorCallBooking['status'],
     declineReason: appointment.decline_reason ?? undefined,
     fee: doctorProfile?.consultation_fee != null ? Number(doctorProfile.consultation_fee) : 500,
+    consultationMode:
+      (appointment as { consultation_mode?: string | null }).consultation_mode === 'in_person'
+        ? 'in_person'
+        : 'online',
   };
 };
 

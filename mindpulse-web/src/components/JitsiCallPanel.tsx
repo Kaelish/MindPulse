@@ -131,11 +131,12 @@ export const JitsiCallPanel = ({ appointment, onBack }: JitsiCallPanelProps) => 
           <div className="call-main-label">Consultation ended</div>
           <p style={{ margin: '8px 0 16px', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
             The video session with {appointment.patientName} is closed and the appointment is
-            marked completed. Add the after-visit summary so the student and the administrators
-            can read it.
+            marked completed. Write the therapy progress note — it stays private to you and the
+            clinic administrators — and publish a short note for the patient if there is anything
+            they should read.
           </p>
           <button type="button" className="primary-button" onClick={() => setPhase('summary')}>
-            Write consultation summary
+            Write progress note
           </button>
         </div>
       </section>

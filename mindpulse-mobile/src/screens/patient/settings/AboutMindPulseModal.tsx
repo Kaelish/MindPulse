@@ -123,7 +123,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
               <Text style={styles.disclaimerText}>
                 MindPulse is an educational and research tool developed for academic capstone demonstration.{'\n\n'}
-                It is <Text style={{ fontWeight: '800' }}>not a certified medical device</Text> and is not intended to replace professional medical advice, clinical diagnosis, psychological therapy, or prescriptions. If you are experiencing severe distress or crisis, please contact student counseling services or call 988 immediately.
+                It is <Text style={{ fontWeight: '800' }}>not a certified medical device</Text> and is not intended to replace professional medical advice, clinical diagnosis, psychological therapy, or prescriptions. If you are experiencing severe distress or crisis, please contact a counselor or crisis service, or call 988 immediately.
               </Text>
             </View>
 
@@ -131,7 +131,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <Text style={styles.sectionLabel}>HOW MINDPULSE WORKS</Text>
             <View style={styles.card}>
               <Text style={styles.cardDesc}>
-                MindPulse combines four non-invasive modalities to provide a comprehensive, multi-dimensional stress evaluation for university students:
+                MindPulse combines four non-invasive modalities to provide a comprehensive, multi-dimensional stress evaluation for anyone:
               </Text>
 
               <View style={styles.modalityItem}>
@@ -184,7 +184,7 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
               </View>
               <View style={styles.featRow}>
                 <Ionicons name="videocam-outline" size={16} color={tone('#5B6EF5')} />
-                <Text style={styles.featText}>Student telehealth consultation booking & video call portal</Text>
+                <Text style={styles.featText}>Telehealth consultation booking & video call portal</Text>
               </View>
               <View style={styles.featRow}>
                 <Ionicons name="trending-up-outline" size={16} color={tone('#8353E2')} />
@@ -303,9 +303,9 @@ export const AboutMindPulseModal: React.FC<AboutMindPulseModalProps> = ({ visibl
             <ScrollView style={{ padding: 12, backgroundColor: Colors.surface, borderRadius: 12 }}>
               <Text style={{ fontSize: 12, color: Colors.textSecondary, lineHeight: 18 }}>
                 {legalModalTitle === 'Privacy Policy' ? (
-                  `MindPulse Privacy Policy (v1.0.0)\n\n1. Information We Collect: We collect name, student email, survey answers, heart rate estimation, and reaction time scores.\n\n2. Facial Analysis Guarantee: All facial feature extraction is performed strictly on-device. No images, videos, or raw biometric landmarks are stored or transmitted.\n\n3. Educational Capstone Purpose: Data collected is used solely to calculate stress scores and render progress visualizations within the application.`
+                  `MindPulse Privacy Policy (v1.0.0)\n\n1. Information We Collect: We collect name, email, survey answers, heart rate estimation, and reaction time scores.\n\n2. Facial Analysis Guarantee: All facial feature extraction is performed strictly on-device. No images, videos, or raw biometric landmarks are stored or transmitted.\n\n3. Educational Capstone Purpose: Data collected is used solely to calculate stress scores and render progress visualizations within the application.`
                 ) : (
-                  `MindPulse Terms of Use (v1.0.0)\n\n1. Acceptable Use: MindPulse is intended for student wellness self-monitoring and research evaluation.\n\n2. Medical Disclaimer: Users acknowledge that MindPulse does not provide clinical diagnosis, emergency crisis care, or medical prescriptions.\n\n3. User Conduct: Accounts must be created using legitimate student information.`
+                  `MindPulse Terms of Use (v1.0.0)\n\n1. Acceptable Use: MindPulse is intended for personal wellness self-monitoring and research evaluation.\n\n2. Medical Disclaimer: Users acknowledge that MindPulse does not provide clinical diagnosis, emergency crisis care, or medical prescriptions.\n\n3. User Conduct: Accounts must be created using legitimate user information.`
                 )}
               </Text>
             </ScrollView>

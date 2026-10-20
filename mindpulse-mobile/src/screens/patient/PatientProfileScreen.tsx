@@ -537,7 +537,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 icon="person-outline"
                 bg="#EEEDFE"
                 label="Account Information"
-                sub="Name, email, student profile & password"
+                sub="Name, email, profile & password"
                 onPress={() => setShowAccountInfo(true)}
               />
               <SettingRow

@@ -71,7 +71,7 @@ const buildStudentCase = (
   avatarUrl: string | null,
 ): StudentCaseRecord => {
   const name =
-    `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown student';
+    `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient';
   const latest = userSessions[0];
   const previous = userSessions[1];
 
@@ -330,6 +330,10 @@ export interface StudentConsultationNoteRecord {
   signedAt: string | null;
   attachmentPath: string | null;
   attachmentName: string | null;
+  /** The only patient-readable part of the note — published or not, this is a doctor view. */
+  patientNote: string;
+  patientNotePublished: boolean;
+  /** Legacy flag from before the note became doctor-only. */
   sharedWithPatient: boolean;
   updatedAt: string;
 }
@@ -339,7 +343,8 @@ const STUDENT_NOTE_COLUMNS =
   'session_date, session_location, duration_minutes, client_name, client_dob, psychologist, ' +
   'presenting_problem, session_content, interventions, client_response, therapist_observations, ' +
   'mental_status_exam, risk_assessment, diagnostic_impressions, plan_next_session, return_to_clinic, ' +
-  'signature, signed_at, attachment_path, attachment_name, shared_with_patient, updated_at';
+  'signature, signed_at, attachment_path, attachment_name, patient_note, patient_note_published, ' +
+  'shared_with_patient, updated_at';
 
 export const fetchStudentConsultationNotes = async (
   studentId: string,
@@ -382,6 +387,8 @@ export const fetchStudentConsultationNotes = async (
     signed_at: string | null;
     attachment_path: string | null;
     attachment_name: string | null;
+    patient_note: string | null;
+    patient_note_published: boolean | null;
     shared_with_patient: boolean | null;
     updated_at: string;
   }[]).map((row) => ({
@@ -410,6 +417,8 @@ export const fetchStudentConsultationNotes = async (
     signedAt: row.signed_at ?? null,
     attachmentPath: row.attachment_path ?? null,
     attachmentName: row.attachment_name ?? null,
+    patientNote: row.patient_note ?? '',
+    patientNotePublished: !!row.patient_note_published,
     sharedWithPatient: !!row.shared_with_patient,
     updatedAt: row.updated_at,
   }));

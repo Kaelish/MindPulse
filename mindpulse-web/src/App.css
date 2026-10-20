@@ -1997,6 +1997,35 @@ button {
   white-space: nowrap;
 }
 
+/* The one field a patient may read — marks it as the patient-visible exception. */
+.therapy-clinician-tag.is-patient {
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+/* Standing privacy reminder at the top of the progress-note editor. */
+.therapy-private-banner {
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.1);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--doc-muted);
+}
+
+.therapy-private-banner strong { color: var(--doc-ink, inherit); }
+
+/* Editor block for the patient-facing note — visually set apart from the chart. */
+.therapy-patient-note {
+  padding: 14px;
+  border: 1px dashed rgba(16, 185, 129, 0.5);
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.06);
+}
+
 .therapy-share-row {
   display: flex;
   align-items: center;

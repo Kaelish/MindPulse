@@ -12,7 +12,7 @@ import { DoctorNotifications } from '../../components/doctor/DoctorChrome';
 const LANDING_OPTIONS: { value: DoctorLandingView; label: string }[] = [
   { value: 'consultations', label: 'Consultations' },
   { value: 'dashboard', label: 'Dashboard' },
-  { value: 'student-cases', label: 'Student Cases' },
+  { value: 'student-cases', label: 'Patient Cases' },
   { value: 'assessment-results', label: 'Assessment Results' },
   { value: 'recommendations', label: 'Suggestions' },
 ];

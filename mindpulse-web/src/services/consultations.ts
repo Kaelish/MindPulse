@@ -2,6 +2,17 @@ import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
 
+export type ConsultationMode = 'online' | 'in_person';
+
+/** Human labels for the two ways a session can happen. */
+export const CONSULTATION_MODE_LABELS: Record<ConsultationMode, string> = {
+  online: 'Online (Video Call)',
+  in_person: 'Face-to-Face (In-Clinic)',
+};
+
+export const consultationModeLabel = (mode?: string | null): string =>
+  mode === 'in_person' ? CONSULTATION_MODE_LABELS.in_person : CONSULTATION_MODE_LABELS.online;
+
 export interface WebConsultationItem {
   id: string;
   patientId: string;
@@ -16,6 +27,8 @@ export interface WebConsultationItem {
   /** Patient's profile photo; null when unset (or migration 0017 not applied). */
   avatarUrl: string | null;
   patientEmail: string;
+  /** How the session happens — defaults to 'online' for rows booked before 0025. */
+  consultationMode: ConsultationMode;
 }
 
 export interface DoctorAvailability {
@@ -204,6 +217,8 @@ export interface ManualBookingData {
   notes: string;
   selectedDate: string;
   selectedTime: string;
+  /** How the session happens — defaults to 'online'. */
+  consultationMode: ConsultationMode;
 }
 
 const initialsOf = (name: string) =>
@@ -261,7 +276,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
 
   const { data: appointments, error } = await supabase
     .from('appointments')
-    .select('id, patient_id, scheduled_for, status, notes, decline_reason, created_at')
+    .select('id, patient_id, scheduled_for, status, notes, decline_reason, consultation_mode, created_at')
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -273,6 +288,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
     status: string;
     notes: string | null;
     decline_reason: string | null;
+    consultation_mode?: string | null;
   }[];
   if (!rows.length) return [];
 
@@ -303,7 +319,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
       id: row.id,
       patientId: row.patient_id,
       patientName: name,
-      studentId: profile?.student_no || 'No student no.',
+      studentId: profile?.student_no || 'No patient no.',
       scheduledTime: row.scheduled_for || 'No date set',
       status: statusLabel(row.status),
       rawStatus: row.status as WebConsultationItem['rawStatus'],
@@ -312,6 +328,7 @@ export const fetchWebConsultations = async (): Promise<WebConsultationItem[]> =>
       avatarInitials: initialsOf(name),
       avatarUrl: avatars.get(row.patient_id) ?? null,
       patientEmail: profile?.email || 'No email',
+      consultationMode: row.consultation_mode === 'in_person' ? 'in_person' : 'online',
     };
   });
 };
@@ -411,8 +428,9 @@ export const saveDoctorScheduleAppointment = async (
       scheduled_for: scheduledFor,
       status: 'scheduled',
       notes,
+      consultation_mode: booking.consultationMode === 'in_person' ? 'in_person' : 'online',
     })
-    .select('id, patient_id, scheduled_for, status, notes, created_at')
+    .select('id, patient_id, scheduled_for, status, notes, consultation_mode, created_at')
     .single();
   if (insertError) throw new Error(insertError.message);
 
@@ -421,7 +439,7 @@ export const saveDoctorScheduleAppointment = async (
     id: inserted.id,
     patientId: inserted.patient_id,
     patientName: name,
-    studentId: patient.studentNo || 'No student no.',
+    studentId: patient.studentNo || 'No patient no.',
     scheduledTime: inserted.scheduled_for || scheduledFor,
     status: 'Scheduled',
     rawStatus: 'scheduled',
@@ -429,6 +447,10 @@ export const saveDoctorScheduleAppointment = async (
     avatarInitials: initialsOf(name),
     avatarUrl: null,
     patientEmail: patient.email,
+    consultationMode:
+      (inserted as { consultation_mode?: string | null }).consultation_mode === 'in_person'
+        ? 'in_person'
+        : 'online',
   };
 };
 
@@ -761,7 +783,14 @@ export interface ConsultationNote {
   signedAt: string | null;
   attachmentPath: string | null;
   attachmentName: string | null;
-  /** FALSE (default) = private to the doctor and admins. TRUE = patient may read it. */
+  /**
+   * The one part of this record the patient may ever read: a short general
+   * note written for them. Published only when patientNotePublished is true,
+   * and read through get_patient_consultation_note() — never from this row.
+   */
+  patientNote: string;
+  patientNotePublished: boolean;
+  /** Legacy flag from before the note became doctor-only. Kept for old rows. */
   sharedWithPatient: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -772,7 +801,8 @@ const NOTE_COLUMNS =
   'session_date, session_location, duration_minutes, client_name, client_dob, psychologist, ' +
   'presenting_problem, session_content, interventions, client_response, therapist_observations, ' +
   'mental_status_exam, risk_assessment, diagnostic_impressions, plan_next_session, return_to_clinic, ' +
-  'signature, signed_at, attachment_path, attachment_name, shared_with_patient, created_at, updated_at';
+  'signature, signed_at, attachment_path, attachment_name, patient_note, patient_note_published, ' +
+  'shared_with_patient, created_at, updated_at';
 
 type ConsultationNoteRow = {
   appointment_id: string;
@@ -802,6 +832,8 @@ type ConsultationNoteRow = {
   signed_at: string | null;
   attachment_path: string | null;
   attachment_name: string | null;
+  patient_note: string | null;
+  patient_note_published: boolean | null;
   shared_with_patient: boolean | null;
   created_at?: string;
   updated_at?: string | null;
@@ -835,6 +867,8 @@ const mapConsultationNoteRow = (row: ConsultationNoteRow): ConsultationNote => (
   signedAt: row.signed_at ?? null,
   attachmentPath: row.attachment_path ?? null,
   attachmentName: row.attachment_name ?? null,
+  patientNote: row.patient_note ?? '',
+  patientNotePublished: !!row.patient_note_published,
   sharedWithPatient: !!row.shared_with_patient,
   createdAt: row.created_at,
   updatedAt: row.updated_at ?? undefined,
@@ -963,29 +997,32 @@ export const createConsultationAttachmentUrl = async (storagePath: string): Prom
 };
 
 /**
- * Flip the patient-visibility of a saved note. When the note is shared the
- * patient gets a notification; when it is made private again nothing is sent.
+ * Flip the publication of the doctor's "Note for the patient". Only this one
+ * field ever becomes readable by the patient (through the
+ * get_patient_consultation_note RPC) — the progress note itself stays private
+ * to the doctor and the clinic administrators. Publishing notifies the
+ * patient; taking it back down sends nothing.
  * Returns the refreshed note so callers can update local state.
  */
-export const setConsultationNoteSharing = async (
+export const setPatientNotePublication = async (
   appointmentId: string,
-  shared: boolean,
+  published: boolean,
 ): Promise<ConsultationNote> => {
   if (!supabase) throw new Error('Supabase is not configured.');
   const { data, error } = await supabase
     .from('consultation_notes')
-    .update({ shared_with_patient: shared, updated_at: new Date().toISOString() })
+    .update({ patient_note_published: published, updated_at: new Date().toISOString() })
     .eq('appointment_id', appointmentId)
     .select(NOTE_COLUMNS)
     .single();
-  if (error || !data) throw new Error(error?.message ?? 'The sharing setting could not be saved.');
+  if (error || !data) throw new Error(error?.message ?? 'The publication setting could not be saved.');
 
-  if (shared) {
+  if (published) {
     const row = data as unknown as ConsultationNoteRow;
     const noticeError = await supabase.from('notifications').insert({
       user_id: row.patient_id,
-      title: 'Consultation notes shared',
-      message: 'Your doctor has shared their consultation notes with you. Open the booking to read them.',
+      title: 'A note from your doctor',
+      message: 'Your doctor has published a note for you. Open the booking to read it.',
       type: 'appointment',
     });
     void noticeError;
@@ -1059,8 +1096,10 @@ export interface ConsultationNoteDraft {
   signature: string | null;
   attachmentPath: string | null;
   attachmentName: string | null;
-  /** Patient visibility — FALSE (default) keeps the note private to the doctor. */
-  sharedWithPatient: boolean;
+  /** The short general note written FOR the patient (never the progress note). */
+  patientNote: string;
+  /** FALSE (default) = draft, doctor-only. TRUE = the patient may read it. */
+  patientNotePublished: boolean;
 }
 
 export const fetchDoctorConsultationNotes = async (): Promise<ConsultationNote[]> => {
@@ -1083,6 +1122,16 @@ export const saveConsultationNote = async (
   const trim = (value: string | null | undefined) => (value ?? '').trim();
   const presentingProblem = trim(draft.presentingProblem);
   const sessionContent = trim(draft.sessionContent);
+  const patientNote = trim(draft.patientNote);
+
+  // Publication state before this save — used to notify the patient only when
+  // the note is published for the first time, not on every edit.
+  const { data: prior } = await supabase
+    .from('consultation_notes')
+    .select('patient_note_published')
+    .eq('appointment_id', item.id)
+    .maybeSingle();
+  const wasPublished = !!prior?.patient_note_published;
 
   // Legacy roll-ups: keep the old 4 columns meaningful for readers that have
   // not been migrated yet (admin records, older clients).
@@ -1116,7 +1165,9 @@ export const saveConsultationNote = async (
     signed_at: draft.signature ? new Date().toISOString() : null,
     attachment_path: draft.attachmentPath,
     attachment_name: draft.attachmentName,
-    shared_with_patient: draft.sharedWithPatient,
+    patient_note: patientNote,
+    patient_note_published: !!draft.patientNotePublished && patientNote.length > 0,
+    shared_with_patient: false,
     updated_at: new Date().toISOString(),
   };
   const { data, error } = await supabase
@@ -1126,11 +1177,11 @@ export const saveConsultationNote = async (
     .single();
   if (error || !data) throw new Error(error?.message ?? 'The note could not be saved.');
   const note = mapConsultationNoteRow(data as unknown as ConsultationNoteRow);
-  if (draft.sharedWithPatient) {
+  if (note.patientNotePublished && !wasPublished) {
     const noticeError = await supabase.from('notifications').insert({
       user_id: item.patientId,
-      title: 'Consultation notes shared',
-      message: 'Your doctor has shared their consultation notes with you. Open the booking to read them.',
+      title: 'A note from your doctor',
+      message: 'Your doctor has published a note for you. Open the booking to read it.',
       type: 'appointment',
     });
     void noticeError;
