@@ -13,10 +13,20 @@
  *    suspension self-healing. The transition tests live with the rest of the
  *    suite.
  *
- *  - NOTHING TO READ. The exercise player shows step labels, pips, three
- *    stats and a percentage. This one shows a countdown, one sentence and a
- *    bar, because the tip is to stop looking at things. No stats row, on
- *    purpose.
+ *  - THE SCREEN GOES BLACK. (Adviser feedback: the tip should be enforced by
+ *    the screen, not just written on it.) The ready card counts 3-2-1, then
+ *    the whole sheet turns black for the remaining minutes with only an
+ *    ultra-dim countdown in the middle — nothing worth looking at, and no
+ *    readable copy while running at all. Tapping anywhere reveals the
+ *    controls (auto-hiding again after REVEAL_IDLE_MS of no touch, or on a
+ *    second tap); the Android back button reveals them too instead of
+ *    closing, so a running pause can still only be left deliberately. At
+ *    zero the sheet brightens back to the ✓ COMPLETE card, so glancing back
+ *    gives a clear answer.
+ *
+ *  - NOTHING TO READ while running. The exercise player shows step labels,
+ *    pips, three stats and a percentage; this one shows a bare countdown,
+ *    because the tip is to stop looking at things. No stats row, on purpose.
  *
  *  - NO SOUND, NO HAPTICS, NO NEW DEPS. Completion is visual, exactly like
  *    `GuidedExerciseModal`. A buzz would need `android.permission.VIBRATE`
@@ -25,7 +35,7 @@
  *    moment the user is waiting for.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
@@ -47,10 +57,17 @@ interface Props {
   onClose: () => void;
 }
 
-type Phase = 'idle' | 'running' | 'paused' | 'done';
+/** `leadin` = the 3-2-1 "put your phone down" card shown before the screen blacks out. */
+type Phase = 'idle' | 'leadin' | 'running' | 'paused' | 'done';
 
 const ACCENT = '#455A64';
 const TICK_MS = 250;
+/** Seconds of lead-in before the screen turns black. */
+const LEAD_IN_SECONDS = 3;
+/** Revealed controls re-hide after this long without a touch. */
+const REVEAL_IDLE_MS = 4000;
+/** Pure black — the point of the feature is that there is nothing to read. */
+const BLACK = '#000000';
 
 const mmss = (totalSecondsLeft: number) => {
   const m = Math.floor(totalSecondsLeft / 60);
@@ -60,6 +77,7 @@ const mmss = (totalSecondsLeft: number) => {
 
 const KICKER: Record<Phase, string> = {
   idle: 'READY',
+  leadin: 'GET READY',
   running: 'PAUSE IN PROGRESS',
   paused: 'PAUSED',
   done: 'COMPLETE',
@@ -67,6 +85,7 @@ const KICKER: Record<Phase, string> = {
 
 const BODY: Record<Phase, string> = {
   idle: `${pauseMinutes} minutes away from every screen. Put your phone down and look at something about twenty feet away — the countdown keeps correct time even if the screen sleeps.`,
+  leadin: `The screen turns black in a moment. Set the phone down now and keep your eyes off it for all ${pauseMinutes} minutes.`,
   running: 'Nothing to read here. Set the phone face down and let your eyes rest.',
   paused: `Paused. Resume when you are ready to finish the full ${pauseMinutes} minutes.`,
   done: 'Minutes off every screen. Notice how your eyes and shoulders feel before you move on.',
@@ -75,6 +94,12 @@ const BODY: Record<Phase, string> = {
 export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainSec, setRemainSec] = useState(PAUSE_SECONDS);
+  /** Lead-in counter (3 → 1) shown big on the ready card. */
+  const [leadInSec, setLeadInSec] = useState(LEAD_IN_SECONDS);
+  /** True while the sheet must be black: only the running phase, never paused/done. */
+  const [dark, setDark] = useState(false);
+  /** True while the controls are temporarily shown on top of the black screen. */
+  const [revealed, setRevealed] = useState(false);
 
   // The clock lives in a ref, not state: a tick must read it without waiting
   // for a re-render. All maths is in `pauseTimer.ts` so it can be tested
@@ -82,6 +107,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
   const clockRef = useRef<PauseClock>(pauseClockIdle());
   const lastSecRef = useRef(PAUSE_SECONDS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopTicker = () => {
     if (timerRef.current) {
@@ -90,11 +116,37 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
     }
   };
 
+  const clearRevealTimer = () => {
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  };
+
+  /** Show the controls on top of the black screen, then re-black automatically. */
+  const reveal = () => {
+    setRevealed(true);
+    clearRevealTimer();
+    revealTimerRef.current = setTimeout(() => setRevealed(false), REVEAL_IDLE_MS);
+  };
+
+  const hideReveal = () => {
+    clearRevealTimer();
+    setRevealed(false);
+  };
+
+  /** Push the auto-hide deadline out — called whenever the user touches the card. */
+  const pokeReveal = () => {
+    if (revealTimerRef.current) reveal();
+  };
+
   const finish = () => {
     stopTicker();
+    hideReveal();
     clockRef.current = pauseStop(clockRef.current, Date.now());
     lastSecRef.current = 0;
     setRemainSec(0);
+    setDark(false);
     setPhase('done');
   };
 
@@ -116,17 +168,29 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
 
   const reset = () => {
     stopTicker();
+    hideReveal();
     clockRef.current = pauseClockIdle();
     lastSecRef.current = PAUSE_SECONDS;
     setRemainSec(PAUSE_SECONDS);
+    setLeadInSec(LEAD_IN_SECONDS);
+    setDark(false);
     setPhase('idle');
   };
 
+  /** Enter the lead-in: the ready card counts down, then the screen blacks out. */
   const start = () => {
+    setLeadInSec(LEAD_IN_SECONDS);
+    setPhase('leadin');
+  };
+
+  /** The wall clock starts here — at the end of the lead-in, never during it. */
+  const beginRun = () => {
     clockRef.current = pauseStart(clockRef.current, Date.now());
     lastSecRef.current = PAUSE_SECONDS;
     setRemainSec(PAUSE_SECONDS);
     setPhase('running');
+    setDark(true);
+    hideReveal();
     startTicker();
     tick();
   };
@@ -134,6 +198,8 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
   const pause = () => {
     clockRef.current = pauseStop(clockRef.current, Date.now());
     stopTicker();
+    hideReveal();
+    setDark(false);
     setPhase('paused');
     tick();
   };
@@ -141,12 +207,35 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
   const resume = () => {
     clockRef.current = pauseResume(clockRef.current, Date.now());
     setPhase('running');
+    // Straight back to black: they have already read the button, and the
+    // whole point is not to keep staring at the countdown.
+    setDark(true);
+    hideReveal();
     startTicker();
     tick();
   };
 
-  // The ticker must never outlive the sheet.
-  useEffect(() => stopTicker, []);
+  // 3-2-1, then black. An effect (not a nested setState) so the lead-in
+  // cannot outlive a reset or a close mid-count.
+  useEffect(() => {
+    if (phase !== 'leadin') return;
+    if (leadInSec <= 0) {
+      beginRun();
+      return;
+    }
+    const timer = setTimeout(() => setLeadInSec((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, leadInSec]);
+
+  // The ticker and the reveal timer must never outlive the sheet.
+  useEffect(() => {
+    return () => {
+      stopTicker();
+      clearRevealTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (!visible) reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,6 +253,25 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
     onClose();
   };
 
+  // Black screen: one tap brings the controls up, the next tap (or 4s of
+  // nothing) puts them away again. Never closes from here.
+  const onDarkTap = () => {
+    if (revealed) hideReveal();
+    else reveal();
+  };
+
+  const onBackdropPress = () => {
+    if (dark) onDarkTap();
+    else requestClose();
+  };
+
+  // Android back / Escape: while black, reveal the controls instead of
+  // dismissing, so "leaving" stays an explicit choice through End early.
+  const onHardwareClose = () => {
+    if (dark) onDarkTap();
+    else requestClose();
+  };
+
   const accent = tone(ACCENT);
   const done = phase === 'done';
   const progress = ((PAUSE_SECONDS - remainSec) / PAUSE_SECONDS) * 100;
@@ -173,22 +281,26 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
       ? { icon: 'pause', text: 'Pause', onPress: pause }
       : phase === 'paused'
         ? { icon: 'play', text: 'Resume', onPress: resume }
-        : done
-          ? { icon: 'refresh', text: 'Do it again', onPress: reset }
-          : { icon: 'play', text: `Start · ${pauseMinutes} min`, onPress: start };
+        : phase === 'leadin'
+          ? { icon: 'play', text: 'Start now', onPress: beginRun }
+          : done
+            ? { icon: 'refresh', text: 'Do it again', onPress: reset }
+            : { icon: 'play', text: `Start · ${pauseMinutes} min`, onPress: start };
 
   const secondaryLabel = done ? 'Done' : phase === 'idle' ? 'Close' : 'End early';
   const secondaryPress = done || phase === 'idle' ? onClose : endEarly;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={requestClose}>
-      <View style={styles.backdrop}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onHardwareClose}>
+      <View style={[styles.backdrop, dark && styles.backdropDark]}>
         <Pressable
           style={StyleSheet.absoluteFill}
-          onPress={requestClose}
-          accessibilityLabel="Close pause timer"
+          onPress={onBackdropPress}
+          accessibilityLabel={
+            dark ? (revealed ? 'Hide pause controls' : 'Show pause controls') : 'Close pause timer'
+          }
         />
-        <View style={styles.card}>
+        <View style={styles.card} onTouchStart={dark ? pokeReveal : undefined}>
           <View style={[styles.head, { backgroundColor: accent }]}>
             <View style={styles.headIcon}>
               <Ionicons name="eye-off-outline" size={16} color="#FFFFFF" />
@@ -200,9 +312,9 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
               </Text>
             </View>
             <Pressable
-              onPress={requestClose}
+              onPress={onBackdropPress}
               style={styles.closeBtn}
-              accessibilityLabel="Close pause timer"
+              accessibilityLabel={dark ? 'Return to the black screen' : 'Close pause timer'}
             >
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
@@ -211,7 +323,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
           <View style={styles.stage}>
             <Text style={styles.stageKicker}>{KICKER[phase]}</Text>
             <Text style={[styles.stageCount, done && { color: accent }]}>
-              {done ? '✓' : mmss(remainSec)}
+              {done ? '✓' : phase === 'leadin' ? Math.max(1, leadInSec) : mmss(remainSec)}
             </Text>
             <Text style={styles.stageText}>{BODY[phase]}</Text>
           </View>
@@ -241,7 +353,26 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* The black screen itself. Rendered after the card so it covers it,
+            and it is a Pressable rather than pointerEvents="none": it must
+            SWALLOW every tap, otherwise a blind finger would fall through to
+            the invisible End early / Pause buttons underneath. */}
+        {dark && !revealed && (
+          <Pressable
+            style={styles.blackStage}
+            onPress={reveal}
+            accessibilityLabel={`No-screen pause running, ${mmss(remainSec)} remaining. Tap to show the controls.`}
+          >
+            <Text style={styles.blackCount}>{mmss(remainSec)}</Text>
+          </Pressable>
+        )}
       </View>
+
+      {/* Hide the system status bar while black — otherwise its clock and
+          battery sit on a coloured strip above the darkened sheet. RN keeps
+          these values on a stack, so unmounting restores the app's own. */}
+      {dark && <StatusBar hidden backgroundColor={BLACK} barStyle="light-content" />}
     </Modal>
   );
 };
@@ -254,6 +385,30 @@ const makeStyles = () =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 18,
+    },
+    /** During the pause the dim backdrop becomes pure black — no ambient glow. */
+    backdropDark: {
+      backgroundColor: BLACK,
+    },
+    /** Full-bleed black plate drawn over the card while the pause runs. */
+    blackStage: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: BLACK,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    /** Ultra-dim on purpose: readable if you deliberately look, not inviting. */
+    blackCount: {
+      color: 'rgba(255, 255, 255, 0.09)',
+      fontSize: 62,
+      fontWeight: '900',
+      lineHeight: 70,
+      letterSpacing: 2,
+      fontVariant: ['tabular-nums'],
     },
     card: {
       width: '100%',

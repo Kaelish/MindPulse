@@ -68,8 +68,18 @@ time, and a documented retention window — not a bare insert.
 
 ### 5. The no-screen pause timer lets the screen sleep
 `PauseTimerModal` powers the "Take a 5-minute no-screen pause" suggestion.
-Three deliberate choices worth knowing before changing them:
+Four deliberate choices worth knowing before changing them:
 
+- **The screen itself goes black.** (Adviser feedback: don't just *say* "put
+  your screen down".) The ready card counts 3-2-1, then the sheet turns pure
+  black for the remaining minutes with only an ultra-dim countdown in the
+  middle — no readable copy while running, and the status bar is hidden too.
+  One tap anywhere (or the Android back button) reveals Pause / Resume / End
+  early over the black, which re-hides after 4 idle seconds or on a second
+  tap; reaching zero brightens back to the ✓ COMPLETE card. This changes only
+  rendering: `dark` is true solely in the running phase, so the lead-in, the
+  paused state and completion are never black, and the wall-clock maths in
+  `pauseTimer.ts` is untouched.
 - **No `expo-keep-awake`.** The tip is to *stop looking at the screen*, so
   letting the OS sleep the display is the point, not a defect. Adding a
   keep-awake dependency would work against the feature.
