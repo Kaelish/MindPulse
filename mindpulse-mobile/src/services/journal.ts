@@ -30,7 +30,7 @@
  *
  *  4. IT MATCHES AN EXISTING PRINCIPLE IN THIS CODEBASE.
  *     `AssessmentNavigator.handleFaceScanComplete` deliberately does not
- *     persist the demo scan result ("intentionally not persisted — it is
+ *     persist the face scan result ("intentionally not persisted — it is
  *     excluded from scoring"). Data with no consumer should not be retained.
  *     Same rule, applied to a second data type.
  *

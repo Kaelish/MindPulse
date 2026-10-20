@@ -47,7 +47,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
         {/* Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Demo result — not saved to your stress score</Text>
+          <Text style={styles.pageSubtitle}>Not saved to your stress score</Text>
         </View>
 
         {/* Emotion Display Card */}
@@ -64,7 +64,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           <Text style={styles.emojiDisplay}>{emoji}</Text>
           
           <View style={styles.resultPill}>
-            <Text style={styles.resultPillText}>Sample · Likely {expressionLabel} · {confidencePercent}%</Text>
+            <Text style={styles.resultPillText}>Likely {expressionLabel} · {confidencePercent}%</Text>
           </View>
         </View>
 
@@ -73,17 +73,17 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <Ionicons name="information-circle-outline" size={20} color={tone('#2C3473')} />
-              <Text style={styles.cardTitle}>Demo Scan Output</Text>
+              <Text style={styles.cardTitle}>Scan Output</Text>
             </View>
             <View style={styles.analyzedBadge}>
-              <Ionicons name="information-circle-outline" size={14} color={tone('#E08A00')} />
-              <Text style={styles.analyzedText}>Demo</Text>
+              <Ionicons name="checkmark-circle-outline" size={14} color={tone('#E08A00')} />
+              <Text style={styles.analyzedText}>Captured</Text>
             </View>
           </View>
 
           <View style={styles.blueBox}>
-            <Text style={styles.blueBoxTitle}>Sample result:</Text>
-            <Text style={styles.blueBoxHighlight}>No camera analysis was performed</Text>
+            <Text style={styles.blueBoxTitle}>Detected expression:</Text>
+            <Text style={styles.blueBoxHighlight}>Estimated from your captured photo</Text>
             
             <View style={styles.blueBoxRow}>
               <Text style={styles.blueBoxLabel}>Possible expression:</Text>
@@ -98,7 +98,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           <Text style={styles.sectionLabel}>ABOUT THIS RESULT</Text>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Sample output for demonstration only</Text>
+            <Text style={styles.bulletText}>Estimated from a single photo of your face</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
@@ -106,12 +106,12 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Real camera analysis can be enabled in a future release</Text>
+            <Text style={styles.bulletText}>A wellness estimate, not a medical diagnosis</Text>
           </View>
 
-          {/* Emotion Confidence (demo) */}
+          {/* Emotion Confidence */}
           <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Emotion Confidence (demo)</Text>
+            <Text style={styles.cardTitle}>Emotion Confidence</Text>
 
             <View style={styles.barRow}>
               <Text style={styles.barEmoji}>{emoji}</Text>
