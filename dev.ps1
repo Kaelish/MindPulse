@@ -60,8 +60,22 @@ function Get-LanIp {
 if (-not (Test-Path $backend)) { Fail "backend folder not found: $backend" }
 if (-not (Test-Path $mobile))  { Fail "mobile folder not found: $mobile" }
 
-$python = Get-Command python -ErrorAction SilentlyContinue
-if (-not $NoBackend -and -not $python) { Fail "python not found on PATH" }
+# Prefer the backend venv: it holds the emotion-model deps (tensorflow, keras,
+# mediapipe, opencv, scikit-learn). System Python may only have Django, which
+# starts the server but fails every face scan with HTTP 503 "Emotion model
+# unavailable." — so only fall back to PATH python when there is no venv.
+$venvPython = Join-Path $backend 'venv\Scripts\python.exe'
+$pythonCmd  = Get-Command python -ErrorAction SilentlyContinue
+if (Test-Path $venvPython) {
+  $pythonPath = $venvPython
+} elseif ($pythonCmd) {
+  $pythonPath = $pythonCmd.Source
+} else {
+  $pythonPath = $null
+}
+if (-not $NoBackend -and -not $pythonPath) {
+  Fail "python not found on PATH and no venv at $venvPython (create it: python -m venv venv; then pip install -r requirements.txt)"
+}
 
 $npm = Get-Command npm -ErrorAction SilentlyContinue
 if (-not $NoExpo -and -not $npm) { Fail "npm not found on PATH" }
@@ -97,7 +111,7 @@ if ($NoBackend) {
   Write-Host "DRYRUN  would start: python manage.py runserver 0.0.0.0:$Port --noreload (in $backend)" -ForegroundColor Cyan
 } else {
   Write-Host "Starting Django backend on 0.0.0.0:$Port ..." -ForegroundColor Cyan
-  $backendProc = Start-Process -FilePath $python.Source `
+  $backendProc = Start-Process -FilePath $pythonPath `
     -ArgumentList @('manage.py', 'runserver', "0.0.0.0:$Port", '--noreload') `
     -WorkingDirectory $backend -PassThru
   $backendOwned = $true
