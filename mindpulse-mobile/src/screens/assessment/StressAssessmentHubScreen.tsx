@@ -34,7 +34,8 @@ export interface AssessmentState {
 
   // Stored data from modules
   surveyScore?: number;
-  faceScanData?: any;
+  /** Latest face-scan result: expression label + model confidence (0–1). */
+  faceScanData?: { expression: 'happy' | 'neutral' | 'sad'; confidence: number };
   heartRateBpm?: number;
   reactionTimeMs?: number;
   /** Raw answers from today's survey, carried to the final session save. */

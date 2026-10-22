@@ -102,8 +102,8 @@ const PRIVACY_ITEMS = [
   {
     iconName: 'shield-outline' as const,
     iconColor: '#F59E0B',
-    title: 'Result is not saved',
-    desc: 'The emotion estimate is shown on the result screen and is excluded from your saved stress score.',
+    title: 'Result feeds your score',
+    desc: 'The emotion estimate contributes 20% of your final stress score. The photo itself is still never stored.',
     bg: '#FFFBEB',
     border: '#FDE68A',
   },

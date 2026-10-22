@@ -175,11 +175,20 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
     );
   }
 
-  // Real inputs only — the face scan is a demo and is excluded from scoring.
-  // Weights are renormalized across the components that are actually present.
+  // Four inputs, weighted; weights are renormalized over whichever are present.
   const surveyVal = stateData.surveyScore;
   const hrBpm = stateData.heartRateBpm;
   const rxMs = stateData.reactionTimeMs;
+  const face = stateData.faceScanData;
+
+  // Face expression → stress (happy low, neutral mid, sad high). Confidence
+  // pulls the value toward neutral so an unsure scan barely moves the score.
+  const FACE_STRESS: Record<string, number> = { happy: 20, neutral: 50, sad: 80 };
+  const faceBase = face ? FACE_STRESS[face.expression] ?? 50 : null;
+  const faceVal =
+    faceBase != null
+      ? Math.round(50 + (faceBase - 50) * Math.min(1, Math.max(0, face?.confidence ?? 0)))
+      : null;
 
   // Re-opening these results after saving must not create a second row today.
   const alreadySavedToday = isDayComplete(stateData);
@@ -190,9 +199,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const rxVal = rxMs != null ? Math.min(100, Math.max(0, (rxMs - 250) / 3)) : null;
 
   const components: { value: number; weight: number }[] = [];
-  if (surveyVal != null) components.push({ value: surveyVal, weight: 0.625 });
-  if (hrVal != null) components.push({ value: hrVal, weight: 0.25 });
-  if (rxVal != null) components.push({ value: rxVal, weight: 0.125 });
+  if (surveyVal != null) components.push({ value: surveyVal, weight: 0.5 });
+  if (hrVal != null) components.push({ value: hrVal, weight: 0.2 });
+  if (faceVal != null) components.push({ value: faceVal, weight: 0.2 });
+  if (rxVal != null) components.push({ value: rxVal, weight: 0.1 });
   const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
   const finalScore =
     totalWeight > 0
@@ -371,12 +381,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       const assessmentName = snapshot?.toolTitle ?? 'PSS-10 Stress Assessment';
       await saveNewStressSession(
         finalScore,
-        `Completed assessment: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms`,
+            `Completed assessment: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms, Face: ${face?.expression ?? 'n/a'}`,
         hrBpm,
         surveyVal,
-        rxMs,
-        undefined,
-        snapshot ?? null,
+            rxMs,
+            face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
+            snapshot ?? null,
       );
 
       // Today is now spent: keep the numbers for review, close every step, and
@@ -480,13 +490,13 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
       {/* Multi-Modal Fusion Card */}
       <View style={styles.fusionCard}>
-        <Text style={styles.fusionTitle}>Multi-Modal Fusion (Survey 62.5% · Heart Rate 25% · Reaction 12.5%)</Text>
+        <Text style={styles.fusionTitle}>Multi-Modal Fusion (Survey 50% · Heart Rate 20% · Face 20% · Reaction 10%)</Text>
 
         {surveyVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Survey (PSS + Physio)</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#E8EAF6') }]}><Text style={[styles.fusionBadgeText, { color: tone('#3F51B5') }]}>62.5%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#E8EAF6') }]}><Text style={[styles.fusionBadgeText, { color: tone('#3F51B5') }]}>50%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
               <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, surveyVal))}%`, backgroundColor: toneBg('#5C6BC0') }]} />
@@ -495,21 +505,25 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           </View>
         )}
 
-        {/* Face scan is a demo — shown for transparency, excluded from the score */}
-        <View style={styles.fusionRow}>
-          <View style={styles.fusionLabelRow}>
-            <Text style={styles.fusionLabel}>Facial Emotion</Text>
-            <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF3E0') }]}><Text style={[styles.fusionBadgeText, { color: tone('#E08A00') }]}>Demo</Text></View>
+        {/* Face scan result — 20% of the score when the step was completed */}
+        {faceVal != null && face && (
+          <View style={styles.fusionRow}>
+            <View style={styles.fusionLabelRow}>
+              <Text style={styles.fusionLabel}>Facial Emotion ({face.expression})</Text>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF3E0') }]}><Text style={[styles.fusionBadgeText, { color: tone('#E08A00') }]}>20%</Text></View>
+            </View>
+            <View style={styles.fusionTrack}>
+              <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, faceVal))}%`, backgroundColor: toneBg('#FB8C00') }]} />
+            </View>
+            <Text style={[styles.fusionScore, { color: tone('#E08A00') }]}>{faceVal}</Text>
           </View>
-          <View style={styles.fusionTrack} />
-          <Text style={[styles.fusionScore, { color: tone('#999') }]}>—</Text>
-        </View>
+        )}
 
         {hrVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Heart Rate</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFEBEE') }]}><Text style={[styles.fusionBadgeText, { color: tone('#F44336') }]}>25%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFEBEE') }]}><Text style={[styles.fusionBadgeText, { color: tone('#F44336') }]}>20%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
               <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: toneBg('#EF5350') }]} />
@@ -522,7 +536,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
               <Text style={styles.fusionLabel}>Reaction Time</Text>
-              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF8E1') }]}><Text style={[styles.fusionBadgeText, { color: tone('#FFB300') }]}>12.5%</Text></View>
+              <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF8E1') }]}><Text style={[styles.fusionBadgeText, { color: tone('#FFB300') }]}>10%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
               <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, rxVal))}%`, backgroundColor: toneBg('#FFA000') }]} />
