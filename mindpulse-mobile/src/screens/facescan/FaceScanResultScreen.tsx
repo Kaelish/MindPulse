@@ -47,7 +47,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
         {/* Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Not saved to your stress score</Text>
+          <Text style={styles.pageSubtitle}>Counts toward 20% of your stress score</Text>
         </View>
 
         {/* Emotion Display Card */}
@@ -102,7 +102,7 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Excluded from your saved stress score</Text>
+            <Text style={styles.bulletText}>Contributes 20% to your final stress score</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />

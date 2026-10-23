@@ -20,8 +20,13 @@ export const AssessmentNavigator = ({ onExit, onBookSession }: { onExit?: () => 
     const state = await loadAssessmentState();
     state.faceScan = 'completed';
     if (state.heartRate === 'locked') state.heartRate = 'unlocked';
-    // Face scan result (data) is intentionally not persisted — it is excluded from scoring
-    void data;
+    // Keep the expression + confidence: the face scan contributes 20% of the score.
+    const expression =
+      data?.expression === 'happy' || data?.expression === 'sad' ? data.expression : 'neutral';
+    state.faceScanData = {
+      expression,
+      confidence: typeof data?.score === 'number' ? data.score : 0,
+    };
     await saveAssessmentState(state);
     setScreen('hub');
   };
