@@ -56,6 +56,41 @@ const startEditing = async () => {
 };
 
 describe('DoctorProfileSettingView save behaviour', () => {
+  it('keeps profile fields locked until Edit Profile is pressed and exposes Gender as a dropdown', async () => {
+    render(<DoctorProfileSettingView />);
+    const firstName = await screen.findByLabelText('First Name');
+    const gender = screen.getByLabelText('Gender');
+    expect(firstName).toHaveAttribute('readonly');
+    expect(gender).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }));
+    expect(screen.getByLabelText('First Name')).not.toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Gender')).toBeEnabled();
+    expect(screen.getByLabelText('Gender').tagName).toBe('SELECT');
+  });
+
+  it('rejects an invalid email address', async () => {
+    await startEditing();
+    fireEvent.change(screen.getByLabelText('Work Email'), { target: { value: 'not-an-email' } });
+    fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('valid email address');
+    expect(saveDoctorProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-numeric phone values and no-op saves', async () => {
+    await startEditing();
+    fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '123-45' } });
+    fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
+    expect(await screen.findByRole('alert')).toHaveTextContent('numbers only');
+
+    fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
+    fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
+    expect(await screen.findByRole('alert')).toHaveTextContent('No changes to save');
+    expect(saveDoctorProfile).not.toHaveBeenCalled();
+  });
+
   it('does not save to the backend when Enter is pressed in a field', async () => {
     const input = await startEditing();
     fireEvent.change(input, { target: { value: 'Monroe Jr' } });

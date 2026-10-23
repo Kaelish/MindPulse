@@ -1805,35 +1805,42 @@
 }
 
 .admin-scope .profile-field span {
-  color: var(--adm-text-2);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  color: var(--adm-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.admin-scope .profile-field input {
+.admin-scope .profile-field input,
+.admin-scope .profile-field select {
   min-height: 44px;
   padding: 11px 14px;
   border: 1px solid var(--adm-border-strong);
   border-radius: var(--adm-radius-sm);
-  background: var(--adm-surface);
+  background: var(--adm-surface-2);
   color: var(--adm-text);
   font-size: 0.94rem;
+  font-family: inherit;
+  line-height: 1.4;
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.admin-scope .profile-field input[readonly] {
+.admin-scope .profile-field input[readonly],
+.admin-scope .profile-field select:disabled {
   background: var(--adm-surface-3);
   color: var(--adm-muted);
 }
 
-.admin-scope .profile-field input:not([readonly]) {
+.admin-scope .profile-field input:not([readonly]),
+.admin-scope .profile-field select:not(:disabled) {
   background: var(--adm-surface);
   border-color: var(--adm-border-strong);
   color: var(--adm-text);
 }
 
-.admin-scope .profile-field input:focus {
+.admin-scope .profile-field input:focus,
+.admin-scope .profile-field select:focus {
   outline: none;
   border-color: var(--adm-accent);
   box-shadow: 0 0 0 3px rgba(14, 127, 150, 0.16);

@@ -1,0 +1,335 @@
+.profile-security-stack {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.profile-security-section {
+  min-width: 0;
+  padding: 22px 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.profile-security-section > header h2,
+.profile-security-toggle-row h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.profile-security-section > header p,
+.profile-security-toggle-row p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.profile-security-password-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px 20px;
+  margin-top: 18px;
+}
+
+.profile-security-password-grid label,
+.profile-security-mfa label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.profile-security-password-grid label > span,
+.profile-security-mfa label > span {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.profile-security-password-grid input,
+.profile-security-mfa input {
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #d6e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1e293b;
+  font: inherit;
+  font-size: 0.94rem;
+}
+
+.profile-security-password-grid input:focus,
+.profile-security-mfa input:focus {
+  border-color: #0e7f96;
+  outline: 3px solid rgba(14, 127, 150, 0.12);
+}
+
+.profile-security-password-grid input[readonly] {
+  cursor: default;
+}
+
+.profile-security-primary,
+.profile-security-secondary,
+.profile-security-logout {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #0e7f96;
+  border-radius: 8px;
+  background: #0e7f96;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-security-secondary {
+  border-color: #d6e0e8;
+  background: #ffffff;
+  color: #334155;
+}
+
+.profile-security-primary:disabled,
+.profile-security-secondary:disabled,
+.profile-security-logout:disabled,
+.profile-security-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-security-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.profile-security-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex: 0 0 48px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+}
+
+.profile-security-switch > span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  transition: transform 0.16s ease;
+}
+
+.profile-security-switch.is-on {
+  border-color: #0e7f96;
+  background: #0e7f96;
+}
+
+.profile-security-switch.is-on > span {
+  transform: translateX(20px);
+}
+
+.profile-security-mfa {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.profile-security-mfa img {
+  width: 132px;
+  height: 132px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.profile-security-mfa label {
+  flex: 1;
+}
+
+.profile-security-session-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.profile-security-session-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.profile-security-session {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.profile-security-session > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-security-session h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 0.92rem;
+}
+
+.profile-security-session header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.profile-security-current {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #e3f3f7;
+  color: #0e6475;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.profile-security-session dl {
+  display: grid;
+  gap: 8px;
+  margin: 15px 0;
+}
+
+.profile-security-session dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-security-session dt,
+.profile-security-session dd {
+  margin: 0;
+  font-size: 0.77rem;
+}
+
+.profile-security-session dt {
+  color: #64748b;
+}
+
+.profile-security-session dd {
+  color: #334155;
+  text-align: right;
+}
+
+.profile-security-logout {
+  min-height: 34px;
+  border-color: #e5b6ba;
+  background: #ffffff;
+  color: #a42b35;
+}
+
+.profile-security-empty,
+.profile-security-session-error,
+.profile-security-session-note {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.profile-security-session-error,
+.profile-security-alert {
+  color: #b4232d;
+}
+
+.profile-security-session-note {
+  margin: 14px 0 0;
+}
+
+.profile-security-alert,
+.profile-security-notice {
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  font-size: 0.86rem;
+}
+
+.profile-security-notice {
+  border-color: #b8e4d0;
+  background: #f1fbf6;
+  color: #16734a;
+}
+
+.admin-scope .profile-security-section {
+  border-color: var(--adm-border);
+  background: var(--adm-surface);
+}
+
+.admin-scope .profile-security-section > header h2,
+.admin-scope .profile-security-toggle-row h2,
+.admin-scope .profile-security-session h3 {
+  color: var(--adm-text);
+}
+
+.admin-scope .profile-security-section > header p,
+.admin-scope .profile-security-toggle-row p,
+.admin-scope .profile-security-session dt,
+.admin-scope .profile-security-session header p {
+  color: var(--adm-muted);
+}
+
+.admin-scope .profile-security-password-grid input,
+.admin-scope .profile-security-mfa input {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-text);
+}
+
+.admin-scope .profile-security-session {
+  border-color: var(--adm-border);
+  background: var(--adm-surface-2);
+}
+
+.admin-scope .profile-security-session dd {
+  color: var(--adm-text-2);
+}
+
+@media (max-width: 680px) {
+  .profile-security-section {
+    padding: 18px;
+  }
+
+  .profile-security-password-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-security-session-header,
+  .profile-security-mfa {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-security-session-list {
+    grid-template-columns: 1fr;
+  }
+}

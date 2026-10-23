@@ -2,37 +2,52 @@ import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
-import { OwnProfile, OwnProfilePatch, changeOwnPassword, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
-import { passwordPolicyError } from '../../services/adminSettings';
+import { ProfileSecurityPanel } from '../../components/ProfileSecurityPanel';
+import { OwnProfile, OwnProfilePatch, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
 import { uploadProfileAvatar } from '../../services/profileAvatar';
 import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'professional' | 'security';
 
-type EditableField = 'first_name' | 'last_name' | 'department' | 'program' | 'year_level' | 'student_no' | 'sex';
+type EditableField =
+  | 'first_name' | 'last_name' | 'email' | 'phone' | 'sex' | 'preferred_title' | 'clinic_address'
+  | 'administrative_title' | 'medical_specialization' | 'professional_license_no' | 'clinic_name' | 'privacy_scope';
 
 type ProfileDraft = Record<EditableField, string>;
 
-const EDITABLE_FIELDS: EditableField[] = ['first_name', 'last_name', 'department', 'program', 'year_level', 'student_no', 'sex'];
+const EDITABLE_FIELDS: EditableField[] = [
+  'first_name', 'last_name', 'email', 'phone', 'sex', 'preferred_title', 'clinic_address',
+  'administrative_title', 'medical_specialization', 'professional_license_no', 'clinic_name', 'privacy_scope',
+];
 
 const EMPTY_DRAFT: ProfileDraft = {
   first_name: '',
   last_name: '',
-  department: '',
-  program: '',
-  year_level: '',
-  student_no: '',
+  email: '',
+  phone: '',
   sex: '',
+  preferred_title: '',
+  clinic_address: '',
+  administrative_title: '',
+  medical_specialization: '',
+  professional_license_no: '',
+  clinic_name: '',
+  privacy_scope: '',
 };
 
 const toDraft = (profile: OwnProfile): ProfileDraft => ({
   first_name: profile.first_name ?? '',
   last_name: profile.last_name ?? '',
-  department: profile.department ?? '',
-  program: profile.program ?? '',
-  year_level: profile.year_level ?? '',
-  student_no: profile.student_no ?? '',
+  email: profile.email ?? '',
+  phone: profile.phone ?? '',
   sex: profile.sex ?? '',
+  preferred_title: profile.preferred_title ?? '',
+  clinic_address: profile.clinic_address ?? '',
+  administrative_title: profile.administrative_title ?? '',
+  medical_specialization: profile.medical_specialization ?? '',
+  professional_license_no: profile.professional_license_no ?? '',
+  clinic_name: profile.clinic_name ?? '',
+  privacy_scope: profile.privacy_scope ?? '',
 });
 
 const formatDate = (value: string) => {
@@ -60,14 +75,6 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
-  const [activeSessions] = useState([
-    { browser: 'Chrome', os: 'Windows 11', ip: '192.168.0.12', location: 'Quezon City, PH' },
-    { browser: 'Safari', os: 'macOS 15', ip: '10.0.0.8', location: 'Makati, PH' },
-  ]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -105,44 +112,28 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!profile) return;
-    if (activeTab !== 'security' && !editing) return;
+    if (activeTab === 'security' || !editing) return;
     setSaved('');
     setSaveError('');
-
-    if (activeTab === 'security') {
-      const policyError = passwordPolicyError(newPassword);
-      if (policyError) {
-        setSaveError(policyError);
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setSaveError('New passwords do not match.');
-        return;
-      }
-      setSaving(true);
-      try {
-        await changeOwnPassword(newPassword);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setSaved('Password updated successfully.');
-      } catch (error) {
-        setSaveError(error instanceof Error ? error.message : 'Unable to update your password.');
-      } finally {
-        setSaving(false);
-      }
+    const email = draft.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setSaveError('Enter a valid email address containing @.');
+      return;
+    }
+    if (draft.phone && !/^\d+$/.test(draft.phone)) {
+      setSaveError('Phone number can contain numbers only.');
       return;
     }
 
     const patch: OwnProfilePatch = {};
     EDITABLE_FIELDS.forEach((field) => {
-      if ((draft[field] ?? '') !== (profile[field] ?? '')) {
+      if (draft[field] !== String(profile[field] ?? '')) {
         patch[field] = draft[field] === '' ? null : draft[field];
       }
     });
     if (Object.keys(patch).length === 0) {
       if (!avatarFile) {
-        setSaved('No changes to save.');
+        setSaveError('No changes to save. Edit a field before saving.');
         return;
       }
     }
@@ -150,7 +141,9 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
     try {
       if (Object.keys(patch).length > 0) await updateOwnProfile(patch);
       const avatarUrl = avatarFile ? await uploadProfileAvatar(avatarFile) : profile.avatar_url;
-      setProfile((current) => (current ? { ...current, ...patch, avatar_url: avatarUrl } : current));
+      const updatedProfile = { ...profile, ...patch, avatar_url: avatarUrl };
+      setProfile(updatedProfile);
+      setDraft(toDraft(updatedProfile));
       setAvatarFile(null);
       setAvatarPreview(avatarUrl);
       setEditing(false);
@@ -221,8 +214,6 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   const identityName = fullName || profile.email || 'Your account';
   const roleLabel = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
-  const showStudentFields = profile.role === 'student'
-    || Boolean(profile.student_no || profile.program || profile.year_level);
 
   return <div className="admin-shell admin-scope admin-profile-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />
@@ -238,76 +229,40 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           )}
           <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
         </div>
-        <div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.department || 'No department'}</p></div>
-        {(activeTab === 'personal' || activeTab === 'professional') && <div className="profile-header-actions">
-          <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => { setEditing(true); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel' : '✎ Edit Profile'}</button>
-          {editing && <button type="submit" form="admin-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
-        </div>}
+        <div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.medical_specialization || profile.department || 'Clinical Administration'}</p></div>
+        <div className="profile-header-actions">
+          <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => { setEditing(true); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel' : 'Edit Profile'}</button>
+          {editing && activeTab !== 'security' && <button type="submit" form="admin-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
+        </div>
       </section>
-      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setEditing(false); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
+      <nav className="admin-profile-tabs" aria-label="Profile settings sections">{([['personal', 'Personal Information'], ['professional', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setSaved(''); setSaveError(''); }}>{label}</button>)}</nav>
       {saved && <div className="profile-save-banner">{saved}</div>}
-      {saveError && <div className="error-inline">{saveError}</div>}
-      <form id="admin-profile-form" className="admin-profile-form" onSubmit={save}>
-        {activeTab === 'personal' && <ProfileSection title="Personal Information">
-          <Field label="First Name" value={draft.first_name} editing={editing} onChange={(value) => updateDraft('first_name', value)} />
-          <Field label="Last Name" value={draft.last_name} editing={editing} onChange={(value) => updateDraft('last_name', value)} />
-          <Field label="Email Address" value={profile.email || ''} editing={false} placeholder="No email" />
-          <Field label="Gender" value={draft.sex} editing={editing} onChange={(value) => updateDraft('sex', value)} placeholder="Not set" />
-          {profile.birth_date && <Field label="Date Of Birth" value={formatDate(profile.birth_date)} editing={false} />}
-          {showStudentFields && <><Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" /><Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" /><Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" /></>}
-        </ProfileSection>}
-        {activeTab === 'professional' && <ProfileSection title="Professional Details">
-          <Field label="Department" value={draft.department} editing={editing} onChange={(value) => updateDraft('department', value)} placeholder="Not set" />
-          <Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" />
-          <Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" />
-          <Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" />
-        </ProfileSection>}
-        {activeTab === 'security' && (
-          <>
-            <ProfileSection title="Change Password">
-              <Field label="Current Password" value={currentPassword} editing onChange={(value) => setCurrentPassword(value)} placeholder="Enter current password" type="password" />
-              <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
-              <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
-            </ProfileSection>
-            <div className="admin-profile-toggle-card">
-              <div>
-                <strong>Two-Factor Authentication</strong>
-                <span>Recommended for account protection and access compliance.</span>
-              </div>
-              <button type="button" className={`admin-profile-toggle ${twoFactorEnabled ? 'is-on' : ''}`} aria-pressed={twoFactorEnabled} onClick={() => setTwoFactorEnabled((value) => !value)}>
-                <span className="admin-profile-toggle-knob" />
-              </button>
-            </div>
-            <div className="admin-profile-session-card">
-              <div className="admin-profile-session-head">
-                <div>
-                  <strong>Active Login Sessions</strong>
-                  <span>Review devices currently signed in to your account.</span>
-                </div>
-                <button type="button" className="admin-profile-secondary-button">Log Out Other Sessions</button>
-              </div>
-              <div className="admin-profile-session-list">
-                {activeSessions.map((session) => (
-                  <div key={`${session.browser}-${session.ip}`} className="admin-profile-session-item">
-                    <div>
-                      <strong>{session.browser}</strong>
-                      <span>{session.os}</span>
-                    </div>
-                    <div>
-                      <strong>{session.ip}</strong>
-                      <span>{session.location}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>
-          </>
-        )}
-      </form>
+      {saveError && <div className="error-inline" role="alert">{saveError}</div>}
+      {activeTab !== 'security' ? (
+        <form id="admin-profile-form" className="admin-profile-form" onSubmit={save}>
+          {activeTab === 'personal' && <ProfileSection title="Personal Information">
+            <Field label="First Name" value={draft.first_name} editing={editing} onChange={(value) => updateDraft('first_name', value)} required />
+            <Field label="Last Name" value={draft.last_name} editing={editing} onChange={(value) => updateDraft('last_name', value)} required />
+            <Field label="Work Email Address" value={draft.email} editing={editing} onChange={(value) => updateDraft('email', value)} type="email" required />
+            <Field label="Phone Number" value={draft.phone} editing={editing} onChange={(value) => updateDraft('phone', value)} type="tel" inputMode="numeric" pattern="[0-9]*" />
+            <Field label="Preferred Title / Honorific" value={draft.preferred_title} editing={editing} onChange={(value) => updateDraft('preferred_title', value)} placeholder="Dr., Prof., etc." />
+            <SelectField label="Gender" value={draft.sex} editing={editing} onChange={(value) => updateDraft('sex', value)} />
+            <Field label="Clinic Address / Location" value={draft.clinic_address} editing={editing} onChange={(value) => updateDraft('clinic_address', value)} full />
+            {profile.birth_date && <Field label="Date Of Birth" value={formatDate(profile.birth_date)} editing={false} />}
+          </ProfileSection>}
+          {activeTab === 'professional' && <ProfileSection title="Professional Details">
+            <Field label="Administrative Title" value={draft.administrative_title} editing={editing} onChange={(value) => updateDraft('administrative_title', value)} placeholder="Clinic Director & Lead Administrator" />
+            <Field label="Medical Specialization" value={draft.medical_specialization} editing={editing} onChange={(value) => updateDraft('medical_specialization', value)} placeholder="Clinical Psychology" />
+            <Field label="PRC / Professional License No." value={draft.professional_license_no} editing={editing} onChange={(value) => updateDraft('professional_license_no', value)} />
+            <Field label="Clinic / Institution Name" value={draft.clinic_name} editing={editing} onChange={(value) => updateDraft('clinic_name', value)} />
+            <Field label="Privacy Responsibility Scope" value={draft.privacy_scope} editing={editing} onChange={(value) => updateDraft('privacy_scope', value)} placeholder="Sole Data Privacy Officer & Doctor Credential Verifier" full />
+          </ProfileSection>}
+        </form>
+      ) : <ProfileSecurityPanel editing={editing} email={profile.email || ''} />}
     </main>
   </div>;
 };
 
 const ProfileSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => <section className="admin-profile-section"><h2>{title}</h2><div className="profile-fields">{children}</div></section>;
-const Field: React.FC<{ label: string; value: string; editing: boolean; onChange?: (value: string) => void; full?: boolean; placeholder?: string; type?: string }> = ({ label, value, editing, onChange, full, placeholder, type = 'text' }) => <label className={`profile-field ${full ? 'full' : ''}`}><span>{label}</span><input type={type} value={value} placeholder={placeholder} readOnly={!editing} onChange={(event) => onChange?.(event.target.value)} /></label>;
+const Field: React.FC<{ label: string; value: string; editing: boolean; onChange?: (value: string) => void; full?: boolean; placeholder?: string; type?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; pattern?: string; required?: boolean }> = ({ label, value, editing, onChange, full, placeholder, type = 'text', inputMode, pattern, required }) => <label className={`profile-field ${full ? 'full' : ''}`}><span>{label}</span><input type={type} inputMode={inputMode} pattern={pattern} required={required} value={value} placeholder={placeholder} readOnly={!editing} onChange={(event) => onChange?.(event.target.value)} /></label>;
+const SelectField: React.FC<{ label: string; value: string; editing: boolean; onChange: (value: string) => void }> = ({ label, value, editing, onChange }) => <label className="profile-field"><span>{label}</span><select value={value} disabled={!editing} onChange={(event) => onChange(event.target.value)}><option value="">Select gender</option><option value="Female">Female</option><option value="Male">Male</option><option value="Non-binary">Non-binary</option><option value="Prefer not to say">Prefer not to say</option><option value="Other">Other</option></select></label>;
