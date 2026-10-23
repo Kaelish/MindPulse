@@ -40,6 +40,7 @@ const viewFromPath = (pathname: string): AdminView => {
     case 'assessment-tools': return 'assessment';
     case 'results': return 'results';
     case 'records': return 'records';
+    case 'profile': return 'profile';
     case 'suggestions': return 'suggestions';
     case 'analytics': return 'analytics';
     case 'settings': return 'settings';
@@ -57,7 +58,7 @@ const pathForView = (view: AdminView): string => {
     case 'reports':
     case 'analytics': return '/analytics';
     case 'suggestions': return '/suggestions';
-    case 'profile':
+    case 'profile': return '/profile';
     case 'settings': return '/settings';
     case 'notifications': return '/notifications';
     default: return '/dashboard';

@@ -63,3 +63,15 @@ test('refreshes the unread dot when the panel reports a change', async () => {
   await waitFor(() => expect(fetchUnreadNotificationCount).toHaveBeenCalledTimes(2));
   await waitFor(() => expect(bell.querySelector('span')).toBeNull());
 });
+
+test('opens profile settings from the account card without replacing website settings', async () => {
+  render(<AdminDashboardView onSignOut={jest.fn()} />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Open Profile Settings for Administrator' }));
+  await waitFor(() => expect(window.location.pathname).toBe('/profile'));
+  expect(await screen.findByRole('heading', { name: 'Profile Settings' })).toBeInTheDocument();
+
+  window.history.pushState({}, '', '/settings');
+  fireEvent(window, new PopStateEvent('popstate'));
+  expect(await screen.findByText('System Information')).toBeInTheDocument();
+});

@@ -32,6 +32,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
   const [avatarUrl, setAvatarUrl] = useState(() => window.localStorage.getItem('mindpulse.profileAvatarUrl'));
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [profileTitle, setProfileTitle] = useState('Chief Clinical Administrator');
 
   useEffect(() => {
     let active = true;
@@ -42,6 +43,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       const name = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
       setProfileName(name);
       setProfileEmail(profile.email ?? '');
+      setProfileTitle(profile.department || 'Chief Clinical Administrator');
     }).catch(() => {
       // Profile row missing: fall back to the auth account so the card is never stale.
       void supabase?.auth.getUser().then(({ data }) => {
@@ -89,20 +91,22 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
         ))}
       </nav>
       <div className="admin-account-area">
-        <div
+        <button
           className={`admin-account ${activeView === 'profile' ? 'active' : ''}`}
-          role="button"
-          tabIndex={0}
+          type="button"
+          aria-label={`Open Profile Settings for ${displayName}`}
+          aria-current={activeView === 'profile' ? 'page' : undefined}
           onClick={() => onNavigate?.('profile')}
         >
           <span className="admin-account-avatar">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : 'A'}
           </span>
-          <span>
+          <span className="admin-account-copy">
             <strong>{displayName}</strong>
             <small>{displayEmail}</small>
+            <small className="admin-account-title">{profileTitle}</small>
           </span>
-        </div>
+        </button>
         <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>
           <span className="signout-icon" aria-hidden="true">➔</span>
           <span className="signout-label">Sign Out</span>
