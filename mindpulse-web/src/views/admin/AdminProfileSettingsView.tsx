@@ -144,6 +144,13 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       const updatedProfile = { ...profile, ...patch, avatar_url: avatarUrl };
       setProfile(updatedProfile);
       setDraft(toDraft(updatedProfile));
+      window.dispatchEvent(new CustomEvent('mindpulse:profile-updated', {
+        detail: {
+          name: `${updatedProfile.first_name ?? ''} ${updatedProfile.last_name ?? ''}`.trim(),
+          email: updatedProfile.email ?? '',
+          administrativeTitle: updatedProfile.administrative_title || 'Chief Clinical Administrator',
+        },
+      }));
       setAvatarFile(null);
       setAvatarPreview(avatarUrl);
       setEditing(false);
@@ -213,7 +220,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
 
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   const identityName = fullName || profile.email || 'Your account';
-  const roleLabel = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
+  const roleLabel = profile.administrative_title?.trim() || (profile.role.charAt(0).toUpperCase() + profile.role.slice(1));
 
   return <div className="admin-shell admin-scope admin-profile-shell">
     <AdminSidebar onSignOut={onSignOut} activeView="profile" onNavigate={onNavigate} />

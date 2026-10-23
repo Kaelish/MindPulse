@@ -55,6 +55,7 @@ const renderAdminProfile = async () => {
 
 it('locks fields until Edit Profile is pressed and provides a gender dropdown', async () => {
   await renderAdminProfile();
+  expect(screen.getByText('Clinic Director')).toBeInTheDocument();
   expect(screen.getByLabelText('First Name')).toHaveAttribute('readonly');
   expect(screen.getByLabelText('Gender')).toBeDisabled();
 

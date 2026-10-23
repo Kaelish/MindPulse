@@ -43,7 +43,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       const name = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
       setProfileName(name);
       setProfileEmail(profile.email ?? '');
-      setProfileTitle(profile.department || 'Chief Clinical Administrator');
+      setProfileTitle(profile.administrative_title?.trim() || 'Chief Clinical Administrator');
     }).catch(() => {
       // Profile row missing: fall back to the auth account so the card is never stale.
       void supabase?.auth.getUser().then(({ data }) => {
@@ -57,10 +57,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
       setAvatarUrl(detail?.avatarUrl ?? null);
     };
+    const updateProfile = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: string; email?: string; administrativeTitle?: string }>).detail;
+      if (detail?.name !== undefined) setProfileName(detail.name);
+      if (detail?.email !== undefined) setProfileEmail(detail.email);
+      if (detail?.administrativeTitle !== undefined) setProfileTitle(detail.administrativeTitle);
+    };
     window.addEventListener('mindpulse:avatar-updated', updateAvatar);
+    window.addEventListener('mindpulse:profile-updated', updateProfile);
     return () => {
       active = false;
       window.removeEventListener('mindpulse:avatar-updated', updateAvatar);
+      window.removeEventListener('mindpulse:profile-updated', updateProfile);
     };
   }, []);
 
