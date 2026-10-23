@@ -184,14 +184,22 @@
   transform: translateY(-1px);
 }
 
-.admin-scope .admin-dashboard-notification > span:last-child {
+.admin-scope .admin-dashboard-notification-badge {
   position: absolute;
-  top: 9px;
-  right: 10px;
-  width: 8px;
-  height: 8px;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border: 2px solid var(--adm-surface);
+  border-radius: 999px;
   background: var(--adm-danger);
-  box-shadow: 0 0 0 2px var(--adm-surface);
+  color: var(--adm-accent-contrast);
+  font-size: 0.67rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(214, 69, 80, 0.28);
 }
 
 /* ----------------------------------------------------------- card shell */

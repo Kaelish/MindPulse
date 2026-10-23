@@ -11,7 +11,6 @@ import { AdminSuggestionsView } from './AdminSuggestionsView';
 import { AdminGenerateReportsView } from './AdminGenerateReportsView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { BrandLogo } from '../../components/BrandLogo';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminDashboardCharts, AdminOverviewStats, fetchAdminDashboardCharts, fetchAdminOverview } from '../../services/admin';
 import { fetchUnreadNotificationCount } from '../../services/notifications';
@@ -75,6 +74,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const unreadBadgeLabel = unreadNotifications > 9 ? '9+' : String(unreadNotifications);
 
   const refreshUnread = useCallback(() => {
     fetchUnreadNotificationCount()
@@ -168,9 +168,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
       <main className="admin-dashboard-main">
         <header className="admin-dashboard-header">
           <div className="admin-dashboard-title">
-            <span className="admin-dashboard-logo">
-              <BrandLogo className="brand-logo-img" />
-            </span>
             <div>
               <div className="admin-dashboard-eyebrow">System Management</div>
               <h1>Admin Dashboard</h1>
@@ -181,14 +178,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
               <button
                 type="button"
                 className="admin-dashboard-notification"
-                aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
+                aria-label={unreadNotifications > 0 ? `Notifications, ${unreadBadgeLabel} unread` : 'Notifications'}
                 onClick={() => {
                   setShowNotifications((open) => !open);
                   refreshUnread();
                 }}
               >
                 <NotificationBell />
-                {unreadNotifications > 0 && <span />}
+                {unreadNotifications > 0 && <span className="admin-dashboard-notification-badge">{unreadBadgeLabel}</span>}
               </button>
               {showNotifications && <NotificationPanel variant="dashboard" onChanged={refreshUnread} />}
             </div>
