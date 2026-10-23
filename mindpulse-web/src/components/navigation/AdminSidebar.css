@@ -9,8 +9,8 @@
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
-  padding: 26px 18px 20px;
-  gap: 26px;
+  padding: 18px 14px 14px;
+  gap: 14px;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #ffffff 0%, #f6fbfd 100%);
@@ -21,15 +21,15 @@
 
 /* brand */
 .admin-sidebar .brand-block {
-  gap: 12px;
-  padding: 4px 8px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+  padding: 2px 8px 12px;
+  border-bottom: 1px solid #e4edf2;
 }
 
 .admin-sidebar .brand-mark {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   border-radius: 14px;
   background: linear-gradient(135deg, #53c7d7, #0f8298);
   color: #06222a;
@@ -45,7 +45,7 @@
 
 .admin-sidebar .brand-name {
   color: #0e1c26;
-  font-size: 1.06rem;
+  font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -54,7 +54,7 @@
   display: block;
   margin-top: 2px;
   color: #5d7381;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -62,15 +62,15 @@
 
 /* navigation */
 .admin-sidebar .nav-panel {
-  gap: 6px;
+  gap: 3px;
   margin: 0;
 }
 
 .admin-sidebar .nav-label {
   display: block;
-  padding: 0 12px 8px;
-  color: rgba(159, 176, 198, 0.55);
-  font-size: 0.7rem;
+  padding: 0 10px 5px;
+  color: #748996;
+  font-size: 0.64rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -78,9 +78,9 @@
 
 .admin-sidebar .nav-item {
   width: 100%;
-  min-height: 46px;
-  padding: 0 14px;
-  gap: 12px;
+  min-height: 40px;
+  padding: 0 10px;
+  gap: 9px;
   border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
@@ -88,7 +88,7 @@
   display: flex;
   align-items: center;
   text-align: left;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -115,9 +115,9 @@
 .admin-sidebar .nav-icon {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   border-radius: 8px;
   background: rgba(15, 130, 152, 0.08);
   color: inherit;
@@ -138,32 +138,32 @@
 /* account */
 .admin-sidebar .admin-account-area {
   margin-top: auto;
-  padding: 16px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 0 0;
+  border-top: 1px solid #e4edf2;
 }
 
 .admin-sidebar .admin-account {
   display: flex;
   align-items: center;
-  gap: 11px;
-  margin-bottom: 12px;
-  padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 9px;
+  margin-bottom: 9px;
+  padding: 8px;
+  border: 1px solid #e4edf2;
+  border-radius: 10px;
+  background: #f7fbfd;
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease;
 }
 
 .admin-sidebar .admin-account:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: #edf8fb;
+  border-color: #cfe4ea;
 }
 
 .admin-sidebar .admin-account-avatar {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   display: grid;
   place-items: center;
   border-radius: 12px;
@@ -181,8 +181,8 @@
 .admin-sidebar .admin-account strong {
   display: block;
   overflow: hidden;
-  color: #ffffff;
-  font-size: 0.9rem;
+  color: #0e1c26;
+  font-size: 0.82rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -192,21 +192,21 @@
   display: block;
   overflow: hidden;
   margin-top: 2px;
-  color: rgba(159, 176, 198, 0.85);
-  font-size: 0.76rem;
+  color: #5d7381;
+  font-size: 0.7rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .admin-sidebar .sidebar-signout-btn {
   width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dbe6ec;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #dbe6f2;
-  font-size: 0.9rem;
+  background: #ffffff;
+  color: #47606e;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -217,9 +217,9 @@
 }
 
 .admin-sidebar .sidebar-signout-btn:hover {
-  background: rgba(214, 69, 80, 0.16);
-  border-color: rgba(214, 69, 80, 0.5);
-  color: #ff9aa2;
+  background: #fff3f3;
+  border-color: #e7a9ad;
+  color: #b52e39;
 }
 
 .admin-sidebar .signout-icon {

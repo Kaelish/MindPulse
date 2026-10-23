@@ -30,6 +30,9 @@ const profile: DoctorProfileData = {
   userId: 'doc-1',
   firstName: 'Maya',
   lastName: 'Reyes',
+  middleInitial: '',
+  title: 'Dr.',
+  preferredLanguage: 'English',
   email: 'maya@example.com',
   phone: '09171234567',
   licenseId: 'PRC-000001',
@@ -85,6 +88,9 @@ test('save still writes the availability notes payload', async () => {
     streetAddress: '12 Sampaguita St.',
     yearsExperience: '6',
     startDate: '2021-03-01',
+    middleInitial: '',
+    title: 'Dr.',
+    preferredLanguage: 'English',
   });
 });
 
