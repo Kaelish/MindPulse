@@ -9,11 +9,11 @@ import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'professional' | 'security';
 
-type EditableField = 'first_name' | 'last_name' | 'department' | 'program' | 'year_level' | 'student_no' | 'sex' | 'living_situation';
+type EditableField = 'first_name' | 'last_name' | 'department' | 'program' | 'year_level' | 'student_no' | 'sex';
 
 type ProfileDraft = Record<EditableField, string>;
 
-const EDITABLE_FIELDS: EditableField[] = ['first_name', 'last_name', 'department', 'program', 'year_level', 'student_no', 'sex', 'living_situation'];
+const EDITABLE_FIELDS: EditableField[] = ['first_name', 'last_name', 'department', 'program', 'year_level', 'student_no', 'sex'];
 
 const EMPTY_DRAFT: ProfileDraft = {
   first_name: '',
@@ -23,7 +23,6 @@ const EMPTY_DRAFT: ProfileDraft = {
   year_level: '',
   student_no: '',
   sex: '',
-  living_situation: '',
 };
 
 const toDraft = (profile: OwnProfile): ProfileDraft => ({
@@ -34,7 +33,6 @@ const toDraft = (profile: OwnProfile): ProfileDraft => ({
   year_level: profile.year_level ?? '',
   student_no: profile.student_no ?? '',
   sex: profile.sex ?? '',
-  living_situation: profile.living_situation ?? '',
 });
 
 const formatDate = (value: string) => {
@@ -65,6 +63,11 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+  const [activeSessions] = useState([
+    { browser: 'Chrome', os: 'Windows 11', ip: '192.168.0.12', location: 'Quezon City, PH' },
+    { browser: 'Safari', os: 'macOS 15', ip: '10.0.0.8', location: 'Makati, PH' },
+  ]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -249,9 +252,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="First Name" value={draft.first_name} editing={editing} onChange={(value) => updateDraft('first_name', value)} />
           <Field label="Last Name" value={draft.last_name} editing={editing} onChange={(value) => updateDraft('last_name', value)} />
           <Field label="Email Address" value={profile.email || ''} editing={false} placeholder="No email" />
-          <Field label="Department" value={draft.department} editing={editing} onChange={(value) => updateDraft('department', value)} placeholder="Not set" />
           <Field label="Gender" value={draft.sex} editing={editing} onChange={(value) => updateDraft('sex', value)} placeholder="Not set" />
-          <Field label="Living Situation" value={draft.living_situation} editing={editing} onChange={(value) => updateDraft('living_situation', value)} placeholder="Not set" />
           {profile.birth_date && <Field label="Date Of Birth" value={formatDate(profile.birth_date)} editing={false} />}
           {showStudentFields && <><Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" /><Field label="Program" value={draft.program} editing={editing} onChange={(value) => updateDraft('program', value)} placeholder="Not set" /><Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" /></>}
         </ProfileSection>}
@@ -261,12 +262,48 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
           <Field label="Year Level" value={draft.year_level} editing={editing} onChange={(value) => updateDraft('year_level', value)} placeholder="Not set" />
           <Field label="Patient Number" value={draft.student_no} editing={editing} onChange={(value) => updateDraft('student_no', value)} placeholder="Not set" />
         </ProfileSection>}
-        {activeTab === 'security' && <ProfileSection title="Change Password">
-          <Field label="Current Password" value={currentPassword} editing onChange={(value) => setCurrentPassword(value)} placeholder="Enter current password" type="password" />
-          <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
-          <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
-        </ProfileSection>}
-        {activeTab === 'security' && <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>}
+        {activeTab === 'security' && (
+          <>
+            <ProfileSection title="Change Password">
+              <Field label="Current Password" value={currentPassword} editing onChange={(value) => setCurrentPassword(value)} placeholder="Enter current password" type="password" />
+              <Field label="New Password" value={newPassword} editing onChange={(value) => setNewPassword(value)} placeholder="Enter new password" type="password" />
+              <Field label="Confirm New Password" value={confirmPassword} editing onChange={(value) => setConfirmPassword(value)} placeholder="Confirm new password" type="password" />
+            </ProfileSection>
+            <div className="admin-profile-toggle-card">
+              <div>
+                <strong>Two-Factor Authentication</strong>
+                <span>Recommended for account protection and access compliance.</span>
+              </div>
+              <button type="button" className={`admin-profile-toggle ${twoFactorEnabled ? 'is-on' : ''}`} aria-pressed={twoFactorEnabled} onClick={() => setTwoFactorEnabled((value) => !value)}>
+                <span className="admin-profile-toggle-knob" />
+              </button>
+            </div>
+            <div className="admin-profile-session-card">
+              <div className="admin-profile-session-head">
+                <div>
+                  <strong>Active Login Sessions</strong>
+                  <span>Review devices currently signed in to your account.</span>
+                </div>
+                <button type="button" className="admin-profile-secondary-button">Log Out Other Sessions</button>
+              </div>
+              <div className="admin-profile-session-list">
+                {activeSessions.map((session) => (
+                  <div key={`${session.browser}-${session.ip}`} className="admin-profile-session-item">
+                    <div>
+                      <strong>{session.browser}</strong>
+                      <span>{session.os}</span>
+                    </div>
+                    <div>
+                      <strong>{session.ip}</strong>
+                      <span>{session.location}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button type="submit" className="small-profile-button" disabled={saving}>{saving ? 'Updating…' : '♧ Change Password'}</button>
+          </>
+        )}
       </form>
     </main>
   </div>;

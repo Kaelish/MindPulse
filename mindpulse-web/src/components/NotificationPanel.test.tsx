@@ -8,6 +8,7 @@ import {
   fetchAllNotifications,
   fetchFeedNotifications,
   markFeedNotificationRead,
+  notificationCategoryForPath,
 } from '../services/notifications';
 
 jest.mock('../services/notifications', () => ({
@@ -110,6 +111,14 @@ test('classifies assessment form edits as Assessment Tools', () => {
     message: 'Assessment form changes are available.',
     type: 'info',
   })).toBe('assessment-tools');
+});
+
+test('maps doctor portal routes to the proper notification section', () => {
+  expect(notificationCategoryForPath('/dashboard')).toBe('all');
+  expect(notificationCategoryForPath('/cases')).toBe('cases');
+  expect(notificationCategoryForPath('/consultations')).toBe('consultations');
+  expect(notificationCategoryForPath('/suggestions')).toBe('suggestions');
+  expect(notificationCategoryForPath('/transactions')).toBe('transactions');
 });
 
 test('returns from notifications to the source route', async () => {

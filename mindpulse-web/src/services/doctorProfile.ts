@@ -6,6 +6,9 @@ export interface DoctorProfileData {
   userId: string;
   firstName: string;
   lastName: string;
+  middleInitial: string;
+  title: string;
+  preferredLanguage: string;
   email: string;
   phone: string;
   licenseId: string;
@@ -24,6 +27,9 @@ const emptyProfile = (userId: string): DoctorProfileData => ({
   userId,
   firstName: '',
   lastName: '',
+  middleInitial: '',
+  title: '',
+  preferredLanguage: 'English',
   email: '',
   phone: '',
   licenseId: '',
@@ -79,6 +85,9 @@ export async function fetchDoctorProfile(): Promise<DoctorProfileData> {
     ...emptyProfile(userId),
     firstName: profileRow.first_name || '',
     lastName: profileRow.last_name || '',
+    middleInitial: extras.middleInitial || '',
+    title: extras.title || '',
+    preferredLanguage: extras.preferredLanguage || 'English',
     email: profileRow.email || '',
     department: profileRow.department || '',
     phone: doctorRow?.contact_number || '',
@@ -142,6 +151,9 @@ export async function saveDoctorProfile(
           streetAddress: profile.streetAddress,
           yearsExperience: profile.yearsExperience,
           startDate: profile.startDate,
+          middleInitial: profile.middleInitial,
+          title: profile.title,
+          preferredLanguage: profile.preferredLanguage,
         }),
       },
       { onConflict: 'user_id' },

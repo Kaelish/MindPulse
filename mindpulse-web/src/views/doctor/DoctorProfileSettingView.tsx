@@ -26,6 +26,11 @@ export const DoctorProfileSettingView: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+  const [activeSessions] = useState([
+    { browser: 'Chrome', os: 'Windows 11', ip: '192.168.0.12', location: 'Quezon City, PH' },
+    { browser: 'Safari', os: 'macOS 15', ip: '10.0.0.8', location: 'Makati, PH' },
+  ]);
 
   const flashSaved = (message: string, tone: 'ok' | 'error' = 'ok') => {
     setSavedTone(tone);
@@ -244,7 +249,15 @@ export const DoctorProfileSettingView: React.FC = () => {
     <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => setActiveTab(key)}>{label}</button>)}</nav>
     {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}
     <form id="doctor-profile-form" className="doctor-profile-form" onSubmit={saveProfile} onKeyDown={blockImplicitSave}>
-      {activeTab === 'personal' && <ProfileSection title="Personal Information"><Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} /><Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} /><Field label="Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" /><Field label="Phone Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} /><Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} /><Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} /><Field label="Street Address" value={profile.streetAddress} editing={editing} onChange={(value) => update('streetAddress', value)} full /></ProfileSection>}
+      {activeTab === 'personal' && <ProfileSection title="Personal Information">
+        <Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} />
+        <Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} />
+        <Field label="Middle Initial" value={profile.middleInitial} editing={editing} onChange={(value) => update('middleInitial', value)} />
+        <Field label="Title / Honorific" value={profile.title} editing={editing} onChange={(value) => update('title', value)} placeholder="Dr., Prof., etc." />
+        <Field label="Work Email" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" />
+        <Field label="Direct Contact Phone" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} />
+        <Field label="Preferred Language" value={profile.preferredLanguage} editing={editing} onChange={(value) => update('preferredLanguage', value)} />
+      </ProfileSection>}
       {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><label className="doctor-profile-field"><span>Position</span>{editing
         ? <select value={specialtyChoice} onChange={(event) => handleSpecialtyChoice(event.target.value)}>
             <option value="" disabled>Select a specialization</option>
@@ -252,10 +265,56 @@ export const DoctorProfileSettingView: React.FC = () => {
             <option value={OTHER_SPECIALIZATION}>{OTHER_SPECIALIZATION}</option>
           </select>
         : <input value={profile.specialty} readOnly />}</label>
+        <Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} />
+        <Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} />
+        <Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} />
+        <Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} />
+        <Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} />
+        <Field label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} />
         {editing && specialtyChoice === OTHER_SPECIALIZATION && <label className="doctor-profile-field full"><span>Other specialization</span><input value={customSpecialty} placeholder="Type your specialization" onChange={(event) => handleCustomSpecialty(event.target.value)} /></label>}
-        <Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} /><Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} /><Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} /><Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} /></ProfileSection>}
-      {activeTab === 'security' && <ProfileSection title="Security"><Field label="Current Password" value={currentPassword} editing onChange={setCurrentPassword} type="password" placeholder="Enter current password" /><Field label="New Password" value={newPassword} editing onChange={setNewPassword} type="password" placeholder="Enter new password (min 8 characters)" /><Field label="Confirm New Password" value={confirmPassword} editing onChange={setConfirmPassword} type="password" placeholder="Confirm new password" /></ProfileSection>}
-      {activeTab === 'security' && <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : 'Change Password'}</button>}
+      </ProfileSection>}
+      {activeTab === 'security' && (
+        <>
+          <ProfileSection title="Security">
+            <Field label="Current Password" value={currentPassword} editing onChange={setCurrentPassword} type="password" placeholder="Enter current password" />
+            <Field label="New Password" value={newPassword} editing onChange={setNewPassword} type="password" placeholder="Enter new password (min 8 characters)" />
+            <Field label="Confirm New Password" value={confirmPassword} editing onChange={setConfirmPassword} type="password" placeholder="Confirm new password" />
+          </ProfileSection>
+          <div className="doctor-profile-toggle-card">
+            <div>
+              <strong>Two-Factor Authentication</strong>
+              <span>Recommended for clinical data privacy compliance.</span>
+            </div>
+            <button type="button" className={`doctor-profile-toggle ${twoFactorEnabled ? 'is-on' : ''}`} aria-pressed={twoFactorEnabled} onClick={() => setTwoFactorEnabled((value) => !value)}>
+              <span className="doctor-profile-toggle-knob" />
+            </button>
+          </div>
+          <div className="doctor-profile-session-card">
+            <div className="doctor-profile-session-head">
+              <div>
+                <strong>Active Login Sessions</strong>
+                <span>Manage devices currently signed in to your account.</span>
+              </div>
+              <button type="button" className="doctor-profile-secondary-button">Log Out Other Sessions</button>
+            </div>
+            <div className="doctor-profile-session-list">
+              {activeSessions.map((session) => (
+                <div key={`${session.browser}-${session.ip}`} className="doctor-profile-session-item">
+                  <div>
+                    <strong>{session.browser}</strong>
+                    <span>{session.os}</span>
+                  </div>
+                  <div>
+                    <strong>{session.ip}</strong>
+                    <span>{session.location}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button type="button" className="small-profile-button" disabled={saving} onClick={changePassword}>{saving ? 'Updating…' : 'Change Password'}</button>
+        </>
+      )}
     </form>
   </main>;
 };

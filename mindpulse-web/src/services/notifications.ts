@@ -32,7 +32,11 @@ export type NotificationCategory =
   | 'results'
   | 'records'
   | 'analytics'
-  | 'settings';
+  | 'settings'
+  | 'cases'
+  | 'consultations'
+  | 'suggestions'
+  | 'transactions';
 
 export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: string }[] = [
   { value: 'users', label: 'Users' },
@@ -41,6 +45,10 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: stri
   { value: 'records', label: 'Records' },
   { value: 'analytics', label: 'Analytics' },
   { value: 'settings', label: 'Settings' },
+  { value: 'cases', label: 'Patient Cases' },
+  { value: 'consultations', label: 'Consultations' },
+  { value: 'suggestions', label: 'Suggestions' },
+  { value: 'transactions', label: 'Transactions' },
 ];
 
 interface NotificationRow {
@@ -71,7 +79,11 @@ export const categoryForNotification = (
   const content = `${notification.title} ${notification.message}`.toLowerCase();
   if (/assessment tool|assessment-tools|\btool\b|form (edits?|updates?|changes?)|tool performance/.test(content)) return 'assessment-tools';
   if (/stress|score|risk|critical scan|assessment result|\bscan\b|\bresults?\b/.test(content)) return 'results';
-  if (notification.type === 'appointment' || /appointment|capacity|registration|account|\buser\b|\bdoctor\b/.test(content)) return 'users';
+  if (/appointment|consultation|booking|session|visit|reschedul/.test(content)) return 'consultations';
+  if (/patient|case|student|history|clinical/.test(content)) return 'cases';
+  if (/recommend|suggestion|plan|advice|guidance|care tip/.test(content)) return 'suggestions';
+  if (/transaction|payment|invoice|receipt|billing|payout/.test(content)) return 'transactions';
+  if (notification.type === 'appointment' || /capacity|registration|account|\buser\b|\bdoctor\b/.test(content)) return 'users';
   if (/record|archive|backup/.test(content)) return 'records';
   if (/analytics|analytic|report|trend/.test(content)) return 'analytics';
   if (/setting|preference|configuration/.test(content)) return 'settings';
@@ -81,9 +93,26 @@ export const categoryForNotification = (
 export const notificationCategoryForPath = (pathname: string): NotificationCategory | 'all' => {
   const section = pathname.replace(/\/+$/, '').split('/').pop()?.toLowerCase();
   switch (section) {
+    case 'dashboard': return 'all';
     case 'users': return 'users';
+    case 'cases':
+    case 'patient-cases':
+    case 'student-cases':
+      return 'cases';
+    case 'consultations':
+    case 'consultation':
+      return 'consultations';
+    case 'suggestions':
+    case 'recommendations':
+    case 'recommendation':
+      return 'suggestions';
+    case 'transactions':
+    case 'billing':
+    case 'payments':
+      return 'transactions';
     case 'assessment-tools':
-    case 'assessment': return 'assessment-tools';
+    case 'assessment':
+      return 'assessment-tools';
     case 'results': return 'results';
     case 'records': return 'records';
     case 'analytics': return 'analytics';
@@ -100,6 +129,10 @@ export const adminPathForNotificationCategory = (category: NotificationCategory 
     case 'records': return '/records';
     case 'analytics': return '/analytics';
     case 'settings': return '/settings';
+    case 'cases': return '/cases';
+    case 'consultations': return '/consultations';
+    case 'suggestions': return '/suggestions';
+    case 'transactions': return '/transactions';
     default: return '/dashboard';
   }
 };

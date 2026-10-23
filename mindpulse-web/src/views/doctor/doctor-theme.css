@@ -75,26 +75,21 @@
   align-self: flex-start;
   height: 100vh;
   max-height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
   width: 276px;
   flex: 0 0 276px;
   display: flex;
   flex-direction: column;
   gap: 18px;
   padding: 24px 16px 20px;
-  background: linear-gradient(180deg, var(--doc-sidebar-bg) 0%, var(--doc-sidebar-bg-2) 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
   border-right: 1px solid var(--doc-sidebar-line);
   color: var(--doc-sidebar-text);
-  scrollbar-width: thin;
 }
 
 .doctor-scope .sidebar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.doctor-scope .sidebar::-webkit-scrollbar-thumb {
-  background: var(--doc-line-strong);
-  border-radius: 999px;
+  width: 0;
+  height: 0;
 }
 
 .doctor-scope .brand-block {
@@ -2379,6 +2374,106 @@
   font-size: 0.94rem;
 }
 
+.doctor-scope .doctor-profile-toggle-card,
+.doctor-scope .doctor-profile-session-card {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-panel);
+}
+
+.doctor-scope .doctor-profile-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.doctor-scope .doctor-profile-toggle-card strong,
+.doctor-scope .doctor-profile-session-head strong,
+.doctor-scope .doctor-profile-session-item strong {
+  display: block;
+  color: var(--doc-ink);
+  font-size: 0.98rem;
+}
+
+.doctor-scope .doctor-profile-toggle-card span,
+.doctor-scope .doctor-profile-session-head span,
+.doctor-scope .doctor-profile-session-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--doc-muted);
+  font-size: 0.82rem;
+}
+
+.doctor-scope .doctor-profile-toggle {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 999px;
+  background: #dfe7ee;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.doctor-scope .doctor-profile-toggle.is-on {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+}
+
+.doctor-scope .doctor-profile-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 25, 34, 0.18);
+  transition: transform 0.18s ease;
+}
+
+.doctor-scope .doctor-profile-toggle.is-on .doctor-profile-toggle-knob {
+  transform: translateX(21px);
+}
+
+.doctor-scope .doctor-profile-session-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.doctor-scope .doctor-profile-secondary-button {
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 10px;
+  background: var(--doc-panel-2);
+  color: var(--doc-ink-2);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.doctor-scope .doctor-profile-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.doctor-scope .doctor-profile-session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--doc-line);
+  border-radius: 10px;
+  background: var(--doc-panel-2);
+}
+
 .doctor-scope .doctor-profile-field input[readonly] {
   background: var(--doc-soft);
   color: var(--doc-ink-2);
@@ -3005,19 +3100,20 @@ html[data-theme='dark'] .doctor-scope .notification-item {
 
 .doctor-scope .doc-bell-badge {
   position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: 999px;
-  background: var(--doc-danger);
+  background: #e53935;
   border: 2px solid var(--doc-bg);
   color: #ffffff;
-  font-size: 0.62rem;
+  font-size: 0.67rem;
   font-weight: 800;
-  line-height: 15px;
+  line-height: 16px;
   text-align: center;
+  box-shadow: 0 4px 10px rgba(229, 57, 53, 0.22);
 }
 
 .doctor-scope .doc-bell-pop {
@@ -3046,6 +3142,11 @@ html[data-theme='dark'] .doctor-scope .notification-item {
 .doctor-scope .doc-bell-pop .notification-panel-note,
 .doctor-scope .doc-bell-pop .notification-heading {
   color: var(--doc-muted);
+  font-size: 0.875rem;
+}
+
+.doctor-scope .doc-bell-pop .notification-item-message {
+  line-height: 1.6;
 }
 
 .doctor-scope .doc-bell-pop .notification-item {
