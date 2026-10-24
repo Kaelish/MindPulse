@@ -162,7 +162,8 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
           className="sidebar-signout-btn"
           onClick={onSignOut}
         >
-          Sign Out
+          <span className="signout-icon" aria-hidden="true">➔</span>
+          <span className="signout-label">Sign Out</span>
         </button>
       </div>
     </aside>
