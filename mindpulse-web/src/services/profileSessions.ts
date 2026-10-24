@@ -665,16 +665,23 @@ export const revokeProfileSession = async (sessionId: string): Promise<RevokeSes
 };
 
 /**
- * Sign out every other device. The native Supabase call revokes the refresh
- * tokens; the broadcast makes connected tabs return to the sign-in screen
- * immediately instead of waiting for their next token refresh.
+ * Sign out every other device but keep this one signed in. The native Supabase
+ * call revokes the other refresh tokens; the broadcast makes connected tabs
+ * return to the sign-in screen immediately instead of waiting for their next
+ * token refresh.
  */
 export const revokeOtherProfileSessions = async (): Promise<RevokeSessionResult> => {
   if (!supabase) throw new Error('Supabase is not configured.');
   state.sessions.forEach((session) => {
     if (!session.isCurrent) revokedSessionIds.add(session.id);
   });
-  const notified = await sendRevoked('*', currentSessionId ?? undefined);
+
+  // A wildcard broadcast without our own id would make this tab sign itself
+  // out. Only broadcast when we know which session must be spared; the server
+  // call below still revokes everyone else.
+  const selfId = currentSessionId;
+  const notified = selfId ? await sendRevoked('*', selfId) : false;
+
   const { error } = await supabase.auth.signOut({ scope: 'others' });
   if (error && !notified) {
     revokedSessionIds.clear();
@@ -684,8 +691,8 @@ export const revokeOtherProfileSessions = async (): Promise<RevokeSessionResult>
   emit({
     sessions: state.sessions.filter((session) => session.isCurrent),
     notice: notified
-      ? 'All other devices were signed out.'
-      : 'All other refresh tokens were revoked. Connected tabs will return to sign-in at their next token refresh.',
+      ? 'All other devices were signed out. This device stays signed in.'
+      : 'All other refresh tokens were revoked; this device stays signed in. Connected tabs return to sign-in at their next token refresh.',
   });
   return { serverRevoked: !error, notified };
 };

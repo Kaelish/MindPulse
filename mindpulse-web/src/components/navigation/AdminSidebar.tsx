@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
-import { fetchOwnProfile } from '../../services/profile';
+import {
+  AdminIdentity,
+  AVATAR_STORAGE_KEY,
+  EMPTY_ADMIN_IDENTITY,
+  loadAdminIdentity,
+  patchCachedAdminIdentity,
+  readCachedAdminIdentity,
+} from '../../services/adminIdentity';
 import { BrandLogo } from '../BrandLogo';
 import './AdminSidebar.css';
 import '../../views/admin/admin-theme.css';
@@ -29,42 +36,62 @@ const NAV_ENTRIES: NavEntry[] = [
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeView = 'dashboard', onNavigate }) => {
-  const [avatarUrl, setAvatarUrl] = useState(() => window.localStorage.getItem('mindpulse.profileAvatarUrl'));
-  const [profileName, setProfileName] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
-  const [profileTitle, setProfileTitle] = useState('Chief Clinical Administrator');
-  const [preferredTitle, setPreferredTitle] = useState('');
+  // Start from the cached identity so a module switch never repaints the
+  // placeholder card ("Administrator / No email on file") before the profile
+  // request finishes. The cache is refreshed in the background below.
+  const [identity, setIdentity] = useState<AdminIdentity>(() => {
+    const cached = readCachedAdminIdentity();
+    if (cached) return cached;
+    let avatarUrl: string | null = null;
+    try {
+      avatarUrl = window.localStorage.getItem(AVATAR_STORAGE_KEY);
+    } catch {
+      avatarUrl = null;
+    }
+    return { ...EMPTY_ADMIN_IDENTITY, avatarUrl };
+  });
 
   useEffect(() => {
     let active = true;
-    fetchOwnProfile().then((profile) => {
-      if (!active) return;
-      setAvatarUrl(profile.avatar_url);
-      if (profile.avatar_url) window.localStorage.setItem('mindpulse.profileAvatarUrl', profile.avatar_url);
-      const name = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
-      setProfileName(name);
-      setProfileEmail(profile.email ?? '');
-      setProfileTitle(profile.administrative_title?.trim() || 'Chief Clinical Administrator');
-      setPreferredTitle(profile.preferred_title?.trim() || '');
-    }).catch(() => {
-      // Profile row missing: fall back to the auth account so the card is never stale.
-      void supabase?.auth.getUser().then(({ data }) => {
-        if (!active || !data.user) return;
-        setProfileEmail(data.user.email ?? '');
-        const metadataName = `${data.user.user_metadata?.first_name ?? ''} ${data.user.user_metadata?.last_name ?? ''}`.trim();
-        setProfileName(metadataName);
+    loadAdminIdentity()
+      .then((next) => {
+        if (!active) return;
+        setIdentity(next);
+        if (next.avatarUrl) {
+          try {
+            window.localStorage.setItem(AVATAR_STORAGE_KEY, next.avatarUrl);
+          } catch {
+            // Ignore storage failures.
+          }
+        }
+      })
+      .catch(() => {
+        // Profile row missing: fall back to the auth account so the card is never stale.
+        void supabase?.auth.getUser().then(({ data }) => {
+          if (!active || !data.user) return;
+          const patch: Partial<AdminIdentity> = { email: data.user.email ?? '' };
+          const metadataName = `${data.user.user_metadata?.first_name ?? ''} ${data.user.user_metadata?.last_name ?? ''}`.trim();
+          if (metadataName) patch.name = metadataName;
+          setIdentity((current) => ({ ...current, ...patch }));
+          patchCachedAdminIdentity(patch);
+        });
       });
-    });
     const updateAvatar = (event: Event) => {
       const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
-      setAvatarUrl(detail?.avatarUrl ?? null);
+      const avatarUrl = detail?.avatarUrl ?? null;
+      setIdentity((current) => ({ ...current, avatarUrl }));
+      patchCachedAdminIdentity({ avatarUrl });
     };
     const updateProfile = (event: Event) => {
       const detail = (event as CustomEvent<{ name?: string; email?: string; preferredTitle?: string; administrativeTitle?: string }>).detail;
-      if (detail?.name !== undefined) setProfileName(detail.name);
-      if (detail?.email !== undefined) setProfileEmail(detail.email);
-      if (detail?.preferredTitle !== undefined) setPreferredTitle(detail.preferredTitle);
-      if (detail?.administrativeTitle !== undefined) setProfileTitle(detail.administrativeTitle);
+      const patch: Partial<AdminIdentity> = {};
+      if (detail?.name !== undefined) patch.name = detail.name;
+      if (detail?.email !== undefined) patch.email = detail.email;
+      if (detail?.preferredTitle !== undefined) patch.preferredTitle = detail.preferredTitle;
+      if (detail?.administrativeTitle !== undefined) patch.administrativeTitle = detail.administrativeTitle;
+      if (Object.keys(patch).length === 0) return;
+      setIdentity((current) => ({ ...current, ...patch }));
+      patchCachedAdminIdentity(patch);
     };
     window.addEventListener('mindpulse:avatar-updated', updateAvatar);
     window.addEventListener('mindpulse:profile-updated', updateProfile);
@@ -75,8 +102,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
     };
   }, []);
 
-  const displayName = [preferredTitle, profileName || 'Administrator'].filter(Boolean).join(' ');
-  const displayEmail = profileEmail || 'No email on file';
+  const displayName = [identity.preferredTitle, identity.name || 'Administrator'].filter(Boolean).join(' ');
+  const displayEmail = identity.email;
+  const displayTitle = identity.administrativeTitle || 'Chief Clinical Administrator';
 
   return (
     <aside className="admin-sidebar">
@@ -110,12 +138,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
           onClick={() => onNavigate?.('profile')}
         >
           <span className="admin-account-avatar">
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : 'A'}
+            {identity.avatarUrl ? <img src={identity.avatarUrl} alt="" /> : 'A'}
           </span>
           <span className="admin-account-copy">
             <strong>{displayName}</strong>
-            <small>{displayEmail}</small>
-            <small className="admin-account-title">{profileTitle}</small>
+            {displayEmail && <small>{displayEmail}</small>}
+            <small className="admin-account-title">{displayTitle}</small>
           </span>
         </button>
         <button type="button" className="sidebar-signout-btn" onClick={onSignOut}>

@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import {
   reportProfileSessionError,
+  revokeOtherProfileSessions,
   startProfileSessionMonitor,
   subscribeProfileSessions,
 } from './profileSessions';
@@ -31,7 +32,7 @@ const mockChannel: {
 
 jest.mock('../supabase/client', () => ({
   supabase: {
-    auth: { getSession: jest.fn() },
+    auth: { getSession: jest.fn(), signOut: jest.fn() },
     channel: jest.fn(),
     removeChannel: jest.fn(),
   },
@@ -45,7 +46,7 @@ const tokenWithoutSessionId = (sub = 'user-1') =>
   `${base64Url('{"alg":"HS256"}')}.${base64Url(JSON.stringify({ sub, iat: 1700000000 }))}.signature`;
 
 const mocked = supabase as unknown as {
-  auth: { getSession: jest.Mock };
+  auth: { getSession: jest.Mock; signOut: jest.Mock };
   channel: jest.Mock;
   removeChannel: jest.Mock;
 };
@@ -67,6 +68,7 @@ beforeEach(() => {
   mocked.channel.mockReset().mockReturnValue(mockChannel);
   mocked.removeChannel.mockReset().mockResolvedValue('ok');
   mocked.auth.getSession.mockReset();
+  mocked.auth.signOut.mockReset().mockResolvedValue({ error: null });
 });
 
 const latestState = () => {
@@ -151,4 +153,43 @@ test('reportProfileSessionError surfaces the underlying message', () => {
   const state = latestState();
   expect(state.status).toBe('offline');
   expect(state.message).toContain('boom');
+});
+
+test('logs out every other device but never this tab', async () => {
+  mocked.auth.getSession.mockResolvedValue({
+    data: { session: { access_token: tokenWithoutSessionId(), user: { id: 'user-1' } } },
+    error: null,
+  });
+
+  const stop = await startProfileSessionMonitor('Admin web');
+  const selfId = latestState().sessions[0].id;
+
+  await revokeOtherProfileSessions();
+
+  // The wildcard broadcast carries our own id so this tab ignores it.
+  expect(mockChannel.send).toHaveBeenCalledWith({
+    type: 'broadcast',
+    event: 'session-revoked',
+    payload: { sessionId: '*', exceptSessionId: selfId },
+  });
+  // Supabase's "others" scope revokes every refresh token except this session.
+  expect(mocked.auth.signOut).toHaveBeenCalledWith({ scope: 'others' });
+  expect(latestState().sessions.map((session) => session.id)).toEqual([selfId]);
+  stop();
+});
+
+test('does not broadcast a wildcard when the current session id is unknown', async () => {
+  mocked.auth.getSession.mockResolvedValue({
+    data: { session: { access_token: tokenWithoutSessionId(), user: { id: 'user-1' } } },
+    error: null,
+  });
+
+  const stop = await startProfileSessionMonitor('Admin web');
+  stop();
+
+  await revokeOtherProfileSessions();
+
+  // Without a self id the wildcard would sign this tab out too, so it is skipped.
+  expect(mockChannel.send).not.toHaveBeenCalled();
+  expect(mocked.auth.signOut).toHaveBeenCalledWith({ scope: 'others' });
 });

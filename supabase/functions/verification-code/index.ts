@@ -1,14 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 /**
- * Sends and verifies the six-digit codes used by the web portals' email and
- * WhatsApp sign-in verification.
+ * Sends and verifies the six-digit codes used by the web portals' email, SMS
+ * and WhatsApp sign-in verification.
  *
  * Required secrets (Supabase → Project Settings → Edge Functions):
  *   RESEND_API_KEY            – for email delivery
  *   VERIFICATION_EMAIL_FROM   – e.g. "MindPulse <security@yourdomain.com>"
- *   TWILIO_ACCOUNT_SID        – for WhatsApp delivery
+ *   TWILIO_ACCOUNT_SID        – for SMS and WhatsApp delivery
  *   TWILIO_AUTH_TOKEN
+ *   TWILIO_SMS_FROM           – SMS sender, e.g. "+15551234567"
+ *   TWILIO_MESSAGING_SERVICE_SID – alternative to TWILIO_SMS_FROM
  *   TWILIO_WHATSAPP_FROM      – e.g. "whatsapp:+14155238886"
  *   VERIFICATION_SECRET       – optional extra HMAC pepper
  *
@@ -115,6 +117,38 @@ const sendWhatsApp = async (destination: string, code: string) => {
   return null;
 };
 
+const sendSms = async (destination: string, code: string) => {
+  const sid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const token = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const from = Deno.env.get('TWILIO_SMS_FROM');
+  const messagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
+  if (!sid || !token || (!from && !messagingServiceSid)) {
+    return 'SMS delivery is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and either TWILIO_SMS_FROM or TWILIO_MESSAGING_SERVICE_SID for the verification-code function.';
+  }
+  const body = new URLSearchParams({
+    To: destination,
+    Body: `MindPulse verification code: ${code}. It expires in ${CODE_TTL_MINUTES} minutes. If you did not try to sign in, change your password immediately.`,
+  });
+  // A Messaging Service handles sender pooling and compliance; a plain From
+  // number is enough for a single Twilio sender.
+  if (messagingServiceSid) body.set('MessagingServiceSid', messagingServiceSid);
+  else if (from) body.set('From', from);
+
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    return `SMS delivery failed${detail ? `: ${detail.slice(0, 200)}` : '.'}`;
+  }
+  return null;
+};
+
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -142,11 +176,11 @@ Deno.serve(async (request: Request) => {
   }
 
   const action = body.action === 'verify' ? 'verify' : body.action === 'send' ? 'send' : '';
-  const channel = body.channel === 'email' || body.channel === 'whatsapp' ? body.channel : '';
+  const channel = body.channel === 'email' || body.channel === 'whatsapp' || body.channel === 'sms' ? body.channel : '';
   const destination = typeof body.destination === 'string' ? body.destination.trim() : '';
-  if (!action || !channel) return json({ error: 'Choose email or WhatsApp verification.' }, 400);
+  if (!action || !channel) return json({ error: 'Choose email, SMS or WhatsApp verification.' }, 400);
   if (channel === 'email' && !isValidEmail(destination)) return json({ error: 'Enter a valid email address.' }, 400);
-  if (channel === 'whatsapp' && !isValidPhone(destination)) return json({ error: 'Enter a phone number in international format, for example +639170000000.' }, 400);
+  if ((channel === 'whatsapp' || channel === 'sms') && !isValidPhone(destination)) return json({ error: 'Enter a phone number in international format, for example +639170000000.' }, 400);
 
   const admin = createClient(projectUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -188,7 +222,9 @@ Deno.serve(async (request: Request) => {
 
     const deliveryError = channel === 'email'
       ? await sendEmail(destination, code)
-      : await sendWhatsApp(destination, code);
+      : channel === 'whatsapp'
+        ? await sendWhatsApp(destination, code)
+        : await sendSms(destination, code);
     if (deliveryError) {
       await admin.from('verification_codes').delete().eq('code_hash', codeHash);
       return json({ error: deliveryError }, 503);

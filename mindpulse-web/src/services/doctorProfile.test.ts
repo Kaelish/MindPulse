@@ -25,12 +25,14 @@ const mockedGetUser = client.auth.getUser;
 const mockedRequireUserId = requireUserId as jest.Mock;
 
 let upserted: Record<string, unknown> | null = null;
+let profileUpdate: Record<string, unknown> | null = null;
 
 const profile: DoctorProfileData = {
   userId: 'doc-1',
   firstName: 'Maya',
   lastName: 'Reyes',
-  middleInitial: '',
+  middleName: 'Louise',
+  middleInitial: 'L',
   title: 'Dr.',
   preferredLanguage: 'English',
   email: 'maya@example.com',
@@ -42,7 +44,9 @@ const profile: DoctorProfileData = {
   startDate: '2021-03-01',
   dob: '1992-05-14',
   gender: 'Female',
-  streetAddress: '12 Sampaguita St.',
+  homeAddress: '12 Sampaguita St.',
+  clinicAddress: 'MindPulse Clinic, Quezon City',
+  bio: 'Helps students manage academic stress.',
   avatarUrl: null,
   isVerified: false,
 };
@@ -50,13 +54,15 @@ const profile: DoctorProfileData = {
 beforeEach(() => {
   jest.clearAllMocks();
   upserted = null;
+  profileUpdate = null;
 
   mockedRequireUserId.mockResolvedValue('doc-1');
   mockedGetUser.mockResolvedValue({ data: { user: { email: 'maya@example.com' } } });
   mockedFrom.mockImplementation((table: string) => ({
-    update: () => ({
-      eq: () => Promise.resolve({ error: null }),
-    }),
+    update: (payload: Record<string, unknown>) => {
+      if (table === 'profiles') profileUpdate = payload;
+      return { eq: () => Promise.resolve({ error: null }) };
+    },
     upsert: (payload: Record<string, unknown>) => {
       if (table === 'doctor_profiles') upserted = payload;
       return Promise.resolve({ error: null });
@@ -75,6 +81,23 @@ test('save never sends is_verified, so the admin-only guard cannot reject the sa
     specialization: 'Clinical Psychologist',
     contact_number: '09171234567',
     license_no: 'PRC-000001',
+    title: 'Dr.',
+    clinic_address: 'MindPulse Clinic, Quezon City',
+    bio: 'Helps students manage academic stress.',
+  });
+});
+
+test('writes the personal-information columns and the derived middle initial', async () => {
+  await saveDoctorProfile(profile);
+
+  expect(profileUpdate).toMatchObject({
+    first_name: 'Maya',
+    last_name: 'Reyes',
+    middle_name: 'Louise',
+    mi: 'L',
+    birth_date: '1992-05-14',
+    sex: 'Female',
+    home_address: '12 Sampaguita St.',
   });
 });
 
@@ -83,15 +106,52 @@ test('save still writes the availability notes payload', async () => {
 
   expect(result.success).toBe(true);
   expect(JSON.parse(String((upserted as Record<string, unknown>).availability_notes))).toEqual({
-    dob: '1992-05-14',
-    gender: 'Female',
-    streetAddress: '12 Sampaguita St.',
-    yearsExperience: '6',
-    startDate: '2021-03-01',
-    middleInitial: '',
+    middleName: 'Louise',
+    middleInitial: 'L',
     title: 'Dr.',
     preferredLanguage: 'English',
+    yearsExperience: '6',
+    startDate: '2021-03-01',
+    dob: '1992-05-14',
+    gender: 'Female',
+    homeAddress: '12 Sampaguita St.',
+    streetAddress: '12 Sampaguita St.',
+    clinicAddress: 'MindPulse Clinic, Quezon City',
+    bio: 'Helps students manage academic stress.',
   });
+});
+
+test('falls back to the legacy columns when migration 0028 has not been applied', async () => {
+  let profileUpdates = 0;
+  mockedFrom.mockImplementation((table: string) => ({
+    update: (payload: Record<string, unknown>) => {
+      if (table === 'profiles') {
+        profileUpdates += 1;
+        if ('middle_name' in payload) {
+          return { eq: () => Promise.resolve({ error: { message: "Could not find the 'middle_name' column of 'profiles' in the schema cache" } }) };
+        }
+        profileUpdate = payload;
+      }
+      return { eq: () => Promise.resolve({ error: null }) };
+    },
+    upsert: (payload: Record<string, unknown>) => {
+      if (table === 'doctor_profiles') {
+        if ('title' in payload) {
+          return Promise.resolve({ error: { message: "Could not find the 'title' column of 'doctor_profiles' in the schema cache" } });
+        }
+        upserted = payload;
+      }
+      return Promise.resolve({ error: null });
+    },
+  }));
+
+  const result = await saveDoctorProfile(profile);
+
+  expect(result.success).toBe(true);
+  expect(profileUpdates).toBe(2);
+  expect(profileUpdate).not.toHaveProperty('middle_name');
+  expect(upserted).not.toHaveProperty('title');
+  expect(upserted).not.toBeNull();
 });
 
 test('surfaces a backend rejection instead of fabricating a success', async () => {

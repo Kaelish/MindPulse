@@ -1300,6 +1300,48 @@
   color: #ffffff;
 }
 
+/* The profile tabs follow the reference design: a flat row with a pale active
+   tab and a teal underline, while the detail tabs keep their pill style. */
+.doctor-scope .doctor-profile-tabs {
+  gap: 4px;
+  padding: 0;
+  margin-bottom: 18px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--doc-line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.doctor-scope .doctor-profile-tabs button {
+  flex: 0 0 auto;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.doctor-scope .doctor-profile-tabs button:hover {
+  background: var(--doc-soft);
+  color: var(--doc-ink);
+}
+
+.doctor-scope .doctor-profile-tabs button.active {
+  position: relative;
+  background: var(--primary-soft);
+  border-color: transparent;
+  color: var(--primary-strong);
+}
+
+.doctor-scope .doctor-profile-tabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--primary-strong);
+}
+
 .doctor-scope .detail-stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2338,7 +2380,12 @@
 }
 
 .doctor-scope .doctor-profile-form {
-  padding: 24px 26px;
+  padding: 26px 28px;
+  margin-bottom: 20px;
+  background: var(--doc-panel);
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-lg);
+  box-shadow: var(--doc-shadow);
 }
 
 .doctor-scope .doctor-profile-section {
@@ -2348,14 +2395,23 @@
   box-shadow: none;
 }
 
+.doctor-scope .doctor-profile-section h2 {
+  margin: 0 0 18px;
+  color: var(--doc-ink);
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
 .doctor-scope .doctor-profile-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
 }
 
 .doctor-scope .doctor-profile-field {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 7px;
 }
@@ -2373,9 +2429,62 @@
 }
 
 .doctor-scope .doctor-profile-field input,
-.doctor-scope .doctor-profile-field select {
+.doctor-scope .doctor-profile-field select,
+.doctor-scope .doctor-profile-field textarea {
+  width: 100%;
   padding: 12px 14px;
   font-size: 0.94rem;
+  background: var(--doc-input-bg);
+  border: 1px solid var(--doc-input-line);
+  border-radius: var(--doc-radius-sm);
+  color: var(--doc-input-text);
+  font-family: inherit;
+}
+
+.doctor-scope .doctor-profile-field textarea {
+  min-height: 70px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.doctor-scope .doctor-profile-field input:focus,
+.doctor-scope .doctor-profile-field select:focus,
+.doctor-scope .doctor-profile-field textarea:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgba(14, 127, 150, 0.12);
+}
+
+/* The phone field is a single grid cell: its country selector and number input
+   share one border, so the global input styling must not add inner borders. */
+.doctor-scope .doctor-profile-form .international-phone-control {
+  min-height: 46px;
+  border-color: var(--doc-input-line);
+  border-radius: var(--doc-radius-sm);
+  background: var(--doc-soft);
+}
+
+.doctor-scope .doctor-profile-form .doctor-profile-fields .international-phone-control select,
+.doctor-scope .doctor-profile-form .doctor-profile-fields .international-phone-control input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doctor-scope .doctor-profile-form .doctor-profile-fields .international-phone-control select {
+  padding: 0 9px 0 12px;
+  border-right: 1px solid var(--doc-input-line);
+}
+
+.doctor-scope .doctor-profile-form .international-phone-control.is-editable {
+  background: var(--doc-input-bg);
+}
+
+.doctor-scope .doctor-profile-form .international-phone-control.is-editable:focus-within {
+  border-color: var(--primary);
+  background: var(--doc-input-bg);
 }
 
 .doctor-scope .doctor-profile-toggle-card,
@@ -2478,7 +2587,8 @@
   background: var(--doc-panel-2);
 }
 
-.doctor-scope .doctor-profile-field input[readonly] {
+.doctor-scope .doctor-profile-field input[readonly],
+.doctor-scope .doctor-profile-field textarea[readonly] {
   background: var(--doc-soft);
   color: var(--doc-ink-2);
   cursor: default;
@@ -3010,6 +3120,10 @@ html[data-theme='dark'] .doctor-scope .notification-item {
 @media (max-width: 760px) {
   .doctor-scope.doctor-shell {
     flex-direction: column;
+  }
+
+  .doctor-scope .doctor-profile-fields {
+    grid-template-columns: 1fr;
   }
 
   .doctor-scope .sidebar {

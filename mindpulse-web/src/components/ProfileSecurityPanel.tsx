@@ -13,7 +13,6 @@ import {
   challengeFactor,
   disableVerification,
   destinationError,
-  enrollSmsFactor,
   enrollTotp,
   markContactMethodVerified,
   markFactorMethodVerified,
@@ -61,6 +60,8 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  // Session details start collapsed; the arrow button reveals them.
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   const [logoutOthersBusy, setLogoutOthersBusy] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [password, setPassword] = useState({ current: '', next: '', confirm: '' });
@@ -71,8 +72,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   const [activeMethod, setActiveMethod] = useState<VerificationMethod | null>(null);
   const [savedDestination, setSavedDestination] = useState('');
   const [totpEnrollment, setTotpEnrollment] = useState<{ factorId: string; challengeId: string; qrCode: string } | null>(null);
-  const [smsEnrollment, setSmsEnrollment] = useState<{ factorId: string; challengeId: string; destination: string } | null>(null);
-  const [contactChallenge, setContactChallenge] = useState<{ method: 'email' | 'whatsapp'; destination: string } | null>(null);
+  const [contactChallenge, setContactChallenge] = useState<{ method: 'email' | 'whatsapp' | 'sms'; destination: string } | null>(null);
   const [phoneNumber, setPhoneNumber] = useState(phone);
   const [emailAddress, setEmailAddress] = useState(email);
   const [whatsappNumber, setWhatsappNumber] = useState(phone);
@@ -143,7 +143,6 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
 
   const clearEnrollment = () => {
     setTotpEnrollment(null);
-    setSmsEnrollment(null);
     setContactChallenge(null);
     setVerificationCode('');
   };
@@ -168,21 +167,15 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
         const challengeId = await challengeFactor(enrollment.factorId);
         setTotpEnrollment({ ...enrollment, challengeId });
         setNotice('Scan the QR code with your authenticator app, then enter the current six-digit code.');
-      } else if (method === 'sms') {
-        const problem = destinationError('sms', phoneNumber);
-        if (problem) throw new Error(problem);
-        const enrollment = await enrollSmsFactor(phoneNumber);
-        const challengeId = await challengeFactor(enrollment.factorId);
-        setSmsEnrollment({ ...enrollment, challengeId });
-        setNotice(`A six-digit code was sent to ${enrollment.destination}.`);
       } else {
-        const destination = method === 'email' ? emailAddress : whatsappNumber;
+        const destination = method === 'email' ? emailAddress : method === 'sms' ? phoneNumber : whatsappNumber;
         const problem = destinationError(method, destination);
         if (problem) throw new Error(problem);
         const normalized = normalizeVerificationDestination(method, destination);
         await sendContactCode(method, normalized);
         setContactChallenge({ method, destination: normalized });
-        setNotice(`A six-digit code was sent to ${normalized} by ${method === 'email' ? 'email' : 'WhatsApp'}.`);
+        const channelLabel = method === 'email' ? 'email' : method === 'sms' ? 'text message' : 'WhatsApp';
+        setNotice(`A six-digit code was sent to ${normalized} by ${channelLabel}.`);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Verification setup could not be started.');
@@ -203,11 +196,6 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
         await verifyFactor(totpEnrollment.factorId, totpEnrollment.challengeId, verificationCode);
         await markFactorMethodVerified('totp', 'Authenticator app');
         setSavedDestination('Authenticator app');
-      } else if (method === 'sms') {
-        if (!smsEnrollment) throw new Error('Request an SMS code first.');
-        await verifyFactor(smsEnrollment.factorId, smsEnrollment.challengeId, verificationCode);
-        await markFactorMethodVerified('sms', smsEnrollment.destination);
-        setSavedDestination(smsEnrollment.destination);
       } else {
         if (!contactChallenge) throw new Error('Request a verification code first.');
         await verifyContactCode(contactChallenge.method, contactChallenge.destination, verificationCode);
@@ -244,6 +232,10 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
     }
   };
 
+  const toggleSessionDetails = (sessionId: string) => {
+    setExpandedSessions((current) => ({ ...current, [sessionId]: !current[sessionId] }));
+  };
+
   const logoutSession = async (session: ProfileLoginSession) => {
     setError('');
     if (session.isCurrent) {
@@ -274,7 +266,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   };
 
   const selectedMethod = methodById(method);
-  const setupStarted = Boolean(totpEnrollment || smsEnrollment || contactChallenge);
+  const setupStarted = Boolean(totpEnrollment || contactChallenge);
   const activeOption = activeMethod ? methodById(activeMethod) : null;
 
   const destinationValue = method === 'email' ? emailAddress : whatsappNumber;
@@ -318,7 +310,12 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
               >
                 <span className="profile-security-method-top">
                   <strong>{option.label}</strong>
-                  {isActive && <span className="profile-security-current">Active</span>}
+                  <span className="profile-security-method-badges">
+                    {option.recommended && !isActive && (
+                      <span className="profile-security-recommended">Recommended</span>
+                    )}
+                    {isActive && <span className="profile-security-current">Active</span>}
+                  </span>
                 </span>
                 <span>{option.description}</span>
               </button>
@@ -393,9 +390,9 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
               </button>
             )}
 
-            {(method === 'email' || method === 'whatsapp') && (
+            {(method === 'email' || method === 'whatsapp' || method === 'sms') && (
               <p className="profile-security-session-note">
-                Email and WhatsApp codes are delivered by the `verification-code` Supabase function. If the function or its mail/WhatsApp provider is not configured, setup will report that instead of pretending a code was sent.
+                Email, SMS and WhatsApp codes are delivered by the `verification-code` Supabase function. If the function or its mail/SMS provider is not configured, setup will report that instead of pretending a code was sent.
               </p>
             )}
             {!editing && <p className="profile-security-session-note">Select Edit Profile to change sign-in verification.</p>}
@@ -412,7 +409,15 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
             </div>
             <p>Every signed-in admin or doctor tab appears here and updates live. IP address and precise location are not available from browser sessions.</p>
           </div>
-          <button type="button" className="profile-security-secondary" onClick={() => void logoutOthers()} disabled={logoutOthersBusy || sessionState.sessions.length < 2}>{logoutOthersBusy ? 'Logging out…' : 'Log Out All Other Sessions'}</button>
+          <button
+            type="button"
+            className="profile-security-secondary"
+            onClick={() => void logoutOthers()}
+            disabled={logoutOthersBusy}
+            title="Revokes every other session on the server, including devices that are not listed here."
+          >
+            {logoutOthersBusy ? 'Logging out…' : 'Log Out All Other Sessions'}
+          </button>
         </header>
 
         {sessionState.status !== 'live' && sessionState.message && (
@@ -429,29 +434,52 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
         ) : (
           <div className="profile-security-session-list">
             {sessionState.sessions.map((session) => (
-              <article className="profile-security-session" key={session.id}>
+              <article className={`profile-security-session ${expandedSessions[session.id] ? 'is-expanded' : ''}`} key={session.id}>
                 <header>
-                  <div>
+                  <div className="profile-security-session-identity">
                     <h3>{session.deviceName}</h3>
                     <p>{session.roleLabel} · {session.browser} · {session.operatingSystem}</p>
                   </div>
-                  {session.isCurrent && <span className="profile-security-current">Current Device</span>}
+                  <div className="profile-security-session-aside">
+                    <div className="profile-security-session-actions">
+                      {session.isCurrent && <span className="profile-security-current">Current Device</span>}
+                      <button
+                        type="button"
+                        className="profile-security-session-toggle"
+                        aria-expanded={Boolean(expandedSessions[session.id])}
+                        aria-controls={`profile-session-details-${session.id}`}
+                        aria-label={expandedSessions[session.id] ? 'Hide session details' : 'Show session details'}
+                        title={expandedSessions[session.id] ? 'Hide details' : 'Show details'}
+                        onClick={() => toggleSessionDetails(session.id)}
+                      >
+                        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                          <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" className="profile-security-logout" onClick={() => void logoutSession(session)} disabled={pendingSessionId === session.id}>
+                      {pendingSessionId === session.id ? 'Logging out…' : session.isCurrent ? 'Sign Out This Device' : 'Log Out'}
+                    </button>
+                  </div>
                 </header>
-                <dl>
-                  <div><dt>Signed in</dt><dd>{formatDateTime(session.signedInAt)}</dd></div>
-                  <div><dt>Last active</dt><dd>{formatDateTime(session.lastActiveAt)}</dd></div>
-                  <div><dt>Time zone</dt><dd>{session.location}</dd></div>
-                  <div><dt>IP address</dt><dd>{session.ipAddress}</dd></div>
-                </dl>
-                <button type="button" className="profile-security-logout" onClick={() => void logoutSession(session)} disabled={pendingSessionId === session.id}>
-                  {pendingSessionId === session.id ? 'Logging out…' : session.isCurrent ? 'Sign Out This Device' : 'Log Out'}
-                </button>
+                <div
+                  className="profile-security-session-details"
+                  id={`profile-session-details-${session.id}`}
+                  hidden={!expandedSessions[session.id]}
+                >
+                  <dl>
+                    <div><dt>Signed in</dt><dd>{formatDateTime(session.signedInAt)}</dd></div>
+                    <div><dt>Last active</dt><dd>{formatDateTime(session.lastActiveAt)}</dd></div>
+                    <div><dt>Time zone</dt><dd>{session.location}</dd></div>
+                    <div><dt>IP address</dt><dd>{session.ipAddress}</dd></div>
+                  </dl>
+                </div>
               </article>
             ))}
           </div>
         )}
         <p className="profile-security-session-note">
-          Logging out a device sends an immediate sign-out signal and removes it from this list. When the session-control function is deployed, its refresh token is also revoked so it cannot silently reconnect. A device appears again the next time it signs in.
+          Logging out a device sends an immediate sign-out signal and removes it from this list. When the session-control function is deployed, its refresh token is also revoked so it cannot silently reconnect. A device appears again the next time it signs in. “Log Out All Other Sessions” always works, even when only one device is listed, because it revokes the refresh tokens on the server.
         </p>
       </section>
     </div>

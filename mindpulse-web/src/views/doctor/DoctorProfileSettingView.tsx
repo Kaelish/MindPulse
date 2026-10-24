@@ -10,6 +10,13 @@ import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'credentials' | 'security';
 
+/** "L" -> "L." so the header card reads "Dr. Monroe L. Leclair". */
+const initialWithPeriod = (initial: string): string => {
+  const trimmed = initial.trim();
+  if (!trimmed) return '';
+  return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+};
+
 export const DoctorProfileSettingView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
   const [editing, setEditing] = useState(false);
@@ -90,7 +97,20 @@ export const DoctorProfileSettingView: React.FC = () => {
   };
 
   const update = (key: keyof DoctorProfileData, value: string) =>
-    setProfile((current) => (current ? { ...current, [key]: value } : current));
+    setProfile((current) => {
+      if (!current) return current;
+      if (key === 'middleName') {
+        const trimmed = value.trim();
+        // The card and sidebar only ever show the initial, so keep it in step
+        // with the full middle name while the doctor is typing.
+        return {
+          ...current,
+          middleName: value,
+          middleInitial: trimmed ? trimmed.charAt(0).toUpperCase() : '',
+        };
+      }
+      return { ...current, [key]: value };
+    });
 
   const handleSpecialtyChoice = (value: string) => {
     setSpecialtyChoice(value);
@@ -131,7 +151,7 @@ export const DoctorProfileSettingView: React.FC = () => {
         seedSpecialtyControls(updatedProfile.specialty);
         window.dispatchEvent(new CustomEvent('mindpulse:profile-updated', {
           detail: {
-            name: [updatedProfile.firstName, updatedProfile.lastName].filter(Boolean).join(' '),
+            name: [updatedProfile.firstName, initialWithPeriod(updatedProfile.middleInitial), updatedProfile.lastName].filter(Boolean).join(' '),
             email: updatedProfile.email,
             title: updatedProfile.title,
             specialty: updatedProfile.specialty,
@@ -199,7 +219,11 @@ export const DoctorProfileSettingView: React.FC = () => {
     );
   }
 
-  const doctorName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+  const doctorName = [
+    profile.firstName,
+    initialWithPeriod(profile.middleInitial),
+    profile.lastName,
+  ].filter(Boolean).join(' ');
   const displayName = [profile.title.trim(), doctorName].filter(Boolean).join(' ') || 'Doctor';
   const displayPhone = profile.phone
     ? formatPhoneNumber(parsePhoneNumber(profile.phone).country, parsePhoneNumber(profile.phone).nationalNumber)
@@ -225,21 +249,25 @@ export const DoctorProfileSettingView: React.FC = () => {
         {editing && activeTab !== 'security' && <button type="submit" form="doctor-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
       </div>
     </section>
-    <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Credentials'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => setActiveTab(key)}>{label}</button>)}</nav>
+    <nav className="doctor-profile-tabs" aria-label="Doctor profile sections">{([['personal', 'Personal Information'], ['credentials', 'Professional Details'], ['security', 'Security']] as const).map(([key, label]) => <button type="button" key={key} className={activeTab === key ? 'active' : ''} onClick={() => setActiveTab(key)}>{label}</button>)}</nav>
     {saved && <div className={`profile-save-banner ${savedTone === 'error' ? 'is-error' : ''}`} role={savedTone === 'error' ? 'alert' : 'status'}>{saved}</div>}
     {activeTab !== 'security' ? (
       <form id="doctor-profile-form" className="doctor-profile-form" onSubmit={saveProfile} onKeyDown={blockImplicitSave}>
         {activeTab === 'personal' && <ProfileSection title="Personal Information">
           <Field label="First Name" value={profile.firstName} editing={editing} onChange={(value) => update('firstName', value)} required />
           <Field label="Last Name" value={profile.lastName} editing={editing} onChange={(value) => update('lastName', value)} required />
-          <Field label="Middle Initial" value={profile.middleInitial} editing={editing} onChange={(value) => update('middleInitial', value)} />
+          <Field label="Middle Name (optional)" value={profile.middleName} editing={editing} onChange={(value) => update('middleName', value)} placeholder="Only the initial appears on your profile card" />
+          <DateField label="Birthdate" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} />
+          <Field label="Work Email Address" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" required />
+          <InternationalPhoneField label="Contact Number" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} />
           <Field label="Title / Honorific" value={profile.title} editing={editing} onChange={(value) => update('title', value)} placeholder="Dr., Prof., etc." />
-          <Field label="Work Email" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" required />
-          <InternationalPhoneField label="Direct Contact Phone" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} />
           <SelectField label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} />
-          <Field label="Preferred Language" value={profile.preferredLanguage} editing={editing} onChange={(value) => update('preferredLanguage', value)} />
+          <TextAreaField label="Home Address" value={profile.homeAddress} editing={editing} onChange={(value) => update('homeAddress', value)} full rows={2} />
+          <TextAreaField label="Clinic Address / Location" value={profile.clinicAddress} editing={editing} onChange={(value) => update('clinicAddress', value)} full rows={2} />
+          <Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} placeholder="PRC-000001" />
+          <TextAreaField label="Short Bio (optional)" value={profile.bio} editing={editing} onChange={(value) => update('bio', value)} full rows={3} placeholder="A short professional introduction" />
         </ProfileSection>}
-        {activeTab === 'credentials' && <ProfileSection title="Professional Credentials"><label className="doctor-profile-field"><span>Position</span>{editing
+        {activeTab === 'credentials' && <ProfileSection title="Professional Details"><label className="doctor-profile-field"><span>Position</span>{editing
           ? <select value={specialtyChoice} onChange={(event) => handleSpecialtyChoice(event.target.value)}>
               <option value="" disabled>Select a specialization</option>
               {SPECIALIZATION_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.options.map((option) => <option key={option} value={option}>{option}</option>)}</optgroup>)}
@@ -247,10 +275,8 @@ export const DoctorProfileSettingView: React.FC = () => {
             </select>
           : <input value={profile.specialty} readOnly />}</label>
           <Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} />
-          <Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} />
-          <Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} />
-          <Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} />
-          <Field label="Date Of Birth" value={profile.dob} editing={editing} onChange={(value) => update('dob', value)} />
+          <Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} inputMode="numeric" />
+          <Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} type="date" />
           {editing && specialtyChoice === OTHER_SPECIALIZATION && <label className="doctor-profile-field full"><span>Other specialization</span><input value={customSpecialty} placeholder="Type your specialization" onChange={(event) => handleCustomSpecialty(event.target.value)} /></label>}
         </ProfileSection>}
       </form>
@@ -259,5 +285,11 @@ export const DoctorProfileSettingView: React.FC = () => {
 };
 
 const ProfileSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => <section className="doctor-profile-section"><h2>{title}</h2><div className="doctor-profile-fields">{children}</div></section>;
+
 const Field: React.FC<{ label: string; value: string; editing: boolean; onChange?: (value: string) => void; full?: boolean; type?: string; placeholder?: string; required?: boolean; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; pattern?: string }> = ({ label, value, editing, onChange, full, type = 'text', placeholder, required, inputMode, pattern }) => <label className={`doctor-profile-field ${full ? 'full' : ''}`}><span>{label}</span><input type={type} inputMode={inputMode} pattern={pattern} required={required} value={value} placeholder={placeholder} readOnly={!editing} onChange={(event) => onChange?.(event.target.value)} /></label>;
+
+const DateField: React.FC<{ label: string; value: string; editing: boolean; onChange: (value: string) => void; full?: boolean }> = ({ label, value, editing, onChange, full }) => <label className={`doctor-profile-field ${full ? 'full' : ''}`}><span>{label}</span><input type="date" max={new Date().toISOString().slice(0, 10)} value={value} readOnly={!editing} onChange={(event) => onChange(event.target.value)} /></label>;
+
+const TextAreaField: React.FC<{ label: string; value: string; editing: boolean; onChange: (value: string) => void; full?: boolean; rows?: number; placeholder?: string }> = ({ label, value, editing, onChange, full, rows = 2, placeholder }) => <label className={`doctor-profile-field ${full ? 'full' : ''}`}><span>{label}</span><textarea rows={rows} value={value} placeholder={placeholder} readOnly={!editing} onChange={(event) => onChange(event.target.value)} /></label>;
+
 const SelectField: React.FC<{ label: string; value: string; editing: boolean; onChange: (value: string) => void }> = ({ label, value, editing, onChange }) => <label className="doctor-profile-field"><span>{label}</span><select value={value} disabled={!editing} onChange={(event) => onChange(event.target.value)}><option value="">Select gender</option><option value="Female">Female</option><option value="Male">Male</option><option value="Non-binary">Non-binary</option><option value="Prefer not to say">Prefer not to say</option><option value="Other">Other</option></select></label>;

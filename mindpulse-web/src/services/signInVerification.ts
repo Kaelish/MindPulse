@@ -11,6 +11,8 @@ export interface VerificationMethodOption {
   description: string;
   destinationLabel: string;
   destinationPlaceholder: string;
+  /** Highlighted in the UI as the safest option (the authenticator app). */
+  recommended?: boolean;
 }
 
 export const VERIFICATION_METHODS: VerificationMethodOption[] = [
@@ -21,12 +23,13 @@ export const VERIFICATION_METHODS: VerificationMethodOption[] = [
     description: 'Scan a QR code with Google Authenticator, Microsoft Authenticator, or any TOTP app. Works offline and is the strongest option.',
     destinationLabel: 'Authenticator app',
     destinationPlaceholder: '',
+    recommended: true,
   },
   {
     id: 'sms',
     label: 'Text message (SMS)',
     shortLabel: 'SMS',
-    description: 'Receive a six-digit code by text message. Requires an SMS provider configured for the Supabase project.',
+    description: 'Receive a six-digit code by text message. Delivered by the MindPulse verification service through Twilio.',
     destinationLabel: 'Mobile number',
     destinationPlaceholder: '+63 917 000 0000',
   },
@@ -137,18 +140,17 @@ const verifiedFactors = async (): Promise<Factor[]> => {
 };
 
 export const verifiedFactorFor = async (method: VerificationMethod): Promise<Factor | null> => {
+  if (method !== 'totp') return null;
   const factors = await verifiedFactors();
-  const type = method === 'totp' ? 'totp' : method === 'sms' ? 'phone' : null;
-  if (!type) return null;
-  return factors.find((factor) => factor.factor_type === type) ?? null;
+  return factors.find((factor) => factor.factor_type === 'totp') ?? null;
 };
 
 export const activeVerificationMethod = async (): Promise<VerificationMethod | null> => {
   const factors = await verifiedFactors();
   if (factors.some((factor) => factor.factor_type === 'totp')) return 'totp';
-  if (factors.some((factor) => factor.factor_type === 'phone')) return 'sms';
   const profile = await readVerificationProfile();
-  return (profile.method === 'email' || profile.method === 'whatsapp') && profile.verifiedAt
+  if (!profile.verifiedAt) return null;
+  return profile.method === 'email' || profile.method === 'whatsapp' || profile.method === 'sms'
     ? profile.method
     : null;
 };
@@ -181,20 +183,6 @@ export const enrollTotp = async () => {
   return { factorId: data.id, qrCode: data.totp.qr_code };
 };
 
-export const enrollSmsFactor = async (phone: string) => {
-  if (!supabase) throw new Error('Supabase is not configured.');
-  const destination = normalizeVerificationDestination('sms', phone);
-  const problem = destinationError('sms', destination);
-  if (problem) throw new Error(problem);
-  const { data, error } = await supabase.auth.mfa.enroll({
-    factorType: 'phone',
-    phone: destination,
-    friendlyName: 'MindPulse SMS verification',
-  });
-  if (error) throw new Error(error.message);
-  return { factorId: data.id, destination };
-};
-
 export const challengeFactor = async (factorId: string) => {
   if (!supabase) throw new Error('Supabase is not configured.');
   const { data, error } = await supabase.auth.mfa.challenge({ factorId });
@@ -211,6 +199,12 @@ export const verifyFactor = async (factorId: string, challengeId: string, code: 
 const parseFunctionError = async (error: unknown): Promise<string> => {
   const context = (error as { context?: Response }).context;
   if (context) {
+    // Check the status before reading the body: a function that was never
+    // deployed answers 404 with a generic gateway message that would otherwise
+    // hide the actionable "deploy the function" hint.
+    if (context.status === 404) {
+      return 'The verification service is not deployed. Apply supabase/migrations/0027_verification_codes.sql and deploy the verification-code function, then try again.';
+    }
     try {
       const body = await context.json() as { error?: string; message?: string };
       if (body?.error) return body.error;
@@ -218,11 +212,8 @@ const parseFunctionError = async (error: unknown): Promise<string> => {
     } catch {
       // Response was not JSON.
     }
-    if (context.status === 404) {
-      return 'The verification service is not deployed. Apply the Supabase migrations and deploy the verification-code function.';
-    }
     if (context.status === 503) {
-      return 'Verification delivery is not configured on this Supabase project yet.';
+      return 'Verification delivery is not configured on this Supabase project yet. Set the provider secrets for the verification-code function.';
     }
   }
   return error instanceof Error ? error.message : 'The verification service is unavailable.';
@@ -239,8 +230,8 @@ const invokeVerificationFunction = async (body: Record<string, unknown>) => {
 };
 
 export const sendContactCode = async (method: VerificationMethod, destination: string) => {
-  if (method !== 'email' && method !== 'whatsapp') {
-    throw new Error('This verification method uses an authenticator or SMS factor.');
+  if (method !== 'email' && method !== 'whatsapp' && method !== 'sms') {
+    throw new Error('The authenticator app does not send a code by message.');
   }
   return invokeVerificationFunction({
     action: 'send',
@@ -295,8 +286,8 @@ const sessionAlreadyVerified = async () => {
 
 /**
  * Decide whether the freshly signed-in browser session needs a verification
- * step. Native Supabase MFA (TOTP or SMS) is enforced through the authenticator
- * assurance level; email and WhatsApp codes are sent through the
+ * step. The authenticator app is enforced through Supabase's authenticator
+ * assurance level; email, SMS and WhatsApp codes are sent through the
  * `verification-code` edge function.
  */
 export const prepareSignInVerification = async (): Promise<VerificationChallenge | null> => {
@@ -321,7 +312,7 @@ export const prepareSignInVerification = async (): Promise<VerificationChallenge
 
   if (await sessionAlreadyVerified()) return null;
   const profile = await readVerificationProfile();
-  if (profile.method !== 'email' && profile.method !== 'whatsapp') return null;
+  if (profile.method !== 'email' && profile.method !== 'whatsapp' && profile.method !== 'sms') return null;
   if (!profile.destination || !profile.verifiedAt) return null;
   await sendContactCode(profile.method, profile.destination);
   return { method: profile.method, destination: profile.destination };

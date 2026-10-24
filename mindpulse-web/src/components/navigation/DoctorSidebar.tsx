@@ -34,6 +34,17 @@ const initialsOf = (first: string, last: string): string => {
   return (mark || first.charAt(0) || 'D').toUpperCase();
 };
 
+const withPeriod = (initial: string): string => {
+  const trimmed = initial.trim();
+  if (!trimmed) return '';
+  return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+};
+
+const displayNameOf = (title: string, first: string, middleInitial: string, last: string): string => {
+  const full = [first, withPeriod(middleInitial), last].filter(Boolean).join(' ');
+  return full ? [title.trim(), full].filter(Boolean).join(' ') : 'Doctor';
+};
+
 export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
   activeView,
   setActiveView,
@@ -54,9 +65,8 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
         if (cancelled) return;
         const first = profile.firstName.trim();
         const last = profile.lastName.trim();
-        const full = [first, last].filter(Boolean).join(' ');
         setIdentity({
-          name: full ? [profile.title.trim(), full].filter(Boolean).join(' ') : 'Doctor',
+          name: displayNameOf(profile.title, first, profile.middleInitial, last),
           email: profile.email.trim(),
           role: profile.specialty.trim() || profile.department.trim() || 'Psychologist',
           initials: initialsOf(first, last),
@@ -72,12 +82,17 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     };
     const updateProfile = (event: Event) => {
       const detail = (event as CustomEvent<{ name?: string; email?: string; title?: string; specialty?: string }>).detail;
-      setIdentity((current) => ({
-        ...current,
-        name: detail?.name !== undefined ? [detail.title?.trim(), detail.name].filter(Boolean).join(' ') : current.name,
-        email: detail?.email ?? current.email,
-        role: detail?.specialty ?? current.role,
-      }));
+      setIdentity((current) => {
+        const name = detail?.name !== undefined
+          ? [detail.title?.trim(), detail.name].filter(Boolean).join(' ') || current.name
+          : current.name;
+        return {
+          ...current,
+          name,
+          email: detail?.email ?? current.email,
+          role: detail?.specialty ?? current.role,
+        };
+      });
     };
     window.addEventListener('mindpulse:avatar-updated', updateAvatar);
     window.addEventListener('mindpulse:profile-updated', updateProfile);

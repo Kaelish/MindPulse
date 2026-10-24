@@ -114,7 +114,7 @@ the admin and doctor web portals:
   function delete a device's refresh token, and installs the private Realtime
   channel policy.
 - `supabase/migrations/0027_verification_codes.sql` — stores hashed email /
-  WhatsApp verification codes. Only the service role can read the table.
+  SMS / WhatsApp verification codes. Only the service role can read the table.
 
 Apply both in the Supabase SQL Editor. Then deploy the functions:
 
@@ -126,28 +126,62 @@ supabase functions deploy verification-code
 Active Login Sessions works without the functions: every signed-in web tab
 joins a Realtime presence channel, so devices appear live and a per-device
 logout sends an immediate sign-out broadcast. The functions add refresh-token
-revocation and email/WhatsApp delivery.
+revocation and email/SMS/WhatsApp delivery.
 
 Verification methods in Profile → Security:
 
 | Method | How it is delivered | What must be configured |
 | --- | --- | --- |
 | Authenticator app (QR) | Supabase TOTP MFA | Nothing beyond Supabase Auth |
-| SMS | Supabase phone MFA | Twilio (or another SMS provider) in Supabase Auth → Providers → Phone |
+| SMS | `verification-code` edge function + Twilio SMS | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_SMS_FROM` or `TWILIO_MESSAGING_SERVICE_SID` secrets |
 | Email | `verification-code` edge function + Resend | `RESEND_API_KEY`, `VERIFICATION_EMAIL_FROM` secrets |
 | WhatsApp | `verification-code` edge function + Twilio WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` secrets |
+
+SMS deliberately does not use Supabase phone MFA: this project has
+`external.phone` disabled, so `mfa.enroll({ factorType: 'phone' })` cannot send
+anything. The edge function calls Twilio directly, sharing the same
+`TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` as WhatsApp.
 
 `VERIFICATION_SECRET` is optional and adds an extra HMAC pepper to stored code
 hashes. If a provider is missing, setup reports that instead of pretending a
 code was sent. Once a method is enabled, a new browser session must pass it
-before the portal opens; TOTP and SMS use Supabase's authenticator assurance
-level (`aal2`), and email/WhatsApp ask once per browser tab.
+before the portal opens; the authenticator app uses Supabase's authenticator
+assurance level (`aal2`), and email/SMS/WhatsApp ask once per browser tab.
+
+The same Sign-in Verification panel is available to both administrators and
+doctors in **Profile → Security**.
+
+### Doctor personal information
+
+`supabase/migrations/0028_doctor_personal_information.sql` adds the columns
+behind the doctor portal's **Profile Setting → Personal Information** card and
+the matching registration fields:
+
+- `profiles.middle_name` — full middle name (the portal displays only the
+  initial, derived from this value)
+- `profiles.home_address`
+- `doctor_profiles.title` — honorific (`Dr.`, `Prof.`, …)
+- `doctor_profiles.clinic_address`
+
+It also rewrites `handle_new_user()` so registration metadata for
+`middle_name`, `home_address`, `title`, `clinic_address`, `birth_date`, `sex`
+and `license_no` is copied into `profiles` / `doctor_profiles` at sign-up, and
+backfills existing accounts from auth metadata and the legacy
+`doctor_profiles.availability_notes` JSON.
+
+The web app still renders correctly before this migration is applied: profile
+reads use `select('*')`, missing values fall back to auth metadata and the
+legacy JSON, and saves retry with the legacy columns when PostgREST reports a
+missing column.
 
 ### Doctor registration and approval
 
-The web app's **Register as a doctor** form creates a `doctor` account with the
-professional details (license number, specialization, contact number, bio)
-stored in `doctor_profiles`. The account starts **unverified**:
+The web app's **Register as a doctor** form asks for first name, last name,
+middle name (optional), birthdate, title/honorific, gender, work e-mail,
+contact number, home address, clinic address, license number, specialization,
+short bio and password. It creates a `doctor` account with the professional
+details (license number, specialization, contact number, bio) stored in
+`doctor_profiles` and the personal details stored in `profiles`. The account starts **unverified**:
 
 1. The doctor confirms their e-mail, then signs in and sees a *pending
    approval* screen — the portal stays locked.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase/client';
 import { getCurrentUserRole } from './services/session';
 import { reportProfileSessionError, signOutCurrentDevice, startProfileSessionMonitor } from './services/profileSessions';
+import { clearAdminIdentity } from './services/adminIdentity';
 import { prepareSignInVerification, VerificationChallenge } from './services/signInVerification';
 import { VerificationChallengeView, VerificationUnavailableView } from './views/auth/VerificationChallengeView';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
@@ -271,6 +272,7 @@ function App() {
             // restart the portal or ask for a fresh verification in that case.
             if (!portalRef.current) void routeToPortal();
           } else if (event === 'SIGNED_OUT') {
+            clearAdminIdentity();
             setPortal(null);
             setVerification(null);
             setVerificationFailure('');
@@ -294,6 +296,7 @@ function App() {
     // Local/this-device only: other signed-in devices stay connected and keep
     // appearing in Active Login Sessions.
     await signOutCurrentDevice();
+    clearAdminIdentity();
     setPortal(null);
     setVerification(null);
     setVerificationFailure('');

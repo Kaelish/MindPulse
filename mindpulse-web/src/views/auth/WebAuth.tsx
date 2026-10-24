@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/client';
 import { BrandLogo } from '../../components/BrandLogo';
 import { passwordPolicyError } from '../../services/adminSettings';
+import { validatePhoneNumber } from '../../services/internationalPhone';
 import { OTHER_SPECIALIZATION, SPECIALIZATION_GROUPS } from '../../services/specializations';
 
 export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm' | 'pending';
@@ -64,6 +65,12 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [homeAddress, setHomeAddress] = useState('');
+  const [title, setTitle] = useState('');
+  const [gender, setGender] = useState('');
+  const [clinicAddress, setClinicAddress] = useState('');
   const [licenseNo, setLicenseNo] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [customSpecialization, setCustomSpecialization] = useState('');
@@ -92,8 +99,18 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
       return;
     }
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()
-      || !licenseNo.trim() || !finalSpecialization || !contactNumber.trim()) {
+      || !licenseNo.trim() || !finalSpecialization || !contactNumber.trim()
+      || !title.trim() || !birthDate || !gender || !homeAddress.trim() || !clinicAddress.trim()) {
       setErrorMessage('Please complete all required fields to create your doctor account.');
+      return;
+    }
+    if (birthDate > new Date().toISOString().slice(0, 10)) {
+      setErrorMessage('Birthdate cannot be in the future.');
+      return;
+    }
+    const phoneError = validatePhoneNumber(contactNumber);
+    if (phoneError) {
+      setErrorMessage(phoneError);
       return;
     }
     const policyError = passwordPolicyError(password);
@@ -115,6 +132,7 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
 
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const middleInitial = middleName.trim() ? middleName.trim().charAt(0).toUpperCase() : '';
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -124,6 +142,13 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             full_name: fullName,
+            middle_name: middleName.trim(),
+            mi: middleInitial,
+            birth_date: birthDate,
+            home_address: homeAddress.trim(),
+            title: title.trim(),
+            sex: gender,
+            clinic_address: clinicAddress.trim(),
             license_no: licenseNo.trim(),
             specialization: finalSpecialization,
             contact_number: contactNumber.trim(),
@@ -469,8 +494,43 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
                 <input placeholder="Your last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </label>
               <label>
-                <span>Email address</span>
+                <span>Middle name (optional)</span>
+                <input placeholder="Your middle name" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
+              </label>
+              <label>
+                <span>Birthdate</span>
+                <input type="date" max={new Date().toISOString().slice(0, 10)} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+              </label>
+              <label>
+                <span>Title / Honorific</span>
+                <input placeholder="Dr., Prof., etc." value={title} onChange={(e) => setTitle(e.target.value)} />
+              </label>
+              <label>
+                <span>Gender</span>
+                <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                  <option value="" disabled>Select gender</option>
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Non-binary">Non-binary</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                <span>Work email address</span>
                 <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </label>
+              <label>
+                <span>Contact number</span>
+                <input type="tel" placeholder="+63 917 000 0000" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+              </label>
+              <label>
+                <span>Home address</span>
+                <input placeholder="House, street, city, province" value={homeAddress} onChange={(e) => setHomeAddress(e.target.value)} />
+              </label>
+              <label>
+                <span>Clinic address / location</span>
+                <input placeholder="Clinic name and address" value={clinicAddress} onChange={(e) => setClinicAddress(e.target.value)} />
               </label>
               <label>
                 <span>License number</span>
@@ -490,10 +550,6 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
                   />
                 </label>
               )}
-              <label>
-                <span>Contact number</span>
-                <input placeholder="09XXXXXXXXX" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
-              </label>
               <label>
                 <span>Short bio</span>
                 <textarea placeholder="A short professional introduction (optional)" value={bio} onChange={(e) => setBio(e.target.value)} />

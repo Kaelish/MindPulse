@@ -25,6 +25,7 @@ const profile: DoctorProfileData = {
   userId: 'doc-1',
   firstName: 'Monroe',
   lastName: 'Leclair',
+  middleName: '',
   middleInitial: '',
   title: 'Dr.',
   preferredLanguage: 'English',
@@ -37,7 +38,9 @@ const profile: DoctorProfileData = {
   startDate: '',
   dob: '',
   gender: '',
-  streetAddress: '',
+  homeAddress: '',
+  clinicAddress: '',
+  bio: '',
   avatarUrl: null,
   isVerified: false,
 };
@@ -71,7 +74,7 @@ describe('DoctorProfileSettingView save behaviour', () => {
 
   it('rejects an invalid email address', async () => {
     await startEditing();
-    fireEvent.change(screen.getByLabelText('Work Email'), { target: { value: 'not-an-email' } });
+    fireEvent.change(screen.getByLabelText('Work Email Address'), { target: { value: 'not-an-email' } });
     fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('valid email address');
@@ -80,11 +83,11 @@ describe('DoctorProfileSettingView save behaviour', () => {
 
   it('rejects non-numeric phone values and no-op saves', async () => {
     await startEditing();
-    fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '123-45' } });
+    fireEvent.change(screen.getByLabelText('Contact Number'), { target: { value: '123-45' } });
     fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
     expect(await screen.findByRole('alert')).toHaveTextContent('digits only');
 
-    fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Contact Number'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
     fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
     expect(await screen.findByRole('alert')).toHaveTextContent('No changes to save');
@@ -98,6 +101,50 @@ describe('DoctorProfileSettingView save behaviour', () => {
 
     expect(await screen.findByRole('heading', { name: 'Dr. Monroe Leclair' })).toBeInTheDocument();
     expect(screen.getByText('+63 9171234567')).toBeInTheDocument();
+  });
+
+  it('shows only the middle initial in the header card', async () => {
+    const doctorProfile = {
+      ...profile,
+      middleName: 'Louise',
+      middleInitial: 'L',
+      lastName: 'Leclair',
+    };
+    (fetchDoctorProfile as jest.Mock).mockResolvedValue(doctorProfile);
+    render(<DoctorProfileSettingView />);
+
+    expect(await screen.findByRole('heading', { name: 'Dr. Monroe L. Leclair' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Middle Name (optional)')).toHaveValue('Louise');
+  });
+
+  it('updates the header initial while the middle name is edited', async () => {
+    await startEditing();
+    fireEvent.change(screen.getByLabelText('Middle Name (optional)'), { target: { value: 'Beatrice' } });
+
+    expect(screen.getByRole('heading', { name: 'Dr. Monroe B. Leclair' })).toBeInTheDocument();
+    expect(screen.queryByText(/Beatrice/)).not.toBeInTheDocument();
+  });
+
+  it('asks for every personal-information field from the design, including the license number', async () => {
+    render(<DoctorProfileSettingView />);
+    await screen.findByLabelText('First Name');
+
+    for (const label of [
+      'First Name',
+      'Last Name',
+      'Middle Name (optional)',
+      'Birthdate',
+      'Home Address',
+      'Title / Honorific',
+      'Work Email Address',
+      'Contact Number',
+      'Gender',
+      'Clinic Address / Location',
+      'Short Bio (optional)',
+      'License Number',
+    ]) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
   });
 
   it('does not save to the backend when Enter is pressed in a field', async () => {
@@ -114,7 +161,7 @@ describe('DoctorProfileSettingView save behaviour', () => {
     const input = await startEditing();
     fireEvent.change(input, { target: { value: 'Monroe Jr' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Professional Credentials' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Professional Details' }));
     expect(saveDoctorProfile).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Personal Information' }));
