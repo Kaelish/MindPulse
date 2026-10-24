@@ -115,13 +115,34 @@ the admin and doctor web portals:
   channel policy.
 - `supabase/migrations/0027_verification_codes.sql` — stores hashed email /
   SMS / WhatsApp verification codes. Only the service role can read the table.
+- `supabase/migrations/0029_reset_own_mfa_factors.sql` — creates
+  `reset_own_mfa_factors()`, which lets a signed-in user delete their own MFA
+  factors at `aal1` so a lost authenticator can be replaced.
 
-Apply both in the Supabase SQL Editor. Then deploy the functions:
+Apply them in the Supabase SQL Editor, including
+`supabase/migrations/0029_reset_own_mfa_factors.sql`. Then deploy the functions:
 
 ```powershell
 supabase functions deploy profile-session-control
 supabase functions deploy verification-code
 ```
+
+Replacing a lost authenticator needs **either** migration `0029` **or** the
+`mfa-reset` function:
+
+- `0029_reset_own_mfa_factors.sql` creates `reset_own_mfa_factors()`. The web
+  client calls it through `supabase.rpc(...)`; it deletes only the caller's own
+  factors and keeps the session alive, so **Show QR Code** can display the new
+  code immediately. This is the recommended path because it needs no function
+  deployment.
+- Alternatively deploy `supabase/functions/mfa-reset` and the client falls back
+  to it when the SQL function is absent.
+
+Both exist because Supabase answers `AAL2 required to enroll a new factor` when
+a verified factor already exists and the session is only `aal1`, and it also
+refuses to unenroll that factor at `aal1`. If neither is installed, delete the
+old factor manually in **Supabase → Authentication → Users → (user) → Factors**
+and press **Show QR Code** again.
 
 Active Login Sessions works without the functions: every signed-in web tab
 joins a Realtime presence channel, so devices appear live and a per-device
@@ -149,7 +170,12 @@ before the portal opens; the authenticator app uses Supabase's authenticator
 assurance level (`aal2`), and email/SMS/WhatsApp ask once per browser tab.
 
 The same Sign-in Verification panel is available to both administrators and
-doctors in **Profile → Security**.
+doctors in **Profile → Security**, with identical behaviour: once a method is
+active it is enforced at sign-in. While a method is active the panel shows only
+**Turn Off Verification**. Turning it off clears the stored factor (through
+`mfa-reset` when Supabase requires `aal2`) and returns to the setup card, where
+**Show QR Code** / **Send Code** is available again. Confirming the new six-digit
+code re-enables sign-in challenges.
 
 ### Doctor personal information
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ProfileSecurityPanel } from './ProfileSecurityPanel';
+import { activeVerificationMethod, disableVerification, readVerificationProfile } from '../services/signInVerification';
 
 const session = {
   id: 'session-1',
@@ -35,6 +36,7 @@ jest.mock('../services/signInVerification', () => ({
   markFactorMethodVerified: jest.fn(),
   normalizeVerificationDestination: jest.fn((_method: string, value: string) => value),
   readVerificationProfile: jest.fn().mockResolvedValue({ method: 'none', destination: '' }),
+  removeOtherTotpFactors: jest.fn(),
   sendContactCode: jest.fn(),
   verifyContactCode: jest.fn(),
   verifyFactor: jest.fn(),
@@ -52,6 +54,18 @@ jest.mock('../services/signInVerification', () => ({
 }));
 
 jest.mock('../supabase/client', () => ({ supabase: null }));
+
+// react-scripts enables resetMocks, so implementations must be re-applied.
+beforeEach(() => {
+  (activeVerificationMethod as jest.Mock).mockResolvedValue(null);
+  (readVerificationProfile as jest.Mock).mockResolvedValue({
+    method: 'none',
+    destination: '',
+    verifiedAt: '',
+    disabled: false,
+  });
+  (disableVerification as jest.Mock).mockResolvedValue(0);
+});
 
 describe('Active Login Sessions disclosure', () => {
   it('hides the session details until the arrow button is pressed', async () => {
@@ -106,5 +120,32 @@ describe('Sign-in Verification method cards', () => {
 
     expect(screen.getByText('Sign-in Verification')).toBeInTheDocument();
     expect(screen.getByText('Active Login Sessions')).toBeInTheDocument();
+  });
+
+  it('shows only Turn Off Verification while a method is active', async () => {
+    (activeVerificationMethod as jest.Mock).mockResolvedValueOnce('totp');
+
+    await act(async () => {
+      render(<ProfileSecurityPanel editing={false} email="doctor@example.com" />);
+    });
+
+    expect(await screen.findByRole('button', { name: 'Turn Off Verification' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show QR Code' })).not.toBeInTheDocument();
+  });
+
+  it('returns to the QR setup after turning verification off without edit mode', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    (activeVerificationMethod as jest.Mock).mockResolvedValueOnce('totp');
+    (disableVerification as jest.Mock).mockResolvedValueOnce(0);
+
+    await act(async () => {
+      render(<ProfileSecurityPanel editing={false} email="doctor@example.com" />);
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn Off Verification' }));
+
+    expect(await screen.findByText('Sign-in verification is turned off.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show QR Code' })).toBeEnabled();
+    confirmSpy.mockRestore();
   });
 });

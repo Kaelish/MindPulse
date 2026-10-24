@@ -18,6 +18,7 @@ import {
   markFactorMethodVerified,
   normalizeVerificationDestination,
   readVerificationProfile,
+  removeOtherTotpFactors,
   sendContactCode,
   VERIFICATION_METHODS,
   VerificationMethod,
@@ -49,6 +50,20 @@ const STATUS_LABEL: Record<ProfileSessionsState['status'], string> = {
 };
 
 const methodById = (id: VerificationMethod) => VERIFICATION_METHODS.find((method) => method.id === id) ?? VERIFICATION_METHODS[0];
+
+/**
+ * Supabase blocks a second TOTP factor at aal1. The service retries through the
+ * mfa-reset function, so seeing this message means the reset could not run —
+ * point at the two ways to clear the stored factor instead of showing raw SQL
+ * style text.
+ */
+const describeVerificationError = (cause: unknown, fallback: string) => {
+  const message = cause instanceof Error ? cause.message : fallback;
+  if (/aal2|assurance level/i.test(message)) {
+    return 'Supabase will not replace the stored authenticator from this session. Deploy the mfa-reset function (supabase functions deploy mfa-reset) or delete the old factor in Supabase → Authentication → Users, then press Show QR Code again.';
+  }
+  return message;
+};
 
 export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ editing, email, phone = '' }) => {
   const [sessionState, setSessionState] = useState<ProfileSessionsState>({
@@ -156,7 +171,8 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   };
 
   const startVerificationSetup = async () => {
-    if (!editing || verificationBusy || activeMethod) return;
+    if (verificationBusy || verificationLoading) return;
+    if (activeMethod) return;
     setError('');
     setNotice('');
     clearEnrollment();
@@ -178,7 +194,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
         setNotice(`A six-digit code was sent to ${normalized} by ${channelLabel}.`);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Verification setup could not be started.');
+      setError(describeVerificationError(cause, 'Verification setup could not be started.'));
     } finally {
       setVerificationBusy(false);
     }
@@ -186,14 +202,25 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
 
   const confirmVerificationSetup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editing || verificationBusy) return;
+    if (verificationBusy) return;
     setError('');
     setNotice('');
     setVerificationBusy(true);
     try {
+      let cleanupWarning = '';
       if (method === 'totp') {
         if (!totpEnrollment) throw new Error('Start the authenticator setup first.');
         await verifyFactor(totpEnrollment.factorId, totpEnrollment.challengeId, verificationCode);
+        // The new factor raised this session to aal2, which is the only level
+        // at which a verified factor may be removed. Drop the lost device's
+        // factor now so future challenges can only use the new authenticator.
+        try {
+          await removeOtherTotpFactors(totpEnrollment.factorId);
+        } catch (cleanupCause) {
+          cleanupWarning = cleanupCause instanceof Error
+            ? ` The old authenticator could not be removed: ${cleanupCause.message}`
+            : ' The old authenticator could not be removed.';
+        }
         await markFactorMethodVerified('totp', 'Authenticator app');
         setSavedDestination('Authenticator app');
       } else {
@@ -204,7 +231,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
       }
       setActiveMethod(method);
       clearEnrollment();
-      setNotice(`${methodById(method).shortLabel} verification is now active.`);
+      setNotice(`${methodById(method).shortLabel} verification is now active.${cleanupWarning}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The verification code could not be confirmed.');
     } finally {
@@ -213,7 +240,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   };
 
   const turnOffVerification = async () => {
-    if (!editing || verificationBusy) return;
+    if (verificationBusy) return;
     if (!window.confirm('Turn off sign-in verification for this account?')) return;
     setVerificationBusy(true);
     setError('');
@@ -325,7 +352,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
 
         {verificationLoading ? (
           <p className="profile-security-empty">Checking your verification settings…</p>
-        ) : activeMethod && activeOption ? (
+        ) : activeMethod && activeOption && !setupStarted ? (
           <div className="profile-security-method-panel">
             <div>
               <h3>{activeOption.label} is active</h3>
@@ -337,7 +364,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
                     : `Sign-in codes are sent to ${savedDestination} by ${activeMethod === 'email' ? 'email' : 'WhatsApp'}.`}
               </p>
             </div>
-            <button type="button" className="profile-security-secondary" onClick={() => void turnOffVerification()} disabled={!editing || verificationBusy}>
+            <button type="button" className="profile-security-secondary" onClick={() => void turnOffVerification()} disabled={verificationBusy}>
               Turn Off Verification
             </button>
           </div>
@@ -348,7 +375,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
             {method === 'sms' && (
               <label>
                 <span>MOBILE NUMBER</span>
-                <input type="tel" value={phoneNumber} placeholder={selectedMethod.destinationPlaceholder} onChange={(event) => setPhoneNumber(event.target.value)} readOnly={!editing} disabled={setupStarted} />
+                <input type="tel" value={phoneNumber} placeholder={selectedMethod.destinationPlaceholder} onChange={(event) => setPhoneNumber(event.target.value)} disabled={setupStarted} />
               </label>
             )}
 
@@ -360,7 +387,6 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
                   value={destinationValue}
                   placeholder={selectedMethod.destinationPlaceholder}
                   onChange={(event) => (method === 'email' ? setEmailAddress(event.target.value) : setWhatsappNumber(event.target.value))}
-                  readOnly={!editing}
                   disabled={Boolean(contactChallenge)}
                 />
               </label>
@@ -377,15 +403,15 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
               <form className="profile-security-code-form" onSubmit={confirmVerificationSetup}>
                 <label>
                   <span>VERIFICATION CODE</span>
-                  <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))} readOnly={!editing} required />
+                  <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required />
                 </label>
-                <button className="profile-security-primary" type="submit" disabled={!editing || verificationBusy || verificationCode.length !== 6}>{verificationBusy ? 'Verifying…' : 'Verify and Enable'}</button>
+                <button className="profile-security-primary" type="submit" disabled={verificationBusy || verificationCode.length !== 6}>{verificationBusy ? 'Verifying…' : 'Verify and Enable'}</button>
                 <button className="profile-security-secondary" type="button" onClick={clearEnrollment} disabled={verificationBusy}>Cancel</button>
               </form>
             )}
 
             {!setupStarted && (
-              <button className="profile-security-primary" type="button" onClick={() => void startVerificationSetup()} disabled={!editing || verificationBusy}>
+              <button className="profile-security-primary" type="button" onClick={() => void startVerificationSetup()} disabled={verificationBusy || verificationLoading}>
                 {verificationBusy ? 'Starting…' : method === 'totp' ? 'Show QR Code' : method === 'sms' ? 'Send SMS Code' : `Send ${method === 'email' ? 'Email' : 'WhatsApp'} Code`}
               </button>
             )}
@@ -395,7 +421,6 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
                 Email, SMS and WhatsApp codes are delivered by the `verification-code` Supabase function. If the function or its mail/SMS provider is not configured, setup will report that instead of pretending a code was sent.
               </p>
             )}
-            {!editing && <p className="profile-security-session-note">Select Edit Profile to change sign-in verification.</p>}
           </div>
         )}
       </section>
