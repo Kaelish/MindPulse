@@ -3,7 +3,9 @@ import { DoctorProfileData, fetchDoctorProfile, saveDoctorProfile } from '../../
 import { OTHER_SPECIALIZATION, SPECIALIZATION_GROUPS, isSpecializationOption } from '../../services/specializations';
 import { DoctorError, DoctorLoading, DoctorNotifications } from '../../components/doctor/DoctorChrome';
 import { ProfileSecurityPanel } from '../../components/ProfileSecurityPanel';
+import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { uploadProfileAvatar } from '../../services/profileAvatar';
+import { formatPhoneNumber, parsePhoneNumber, validatePhoneNumber } from '../../services/internationalPhone';
 import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'credentials' | 'security';
@@ -108,8 +110,9 @@ export const DoctorProfileSettingView: React.FC = () => {
       flashSaved('Enter a valid email address containing @.', 'error');
       return;
     }
-    if (profile.phone && !/^\d+$/.test(profile.phone)) {
-      flashSaved('Phone number can contain numbers only.', 'error');
+    const phoneError = validatePhoneNumber(profile.phone);
+    if (phoneError) {
+      flashSaved(phoneError, 'error');
       return;
     }
     if (!dirty) {
@@ -126,6 +129,14 @@ export const DoctorProfileSettingView: React.FC = () => {
         setProfile(updatedProfile);
         setSavedProfile(updatedProfile);
         seedSpecialtyControls(updatedProfile.specialty);
+        window.dispatchEvent(new CustomEvent('mindpulse:profile-updated', {
+          detail: {
+            name: [updatedProfile.firstName, updatedProfile.lastName].filter(Boolean).join(' '),
+            email: updatedProfile.email,
+            title: updatedProfile.title,
+            specialty: updatedProfile.specialty,
+          },
+        }));
         setAvatarFile(null);
         setAvatarPreview(avatarUrl);
         setEditing(false);
@@ -188,13 +199,19 @@ export const DoctorProfileSettingView: React.FC = () => {
     );
   }
 
+  const doctorName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+  const displayName = [profile.title.trim(), doctorName].filter(Boolean).join(' ') || 'Doctor';
+  const displayPhone = profile.phone
+    ? formatPhoneNumber(parsePhoneNumber(profile.phone).country, parsePhoneNumber(profile.phone).nationalNumber)
+    : '';
+
   return <main className="main-panel doctor-profile-main">
     <header className="doctor-profile-header"><div><h1>Profile Setting</h1><p>Manage your personal and professional information</p></div><DoctorNotifications /></header>
     <section className="doctor-profile-card">
       <div className="doctor-avatar-wrap">
         <div className="doctor-avatar-large">
           {avatarPreview
-            ? <img src={avatarPreview} alt={`Dr. ${profile.firstName} ${profile.lastName} profile`} />
+            ? <img src={avatarPreview} alt={`${displayName} profile`} />
             : `${(profile.firstName || 'D').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase()}
         </div>
         {editing && (activeTab === 'personal' || activeTab === 'credentials') && (
@@ -202,10 +219,9 @@ export const DoctorProfileSettingView: React.FC = () => {
         )}
         <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
       </div>
-      <div className="doctor-profile-identity"><h2>DR. {profile.firstName.toUpperCase()} {profile.lastName.toUpperCase()}</h2><span>{profile.specialty || 'Add your position'}</span><p className="doctor-profile-contact"><span className="doctor-profile-contact-item">{profile.email}</span>{profile.phone && <span className="doctor-profile-contact-item">{profile.phone}</span>}{profile.licenseId && <span className="doctor-profile-contact-item">{'License ' + profile.licenseId}</span>}</p></div>
+      <div className="doctor-profile-identity"><h2>{displayName}</h2><span>{profile.specialty || 'Add your position'}</span><p className="doctor-profile-contact"><span className="doctor-profile-contact-item">{profile.email}</span>{displayPhone && <span className="doctor-profile-contact-item">{displayPhone}</span>}{profile.licenseId && <span className="doctor-profile-contact-item">{'License ' + profile.licenseId}</span>}</p></div>
       <div className="profile-header-actions">
         <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => setEditing(true)}>{editing ? 'Cancel' : 'Edit Profile'}</button>
-        {editing && dirty && <span className="doc-settings-unsaved">Unsaved changes</span>}
         {editing && activeTab !== 'security' && <button type="submit" form="doctor-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
       </div>
     </section>
@@ -219,7 +235,7 @@ export const DoctorProfileSettingView: React.FC = () => {
           <Field label="Middle Initial" value={profile.middleInitial} editing={editing} onChange={(value) => update('middleInitial', value)} />
           <Field label="Title / Honorific" value={profile.title} editing={editing} onChange={(value) => update('title', value)} placeholder="Dr., Prof., etc." />
           <Field label="Work Email" value={profile.email} editing={editing} onChange={(value) => update('email', value)} type="email" required />
-          <Field label="Direct Contact Phone" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} type="tel" inputMode="numeric" pattern="[0-9]*" />
+          <InternationalPhoneField label="Direct Contact Phone" value={profile.phone} editing={editing} onChange={(value) => update('phone', value)} />
           <SelectField label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} />
           <Field label="Preferred Language" value={profile.preferredLanguage} editing={editing} onChange={(value) => update('preferredLanguage', value)} />
         </ProfileSection>}

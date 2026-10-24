@@ -21,7 +21,7 @@ const profile = {
   first_name: 'Maya',
   last_name: 'Reyes',
   email: 'maya@example.com',
-  phone: '09171234567',
+  phone: '+63 9171234567',
   role: 'admin',
   department: 'Clinical Services',
   program: null,
@@ -55,7 +55,9 @@ const renderAdminProfile = async () => {
 
 it('locks fields until Edit Profile is pressed and provides a gender dropdown', async () => {
   await renderAdminProfile();
+  expect(screen.getByRole('heading', { name: 'Dr. Maya Reyes' })).toBeInTheDocument();
   expect(screen.getByText('Clinic Director')).toBeInTheDocument();
+  expect(screen.getByText('+63 9171234567')).toBeInTheDocument();
   expect(screen.getByLabelText('First Name')).toHaveAttribute('readonly');
   expect(screen.getByLabelText('Gender')).toBeDisabled();
 
@@ -87,10 +89,10 @@ it('rejects invalid email, non-numeric phone, and unchanged saves', async () => 
   fireEvent.change(screen.getByLabelText('Work Email Address'), { target: { value: profile.email } });
   fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '555-1234' } });
   fireEvent.submit(form);
-  expect(await screen.findByRole('alert')).toHaveTextContent('numbers only');
+  expect(await screen.findByRole('alert')).toHaveTextContent('digits only');
   expect(updateOwnProfile).not.toHaveBeenCalled();
 
-  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: profile.phone } });
+  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '9171234567' } });
   fireEvent.submit(form);
   expect(await screen.findByRole('alert')).toHaveTextContent('No changes to save');
   expect(updateOwnProfile).not.toHaveBeenCalled();

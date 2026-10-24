@@ -1733,14 +1733,33 @@
   color: var(--adm-accent);
   font-size: 0.8rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .admin-scope .admin-profile-identity p {
   margin-top: 10px;
   color: var(--adm-muted);
   font-size: 0.9rem;
+}
+
+.admin-scope .admin-profile-identity p.admin-profile-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+}
+
+.admin-scope .admin-profile-contact span {
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--adm-muted);
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .admin-scope .profile-edit-button {

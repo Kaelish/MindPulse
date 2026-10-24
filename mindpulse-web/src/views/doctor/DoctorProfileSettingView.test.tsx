@@ -82,13 +82,22 @@ describe('DoctorProfileSettingView save behaviour', () => {
     await startEditing();
     fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '123-45' } });
     fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
-    expect(await screen.findByRole('alert')).toHaveTextContent('numbers only');
+    expect(await screen.findByRole('alert')).toHaveTextContent('digits only');
 
     fireEvent.change(screen.getByLabelText('Direct Contact Phone'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
     fireEvent.submit(document.getElementById('doctor-profile-form') as HTMLFormElement);
     expect(await screen.findByRole('alert')).toHaveTextContent('No changes to save');
     expect(saveDoctorProfile).not.toHaveBeenCalled();
+  });
+
+  it('displays the saved honorific and normalized phone beside email', async () => {
+    const doctorProfile = { ...profile, phone: '09171234567' };
+    (fetchDoctorProfile as jest.Mock).mockResolvedValue(doctorProfile);
+    render(<DoctorProfileSettingView />);
+
+    expect(await screen.findByRole('heading', { name: 'Dr. Monroe Leclair' })).toBeInTheDocument();
+    expect(screen.getByText('+63 9171234567')).toBeInTheDocument();
   });
 
   it('does not save to the backend when Enter is pressed in a field', async () => {

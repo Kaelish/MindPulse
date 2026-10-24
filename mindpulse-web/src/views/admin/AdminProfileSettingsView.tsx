@@ -3,8 +3,10 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { ProfileSecurityPanel } from '../../components/ProfileSecurityPanel';
+import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { OwnProfile, OwnProfilePatch, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
 import { uploadProfileAvatar } from '../../services/profileAvatar';
+import { formatPhoneNumber, parsePhoneNumber, validatePhoneNumber } from '../../services/internationalPhone';
 import '../ProfilePhoto.css';
 
 type ProfileTab = 'personal' | 'professional' | 'security';
@@ -120,8 +122,9 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       setSaveError('Enter a valid email address containing @.');
       return;
     }
-    if (draft.phone && !/^\d+$/.test(draft.phone)) {
-      setSaveError('Phone number can contain numbers only.');
+    const phoneError = validatePhoneNumber(draft.phone);
+    if (phoneError) {
+      setSaveError(phoneError);
       return;
     }
 
@@ -148,6 +151,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
         detail: {
           name: `${updatedProfile.first_name ?? ''} ${updatedProfile.last_name ?? ''}`.trim(),
           email: updatedProfile.email ?? '',
+          preferredTitle: updatedProfile.preferred_title ?? '',
           administrativeTitle: updatedProfile.administrative_title || 'Chief Clinical Administrator',
         },
       }));
@@ -220,6 +224,10 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
 
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   const identityName = fullName || profile.email || 'Your account';
+  const displayName = [profile.preferred_title?.trim(), identityName].filter(Boolean).join(' ');
+  const displayPhone = profile.phone
+    ? formatPhoneNumber(parsePhoneNumber(profile.phone).country, parsePhoneNumber(profile.phone).nationalNumber)
+    : '';
   const roleLabel = profile.administrative_title?.trim() || (profile.role.charAt(0).toUpperCase() + profile.role.slice(1));
 
   return <div className="admin-shell admin-scope admin-profile-shell">
@@ -229,14 +237,14 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
       <section className="admin-profile-card">
         <div className="admin-avatar-wrap">
           <div className="admin-avatar-large">
-            {avatarPreview ? <img src={avatarPreview} alt={`${identityName} profile`} /> : identityName.charAt(0).toUpperCase()}
+            {avatarPreview ? <img src={avatarPreview} alt={`${displayName} profile`} /> : identityName.charAt(0).toUpperCase()}
           </div>
           {editing && (activeTab === 'personal' || activeTab === 'professional') && (
             <button type="button" className="profile-photo-trigger" onClick={() => photoInput.current?.click()} aria-label="Change profile photo">📷</button>
           )}
           <input ref={photoInput} className="profile-photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectAvatar} />
         </div>
-        <div className="admin-profile-identity"><h2>{identityName}</h2><span>{roleLabel}</span><p>✉ {profile.email || 'No email'} &nbsp;&nbsp; ▣ {profile.medical_specialization || profile.department || 'Clinical Administration'}</p></div>
+        <div className="admin-profile-identity"><h2>{displayName}</h2><span>{roleLabel}</span><p className="admin-profile-contact"><span>{profile.email || 'No email'}</span>{displayPhone && <span>{displayPhone}</span>}<span>{profile.medical_specialization || profile.department || 'Clinical Administration'}</span></p></div>
         <div className="profile-header-actions">
           <button type="button" className="profile-edit-button" onClick={editing ? cancelProfileEdit : () => { setEditing(true); setSaved(''); setSaveError(''); }}>{editing ? 'Cancel' : 'Edit Profile'}</button>
           {editing && activeTab !== 'security' && <button type="submit" form="admin-profile-form" className="small-profile-button" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>}
@@ -251,7 +259,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
             <Field label="First Name" value={draft.first_name} editing={editing} onChange={(value) => updateDraft('first_name', value)} required />
             <Field label="Last Name" value={draft.last_name} editing={editing} onChange={(value) => updateDraft('last_name', value)} required />
             <Field label="Work Email Address" value={draft.email} editing={editing} onChange={(value) => updateDraft('email', value)} type="email" required />
-            <Field label="Phone Number" value={draft.phone} editing={editing} onChange={(value) => updateDraft('phone', value)} type="tel" inputMode="numeric" pattern="[0-9]*" />
+            <InternationalPhoneField label="Phone Number" value={draft.phone} editing={editing} onChange={(value) => updateDraft('phone', value)} />
             <Field label="Preferred Title / Honorific" value={draft.preferred_title} editing={editing} onChange={(value) => updateDraft('preferred_title', value)} placeholder="Dr., Prof., etc." />
             <SelectField label="Gender" value={draft.sex} editing={editing} onChange={(value) => updateDraft('sex', value)} />
             <Field label="Clinic Address / Location" value={draft.clinic_address} editing={editing} onChange={(value) => updateDraft('clinic_address', value)} full />

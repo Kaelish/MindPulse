@@ -56,7 +56,7 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
         const last = profile.lastName.trim();
         const full = [first, last].filter(Boolean).join(' ');
         setIdentity({
-          name: full ? `Dr. ${full}` : 'Doctor',
+          name: full ? [profile.title.trim(), full].filter(Boolean).join(' ') : 'Doctor',
           email: profile.email.trim(),
           role: profile.specialty.trim() || profile.department.trim() || 'Psychologist',
           initials: initialsOf(first, last),
@@ -70,10 +70,21 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
       const detail = (event as CustomEvent<{ avatarUrl: string | null }>).detail;
       setIdentity((current) => ({ ...current, avatarUrl: detail?.avatarUrl ?? null }));
     };
+    const updateProfile = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: string; email?: string; title?: string; specialty?: string }>).detail;
+      setIdentity((current) => ({
+        ...current,
+        name: detail?.name !== undefined ? [detail.title?.trim(), detail.name].filter(Boolean).join(' ') : current.name,
+        email: detail?.email ?? current.email,
+        role: detail?.specialty ?? current.role,
+      }));
+    };
     window.addEventListener('mindpulse:avatar-updated', updateAvatar);
+    window.addEventListener('mindpulse:profile-updated', updateProfile);
     return () => {
       cancelled = true;
       window.removeEventListener('mindpulse:avatar-updated', updateAvatar);
+      window.removeEventListener('mindpulse:profile-updated', updateProfile);
     };
   }, []);
 

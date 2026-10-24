@@ -1,0 +1,101 @@
+.international-phone-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.international-phone-field > label {
+  color: #202938;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.international-phone-control {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #f5f7fa;
+}
+
+.international-phone-control select,
+.international-phone-control input {
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #1e293b;
+  font: inherit;
+  font-size: 0.94rem;
+}
+
+.international-phone-control select {
+  max-width: 125px;
+  padding: 0 9px 0 12px;
+  border-right: 1px solid #dfe3e8;
+  color: #334155;
+  cursor: pointer;
+}
+
+.international-phone-control input {
+  padding: 0 12px;
+}
+
+.international-phone-control input::placeholder {
+  color: #94a3b8;
+}
+
+.international-phone-control input[readonly],
+.international-phone-control select:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.international-phone-control.is-editable:focus-within {
+  border-color: #0e7f96;
+  outline: 3px solid rgba(14, 127, 150, 0.12);
+  background: #ffffff;
+}
+
+.admin-scope .international-phone-field > label {
+  color: var(--adm-muted);
+}
+
+.admin-scope .international-phone-control {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+}
+
+.admin-scope .international-phone-control select,
+.admin-scope .international-phone-control input {
+  color: var(--adm-text);
+}
+
+.admin-scope .international-phone-control select {
+  border-right-color: var(--adm-border-strong);
+}
+
+.doctor-scope .international-phone-field > label {
+  color: var(--doc-muted);
+}
+
+.doctor-scope .international-phone-control {
+  border-color: var(--doc-line-strong);
+  background: var(--doc-soft);
+}
+
+.doctor-scope .international-phone-control select,
+.doctor-scope .international-phone-control input {
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .international-phone-control select {
+  border-right-color: var(--doc-line-strong);
+}

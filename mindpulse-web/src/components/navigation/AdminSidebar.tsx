@@ -33,6 +33,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profileTitle, setProfileTitle] = useState('Chief Clinical Administrator');
+  const [preferredTitle, setPreferredTitle] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -44,6 +45,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       setProfileName(name);
       setProfileEmail(profile.email ?? '');
       setProfileTitle(profile.administrative_title?.trim() || 'Chief Clinical Administrator');
+      setPreferredTitle(profile.preferred_title?.trim() || '');
     }).catch(() => {
       // Profile row missing: fall back to the auth account so the card is never stale.
       void supabase?.auth.getUser().then(({ data }) => {
@@ -58,9 +60,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
       setAvatarUrl(detail?.avatarUrl ?? null);
     };
     const updateProfile = (event: Event) => {
-      const detail = (event as CustomEvent<{ name?: string; email?: string; administrativeTitle?: string }>).detail;
+      const detail = (event as CustomEvent<{ name?: string; email?: string; preferredTitle?: string; administrativeTitle?: string }>).detail;
       if (detail?.name !== undefined) setProfileName(detail.name);
       if (detail?.email !== undefined) setProfileEmail(detail.email);
+      if (detail?.preferredTitle !== undefined) setPreferredTitle(detail.preferredTitle);
       if (detail?.administrativeTitle !== undefined) setProfileTitle(detail.administrativeTitle);
     };
     window.addEventListener('mindpulse:avatar-updated', updateAvatar);
@@ -72,7 +75,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onSignOut, activeVie
     };
   }, []);
 
-  const displayName = profileName || 'Administrator';
+  const displayName = [preferredTitle, profileName || 'Administrator'].filter(Boolean).join(' ');
   const displayEmail = profileEmail || 'No email on file';
 
   return (

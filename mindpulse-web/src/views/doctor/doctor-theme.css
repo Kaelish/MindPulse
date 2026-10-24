@@ -2316,6 +2316,10 @@
   color: inherit;
 }
 
+.doctor-scope .doctor-profile-identity h2 {
+  text-transform: none;
+}
+
 .doctor-scope .profile-edit-button {
   padding: 10px 16px;
   border: 1px solid var(--doc-line-strong);
