@@ -181,6 +181,23 @@ test('falls back to the mfa-reset function when the SQL reset function is missin
   expect(client.auth.verifyOtp).toHaveBeenCalledWith({ type: 'magiclink', token_hash: 'reset-token' });
 });
 
+test('surfaces the database error when the SQL reset function exists but fails', async () => {
+  client.auth.mfa.listFactors.mockResolvedValue({
+    data: { all: [{ id: 'lost-factor', factor_type: 'totp', status: 'verified' }] },
+    error: null,
+  });
+  client.auth.mfa.unenroll.mockResolvedValue({
+    error: { message: 'AAL2 session is required to unenroll a verified factor' },
+  });
+  client.rpc.mockResolvedValue({
+    data: null,
+    error: { message: 'permission denied for table mfa_factors' },
+  });
+
+  await expect(disableVerification()).rejects.toThrow(/permission denied for table mfa_factors/);
+  expect(mockedInvoke).not.toHaveBeenCalled();
+});
+
 test('retries enrollment after the SQL reset function clears an old factor', async () => {
   client.auth.mfa.enroll
     .mockResolvedValueOnce({

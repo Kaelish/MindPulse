@@ -245,6 +245,18 @@ export const resetStoredFactors = async (): Promise<number> => {
     return removed;
   }
 
+  const rpcMessage = rpc.error.message ?? '';
+  const rpcMissing = /could not find the function|does not exist|schema cache|PGRST202/i.test(rpcMessage);
+  if (!rpcMissing) {
+    // The migration was applied but the delete failed (permissions, policy,
+    // etc.). Surface the database error instead of hiding it behind the
+    // "service not reachable" message.
+    throw new Error(
+      `Supabase could not delete the old authenticator: ${rpcMessage} `
+      + 'Re-run supabase/migrations/0029_reset_own_mfa_factors.sql in the Supabase SQL Editor, then try again.',
+    );
+  }
+
   const { data, error } = await supabase.functions.invoke('mfa-reset', { body: { action: 'reset' } });
   if (error) throw new Error(await parseResetError(error));
   const payload = (data ?? {}) as { ok?: boolean; removed?: number; tokenHash?: string; error?: string };

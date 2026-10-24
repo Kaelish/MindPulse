@@ -298,10 +298,28 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
 
   const destinationValue = method === 'email' ? emailAddress : whatsappNumber;
   const destinationFieldLabel = method === 'email' ? 'Email address' : 'WhatsApp number';
+  const projectRef = /https:\/\/([a-z0-9]+)\.supabase\.co/.exec(process.env.REACT_APP_SUPABASE_URL ?? '')?.[1] ?? '';
+  const needsResetSetup = /0029_reset_own_mfa_factors|mfa-reset service is not reachable/i.test(error);
 
   return (
     <div className="profile-security-stack">
-      {error && <div className="profile-security-alert" role="alert">{error}</div>}
+      {error && (
+        <div className="profile-security-alert" role="alert">
+          <span>{error}</span>
+          {needsResetSetup && (
+            <a
+              className="profile-security-alert-link"
+              href={projectRef
+                ? `https://supabase.com/dashboard/project/${projectRef}/sql/new`
+                : 'https://supabase.com/dashboard'}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open the SQL Editor
+            </a>
+          )}
+        </div>
+      )}
       {notice && <div className="profile-security-notice" role="status">{notice}</div>}
 
       <section className="profile-security-section">

@@ -556,6 +556,19 @@
   font-size: 0.86rem;
 }
 
+.profile-security-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-security-alert-link {
+  align-self: flex-start;
+  color: #0f6d7d;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .profile-security-notice {
   border-color: #b8e4d0;
   background: #f1fbf6;
