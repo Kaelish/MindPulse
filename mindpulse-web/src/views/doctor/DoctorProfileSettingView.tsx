@@ -263,8 +263,6 @@ export const DoctorProfileSettingView: React.FC = () => {
           <Field label="Title / Honorific" value={profile.title} editing={editing} onChange={(value) => update('title', value)} placeholder="Dr., Prof., etc." />
           <SelectField label="Gender" value={profile.gender} editing={editing} onChange={(value) => update('gender', value)} />
           <TextAreaField label="Home Address" value={profile.homeAddress} editing={editing} onChange={(value) => update('homeAddress', value)} full rows={2} />
-          <TextAreaField label="Clinic Address / Location" value={profile.clinicAddress} editing={editing} onChange={(value) => update('clinicAddress', value)} full rows={2} />
-          <Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} placeholder="PRC-000001" />
           <TextAreaField label="Short Bio (optional)" value={profile.bio} editing={editing} onChange={(value) => update('bio', value)} full rows={3} placeholder="A short professional introduction" />
         </ProfileSection>}
         {activeTab === 'credentials' && <ProfileSection title="Professional Details"><label className="doctor-profile-field"><span>Position</span>{editing
@@ -275,8 +273,10 @@ export const DoctorProfileSettingView: React.FC = () => {
             </select>
           : <input value={profile.specialty} readOnly />}</label>
           <Field label="Department" value={profile.department} editing={editing} onChange={(value) => update('department', value)} />
+          <Field label="License Number" value={profile.licenseId} editing={editing} onChange={(value) => update('licenseId', value)} placeholder="PRC-000001" />
           <Field label="Years of Experience" value={profile.yearsExperience} editing={editing} onChange={(value) => update('yearsExperience', value)} inputMode="numeric" />
           <Field label="Start Date" value={profile.startDate} editing={editing} onChange={(value) => update('startDate', value)} type="date" />
+          <TextAreaField label="Clinic Address / Location" value={profile.clinicAddress} editing={editing} onChange={(value) => update('clinicAddress', value)} full rows={2} />
           {editing && specialtyChoice === OTHER_SPECIALIZATION && <label className="doctor-profile-field full"><span>Other specialization</span><input value={customSpecialty} placeholder="Type your specialization" onChange={(event) => handleCustomSpecialty(event.target.value)} /></label>}
         </ProfileSection>}
       </form>

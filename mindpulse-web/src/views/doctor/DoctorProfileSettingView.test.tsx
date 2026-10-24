@@ -125,7 +125,7 @@ describe('DoctorProfileSettingView save behaviour', () => {
     expect(screen.queryByText(/Beatrice/)).not.toBeInTheDocument();
   });
 
-  it('asks for every personal-information field from the design, including the license number', async () => {
+  it('asks for every personal-information field from the design', async () => {
     render(<DoctorProfileSettingView />);
     await screen.findByLabelText('First Name');
 
@@ -139,12 +139,24 @@ describe('DoctorProfileSettingView save behaviour', () => {
       'Work Email Address',
       'Contact Number',
       'Gender',
-      'Clinic Address / Location',
       'Short Bio (optional)',
-      'License Number',
     ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
+
+    // Credentials belong to the Professional Details card.
+    expect(screen.queryByLabelText('Clinic Address / Location')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('License Number')).not.toBeInTheDocument();
+  });
+
+  it('shows the clinic address and license number in Professional Details', async () => {
+    render(<DoctorProfileSettingView />);
+    await screen.findByLabelText('First Name');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Professional Details' }));
+
+    expect(screen.getByLabelText('Clinic Address / Location')).toBeInTheDocument();
+    expect(screen.getByLabelText('License Number')).toBeInTheDocument();
   });
 
   it('does not save to the backend when Enter is pressed in a field', async () => {
@@ -181,6 +193,26 @@ describe('DoctorProfileSettingView save behaviour', () => {
     expect(saveDoctorProfile).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'doc-1', firstName: 'Monroe Jr' }),
     );
+  });
+
+  it('saves the clinic address and license number edited in Professional Details', async () => {
+    await startEditing();
+    fireEvent.click(screen.getByRole('button', { name: 'Professional Details' }));
+    fireEvent.change(screen.getByLabelText('Clinic Address / Location'), {
+      target: { value: 'Room 204, Main Clinic' },
+    });
+    fireEvent.change(screen.getByLabelText('License Number'), {
+      target: { value: 'PRC-123456' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(saveDoctorProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clinicAddress: 'Room 204, Main Clinic',
+        licenseId: 'PRC-123456',
+      }),
+    ));
   });
 
   it('reverts the edits when Cancel is pressed', async () => {
