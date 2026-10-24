@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase/client';
 import { getCurrentUserRole } from './services/session';
+import { reportProfileSessionError, signOutCurrentDevice, startProfileSessionMonitor } from './services/profileSessions';
+import { prepareSignInVerification, VerificationChallenge } from './services/signInVerification';
+import { VerificationChallengeView, VerificationUnavailableView } from './views/auth/VerificationChallengeView';
 import { applyAdminSettings, loadAdminSettings } from './services/adminSettings';
 import { applyDoctorSettings, loadDoctorSettings } from './services/doctorSettings';
 import { DoctorSidebar, DoctorView } from './components/navigation/DoctorSidebar';
@@ -194,16 +197,49 @@ function App() {
   const [checkingSession, setCheckingSession] = useState(
     () => Boolean(supabase && typeof supabase.auth.getSession === 'function'),
   );
+  const [verification, setVerification] = useState<VerificationChallenge | null>(null);
+  const [verificationFailure, setVerificationFailure] = useState('');
+  const portalRef = useRef<Portal | null>(null);
+  const routingRef = useRef<Promise<Portal> | null>(null);
+
+  useEffect(() => {
+    portalRef.current = portal;
+  }, [portal]);
 
   const routeToPortal = async (): Promise<Portal> => {
-    const role = await getCurrentUserRole();
-    const next: Portal =
-      role === 'doctor' ? 'doctor'
-      : role === 'admin' ? 'admin'
-      : role === 'pending' ? 'pending'
-      : 'unauthorized';
-    setPortal(next);
-    return next;
+    if (routingRef.current) return routingRef.current;
+    const work = (async (): Promise<Portal> => {
+      try {
+        const challenge = await prepareSignInVerification();
+        if (challenge) {
+          setVerificationFailure('');
+          setVerification(challenge);
+          setPortal(null);
+          return 'unauthorized';
+        }
+      } catch (cause) {
+        setVerification(null);
+        setVerificationFailure(cause instanceof Error ? cause.message : 'Sign-in verification could not be started.');
+        setPortal(null);
+        return 'unauthorized';
+      }
+      setVerification(null);
+      setVerificationFailure('');
+      const role = await getCurrentUserRole();
+      const next: Portal =
+        role === 'doctor' ? 'doctor'
+        : role === 'admin' ? 'admin'
+        : role === 'pending' ? 'pending'
+        : 'unauthorized';
+      setPortal(next);
+      return next;
+    })();
+    routingRef.current = work;
+    try {
+      return await work;
+    } finally {
+      routingRef.current = null;
+    }
   };
 
   useEffect(() => {
@@ -231,9 +267,13 @@ function App() {
       try {
         const { data: listener } = supabase.auth.onAuthStateChange((event) => {
           if (event === 'SIGNED_IN') {
-            void routeToPortal();
+            // A password re-check inside Security also emits SIGNED_IN; do not
+            // restart the portal or ask for a fresh verification in that case.
+            if (!portalRef.current) void routeToPortal();
           } else if (event === 'SIGNED_OUT') {
             setPortal(null);
+            setVerification(null);
+            setVerificationFailure('');
             setAuthScreen('login');
           }
         });
@@ -251,14 +291,38 @@ function App() {
   }, []);
 
   const signOut = async () => {
-    try {
-      await supabase?.auth.signOut();
-    } catch {
-      // Network error: still drop the local portal state below.
-    }
+    // Local/this-device only: other signed-in devices stay connected and keep
+    // appearing in Active Login Sessions.
+    await signOutCurrentDevice();
     setPortal(null);
+    setVerification(null);
+    setVerificationFailure('');
     setAuthScreen('login');
   };
+
+  // Track this tab for as long as a staff portal is open. This is what makes
+  // the laptop/desktop session appear in Active Login Sessions even when the
+  // user never opens Profile → Security.
+  useEffect(() => {
+    if (!portal) return;
+    let cancelled = false;
+    let stop: (() => void) | undefined;
+    const label = portal === 'admin' ? 'Admin web' : portal === 'doctor' ? 'Doctor web' : 'MindPulse web';
+    startProfileSessionMonitor(label)
+      .then((disconnect) => {
+        if (cancelled) disconnect();
+        else stop = disconnect;
+      })
+      .catch((cause: unknown) => {
+        // The monitor normally reports its own failures; this is the last line
+        // of defence so the panel never silently stays on "Connecting".
+        reportProfileSessionError(cause);
+      });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [portal]);
 
   // Apply saved Settings (theme, density, document title) as soon as the app boots.
   // The doctor appearance is scoped to `.doctor-scope`, so applying it here never
@@ -296,6 +360,29 @@ function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portal]);
+
+  if (verificationFailure) {
+    return (
+      <VerificationUnavailableView
+        message={verificationFailure}
+        onRetry={() => void routeToPortal()}
+        onSignOut={() => void signOut()}
+      />
+    );
+  }
+
+  if (verification) {
+    return (
+      <VerificationChallengeView
+        challenge={verification}
+        onVerified={() => {
+          setVerification(null);
+          void routeToPortal();
+        }}
+        onSignOut={() => void signOut()}
+      />
+    );
+  }
 
   if (portal === 'doctor') return <DoctorPortal onSignOut={signOut} />;
   if (portal === 'admin') return <AdminDashboardView onSignOut={signOut} />;

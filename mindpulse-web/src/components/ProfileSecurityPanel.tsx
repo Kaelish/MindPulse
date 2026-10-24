@@ -1,67 +1,112 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { supabase } from '../supabase/client';
 import {
-  connectProfileSessions,
+  ProfileSessionsState,
   ProfileLoginSession,
   revokeOtherProfileSessions,
   revokeProfileSession,
+  signOutCurrentDevice,
+  subscribeProfileSessions,
 } from '../services/profileSessions';
+import {
+  activeVerificationMethod,
+  challengeFactor,
+  disableVerification,
+  destinationError,
+  enrollSmsFactor,
+  enrollTotp,
+  markContactMethodVerified,
+  markFactorMethodVerified,
+  normalizeVerificationDestination,
+  readVerificationProfile,
+  sendContactCode,
+  VERIFICATION_METHODS,
+  VerificationMethod,
+  verifyContactCode,
+  verifyFactor,
+} from '../services/signInVerification';
 import './ProfileSecurityPanel.css';
 
 interface ProfileSecurityPanelProps {
   editing: boolean;
   email: string;
+  phone?: string;
 }
 
-const formatLastActive = (value: string) => new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-}).format(new Date(value));
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+};
 
-export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ editing, email }) => {
-  const [sessions, setSessions] = useState<ProfileLoginSession[]>([]);
-  const [sessionError, setSessionError] = useState('');
+const STATUS_LABEL: Record<ProfileSessionsState['status'], string> = {
+  live: 'Live',
+  connecting: 'Connecting',
+  reconnecting: 'Reconnecting',
+  offline: 'Offline',
+};
+
+const methodById = (id: VerificationMethod) => VERIFICATION_METHODS.find((method) => method.id === id) ?? VERIFICATION_METHODS[0];
+
+export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ editing, email, phone = '' }) => {
+  const [sessionState, setSessionState] = useState<ProfileSessionsState>({
+    sessions: [],
+    status: 'connecting',
+    message: 'Connecting to the live session service…',
+    notice: '',
+  });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [logoutOthersBusy, setLogoutOthersBusy] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [password, setPassword] = useState({ current: '', next: '', confirm: '' });
-  const [mfaEnabled, setMfaEnabled] = useState(false);
-  const [mfaBusy, setMfaBusy] = useState(false);
-  const [factorId, setFactorId] = useState('');
-  const [qrCode, setQrCode] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
+
+  const [verificationLoading, setVerificationLoading] = useState(true);
+  const [verificationBusy, setVerificationBusy] = useState(false);
+  const [method, setMethod] = useState<VerificationMethod>('totp');
+  const [activeMethod, setActiveMethod] = useState<VerificationMethod | null>(null);
+  const [savedDestination, setSavedDestination] = useState('');
+  const [totpEnrollment, setTotpEnrollment] = useState<{ factorId: string; challengeId: string; qrCode: string } | null>(null);
+  const [smsEnrollment, setSmsEnrollment] = useState<{ factorId: string; challengeId: string; destination: string } | null>(null);
+  const [contactChallenge, setContactChallenge] = useState<{ method: 'email' | 'whatsapp'; destination: string } | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState(phone);
+  const [emailAddress, setEmailAddress] = useState(email);
+  const [whatsappNumber, setWhatsappNumber] = useState(phone);
+  const [verificationCode, setVerificationCode] = useState('');
+
+  useEffect(() => subscribeProfileSessions(setSessionState), []);
 
   useEffect(() => {
-    let active = true;
-    let disconnect: (() => void) | undefined;
-    connectProfileSessions(setSessions, setSessionError)
-      .then((stop) => {
-        if (active) disconnect = stop;
-        else stop();
-      })
-      .catch((cause: unknown) => {
-        if (active) setSessionError(cause instanceof Error ? cause.message : 'Unable to connect to live sessions.');
-      });
-    return () => {
-      active = false;
-      disconnect?.();
-    };
-  }, []);
+    setEmailAddress(email);
+    setPhoneNumber((current) => current || phone);
+    setWhatsappNumber((current) => current || phone);
+  }, [email, phone]);
 
-  useEffect(() => {
-    if (!supabase) return;
-    let active = true;
-    supabase.auth.mfa.listFactors().then(({ data, error: factorError }) => {
-      if (!active) return;
-      if (factorError) {
-        setError(factorError.message);
-        return;
+  const loadVerification = async () => {
+    setVerificationLoading(true);
+    try {
+      const [profile, active] = await Promise.all([readVerificationProfile(), activeVerificationMethod()]);
+      setSavedDestination(profile.destination);
+      if (active) {
+        setActiveMethod(active);
+        setMethod(active);
+      } else if (profile.method !== 'none') {
+        setMethod(profile.method);
       }
-      setMfaEnabled((data?.totp ?? []).some((factor) => factor.status === 'verified'));
-    });
-    return () => { active = false; };
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to read your verification settings.');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadVerification();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const changePassword = async (event: FormEvent<HTMLFormElement>) => {
@@ -96,90 +141,113 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
     }
   };
 
-  const toggleMfa = async () => {
-    if (!editing || !supabase) return;
-    setMfaBusy(true);
+  const clearEnrollment = () => {
+    setTotpEnrollment(null);
+    setSmsEnrollment(null);
+    setContactChallenge(null);
+    setVerificationCode('');
+  };
+
+  const selectMethod = (next: VerificationMethod) => {
+    if (activeMethod && activeMethod !== next) return;
+    setMethod(next);
+    setError('');
+    setNotice('');
+    clearEnrollment();
+  };
+
+  const startVerificationSetup = async () => {
+    if (!editing || verificationBusy || activeMethod) return;
+    setError('');
+    setNotice('');
+    clearEnrollment();
+    setVerificationBusy(true);
+    try {
+      if (method === 'totp') {
+        const enrollment = await enrollTotp();
+        const challengeId = await challengeFactor(enrollment.factorId);
+        setTotpEnrollment({ ...enrollment, challengeId });
+        setNotice('Scan the QR code with your authenticator app, then enter the current six-digit code.');
+      } else if (method === 'sms') {
+        const problem = destinationError('sms', phoneNumber);
+        if (problem) throw new Error(problem);
+        const enrollment = await enrollSmsFactor(phoneNumber);
+        const challengeId = await challengeFactor(enrollment.factorId);
+        setSmsEnrollment({ ...enrollment, challengeId });
+        setNotice(`A six-digit code was sent to ${enrollment.destination}.`);
+      } else {
+        const destination = method === 'email' ? emailAddress : whatsappNumber;
+        const problem = destinationError(method, destination);
+        if (problem) throw new Error(problem);
+        const normalized = normalizeVerificationDestination(method, destination);
+        await sendContactCode(method, normalized);
+        setContactChallenge({ method, destination: normalized });
+        setNotice(`A six-digit code was sent to ${normalized} by ${method === 'email' ? 'email' : 'WhatsApp'}.`);
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Verification setup could not be started.');
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
+
+  const confirmVerificationSetup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editing || verificationBusy) return;
+    setError('');
+    setNotice('');
+    setVerificationBusy(true);
+    try {
+      if (method === 'totp') {
+        if (!totpEnrollment) throw new Error('Start the authenticator setup first.');
+        await verifyFactor(totpEnrollment.factorId, totpEnrollment.challengeId, verificationCode);
+        await markFactorMethodVerified('totp', 'Authenticator app');
+        setSavedDestination('Authenticator app');
+      } else if (method === 'sms') {
+        if (!smsEnrollment) throw new Error('Request an SMS code first.');
+        await verifyFactor(smsEnrollment.factorId, smsEnrollment.challengeId, verificationCode);
+        await markFactorMethodVerified('sms', smsEnrollment.destination);
+        setSavedDestination(smsEnrollment.destination);
+      } else {
+        if (!contactChallenge) throw new Error('Request a verification code first.');
+        await verifyContactCode(contactChallenge.method, contactChallenge.destination, verificationCode);
+        await markContactMethodVerified(contactChallenge.method, contactChallenge.destination);
+        setSavedDestination(contactChallenge.destination);
+      }
+      setActiveMethod(method);
+      clearEnrollment();
+      setNotice(`${methodById(method).shortLabel} verification is now active.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The verification code could not be confirmed.');
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
+
+  const turnOffVerification = async () => {
+    if (!editing || verificationBusy) return;
+    if (!window.confirm('Turn off sign-in verification for this account?')) return;
+    setVerificationBusy(true);
     setError('');
     setNotice('');
     try {
-      const { data, error: listError } = await supabase.auth.mfa.listFactors();
-      if (listError) throw listError;
-      const verifiedFactor = (data?.totp ?? []).find((factor) => factor.status === 'verified');
-      if (verifiedFactor) {
-        const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: verifiedFactor.id });
-        if (unenrollError) throw unenrollError;
-        setMfaEnabled(false);
-        setNotice('Two-factor authentication disabled.');
-      } else {
-        const unverified = (data?.all ?? []).find((factor) => factor.factor_type === 'totp' && factor.status === 'unverified');
-        if (unverified) {
-          const { error: removeError } = await supabase.auth.mfa.unenroll({ factorId: unverified.id });
-          if (removeError) throw removeError;
-        }
-        const { data: enrollment, error: enrollError } = await supabase.auth.mfa.enroll({
-          factorType: 'totp',
-          friendlyName: 'MindPulse profile authenticator',
-        });
-        if (enrollError) throw enrollError;
-        setFactorId(enrollment.id);
-        setQrCode(enrollment.totp.qr_code);
-        setNotice('Scan the QR code, then enter a current authenticator code to finish setup.');
-      }
+      await disableVerification();
+      setActiveMethod(null);
+      setSavedDestination('');
+      setMethod('totp');
+      clearEnrollment();
+      setNotice('Sign-in verification is turned off.');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to update two-factor authentication.');
+      setError(cause instanceof Error ? cause.message : 'Unable to turn off verification.');
     } finally {
-      setMfaBusy(false);
-    }
-  };
-
-  const verifyMfa = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!editing || !supabase || !factorId) return;
-    setMfaBusy(true);
-    setError('');
-    try {
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
-      if (challengeError) throw challengeError;
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challenge.id,
-        code: mfaCode.trim(),
-      });
-      if (verifyError) throw verifyError;
-      setMfaEnabled(true);
-      setFactorId('');
-      setQrCode('');
-      setMfaCode('');
-      setNotice('Two-factor authentication enabled.');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The authenticator code could not be verified.');
-    } finally {
-      setMfaBusy(false);
-    }
-  };
-
-  const cancelMfa = async () => {
-    if (!supabase || !factorId) return;
-    setMfaBusy(true);
-    setError('');
-    try {
-      const { error: cancelError } = await supabase.auth.mfa.unenroll({ factorId });
-      if (cancelError) throw cancelError;
-      setFactorId('');
-      setQrCode('');
-      setMfaCode('');
-      setNotice('Authenticator setup cancelled.');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to cancel authenticator setup.');
-    } finally {
-      setMfaBusy(false);
+      setVerificationBusy(false);
     }
   };
 
   const logoutSession = async (session: ProfileLoginSession) => {
     setError('');
     if (session.isCurrent) {
-      await supabase?.auth.signOut({ scope: 'local' });
+      await signOutCurrentDevice();
       return;
     }
     setPendingSessionId(session.id);
@@ -205,6 +273,13 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
     }
   };
 
+  const selectedMethod = methodById(method);
+  const setupStarted = Boolean(totpEnrollment || smsEnrollment || contactChallenge);
+  const activeOption = activeMethod ? methodById(activeMethod) : null;
+
+  const destinationValue = method === 'email' ? emailAddress : whatsappNumber;
+  const destinationFieldLabel = method === 'email' ? 'Email address' : 'WhatsApp number';
+
   return (
     <div className="profile-security-stack">
       {error && <div className="profile-security-alert" role="alert">{error}</div>}
@@ -221,42 +296,163 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
       </section>
 
       <section className="profile-security-section">
-        <div className="profile-security-toggle-row">
-          <div><h2>Two-Factor Authentication</h2><p>{mfaEnabled ? 'Authenticator app verification is enabled.' : 'Protect your account with an authenticator app.'}</p></div>
-          <button type="button" role="switch" aria-checked={mfaEnabled} className={`profile-security-switch ${mfaEnabled ? 'is-on' : ''}`} onClick={() => void toggleMfa()} disabled={!editing || mfaBusy || Boolean(factorId)}><span /></button>
+        <header>
+          <h2>Sign-in Verification</h2>
+          <p>Choose how MindPulse confirms it&apos;s you. The code can arrive by QR/authenticator app, SMS, email, or WhatsApp.</p>
+        </header>
+
+        <div className="profile-security-methods" role="radiogroup" aria-label="Verification method">
+          {VERIFICATION_METHODS.map((option) => {
+            const isActive = activeMethod === option.id;
+            const isSelected = method === option.id;
+            const locked = Boolean(activeMethod && !isActive);
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                className={`profile-security-method ${isSelected ? 'is-selected' : ''} ${isActive ? 'is-active' : ''}`}
+                onClick={() => selectMethod(option.id)}
+                disabled={locked || verificationBusy || verificationLoading}
+              >
+                <span className="profile-security-method-top">
+                  <strong>{option.label}</strong>
+                  {isActive && <span className="profile-security-current">Active</span>}
+                </span>
+                <span>{option.description}</span>
+              </button>
+            );
+          })}
         </div>
-        {factorId && (
-          <form className="profile-security-mfa" onSubmit={verifyMfa}>
-            <img src={qrCode} alt="Authenticator enrollment QR code" />
-            <label><span>AUTHENTICATOR CODE</span><input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} required /></label>
-            <button className="profile-security-primary" type="submit" disabled={mfaBusy}>{mfaBusy ? 'Verifying…' : 'Verify and Enable'}</button>
-            <button className="profile-security-secondary" type="button" onClick={() => void cancelMfa()} disabled={mfaBusy}>Cancel Setup</button>
-          </form>
+
+        {verificationLoading ? (
+          <p className="profile-security-empty">Checking your verification settings…</p>
+        ) : activeMethod && activeOption ? (
+          <div className="profile-security-method-panel">
+            <div>
+              <h3>{activeOption.label} is active</h3>
+              <p>
+                {activeMethod === 'totp'
+                  ? 'Sign-in asks for a code from your authenticator app.'
+                  : activeMethod === 'sms'
+                    ? `Sign-in codes are sent to ${savedDestination || 'your mobile number'}.`
+                    : `Sign-in codes are sent to ${savedDestination} by ${activeMethod === 'email' ? 'email' : 'WhatsApp'}.`}
+              </p>
+            </div>
+            <button type="button" className="profile-security-secondary" onClick={() => void turnOffVerification()} disabled={!editing || verificationBusy}>
+              Turn Off Verification
+            </button>
+          </div>
+        ) : (
+          <div className="profile-security-method-panel profile-security-method-setup">
+            <p>{selectedMethod.description}</p>
+
+            {method === 'sms' && (
+              <label>
+                <span>MOBILE NUMBER</span>
+                <input type="tel" value={phoneNumber} placeholder={selectedMethod.destinationPlaceholder} onChange={(event) => setPhoneNumber(event.target.value)} readOnly={!editing} disabled={setupStarted} />
+              </label>
+            )}
+
+            {(method === 'email' || method === 'whatsapp') && (
+              <label>
+                <span>{destinationFieldLabel.toUpperCase()}</span>
+                <input
+                  type={method === 'email' ? 'email' : 'tel'}
+                  value={destinationValue}
+                  placeholder={selectedMethod.destinationPlaceholder}
+                  onChange={(event) => (method === 'email' ? setEmailAddress(event.target.value) : setWhatsappNumber(event.target.value))}
+                  readOnly={!editing}
+                  disabled={Boolean(contactChallenge)}
+                />
+              </label>
+            )}
+
+            {totpEnrollment && (
+              <div className="profile-security-qr">
+                <img src={totpEnrollment.qrCode} alt="Authenticator enrollment QR code" />
+                <p>Scan this QR code with your authenticator app, then enter the six-digit code it shows.</p>
+              </div>
+            )}
+
+            {setupStarted && (
+              <form className="profile-security-code-form" onSubmit={confirmVerificationSetup}>
+                <label>
+                  <span>VERIFICATION CODE</span>
+                  <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))} readOnly={!editing} required />
+                </label>
+                <button className="profile-security-primary" type="submit" disabled={!editing || verificationBusy || verificationCode.length !== 6}>{verificationBusy ? 'Verifying…' : 'Verify and Enable'}</button>
+                <button className="profile-security-secondary" type="button" onClick={clearEnrollment} disabled={verificationBusy}>Cancel</button>
+              </form>
+            )}
+
+            {!setupStarted && (
+              <button className="profile-security-primary" type="button" onClick={() => void startVerificationSetup()} disabled={!editing || verificationBusy}>
+                {verificationBusy ? 'Starting…' : method === 'totp' ? 'Show QR Code' : method === 'sms' ? 'Send SMS Code' : `Send ${method === 'email' ? 'Email' : 'WhatsApp'} Code`}
+              </button>
+            )}
+
+            {(method === 'email' || method === 'whatsapp') && (
+              <p className="profile-security-session-note">
+                Email and WhatsApp codes are delivered by the `verification-code` Supabase function. If the function or its mail/WhatsApp provider is not configured, setup will report that instead of pretending a code was sent.
+              </p>
+            )}
+            {!editing && <p className="profile-security-session-note">Select Edit Profile to change sign-in verification.</p>}
+          </div>
         )}
       </section>
 
       <section className="profile-security-section">
         <header className="profile-security-session-header">
-          <div><h2>Active Login Sessions</h2><p>Device sessions update live. IP address and precise location are not available from browser sessions.</p></div>
-          <button type="button" className="profile-security-secondary" onClick={() => void logoutOthers()} disabled={logoutOthersBusy || sessions.length < 2}>{logoutOthersBusy ? 'Logging out…' : 'Log Out All Other Sessions'}</button>
+          <div>
+            <div className="profile-security-session-title">
+              <h2>Active Login Sessions</h2>
+              <span className={`profile-security-live is-${sessionState.status}`}>{STATUS_LABEL[sessionState.status]}</span>
+            </div>
+            <p>Every signed-in admin or doctor tab appears here and updates live. IP address and precise location are not available from browser sessions.</p>
+          </div>
+          <button type="button" className="profile-security-secondary" onClick={() => void logoutOthers()} disabled={logoutOthersBusy || sessionState.sessions.length < 2}>{logoutOthersBusy ? 'Logging out…' : 'Log Out All Other Sessions'}</button>
         </header>
-        {sessionError && <p className="profile-security-session-error" role="status">{sessionError}</p>}
-        {sessions.length === 0 ? <p className="profile-security-empty">Waiting for connected devices…</p> : (
+
+        {sessionState.status !== 'live' && sessionState.message && (
+          <p className="profile-security-session-error" role="status">{sessionState.message}</p>
+        )}
+        {sessionState.notice && <p className="profile-security-session-note" role="status">{sessionState.notice}</p>}
+
+        {sessionState.sessions.length === 0 ? (
+          <p className="profile-security-empty">
+            {sessionState.status === 'live'
+              ? 'No device is tracked yet. This tab will appear as soon as the live channel syncs.'
+              : 'Waiting for the live session service…'}
+          </p>
+        ) : (
           <div className="profile-security-session-list">
-            {sessions.map((session) => (
+            {sessionState.sessions.map((session) => (
               <article className="profile-security-session" key={session.id}>
-                <header><div><h3>{session.deviceName}</h3><p>{session.browser} · {session.operatingSystem}</p></div>{session.isCurrent && <span className="profile-security-current">Current Device</span>}</header>
+                <header>
+                  <div>
+                    <h3>{session.deviceName}</h3>
+                    <p>{session.roleLabel} · {session.browser} · {session.operatingSystem}</p>
+                  </div>
+                  {session.isCurrent && <span className="profile-security-current">Current Device</span>}
+                </header>
                 <dl>
-                  <div><dt>IP Address</dt><dd>{session.ipAddress}</dd></div>
-                  <div><dt>Location</dt><dd>{session.location}</dd></div>
-                  <div><dt>Last Active</dt><dd>{formatLastActive(session.lastActiveAt)}</dd></div>
+                  <div><dt>Signed in</dt><dd>{formatDateTime(session.signedInAt)}</dd></div>
+                  <div><dt>Last active</dt><dd>{formatDateTime(session.lastActiveAt)}</dd></div>
+                  <div><dt>Time zone</dt><dd>{session.location}</dd></div>
+                  <div><dt>IP address</dt><dd>{session.ipAddress}</dd></div>
                 </dl>
-                <button type="button" className="profile-security-logout" onClick={() => void logoutSession(session)} disabled={pendingSessionId === session.id}>{pendingSessionId === session.id ? 'Logging out…' : 'Log Out'}</button>
+                <button type="button" className="profile-security-logout" onClick={() => void logoutSession(session)} disabled={pendingSessionId === session.id}>
+                  {pendingSessionId === session.id ? 'Logging out…' : session.isCurrent ? 'Sign Out This Device' : 'Log Out'}
+                </button>
               </article>
             ))}
           </div>
         )}
-        <p className="profile-security-session-note">Logging out revokes the session refresh token. An already-issued access token can remain valid until expiry.</p>
+        <p className="profile-security-session-note">
+          Logging out a device sends an immediate sign-out signal and removes it from this list. When the session-control function is deployed, its refresh token is also revoked so it cannot silently reconnect. A device appears again the next time it signs in.
+        </p>
       </section>
     </div>
   );

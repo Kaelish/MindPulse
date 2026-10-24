@@ -54,7 +54,16 @@ Deno.serve(async (request: Request) => {
     return Response.json({ error: 'The session is already offline or expired.' }, { status: 404, headers: corsHeaders });
   }
 
-  const channel = adminClient.channel(`profile-sessions:${user.id}`, { config: { private: true } });
+  // The web client joins a public presence channel whose topic is a SHA-256
+  // hash of the user id (see mindpulse-web/src/services/profileSessions.ts).
+  // Broadcasting there makes a connected tab sign out even when the request
+  // came from a device whose own Realtime connection was down.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`mindpulse-sessions:${user.id}`));
+  const topicHash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 40);
+  const channel = adminClient.channel(`mindpulse-sessions:${topicHash}`);
   const broadcast = await channel.send({
     type: 'broadcast',
     event: 'session-revoked',

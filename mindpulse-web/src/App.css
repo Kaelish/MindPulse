@@ -1013,6 +1013,28 @@ button {
   font-size: 0.85rem;
 }
 
+.auth-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(22, 163, 74, 0.08);
+  color: #16734a;
+  font-size: 0.85rem;
+}
+
+.auth-secondary-button {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  box-shadow: none;
+}
+
+.auth-form input[autocomplete="one-time-code"],
+.auth-form input[inputmode="numeric"] {
+  letter-spacing: 0.35em;
+  font-weight: 700;
+}
+
 .auth-shell-compact .auth-card {
   min-height: auto;
 }

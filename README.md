@@ -104,6 +104,45 @@ update public.profiles set role = 'admin' where email = 'you@school.edu';
 Exactly one administrator account is allowed: the database rejects promoting
 anyone else to `admin` and rejects demoting the administrator.
 
+### Live login sessions and sign-in verification
+
+Two later migrations add the server-side pieces for the Security tab shared by
+the admin and doctor web portals:
+
+- `supabase/migrations/0026_active_login_sessions.sql` — creates
+  `revoke_profile_auth_session`, which lets the `profile-session-control` edge
+  function delete a device's refresh token, and installs the private Realtime
+  channel policy.
+- `supabase/migrations/0027_verification_codes.sql` — stores hashed email /
+  WhatsApp verification codes. Only the service role can read the table.
+
+Apply both in the Supabase SQL Editor. Then deploy the functions:
+
+```powershell
+supabase functions deploy profile-session-control
+supabase functions deploy verification-code
+```
+
+Active Login Sessions works without the functions: every signed-in web tab
+joins a Realtime presence channel, so devices appear live and a per-device
+logout sends an immediate sign-out broadcast. The functions add refresh-token
+revocation and email/WhatsApp delivery.
+
+Verification methods in Profile → Security:
+
+| Method | How it is delivered | What must be configured |
+| --- | --- | --- |
+| Authenticator app (QR) | Supabase TOTP MFA | Nothing beyond Supabase Auth |
+| SMS | Supabase phone MFA | Twilio (or another SMS provider) in Supabase Auth → Providers → Phone |
+| Email | `verification-code` edge function + Resend | `RESEND_API_KEY`, `VERIFICATION_EMAIL_FROM` secrets |
+| WhatsApp | `verification-code` edge function + Twilio WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` secrets |
+
+`VERIFICATION_SECRET` is optional and adds an extra HMAC pepper to stored code
+hashes. If a provider is missing, setup reports that instead of pretending a
+code was sent. Once a method is enabled, a new browser session must pass it
+before the portal opens; TOTP and SMS use Supabase's authenticator assurance
+level (`aal2`), and email/WhatsApp ask once per browser tab.
+
 ### Doctor registration and approval
 
 The web app's **Register as a doctor** form creates a `doctor` account with the

@@ -254,7 +254,7 @@ export const DoctorProfileSettingView: React.FC = () => {
           {editing && specialtyChoice === OTHER_SPECIALIZATION && <label className="doctor-profile-field full"><span>Other specialization</span><input value={customSpecialty} placeholder="Type your specialization" onChange={(event) => handleCustomSpecialty(event.target.value)} /></label>}
         </ProfileSection>}
       </form>
-    ) : <ProfileSecurityPanel editing={editing} email={profile.email} />}
+    ) : <ProfileSecurityPanel editing={editing} email={profile.email} phone={profile.phone} />}
   </main>;
 };
 

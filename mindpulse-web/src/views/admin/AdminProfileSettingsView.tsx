@@ -273,7 +273,7 @@ export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> =
             <Field label="Privacy Responsibility Scope" value={draft.privacy_scope} editing={editing} onChange={(value) => updateDraft('privacy_scope', value)} placeholder="Sole Data Privacy Officer & Doctor Credential Verifier" full />
           </ProfileSection>}
         </form>
-      ) : <ProfileSecurityPanel editing={editing} email={profile.email || ''} />}
+      ) : <ProfileSecurityPanel editing={editing} email={profile.email || ''} phone={profile.phone || ''} />}
     </main>
   </div>;
 };
