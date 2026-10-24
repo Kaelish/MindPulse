@@ -258,6 +258,11 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate }) => {
             placeholder="Search: e.g. approve a booking, bands, receipts, walk-in…"
             aria-label="Search help topics"
           />
+          {query && (
+            <button type="button" className="help-search-clear" onClick={() => setQuery('')} aria-label="Clear search">
+              ×
+            </button>
+          )}
         </div>
 
         <div className="help-toolbar">

@@ -33,9 +33,11 @@
   flex: 1;
   min-width: 0;
   padding: 12px 0;
-  border: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
   outline: 0;
-  background: transparent;
+  background: transparent !important;
+  box-shadow: none !important;
   font-size: 0.95rem;
   color: #0f172a;
 }
@@ -46,8 +48,8 @@
   box-shadow: none;
 }
 
-/* Drop the browser's built-in clear (×) control — the field keeps its own
-   styling and the portal does not show a second clear button. */
+/* Drop the browser's built-in clear (×) control — the card renders its own
+   clear icon on the right so only one appears. */
 .help-search input::-webkit-search-cancel-button,
 .help-search input::-webkit-search-decoration {
   -webkit-appearance: none;
@@ -56,6 +58,28 @@
 
 .help-search input::placeholder {
   color: #9aa5b5;
+}
+
+.help-search-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a94a6;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.help-search-clear:hover {
+  background: #e8eef4;
+  color: #0f172a;
 }
 
 .help-result-count {
@@ -244,6 +268,15 @@ html[data-doctor-theme='dark'] .help-search input {
 
 html[data-doctor-theme='dark'] .help-search input::placeholder {
   color: #6d7a91;
+}
+
+html[data-doctor-theme='dark'] .help-search-clear {
+  color: #9fb0c9;
+}
+
+html[data-doctor-theme='dark'] .help-search-clear:hover {
+  background: #232d41;
+  color: #e6ebf4;
 }
 
 html[data-doctor-theme='dark'] .help-result-count {
