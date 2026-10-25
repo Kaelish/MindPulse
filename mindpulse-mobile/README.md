@@ -14,6 +14,25 @@ To run the application locally:
 
 3. Open the app using Expo Go on your physical device, or press 'a' for Android emulator / 'i' for iOS simulator.
 
+If iOS remains on the MindPulse splash screen, update Expo Go and restart the
+development server with `npx expo start -c`. The app gives its startup storage
+and session checks a timeout and falls back to onboarding when they cannot
+complete, but an outdated Expo Go binary can still prevent native modules such
+as AsyncStorage from working correctly.
+
+### Backend URL
+
+The emotion scan calls the local Django backend, so a physical iPhone cannot
+use `localhost`—that means the iPhone itself. Run `.\dev.ps1` from the
+repository root; it starts Django on the computer's LAN interface and writes
+the current LAN address to this ignored `.env` file automatically. This avoids
+committing or hardcoding a machine-specific IP address.
+
+If the computer changes networks, run `.\dev.ps1` again after clearing the old
+`EXPO_PUBLIC_MINDPULSE_API_URL` line in `mindpulse-mobile\.env`, or update it
+to the new computer LAN address. The iPhone and computer must be on the same
+Wi-Fi network, and Windows Firewall must allow the backend port.
+
 ## Current Architecture & Workarounds
 
 ### 1. Authentication

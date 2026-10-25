@@ -20,9 +20,28 @@ or, in PowerShell:
 ```
 
 Options: `-Port 8001`, `-NoBackend` (Expo only), `-NoExpo` (backend only),
-`-DryRun` (checks only). The script prints the correct
-`EXPO_PUBLIC_MINDPULSE_API_URL` for emulator / physical phone / web if it is
-missing from `mindpulse-mobile\.env`.
+`-DryRun` (checks only). When the mobile backend URL is missing,
+`dev.ps1` writes the current computer LAN address to the ignored
+`mindpulse-mobile\.env` so a physical phone can reach Django without a
+machine-specific IP being committed to the repository.
+
+### Deploy the Django backend
+
+The repository includes [`render.yaml`](./render.yaml), which prepares the
+backend as a Render Web Service using the Linux CPU/headless dependencies,
+Gunicorn, migrations, and the `/api/health/` health check. To deploy it:
+
+1. Push the repository to GitHub.
+2. In Render, choose **New > Blueprint**, select the repository, and apply
+   `render.yaml`.
+3. Set `SUPABASE_SERVICE_ROLE_KEY` in the Render service environment. Never
+   commit this value.
+4. After deployment, copy the service's HTTPS URL into the mobile build
+   environment as `EXPO_PUBLIC_MINDPULSE_API_URL`.
+
+The free plan may sleep and may not have enough memory for TensorFlow and
+MediaPipe. The deployment configuration is ready to try, but hosting limits
+are controlled by Render and cannot be verified from this repository alone.
 
 ## Shared Supabase connection
 

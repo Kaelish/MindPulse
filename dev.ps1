@@ -92,11 +92,16 @@ if (Test-Path $envFile) {
 if ($hasApiUrl) {
   Write-Host "OK  EXPO_PUBLIC_MINDPULSE_API_URL is set in mindpulse-mobile\.env" -ForegroundColor Green
 } else {
-  Write-Host "WARN  EXPO_PUBLIC_MINDPULSE_API_URL is not set in mindpulse-mobile\.env" -ForegroundColor Yellow
-  Write-Host "      Capture will fail with 'Could not reach the emotion service' until you add one of:" -ForegroundColor Yellow
-  Write-Host "        Android emulator : EXPO_PUBLIC_MINDPULSE_API_URL=http://10.0.2.2:$Port"
-  Write-Host "        Physical phone    : EXPO_PUBLIC_MINDPULSE_API_URL=http://$(Get-LanIp):$Port"
-  Write-Host "        Web / iOS sim     : EXPO_PUBLIC_MINDPULSE_API_URL=http://localhost:$Port"
+  $lanIp = Get-LanIp
+  if ($lanIp -ne '<your-PC-LAN-IP>' -and -not $DryRun) {
+    Add-Content -Path $envFile -Value "EXPO_PUBLIC_MINDPULSE_API_URL=http://${lanIp}:$Port"
+    Write-Host "OK  Wrote the local phone backend URL to mindpulse-mobile\.env ($lanIp`:$Port)" -ForegroundColor Green
+  } else {
+    Write-Host "WARN  EXPO_PUBLIC_MINDPULSE_API_URL is not set in mindpulse-mobile\.env" -ForegroundColor Yellow
+    Write-Host "      Physical phone: http://$(Get-LanIp):$Port"
+    Write-Host "      Android emulator: http://10.0.2.2:$Port"
+    Write-Host "      Web / iOS simulator: http://localhost:$Port"
+  }
 }
 
 # --- backend --------------------------------------------------------------

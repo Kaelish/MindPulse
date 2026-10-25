@@ -5,9 +5,9 @@
  * backend that runs the capstone hybrid model (pixel CNN + 1,434 MediaPipe face
  * landmarks -> scaler -> multinomial logistic regression).
  *
- * Requires EXPO_PUBLIC_MINDPULSE_API_URL in the app env. There is no demo
- * fallback: without configuration this throws instead of returning a fake
- * result, matching the pattern used by services/video.ts.
+ * Requires EXPO_PUBLIC_MINDPULSE_API_URL in the app env. Without configuration
+ * this throws instead of returning a fake result, matching the pattern used by
+ * services/video.ts.
  *
  * The backend returns one of three classes — Happy / Neutral / Sad. Those map
  * 1:1 onto the expression vocabulary used by the face-scan result screen.
@@ -50,7 +50,7 @@ const getApiBaseUrl = (): string => {
   // only rewrites that exact shape (dev -> expo/virtual/env, prod -> inlined value).
   // Reading it through `globalThis.process` hides it from that transform, so the
   // .env value never reaches the app and capture always reports "not configured".
-  const baseUrl = process.env.EXPO_PUBLIC_MINDPULSE_API_URL || 'http://192.168.101.7:8000';
+  const baseUrl = process.env.EXPO_PUBLIC_MINDPULSE_API_URL?.trim();
   if (!baseUrl) {
     throw new Error(
       'Face scan is not configured. Set EXPO_PUBLIC_MINDPULSE_API_URL to the MindPulse backend URL.',

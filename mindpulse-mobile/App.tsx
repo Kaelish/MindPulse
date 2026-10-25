@@ -175,7 +175,8 @@ function App() {
     const timer = setTimeout(async () => {
       let hasSession = false;
       try {
-        if (await isRememberMeEnabled()) {
+        const rememberMe = await withTimeout(isRememberMeEnabled(), 3000);
+        if (rememberMe) {
           // getSession() answers from local storage (refreshing only when the
           // token is near expiry), so a slow auth endpoint can't force the
           // user back through the login screen.
@@ -188,7 +189,7 @@ function App() {
       if (cancelled) return;
       if (hasSession) {
         try {
-          await handleAuthSuccess(false);
+          await withTimeout(handleAuthSuccess(false), 6000);
         } catch (e) {
           console.warn('Session restore failed', e);
           if (!cancelled) changeScreen('onboarding');
