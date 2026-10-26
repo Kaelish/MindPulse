@@ -1,5 +1,7 @@
 import base64
-from pathlib import Path
+import sys
+from types import ModuleType
+from unittest.mock import Mock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
@@ -7,7 +9,24 @@ from rest_framework.test import APITestCase
 
 from .models import VideoCallSession
 
-FACE_FIXTURE = Path(__file__).resolve().parent / 'test_fixtures' / 'face.jpg'
+PREDICTION = {
+	'label': 'Neutral',
+	'confidence': 0.82,
+	'probabilities': {'Happy': 0.10, 'Neutral': 0.82, 'Sad': 0.08},
+	'runner_up': {'label': 'Happy', 'confidence': 0.10},
+}
+
+
+def fake_emotion_model(result=PREDICTION, side_effect=None):
+	"""Stand-in for the TensorFlow/MediaPipe module used by the view.
+
+	Unit tests must not need the ~700 MB inference stack, so the module is
+	injected into sys.modules and predict_image is a mock. The test can then
+	assert the request parsing and response mapping in isolation.
+	"""
+	module = ModuleType('emotion_model')
+	module.predict_image = Mock(return_value=result, side_effect=side_effect)
+	return module
 
 
 class VideoCallSessionApiTests(APITestCase):
@@ -55,10 +74,75 @@ class VideoCallSessionApiTests(APITestCase):
 		self.assertEqual(len(response.data), 1)
 		self.assertEqual(response.data[0]['patient_id'], 'patient-1')
 
+	def test_filter_sessions_by_doctor(self):
+		VideoCallSession.objects.create(
+			patient_id='patient-1',
+			doctor_id='doctor-1',
+			room_name='room-1',
+		)
+		VideoCallSession.objects.create(
+			patient_id='patient-1',
+			doctor_id='doctor-2',
+			room_name='room-2',
+		)
+
+		response = self.client.get('/api/video-sessions/?doctor_id=doctor-2')
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(len(response.data), 1)
+		self.assertEqual(response.data[0]['doctor_id'], 'doctor-2')
+
+	def test_duplicate_room_name_is_rejected(self):
+		VideoCallSession.objects.create(
+			patient_id='patient-1',
+			doctor_id='doctor-1',
+			room_name='room-1',
+		)
+
+		response = self.client.post(
+			'/api/video-sessions/',
+			{
+				'patient_id': 'patient-2',
+				'doctor_id': 'doctor-1',
+				'room_name': 'room-1',
+			},
+			format='json',
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertIn('room_name', response.data)
+
+	def test_invalid_status_is_rejected(self):
+		session = VideoCallSession.objects.create(
+			patient_id='patient-1',
+			doctor_id='doctor-1',
+			room_name='room-1',
+		)
+
+		response = self.client.patch(
+			f'/api/video-sessions/{session.id}/',
+			{'status': 'not-a-status'},
+			format='json',
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertIn('status', response.data)
+
+
+class HealthApiTests(APITestCase):
+	def test_health_reports_ok(self):
+		response = self.client.get('/api/health/')
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(response.json(), {'status': 'ok'})
+
 
 class PredictEmotionApiTests(APITestCase):
-	def test_missing_image_returns_400(self):
-		response = self.client.post('/api/predict-emotion/', {}, format='json')
+	def test_missing_image_returns_400_without_loading_the_model(self):
+		# Even with inference dependencies unavailable, a malformed request is
+		# the caller's error (400), not a service failure (503).
+		with patch.dict(sys.modules, {'emotion_model': None}):
+			response = self.client.post('/api/predict-emotion/', {}, format='json')
 
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertIn('image', response.data['detail'])
@@ -70,39 +154,87 @@ class PredictEmotionApiTests(APITestCase):
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertIn('Invalid base64', response.data['detail'])
 
-	def test_no_face_returns_400(self):
-		import cv2
-		import numpy as np
-
-		_, buf = cv2.imencode('.jpg', np.zeros((128, 128, 3), dtype=np.uint8))
-		payload = base64.b64encode(buf.tobytes()).decode('ascii')
+	def test_invalid_sad_bias_returns_400(self):
+		payload = base64.b64encode(b'fake-image').decode('ascii')
 
 		response = self.client.post(
-			'/api/predict-emotion/', {'image': payload}, format='json')
+			'/api/predict-emotion/',
+			{'image': payload, 'sad_bias': 'not-a-number'},
+			format='json',
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertIn('sad_bias', response.data['detail'])
+
+	def test_multipart_upload_returns_prediction(self):
+		image = SimpleUploadedFile('face.jpg', b'fake-jpeg-bytes',
+			content_type='image/jpeg')
+		model = fake_emotion_model()
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': image}, format='multipart')
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(response.data['label'], 'Neutral')
+		self.assertEqual(response.data['probabilities'], PREDICTION['probabilities'])
+		model.predict_image.assert_called_once_with(b'fake-jpeg-bytes', sad_bias=None)
+
+	def test_json_base64_data_url_returns_prediction(self):
+		payload = 'data:image/jpeg;base64,' + base64.b64encode(
+			b'fake-jpeg-bytes').decode('ascii')
+		model = fake_emotion_model()
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/',
+				{'image': payload, 'sad_bias': 1.5},
+				format='json',
+			)
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(response.data['runner_up']['label'], 'Happy')
+		model.predict_image.assert_called_once_with(b'fake-jpeg-bytes', sad_bias=1.5)
+
+	def test_no_face_returns_400(self):
+		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
+		model = fake_emotion_model(result=None)
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': payload}, format='json')
 
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertIn('No face', response.data['detail'])
 
-	def test_multipart_upload_returns_prediction(self):
-		image = SimpleUploadedFile('face.jpg', FACE_FIXTURE.read_bytes(),
-			content_type='image/jpeg')
+	def test_model_unavailable_returns_503(self):
+		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
 
-		response = self.client.post(
-			'/api/predict-emotion/', {'image': image}, format='multipart')
+		with patch.dict(sys.modules, {'emotion_model': None}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': payload}, format='json')
 
-		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertIn(response.data['label'], ('Happy', 'Neutral', 'Sad'))
-		self.assertAlmostEqual(
-			sum(response.data['probabilities'].values()), 1.0, places=5)
-		self.assertGreater(response.data['confidence'], 0.0)
+		self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+		self.assertIn('unavailable', response.data['detail'])
 
-	def test_json_base64_data_url_returns_prediction(self):
-		payload = 'data:image/jpeg;base64,' + base64.b64encode(
-			FACE_FIXTURE.read_bytes()).decode('ascii')
+	def test_prediction_value_error_returns_400(self):
+		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
+		model = fake_emotion_model(side_effect=ValueError('Unreadable image'))
 
-		response = self.client.post(
-			'/api/predict-emotion/', {'image': payload}, format='json')
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': payload}, format='json')
 
-		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertIn(response.data['label'], ('Happy', 'Neutral', 'Sad'))
-		self.assertGreater(response.data['confidence'], 0.0)
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertIn('Unreadable image', response.data['detail'])
+
+	def test_unexpected_prediction_error_returns_500(self):
+		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
+		model = fake_emotion_model(side_effect=RuntimeError('model crashed'))
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': payload}, format='json')
+
+		self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+		self.assertEqual(response.data['detail'], 'Prediction failed.')

@@ -3,7 +3,10 @@
  */
 
 import React from 'react';
-import ReactTestRenderer from 'react-test-renderer';
+const ReactTestRenderer = require('react-test-renderer') as {
+  act: (callback: () => void | Promise<void>) => Promise<void>;
+  create: (element: React.ReactElement) => unknown;
+};
 import App from '../App';
 
 test('renders the splash screen entry point', async () => {

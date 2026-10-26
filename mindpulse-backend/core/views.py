@@ -59,14 +59,6 @@ def predict_emotion_view(request):
 	Returns 200 with {"label", "confidence", "probabilities", "runner_up"}
 	or 400 when the image is missing/invalid or no face is detected.
 	"""
-	try:
-		from emotion_model import predict_image
-	except ImportError:
-		logger.exception('Emotion model unavailable')
-		return Response(
-			{'detail': 'Emotion model unavailable.'},
-			status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
 	raw = None
 	sad_bias = None
 
@@ -97,6 +89,16 @@ def predict_emotion_view(request):
 		except (TypeError, ValueError):
 			return Response({'detail': 'sad_bias must be a number.'},
 							status=status.HTTP_400_BAD_REQUEST)
+
+	# Validate the request before loading the ~700 MB model stack. A malformed
+	# request must stay a 400 even when the inference dependencies are absent.
+	try:
+		from emotion_model import predict_image
+	except ImportError:
+		logger.exception('Emotion model unavailable')
+		return Response(
+			{'detail': 'Emotion model unavailable.'},
+			status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 	try:
 		result = predict_image(raw, sad_bias=sad_bias)
