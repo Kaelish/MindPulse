@@ -351,8 +351,6 @@ For iOS, use macOS with Xcode and CocoaPods:
 npm run ios
 ```
 
-The `mindpulse-expo` folder is retained as a separate Expo prototype and is not the main mobile app.
-
 ## Backend
 
 ```powershell
@@ -382,9 +380,6 @@ Use separate PowerShell terminals:
 2. Web: `npm start` from `mindpulse-web`
 3. Mobile Metro: `npm start` from `mindpulse-mobile`
 4. Mobile Android: `npm run android` from a second `mindpulse-mobile` terminal
-
-The `mindpulse-expo` folder is a separate prototype. It is not required for the
-main web, backend, or bare React Native mobile app.
 
 ## Current Limitations
 
