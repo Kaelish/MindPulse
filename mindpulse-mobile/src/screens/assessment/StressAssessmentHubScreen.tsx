@@ -9,6 +9,7 @@ import {
   fetchActiveAssessmentTools,
 } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 export type AssessmentStepStatus = 'locked' | 'unlocked' | 'completed' | 'skipped';
 
@@ -133,6 +134,8 @@ interface StepCardProps {
   weight: string;
   /** Short hint pill: Required steps gate the results, Skippable ones do not. */
   flag?: 'required' | 'skippable';
+  /** Pre-translated flag label (passed by parent so the hub can localize it). */
+  flagLabel?: string;
   /** Explains what to finish first when a greyed-out step is tapped. */
   lockedHint?: string;
   /** Today's run is already saved — tapping explains why it is closed. */
@@ -140,7 +143,7 @@ interface StepCardProps {
 }
 
 const StepCard = ({
-  title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, lockedHint, dayComplete,
+  title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, flagLabel, lockedHint, dayComplete,
 }: StepCardProps) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
@@ -194,7 +197,7 @@ const StepCard = ({
             <Text
               style={[styles.flagText, flag === 'required' ? styles.flagTextRequired : styles.flagTextSkippable, isLocked && styles.flagTextLocked]}
             >
-              {flag === 'required' ? 'Required' : 'Skippable'}
+              {flagLabel ?? (flag === 'required' ? 'Required' : 'Skippable')}
             </Text>
           </View>
         )}
@@ -224,6 +227,7 @@ export const StressAssessmentHubScreen = ({
   onNavigate: (screen: string, tool?: AssessmentTool) => void;
   onExit?: () => void;
 }) => {
+  const { t } = useTranslation();
   const [state, setState] = useState<AssessmentState | null>(null);
   // Still fetched: the Stress Survey step below hands the Multi-Modal tool
   // definition to the survey screen. The standalone tool LIST is gone from
@@ -269,11 +273,9 @@ export const StressAssessmentHubScreen = ({
           <View style={styles.headerIconWrap}>
             <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={Colors.white} />
           </View>
-          <Text style={styles.title}>Stress Assessment</Text>
+          <Text style={styles.title}>{t.hub.title}</Text>
           <Text style={styles.subtitle}>
-            {dayComplete
-              ? 'Done for today — your results are below'
-              : 'Complete all steps for the most accurate result'}
+            {dayComplete ? t.hub.subtitleDone : t.hub.subtitleReady}
           </Text>
         </View>
 
@@ -281,9 +283,9 @@ export const StressAssessmentHubScreen = ({
           <View style={styles.dayCompleteBanner}>
             <Ionicons name="checkmark-circle" size={22} color={tone('#FFF')} />
             <View style={styles.dayCompleteCopy}>
-              <Text style={styles.dayCompleteTitle}>Today's assessment is complete!</Text>
+              <Text style={styles.dayCompleteTitle}>{t.hub.bannerTitle}</Text>
               <Text style={styles.dayCompleteSub}>
-                Your next daily check-in unlocks tomorrow. You can still review today's results.
+                {t.hub.bannerSub}
               </Text>
             </View>
           </View>
@@ -291,25 +293,26 @@ export const StressAssessmentHubScreen = ({
 
         {/* Steps List */}
         <View style={styles.stepsSection}>
-          <View style={styles.sectionHeaderRow}>
-             <Text style={styles.sectionTitle}>ASSESSMENT STEPS</Text>
-             <Text style={styles.progressText}>
-               {dayComplete ? 'Completed today' : `${completedCount}/4 Completed`}
-             </Text>
-           </View>
-           <Text style={styles.sectionNote}>
-             One combined daily check-in: survey, face scan, heart rate & reaction time.
-           </Text>
+           <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{t.hub.sectionTitle}</Text>
+              <Text style={styles.progressText}>
+                {dayComplete ? t.hub.completedToday : `${completedCount}/4 ${t.hub.completedSuffix}`}
+              </Text>
+            </View>
+            <Text style={styles.sectionNote}>
+              {t.hub.sectionNote}
+            </Text>
           
           <StepCard
-            title="Stress Survey"
-            subtitle="PSS-10 + physiological indicators"
+            title={t.hub.steps.survey.title}
+            subtitle={t.hub.steps.survey.subtitle}
             icon="clipboard-edit-outline"
             iconColor="#6B79F2"
             iconBg="#EEF0FD"
             status={displayStatus(state.survey)}
             weight="50%"
             flag="required"
+            flagLabel={t.hub.required}
             dayComplete={dayComplete}
             onPress={() =>
               onNavigate(
@@ -319,41 +322,44 @@ export const StressAssessmentHubScreen = ({
             }
           />
           <StepCard
-            title="Face Emotion Scan"
-            subtitle="AI facial cue detection"
+            title={t.hub.steps.faceScan.title}
+            subtitle={t.hub.steps.faceScan.subtitle}
             icon="camera-outline"
             iconColor="#50C8EA"
             iconBg="#E4F7FC"
             status={displayStatus(state.faceScan)}
             weight="20%"
             flag="skippable"
-            lockedHint="Finish the Stress Survey first — the Face Emotion Scan unlocks right after it."
+            flagLabel={t.hub.skippable}
+            lockedHint={t.hub.lockedHintFace}
             dayComplete={dayComplete}
             onPress={() => onNavigate('FaceScan')}
           />
           <StepCard
-            title="Heart Rate"
-            subtitle="Manual 15-second BPM reading"
+            title={t.hub.steps.heartRate.title}
+            subtitle={t.hub.steps.heartRate.subtitle}
             icon="heart-outline"
             iconColor="#EE7788"
             iconBg="#FCE9EC"
             status={displayStatus(state.heartRate)}
             weight="20%"
             flag="required"
-            lockedHint="Finish the Stress Survey first — the Heart Rate step unlocks right after it."
+            flagLabel={t.hub.required}
+            lockedHint={t.hub.lockedHintHeart}
             dayComplete={dayComplete}
             onPress={() => onNavigate('HeartRate')}
           />
           <StepCard
-            title="Reaction Time Game"
-            subtitle="Tap-speed cognitive indicator"
+            title={t.hub.steps.reaction.title}
+            subtitle={t.hub.steps.reaction.subtitle}
             icon="lightning-bolt-outline"
             iconColor="#F2BA24"
             iconBg="#FEF6DB"
             status={displayStatus(state.reaction)}
             weight="20%"
             flag="required"
-            lockedHint="Finish the Heart Rate step first — the Reaction Time Game unlocks right after it."
+            flagLabel={t.hub.required}
+            lockedHint={t.hub.lockedHintReaction}
             dayComplete={dayComplete}
             onPress={() => onNavigate('ReactionGame')}
           />
@@ -363,10 +369,10 @@ export const StressAssessmentHubScreen = ({
         <View style={styles.tipBox}>
           <Text style={styles.tipIcon}>💡</Text>
           <Text style={styles.tipText}>
-            <Text style={{ fontWeight: '700' }}>{dayComplete ? 'Note:' : 'Tip:'}</Text>{' '}
+            <Text style={{ fontWeight: '700' }}>{dayComplete ? t.hub.noteLabel : t.hub.tipLabel}</Text>{' '}
             {dayComplete
-              ? 'You can retake the assessment tomorrow. Each day produces one score so your trend stays meaningful.'
-              : 'Complete all 4 steps for the most accurate stress score. Each step contributes a weighted input to your final analysis.'}
+              ? t.hub.noteBody
+              : t.hub.tipBody}
           </Text>
         </View>
 
@@ -376,7 +382,7 @@ export const StressAssessmentHubScreen = ({
             onPress={() => onNavigate('Results')}
           >
             <Text style={styles.viewResultsText}>
-              {dayComplete ? "View Today's Results" : 'View Final Results'}
+              {dayComplete ? t.hub.viewTodayResults : t.hub.viewResults}
             </Text>
             <Ionicons name="arrow-forward" size={18} color={tone('#FFF')} />
           </TouchableOpacity>

@@ -25,6 +25,7 @@ import { GuidedExerciseModal } from '../../components/GuidedExerciseModal';
 import { JournalModal } from '../../components/JournalModal';
 import { PauseTimerModal } from '../../components/PauseTimerModal';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onBack: () => void;
@@ -34,82 +35,47 @@ interface Props {
 
 type ResultBand = 'low' | 'moderate' | 'high';
 
-/** Band-specific framing for the tool launcher — same tools, different pitch. */
-const LAUNCHER_COPY: Record<ResultBand, { title: string; sub: string }> = {
-  low: {
-    title: 'Keep the habit',
-    sub: 'Two quiet minutes now make tomorrow’s check-in easier to keep low.',
-  },
-  moderate: {
-    title: 'Unwind right now',
-    sub: 'Pick one and give it a few minutes before you decide whether to save.',
-  },
-  high: {
-    title: 'Bridge to support',
-    sub: 'Settle your body first, then reach out through the cards below.',
-  },
-};
-
 /** Fixed launcher order so the buttons never reshuffle between bands. */
 const LAUNCHER_ORDER: ToolAction[] = ['breathe', 'music', 'exercise', 'journal', 'pause'];
 
-/** Presentation for each tool. The tip bank decides *which* show up. */
+/** Presentation for each tool. The tip bank decides *which* show up.
+ * Labels/meta/cta are filled in from translations inside the component. */
 const TOOL_UI: Record<ToolAction, {
-  label: string;
-  meta: string;
   icon: string;
   material?: boolean;
   bg: string;
   fg: string;
-  cta: string;
 }> = {
   breathe: {
-    label: 'Box breathing',
-    meta: '4·4·4·4 guided · 5 min',
     icon: 'lungs',
     material: true,
     bg: '#E8F0FE',
     fg: '#1976D2',
-    cta: 'Start',
   },
   music: {
-    label: 'Calming music',
-    meta: `${CALM_TRACKS.length} tracks · loops`,
     icon: 'musical-notes-outline',
     fg: '#00897B',
     bg: '#E0F2F1',
-    cta: 'Listen',
   },
   exercise: {
-    label: 'Guided exercises',
-    // Computed at render — how many the current band offers.
-    meta: '',
     icon: 'body-outline',
     fg: '#7B1FA2',
     bg: '#F3E5F5',
-    cta: 'Begin',
   },
   journal: {
-    label: 'Journal',
-    // Computed at render — which prompt this band is offering.
-    meta: 'On this device',
     icon: 'create-outline',
     fg: '#E65100',
     bg: '#FFF3E0',
-    cta: 'Write',
   },
   pause: {
-    label: 'No-screen pause',
-    // Derived from PAUSE_SECONDS so the button can't disagree with the timer.
-    meta: PAUSE_META,
     icon: 'eye-off-outline',
     fg: '#455A64',
     bg: '#ECEFF1',
-    cta: 'Rest',
   },
 };
 
 export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession }) => {
+  const { t } = useTranslation();
   const [clinicsExpanded, setClinicsExpanded] = useState(false);
   const [stateData, setStateData] = useState<AssessmentState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -355,12 +321,31 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   };
 
   const getTheme = () => {
-    if (isLowStress) return { bg: toneBg('#E8F5E9'), text: tone('#2E7D32'), pillBg: toneBg('#4CAF50'), pillText: tone('#FFF'), label: 'Low Stress' };
-    if (isModerateStress) return { bg: toneBg('#FFF3E0'), text: tone('#E65100'), pillBg: toneBg('#FF9800'), pillText: tone('#FFF'), label: 'Moderate Stress' };
-    return { bg: toneBg('#FDECE6'), text: tone('#D32F2F'), pillBg: toneBg('#F44336'), pillText: tone('#FFF'), label: 'High Stress' };
+    if (isLowStress) return { bg: toneBg('#E8F5E9'), text: tone('#2E7D32'), pillBg: toneBg('#4CAF50'), pillText: tone('#FFF'), label: t.results.bandLow };
+    if (isModerateStress) return { bg: toneBg('#FFF3E0'), text: tone('#E65100'), pillBg: toneBg('#FF9800'), pillText: tone('#FFF'), label: t.results.bandModerate };
+    return { bg: toneBg('#FDECE6'), text: tone('#D32F2F'), pillBg: toneBg('#F44336'), pillText: tone('#FFF'), label: t.results.bandHigh };
   };
 
   const theme = getTheme();
+
+  /** Band-specific UI copy from translations. */
+  const launcherCopy = {
+    low: { title: t.results.launcher.low.title, sub: t.results.launcher.low.sub },
+    moderate: { title: t.results.launcher.moderate.title, sub: t.results.launcher.moderate.sub },
+    high: { title: t.results.launcher.high.title, sub: t.results.launcher.high.sub },
+  };
+
+  /** Tool launcher UI from translations. */
+  const toolUi = (() => {
+    const base = TOOL_UI;
+    return {
+      breathe: { ...base.breathe, label: t.results.tools.breathe.label, meta: '4·4·4·4 guided · 5 min', cta: t.results.tools.breathe.cta },
+      music: { ...base.music, label: t.results.tools.music.label, meta: t.results.tools.music.metaFmt.replace('{n}', String(CALM_TRACKS.length)), cta: t.results.tools.music.cta },
+      exercise: { ...base.exercise, label: t.results.tools.exercise.label, meta: '', cta: t.results.tools.exercise.cta },
+      journal: { ...base.journal, label: t.results.tools.journal.label, meta: '', cta: t.results.tools.journal.cta },
+      pause: { ...base.pause, label: t.results.tools.pause.label, meta: PAUSE_META, cta: t.results.tools.pause.cta },
+    };
+  })();
 
   /**
    * `after` runs only when the save actually succeeded — used when saving is a
@@ -378,10 +363,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       // so the doctor's session footer reads consistently across every flow,
       // and the raw answers ride along so item-level review works here too.
       const snapshot = stateData.surveyAnswersSnapshot;
-      const assessmentName = snapshot?.toolTitle ?? 'PSS-10 Stress Assessment';
+      const assessmentName = snapshot?.toolTitle ?? t.toolSurvey.completeAssessment;
       await saveNewStressSession(
         finalScore,
-            `Completed assessment: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms, Face: ${face?.expression ?? 'n/a'}`,
+        `${t.toolSurvey.completeAssessment}: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms, Face: ${face?.expression ?? 'n/a'}`,
         hrBpm,
         surveyVal,
             rxMs,
@@ -407,7 +392,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       // saveNewStressSession is non-throwing (prefs, notification and plant
       // writes are all best-effort) — so no row exists on this path and a
       // retry writes exactly one, never two.
-      Alert.alert('Error', e?.message ?? 'Could not save your result. Try again.');
+      Alert.alert(t.results.errorTitle, e?.message ?? t.results.errorBody);
     } finally {
       setIsSaving(false);
     }
@@ -433,19 +418,19 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       return;
     }
     Alert.alert(
-      'Save your result first?',
-      "Your result hasn't been saved yet. Saving shares it with your doctor; leaving now keeps it on this device only — you can still come back and save it from the hub.",
+      t.results.saveFirstTitle,
+      t.results.saveFirstBody,
       [
         {
-          text: 'Save & book',
+          text: t.results.saveAndBook,
           onPress: () => handleSaveResult(() => onBookSession!()),
         },
         {
-          text: 'Leave without saving',
+          text: t.results.leaveWithoutSaving,
           style: 'destructive',
           onPress: onBookSession,
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
       ],
     );
   };
@@ -459,12 +444,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
     >
       {/* Final Stress Score Card */}
       <View style={[styles.scoreCard, { backgroundColor: theme.bg }]}>
-        <Text style={styles.scoreTitle}>Final Stress Score</Text>
+        <Text style={styles.scoreTitle}>{t.results.finalScore}</Text>
         
         <View style={styles.scoreContent}>
           <View style={[styles.scoreCircle, { borderColor: theme.pillBg }]}>
             <Text style={[styles.scoreNumber, { color: theme.text }]}>{finalScore}</Text>
-            <Text style={styles.scoreOutof}>out of 100</Text>
+            <Text style={styles.scoreOutof}>{t.results.outOf100}</Text>
           </View>
           
           <View style={styles.scoreLegend}>
@@ -474,15 +459,15 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: toneBg('#4CAF50') }]} />
-              <Text style={styles.legendText}>Low (0-35)</Text>
+              <Text style={styles.legendText}>{t.results.legendLow}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: toneBg('#FF9800') }]} />
-              <Text style={styles.legendText}>Moderate (36-60)</Text>
+              <Text style={styles.legendText}>{t.results.legendModerate}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: toneBg('#F44336') }]} />
-              <Text style={styles.legendText}>High (61-100)</Text>
+              <Text style={styles.legendText}>{t.results.legendHigh}</Text>
             </View>
           </View>
         </View>
@@ -490,12 +475,12 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
       {/* Multi-Modal Fusion Card */}
       <View style={styles.fusionCard}>
-        <Text style={styles.fusionTitle}>Multi-Modal Fusion (Survey 50% · Heart Rate 20% · Face 20% · Reaction 10%)</Text>
+        <Text style={styles.fusionTitle}>{t.results.fusionTitle}</Text>
 
         {surveyVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
-              <Text style={styles.fusionLabel}>Survey (PSS + Physio)</Text>
+              <Text style={styles.fusionLabel}>{t.results.fusionSurvey}</Text>
               <View style={[styles.fusionBadge, { backgroundColor: toneBg('#E8EAF6') }]}><Text style={[styles.fusionBadgeText, { color: tone('#3F51B5') }]}>50%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
@@ -509,7 +494,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         {faceVal != null && face && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
-              <Text style={styles.fusionLabel}>Facial Emotion ({face.expression})</Text>
+              <Text style={styles.fusionLabel}>{t.results.fusionFace} ({face.expression})</Text>
               <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF3E0') }]}><Text style={[styles.fusionBadgeText, { color: tone('#E08A00') }]}>20%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
@@ -522,7 +507,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         {hrVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
-              <Text style={styles.fusionLabel}>Heart Rate</Text>
+              <Text style={styles.fusionLabel}>{t.results.fusionHeartRate}</Text>
               <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFEBEE') }]}><Text style={[styles.fusionBadgeText, { color: tone('#F44336') }]}>20%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
@@ -535,7 +520,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         {rxVal != null && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
-              <Text style={styles.fusionLabel}>Reaction Time</Text>
+              <Text style={styles.fusionLabel}>{t.results.fusionReaction}</Text>
               <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF8E1') }]}><Text style={[styles.fusionBadgeText, { color: tone('#FFB300') }]}>10%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
@@ -551,10 +536,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         <View style={[styles.advisoryCard, { backgroundColor: toneBg('#E8F5E9') }]}>
           <View style={styles.advisoryHeader}>
             <Ionicons name="leaf-outline" size={28} color={tone('#2E7D32')} />
-            <Text style={[styles.advisoryTitle, { color: tone('#2E7D32') }]}>You seem relaxed today.</Text>
+            <Text style={[styles.advisoryTitle, { color: tone('#2E7D32') }]}>{t.results.advisoryLowTitle}</Text>
           </View>
           <Text style={styles.advisoryBody}>
-            Maintain healthy routines — good sleep, regular physical activity, and social connections keep stress low.
+            {t.results.advisoryLowBody}
           </Text>
           {readTips.map((tip) => {
             const routing = isRoutingTip(tip);
@@ -587,10 +572,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         <View style={[styles.advisoryCard, { backgroundColor: toneBg('#FDECE6') }]}>
           <View style={styles.advisoryHeader}>
             <Ionicons name="warning-outline" size={28} color={tone('#D32F2F')} />
-            <Text style={[styles.advisoryTitle, { color: tone('#D32F2F') }]}>Your stress indicators may be elevated</Text>
+            <Text style={[styles.advisoryTitle, { color: tone('#D32F2F') }]}>{t.results.advisoryElevatedTitle}</Text>
           </View>
           <Text style={styles.advisoryBody}>
-            Try resting or practicing relaxation techniques. Consider reaching out to a mental health professional for support.
+            {t.results.advisoryElevatedBody}
           </Text>
           {readTips.map((tip) => {
             const routing = isRoutingTip(tip);
@@ -624,11 +609,11 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       {/* Self-guided versions of the advice above — no booking, no saving. */}
       {toolTips.length > 0 && (
         <View style={styles.toolsCard}>
-          <Text style={styles.toolsTitle}>{LAUNCHER_COPY[band].title}</Text>
-          <Text style={styles.toolsSub}>{LAUNCHER_COPY[band].sub}</Text>
+          <Text style={styles.toolsTitle}>{launcherCopy[band].title}</Text>
+          <Text style={styles.toolsSub}>{launcherCopy[band].sub}</Text>
           <View style={styles.toolsRow}>
             {launcherActions.map((action) => {
-              const ui = TOOL_UI[action];
+              const ui = toolUi[action];
               const meta =
                 action === 'exercise' ? exerciseMeta
                   : action === 'journal' ? journalMeta
@@ -673,8 +658,8 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                 <Ionicons name="location-outline" size={20} color={tone('#FFF')} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.clinicsTitle}>Find Nearby Psych Clinics</Text>
-                <Text style={styles.clinicsSub}>Suggested based on your stress level</Text>
+                <Text style={styles.clinicsTitle}>{t.results.clinics.title}</Text>
+                <Text style={styles.clinicsSub}>{t.results.clinics.sub}</Text>
               </View>
               <Ionicons name={clinicsExpanded ? "chevron-up" : "chevron-forward"} size={20} color={tone('#D32F2F')} />
             </TouchableOpacity>
@@ -687,7 +672,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
                 {!panelLoading && panel.length === 0 && (
                   <Text style={styles.clinicsEmpty}>
-                    No clinicians are listed right now. Open the Clinics tab to browse the directory.
+                    {t.results.clinics.empty}
                   </Text>
                 )}
 
@@ -714,7 +699,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                         <Text style={styles.clinicName}>{doc.name}</Text>
                         <Text style={styles.clinicHours} numberOfLines={1}>{doc.specialty}</Text>
                         <View style={styles.clinicTag}>
-                          <Text style={styles.clinicTagText}>Tap to view in Clinics</Text>
+                          <Text style={styles.clinicTagText}>{t.results.clinics.tapToView}</Text>
                         </View>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={tone('#D32F2F')} />
@@ -723,7 +708,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
 
                 {onBookSession && (
                   <TouchableOpacity style={styles.doctorBookBtn} onPress={requestBookSession} activeOpacity={0.85}>
-                    <Text style={styles.doctorBookText}>Open Clinics to book</Text>
+                    <Text style={styles.doctorBookText}>{t.results.clinics.openToBook}</Text>
                     <Ionicons name="arrow-forward" size={16} color={tone('#FFF')} />
                   </TouchableOpacity>
                 )}
@@ -737,7 +722,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               hotlinesY.current = e.nativeEvent.layout.y;
             }}
           >
-            <Text style={styles.hotlinesTitle}>Emergency Mental Health Hotlines</Text>
+            <Text style={styles.hotlinesTitle}>{t.results.hotlinesTitle}</Text>
             
             <TouchableOpacity
               style={styles.hotlineItem}
@@ -804,7 +789,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         <View style={styles.unsavedBanner}>
           <Ionicons name="alert-circle-outline" size={16} color={tone('#B26A00')} />
           <Text style={styles.unsavedText}>
-            Not saved yet — tap Save Result to record today's assessment.
+            {t.results.unsaved}
           </Text>
         </View>
       )}
@@ -816,14 +801,14 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           disabled={isSaving || alreadySavedToday}
         >
           <Text style={styles.saveBtnText}>
-            {isSaving ? 'Saving...' : alreadySavedToday ? 'Saved for today' : 'Save Result'}
+            {isSaving ? t.results.saveSaving : alreadySavedToday ? t.results.saveSavedToday : t.results.saveAction}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.helpBtn, helpRequested && styles.helpBtnActive]}
           onPress={handleGetHelp}
         >
-          <Text style={styles.helpBtnText}>{helpRequested ? 'Help shown' : 'Get Help'}</Text>
+          <Text style={styles.helpBtnText}>{helpRequested ? t.results.helpShown : t.results.getHelp}</Text>
           <Ionicons
             name={helpRequested ? 'checkmark-circle' : 'arrow-forward'}
             size={16}
@@ -841,7 +826,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
           disabled={isSaving}
           activeOpacity={0.7}
         >
-          <Text style={styles.skipBtnText}>Don't save this result</Text>
+          <Text style={styles.skipBtnText}>{t.results.dontSave}</Text>
         </TouchableOpacity>
       )}
 

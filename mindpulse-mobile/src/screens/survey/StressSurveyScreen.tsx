@@ -7,15 +7,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { loadAssessmentState, saveAssessmentState } from '../assessment/StressAssessmentHubScreen';
 import { AssessmentTool } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
+import { part1Display, part2Display, likertDisplay } from '../../i18n/translations';
+import type { PssDisplayItem, LifestyleDisplayItem, LikertOption } from '../../i18n/types';
 
-type SurveyOption = { value: number; label: string };
-type SurveyQuestion = {
-  id: number;
-  pill: string;
-  text: string;
-  sub?: string;
-  options?: SurveyOption[];
-};
+type SurveyOption = LikertOption;
+type PssQuestion = PssDisplayItem;
+type LifestyleQuestion = LifestyleDisplayItem;
 
 /* PSS-10 (Cohen et al., 1983) — public-domain Perceived Stress Scale.
  * Items 4, 5, 7, 8 are reverse-scored (score = 4 - raw).
@@ -23,92 +21,32 @@ type SurveyQuestion = {
  * daily check-in measures today instead of the past 30 days. Scoring is
  * unchanged (0-40), so dashboard thresholds stay comparable. */
 const PSS_REVERSE_IDS = new Set([4, 5, 7, 8]);
-const RECALL = 'In the last 24 hours';
-
-const part1Questions: SurveyQuestion[] = [
-  { id: 1, pill: 'Unexpected Event', text: `${RECALL}, how often have you been upset because of something that happened unexpectedly?` },
-  { id: 2, pill: 'Control', text: `${RECALL}, how often have you felt that you were unable to control the important things in your life?` },
-  { id: 3, pill: 'Nervous & Stressed', text: `${RECALL}, how often have you felt nervous and stressed?` },
-  { id: 4, pill: 'Confidence', text: `${RECALL}, how often have you felt confident about your ability to handle your personal problems?` },
-  { id: 5, pill: 'Going Your Way', text: `${RECALL}, how often have you felt that things were going your way?` },
-  { id: 6, pill: 'Overloaded', text: `${RECALL}, how often have you found that you could not cope with all the things that you had to do?` },
-  { id: 7, pill: 'Irritations', text: `${RECALL}, how often have you been able to control irritations in your life?` },
-  { id: 8, pill: 'On Top of Things', text: `${RECALL}, how often have you felt that you were on top of things?` },
-  { id: 9, pill: 'Anger', text: `${RECALL}, how often have you been angered because of things that were outside of your control?` },
-  { id: 10, pill: 'Overwhelm', text: `${RECALL}, how often have you felt difficulties were piling up so high that you could not overcome them?` },
-];
-
-/* Part 2 — 8 body/lifestyle indicators, 0-3 scale, higher = more stress. */
-const part2Questions: SurveyQuestion[] = [
-  { id: 101, pill: 'Sleep Hours', text: 'How many hours did you sleep last night?', options: [
-    { value: 0, label: '8+ hours' },
-    { value: 1, label: '6-7 hours' },
-    { value: 2, label: '4-5 hours' },
-    { value: 3, label: 'Less than 4 hours' },
-  ]},
-  { id: 102, pill: 'Breathing Pattern', text: 'How is your breathing right now?', sub: 'Are you breathing fast, or feeling shortness of breath?', options: [
-    { value: 0, label: 'Not at all' },
-    { value: 1, label: 'Slightly' },
-    { value: 2, label: 'Sometimes' },
-    { value: 3, label: 'Often' },
-  ]},
-  { id: 103, pill: 'Mood Check', text: 'How has your mood been today?', options: [
-    { value: 0, label: 'Good and stable' },
-    { value: 1, label: 'Mostly okay' },
-    { value: 2, label: 'Low or irritable' },
-    { value: 3, label: 'Very low or overwhelmed' },
-  ]},
-  { id: 104, pill: 'Eye Fatigue', text: 'How tired are your eyes right now?', options: [
-    { value: 0, label: 'Not tired' },
-    { value: 1, label: 'Mildly tired' },
-    { value: 2, label: 'Quite tired' },
-    { value: 3, label: 'Very tired or sore' },
-  ]},
-  { id: 105, pill: 'Stressors', text: 'How many sources of stress (school, work, relationships, money) are affecting you right now?', options: [
-    { value: 0, label: 'None' },
-    { value: 1, label: 'One or two' },
-    { value: 2, label: 'Three or four' },
-    { value: 3, label: 'Five or more' },
-  ]},
-  { id: 106, pill: 'Physical Symptoms', text: 'Have you noticed physical signs of stress (headache, tense muscles, stomach trouble)?', options: [
-    { value: 0, label: 'None' },
-    { value: 1, label: 'Rarely' },
-    { value: 2, label: 'Sometimes' },
-    { value: 3, label: 'Often' },
-  ]},
-  { id: 107, pill: 'Device Use', text: 'How many hours a day do you spend on screens beyond work or school?', options: [
-    { value: 0, label: 'Less than 1 hour' },
-    { value: 1, label: '1-2 hours' },
-    { value: 2, label: '3-4 hours' },
-    { value: 3, label: '5+ hours' },
-  ]},
-  { id: 108, pill: 'Energy Level', text: 'How would you rate your energy level today?', options: [
-    { value: 0, label: 'Very energetic' },
-    { value: 1, label: 'Fairly energetic' },
-    { value: 2, label: 'Low energy' },
-    { value: 3, label: 'Exhausted' },
-  ]},
-];
-
-const part1Options = [
-  { value: 0, label: 'Never' },
-  { value: 1, label: 'Almost Never' },
-  { value: 2, label: 'Sometimes' },
-  { value: 3, label: 'Fairly Often' },
-  { value: 4, label: 'Very Often' },
-];
 
 export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?: AssessmentTool }) => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<'part1' | 'interstitial' | 'part2'>('part1');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
 
   const isPart1 = phase === 'part1';
   const isPart2 = phase === 'part2';
-  const currentQuestions = isPart1 ? part1Questions : part2Questions;
+
+  /** Localized PSS-10 questions (part 1). */
+  const pssQuestions: PssQuestion[] = part1Display(t);
+  /** Localized lifestyle questions (part 2). */
+  const lifestyleQuestions: LifestyleQuestion[] = part2Display(t);
+  /** Localized 5-point Likert scale for part 1. */
+  const likertOptions: SurveyOption[] = likertDisplay(t);
+
+  const currentQuestions = isPart1 ? pssQuestions : lifestyleQuestions;
   const currentQuestion = currentQuestions[currentIndex];
   const selectedValue = answers[currentQuestion?.id];
   const canProceed = selectedValue !== undefined;
+
+  /** Options rendered for the current question. */
+  const currentOptions = isPart1
+    ? likertOptions
+    : (currentQuestion as LifestyleQuestion).options.map((label, value) => ({ value, label }));
 
   const handleNext = async () => {
     if (currentIndex < currentQuestions.length - 1) {
@@ -124,17 +62,17 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         // survey so the user can continue without facial analysis.
         if (state.faceScan === 'locked') state.faceScan = 'unlocked';
         if (state.heartRate === 'locked') state.heartRate = 'unlocked';
-        
+
         // Score 0-100 (higher = more stress): PSS-10 with reverse-keyed items
         // (4,5,7,8) on a 0-40 scale + Part 2 on a 0-24 scale → max 64.
-        const pssSum = part1Questions.reduce((sum, q) => {
+        const pssSum = pssQuestions.reduce((sum, q) => {
           const raw = answers[q.id] ?? 0;
           return sum + (PSS_REVERSE_IDS.has(q.id) ? 4 - raw : raw);
         }, 0);
-        const part2Sum = part2Questions.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
-        const maxPossible = part1Questions.length * 4 + part2Questions.length * 3;
+        const part2Sum = lifestyleQuestions.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
+        const maxPossible = pssQuestions.length * 4 + lifestyleQuestions.length * 3;
         const scaledScore = Math.round(((pssSum + part2Sum) / maxPossible) * 100);
-        
+
         state.surveyScore = scaledScore;
 
         // Carry every answered item with the run so the final save stores the
@@ -142,9 +80,9 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         // All 18 items travel: the 10 PSS-10 items + the 8 physiological
         // indicators the doctor reviewed — nothing answered is dropped.
         const snapshotItems = [
-          ...part1Questions.map((question) => {
+          ...pssQuestions.map((question) => {
             const value = answers[question.id] ?? 0;
-            const option = part1Options.find((candidate) => candidate.value === value);
+            const option = likertOptions.find((candidate) => candidate.value === value);
             return {
               id: question.id,
               text: question.text,
@@ -153,9 +91,11 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
               label: option?.label ?? String(value),
             };
           }),
-          ...part2Questions.map((question) => {
+          ...lifestyleQuestions.map((question) => {
             const value = answers[question.id] ?? 0;
-            const option = question.options?.find((candidate) => candidate.value === value);
+            const option = question.options?.findIndex((_, i) => i === value) !== -1
+              ? { value, label: question.options[value] }
+              : undefined;
             return {
               id: question.id,
               text: question.text,
@@ -180,23 +120,24 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
   const progressPercent = ((currentIndex + 1) / currentQuestions.length) * 100;
 
   if (phase === 'interstitial') {
+    const { title, sub, start, gridSleep, gridBreathing, gridMood, gridEyes, gridStressors, gridSymptoms, gridDevice, gridEnergy } = t.survey.interstitial;
     return (
       <SafeAreaView style={styles.interstitialRoot}>
         <View style={styles.interstitialContent}>
           <View style={styles.interstitialIconBox}>
             <MaterialCommunityIcons name="chart-bell-curve" size={60} color={Colors.white} />
           </View>
-          <Text style={styles.interstitialTitle}>Part 2: Psychological Check</Text>
+          <Text style={styles.interstitialTitle}>{title}</Text>
           <Text style={styles.interstitialSub}>
-            These 8 quick indicators — sleep, breathing, mood, eye fatigue, and more — help us better understand your body's stress signals.
+            {sub}
           </Text>
 
           <View style={styles.interstitialGrid}>
             {[
-              { label: 'Sleep Hours', icon: 'sleep' }, { label: 'Breathing', icon: 'head-outline' },
-              { label: 'Mood Check', icon: 'emoticon-outline' }, { label: 'Eye Fatigue', icon: 'eye-outline' },
-              { label: 'Stressors', icon: 'file-document-outline' }, { label: 'Symptoms', icon: 'magnify' },
-              { label: 'Device Use', icon: 'cellphone' }, { label: 'Energy', icon: 'lightning-bolt' }
+              { label: gridSleep, icon: 'sleep' }, { label: gridBreathing, icon: 'head-outline' },
+              { label: gridMood, icon: 'emoticon-outline' }, { label: gridEyes, icon: 'eye-outline' },
+              { label: gridStressors, icon: 'file-document-outline' }, { label: gridSymptoms, icon: 'magnify' },
+              { label: gridDevice, icon: 'cellphone' }, { label: gridEnergy, icon: 'lightning-bolt' }
             ].map((item, idx) => (
               <View key={idx} style={styles.interstitialGridItem}>
                 <MaterialCommunityIcons name={item.icon as any} size={24} color={tone('#558E4C')} style={{ marginRight: 8 }} />
@@ -208,10 +149,10 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         <View style={styles.interstitialFooter}>
           <TouchableOpacity style={styles.interstitialBackBtn} onPress={onBack}>
-            <Text style={styles.interstitialBackText}>Back</Text>
+            <Text style={styles.interstitialBackText}>{t.common.back}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.interstitialStartBtn} onPress={() => { setPhase('part2'); setCurrentIndex(0); }}>
-            <Text style={styles.interstitialStartText}>Start Part 2</Text>
+            <Text style={styles.interstitialStartText}>{start}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -231,7 +172,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={onBack}>
           <Ionicons name="chevron-back" size={24} color={themeColor} />
-          <Text style={[styles.headerBtnText, { color: themeColor }]}>Back</Text>
+          <Text style={[styles.headerBtnText, { color: themeColor }]}>{t.common.back}</Text>
         </TouchableOpacity>
 
         <View style={[styles.headerPill, { backgroundColor: themeBg }]}>
@@ -241,7 +182,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         </View>
 
         <TouchableOpacity style={styles.headerBtn} onPress={onBack}>
-          <Text style={styles.headerExitText}>Exit</Text>
+          <Text style={styles.headerExitText}>{t.common.exit}</Text>
         </TouchableOpacity>
       </View>
 
@@ -258,17 +199,17 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         {/* Question Text */}
         <Text style={styles.questionText}>{currentQuestion.text}</Text>
-        {isPart2 && currentQuestion.sub && <Text style={styles.questionSubText}>{currentQuestion.sub}</Text>}
+        {isPart2 && (currentQuestion as LifestyleQuestion).sub && <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion).sub}</Text>}
 
         {/* Options */}
         <View style={styles.optionsContainer}>
-          {(isPart2 ? currentQuestion.options ?? part1Options : part1Options).map((opt) => {
+          {currentOptions.map((opt) => {
             const isSelected = selectedValue === opt.value;
             return (
               <TouchableOpacity
                 key={opt.value}
                 style={[
-                  styles.optionCard, 
+                  styles.optionCard,
                   isSelected && { backgroundColor: selectedThemeBg, borderColor: selectedThemeBorder }
                 ]}
                 activeOpacity={0.7}
@@ -298,7 +239,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
           onPress={handleNext}
         >
           <Text style={[styles.nextBtnText, canProceed && styles.nextBtnTextActive]}>
-            {currentIndex === currentQuestions.length - 1 ? (isPart1 ? 'Continue to Part 2' : 'Complete Survey') : 'Next Question'}
+            {currentIndex === currentQuestions.length - 1 ? (isPart1 ? t.survey.footer.continueToPart2 : t.survey.footer.completeSurvey) : t.common.nextQuestion}
           </Text>
           {canProceed && <Ionicons name="chevron-forward" size={20} color={Colors.white} />}
         </TouchableOpacity>
@@ -309,7 +250,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
 const makeStyles = () => StyleSheet.create({
   root: { flex: 1, backgroundColor: toneBg('#FCFBF8') },
-  
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
