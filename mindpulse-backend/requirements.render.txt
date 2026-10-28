@@ -11,7 +11,10 @@ gunicorn==23.0.0
 tensorflow==2.20.0
 keras==3.15.0
 mediapipe==0.10.18
-opencv-contrib-python-headless==5.0.0.93
+# MediaPipe declares the non-headless distribution; pin both OpenCV packages
+# to the same NumPy-compatible release for Render's Linux environment.
+opencv-contrib-python==4.11.0.86
+opencv-contrib-python-headless==4.11.0.86
 scikit-learn==1.7.2
 joblib==1.5.3
 numpy==1.26.4
