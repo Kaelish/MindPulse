@@ -110,6 +110,12 @@
   font-size: 0.66rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  /* Preview only: keep the dropdown compact like the admin popover. The full
+     text stays available in the notification history popup. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .notification-panel-note {

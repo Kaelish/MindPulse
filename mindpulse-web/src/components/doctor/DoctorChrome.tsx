@@ -65,11 +65,7 @@ export const DoctorNotifications: React.FC = () => {
           <NotificationBell />
           {unread > 0 && <span className="doc-bell-badge">{unread > 9 ? '9+' : unread}</span>}
         </button>
-        {open && (
-          <div className="doc-bell-pop">
-            <NotificationPanel onSeeAll={openFullHistory} />
-          </div>
-        )}
+        {open && <NotificationPanel onSeeAll={openFullHistory} />}
       </div>
       {showAll && (
         <NotificationHistorySheet

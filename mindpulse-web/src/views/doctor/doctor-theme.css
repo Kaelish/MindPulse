@@ -3245,60 +3245,77 @@ html[data-theme='dark'] .doctor-scope .notification-item {
   box-shadow: 0 4px 10px rgba(229, 57, 53, 0.22);
 }
 
-.doctor-scope .doc-bell-pop {
+/* The bell dropdown is the notification card itself — no extra wrapper card,
+   so there is no empty strip above the list. Matches the admin popover. */
+.doctor-scope .doc-bell-wrap .notification-panel {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
   z-index: 200;
-  width: 322px;
+  width: 330px;
   max-width: calc(100vw - 32px);
-  padding: 16px;
+  padding: 18px;
   background: var(--doc-panel);
   border: 1px solid var(--doc-line);
   border-radius: var(--doc-radius);
   box-shadow: 0 18px 42px rgba(8, 22, 30, 0.18);
 }
 
-.doctor-scope .doc-bell-pop .notification-heading strong,
-.doctor-scope .doc-bell-pop .notification-item-title,
-.doctor-scope .doc-bell-pop .empty-notifications {
+.doctor-scope .doc-bell-wrap .notification-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doctor-scope .doc-bell-wrap .notification-heading strong,
+.doctor-scope .doc-bell-wrap .notification-item-title,
+.doctor-scope .doc-bell-wrap .empty-notifications {
   color: var(--doc-ink);
 }
 
-.doctor-scope .doc-bell-pop .notification-item-message,
-.doctor-scope .doc-bell-pop .notification-item-time,
-.doctor-scope .doc-bell-pop .notification-panel-state,
-.doctor-scope .doc-bell-pop .notification-panel-note,
-.doctor-scope .doc-bell-pop .notification-heading {
+.doctor-scope .doc-bell-wrap .notification-heading strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.doctor-scope .doc-bell-wrap .notification-item-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.doctor-scope .doc-bell-wrap .notification-item-message,
+.doctor-scope .doc-bell-wrap .notification-panel-state,
+.doctor-scope .doc-bell-wrap .notification-panel-note {
   color: var(--doc-muted);
-  font-size: 0.875rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
-.doctor-scope .doc-bell-pop .notification-item-message {
-  line-height: 1.6;
+.doctor-scope .doc-bell-wrap .notification-item-time {
+  color: var(--doc-muted);
+  font-size: 0.8rem;
 }
 
-.doctor-scope .doc-bell-pop .notification-item {
+.doctor-scope .doc-bell-wrap .notification-item {
   border-bottom-color: var(--doc-line);
 }
 
-.doctor-scope .doc-bell-pop .notification-panel-state button {
+.doctor-scope .doc-bell-wrap .notification-panel-state button {
   background: var(--doc-panel);
   border-color: var(--doc-line-strong);
   color: var(--primary-strong);
 }
 
-.doctor-scope .doc-bell-pop .notification-see-all {
+.doctor-scope .doc-bell-wrap .notification-see-all {
   margin-top: 12px;
   padding: 9px 12px;
   border: 1px solid var(--doc-line);
   border-radius: 10px;
   background: var(--doc-soft);
   color: var(--primary-strong);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
-.doctor-scope .doc-bell-pop .notification-see-all:hover {
+.doctor-scope .doc-bell-wrap .notification-see-all:hover {
   background: var(--primary-soft);
   border-color: var(--primary);
 }
@@ -3699,9 +3716,9 @@ html[data-theme='dark'] .doctor-scope .notification-item {
     width: 100%;
   }
 
-  .doctor-scope .doc-bell-pop {
+  .doctor-scope .doc-bell-wrap .notification-panel {
     right: -4px;
-    width: min(322px, calc(100vw - 40px));
+    width: min(330px, calc(100vw - 40px));
   }
 }
 
