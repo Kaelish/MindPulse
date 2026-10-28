@@ -30,6 +30,7 @@ import { NotificationsModal } from './settings/NotificationsModal';
 import { PrivacyDataModal } from './settings/PrivacyDataModal';
 import { AboutMindPulseModal } from './settings/AboutMindPulseModal';
 import { HelpGuideModal } from './settings/HelpGuideModal';
+import { LanguageModal } from './settings/LanguageModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { MyFilesSection } from './MyFilesSection';
 import { TransactionsSection } from './TransactionsSection';
@@ -232,6 +233,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const [showPrivacyData, setShowPrivacyData] = useState(false);
   const [showAboutMindPulse, setShowAboutMindPulse] = useState(false);
   const [showHelpGuide, setShowHelpGuide] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
 
   // Dark mode (device-wide, restored on the next launch)
   const themeMode = useThemeMode();
@@ -563,6 +565,13 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                 onPress={() => setShowHelpGuide(true)}
               />
               <SettingRow
+                icon="language-outline"
+                bg="#EDE7F6"
+                label="Language"
+                sub="English · Filipino · Cebuano"
+                onPress={() => setShowLanguage(true)}
+              />
+              <SettingRow
                 icon="information-circle-outline"
                 bg="#E6F7F5"
                 label="About MindPulse"
@@ -613,6 +622,10 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
       <HelpGuideModal
         visible={showHelpGuide}
         onClose={() => setShowHelpGuide(false)}
+      />
+      <LanguageModal
+        visible={showLanguage}
+        onClose={() => setShowLanguage(false)}
       />
       <SessionDetailModal
         visible={detailSession !== null}
