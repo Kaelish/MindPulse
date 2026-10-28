@@ -50,7 +50,7 @@ const getApiBaseUrl = (): string => {
   // only rewrites that exact shape (dev -> expo/virtual/env, prod -> inlined value).
   // Reading it through `globalThis.process` hides it from that transform, so the
   // .env value never reaches the app and capture always reports "not configured".
-  const baseUrl = process.env.EXPO_PUBLIC_MINDPULSE_API_URL?.trim();
+  const baseUrl = (process.env.EXPO_PUBLIC_MINDPULSE_API_URL || 'https://mindpulse-backend-dgz0.onrender.com')?.trim();
   if (!baseUrl) {
     throw new Error(
       'Face scan is not configured. Set EXPO_PUBLIC_MINDPULSE_API_URL to the MindPulse backend URL.',
