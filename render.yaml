@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     rootDir: mindpulse-backend
-    buildCommand: pip install -r requirements.render.txt && python manage.py migrate
+    buildCommand: pip install -r requirements.render.txt && pip install --no-deps mediapipe==0.10.18 && python manage.py migrate
     startCommand: gunicorn mindpulse_api.wsgi:application --bind 0.0.0.0:$PORT
     healthCheckPath: /api/health/
     envVars:
