@@ -8,13 +8,14 @@ gunicorn==23.0.0
 
 # TensorFlow 2.20.0 is the latest compatible Linux wheel for Render's
 # pinned Python 3.12 runtime.
-tensorflow==2.20.0
+tensorflow==2.19.1
 keras==3.15.0
 mediapipe==0.10.18
 # MediaPipe declares the non-headless distribution; pin both OpenCV packages
 # to the same NumPy-compatible release for Render's Linux environment.
 opencv-contrib-python==4.11.0.86
 opencv-contrib-python-headless==4.11.0.86
+protobuf==4.25.8
 scikit-learn==1.7.2
 joblib==1.5.3
 numpy==1.26.4
