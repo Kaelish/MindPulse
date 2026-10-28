@@ -9,7 +9,10 @@
         {
           "cameraPermission": "MindPulse uses the front camera to read your facial expression during the stress assessment."
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-font",
+      "expo-asset"
     ]
   }
 }
