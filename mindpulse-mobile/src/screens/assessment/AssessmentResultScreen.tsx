@@ -369,9 +369,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         `${t.toolSurvey.completeAssessment}: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms, Face: ${face?.expression ?? 'n/a'}`,
         hrBpm,
         surveyVal,
-            rxMs,
-            face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
-            snapshot ?? null,
+        rxMs,
+        face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
+        snapshot ?? null,
+        face?.expression,
       );
 
       // Today is now spent: keep the numbers for review, close every step, and

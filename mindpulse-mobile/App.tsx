@@ -366,6 +366,10 @@ function App() {
         score,
         `Completed reaction time assessment (${reactionResult.average} ms average)`,
         heartRateBpm,
+        undefined,
+        // Persist the reading itself: it previously survived only inside the
+        // notes string, so this flow's sessions had no reaction_time_ms.
+        reactionResult.average,
       );
     } catch (e: any) {
       Alert.alert(

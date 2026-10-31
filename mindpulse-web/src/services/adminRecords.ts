@@ -23,6 +23,7 @@ interface StudentProfileRow {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  phone: string | null;
   student_no: string | null;
   program: string | null;
   year_level: string | null;
@@ -90,7 +91,7 @@ const pullBundles = async (): Promise<Bundles> => {
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, student_no, program, year_level, created_at')
+    .select('id, first_name, last_name, email, phone, student_no, program, year_level, created_at')
     .eq('role', 'student')
     .order('created_at', { ascending: false });
   if (profilesError) throw new Error(profilesError.message);
@@ -146,6 +147,7 @@ export interface StudentRecordRow {
   name: string;
   initials: string;
   email: string;
+  phone: string | null;
   studentNo: string;
   program: string;
   year: string;
@@ -169,6 +171,7 @@ const buildRecord = (student: StudentProfileRow, bundles: Bundles): StudentRecor
     name,
     initials: initialsOf(name, student.email || ''),
     email: student.email || 'No email',
+    phone: student.phone || null,
     studentNo: student.student_no || student.id.slice(0, 8).toUpperCase(),
     program: student.program || 'â€”',
     year: student.year_level || 'â€”',
@@ -208,8 +211,8 @@ const buildBundles = (bundles: Bundles): RecordBundles => {
         riskTier,
         riskLabel: riskLabelForTier(riskTier),
         careStatus: careStatusFor(appointments),
-        // profiles has no student phone column yet; tel: actions enable once it does.
-        phone: null,
+        // phone now rides along from StudentRecordRow (profiles.phone), so the
+        // Call action in the at-risk table points at a real number.
       };
     })
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));

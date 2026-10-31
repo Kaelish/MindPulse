@@ -1,0 +1,429 @@
+# Module Implementation Status & Design Decisions
+
+**System:** MINDPULSE: AI-Based Emotional Stress Detection System Using Facial Analysis
+**Spec of record:** `List of Modules Adviser Signature.pdf` — 24 modules, adviser-signed
+**Audit date:** 2026-10-31 (read-only code audit, no code changed)
+**Status:** Phase 0 of the remediation sequence — *pending review sign-off (Appendix D)*
+
+---
+
+## 1. Purpose
+
+This document reconciles every CRUD operation × role cell in the signed List of Modules
+against what is actually implemented in the codebase, and records the decision for each
+gap:
+
+| Decision | Meaning |
+|---|---|
+| **Fix** | A real defect: the system already claims this behaviour but does not deliver it (Appendix A) |
+| **Build (lean)** | A realistic, low-risk feature that should exist anyway (Appendix B) |
+| **Deviate** | The spec cell is intentionally not implemented, for a documented safety/privacy/professional reason (Appendix C) |
+
+Nothing is implemented "because the PDF says so", and nothing is dropped without a
+written reason. Each Appendix C deviation requires a reviewer initial before the module
+may be reported as *covered*.
+
+---
+
+## 2. Legend (used in the per-module registers)
+
+| Glyph | Meaning |
+|---|---|
+| ✅ | Implemented and working |
+| 🔁 | *Implemented-as* — delivered in a different, justified form (see notes) |
+| 🔧 | Planned — committed fix/build (Appendix A or B) |
+| 🔶 | Optional — build only if the adviser requires the cell |
+| ⛔ | Deliberate deviation (Appendix C reference) |
+| ❌ | Open gap / defect |
+| — | Not required by the spec |
+
+Roles: **Admin** and **Doctor** use the web app; **User** (patient) uses the mobile app.
+
+---
+
+## 3. Summary
+
+| Code audit status | Count | Modules |
+|---|---|---|
+| Fully implemented | 7 | Result Display, Stress History, Admin Dashboard, User Monitoring, Report Generation, MindPlant Growth & Streak, Security & Access Control |
+| Partially implemented | 15 | User Authentication, User Profile Management, User Health Background, Assessment Session, Survey Assessment, Heart Rate Input, Reaction Time Test, Facial Analysis, Stress Calculation, Recommendation, Consultation Request, Consultation Management, Messaging, Notification, Data Management |
+| Not implemented | 2 | Consent Management, Activity Log |
+
+**Target end-state after this sequence:** all 24 modules *covered* — implemented,
+implemented-as, or deviating with an approved justification.
+
+---
+
+## 4. Decision principles
+
+1. **Three buckets.** Every gap is a defect (fix), a realistic gap (build lean), or an
+   unrealistic spec cell (deviate with a reason).
+2. **Clinical data is immutable.** No hard delete of sessions, results, messages, or
+   consent. Correction happens *before* submission (retake), or through soft states
+   (`cancelled`, `withdrawn`, `anonymized`, `draft`/`published`).
+3. **Deletion is least-privilege.** Patients delete their own account (self-service,
+   already built). Admins remove unapproved staff accounts. Clinicians never delete
+   patient records.
+4. **No fake controls.** A toggle that only writes to `localStorage` is removed, not
+   preserved. If it cannot be enforced server-side, it does not ship.
+5. **Additive schema only.** New tables and nullable columns with defaults. No ALTERs
+   that change existing column semantics; no destructive migration.
+6. **RLS-first.** Every new table ships with row-level security and explicit policies;
+   capture that cannot be bypassed by the client (database triggers, per the existing
+   `0008_notification_events.sql` pattern).
+
+### Approved precedents
+
+| Precedent | Effect |
+|---|---|
+| Licensed doctor's guidance: **clinical recommendations must not be visible to patients** | Patient-facing channels are the *published consultation progress note* (`setPatientNotePublication`, `ConsultationSummaryView` publish switch, migration `0021_therapy_progress_note.sql`) and system-authored self-care tips (`SelfCareModal`). Recommendation cells for the User role → deviation **C-6**. |
+| `0008_notification_events.sql` | Notifications are created by database triggers fired by admin/doctor/patient actions — the basis for deviation **C-10** and the model for the Activity Log build (B-4). |
+| `delete_my_account()` / `delete_app_user()` RPCs (`0001_canonical_schema.sql`) | Patient deletion is user-initiated; admin deletion applies to staff accounts → deviations **C-1/C-2**. |
+
+---
+
+## 5. Per-module registers
+
+Cell notation: `Operation → Admin / Doctor / User`.
+
+### M-01 · User Authentication — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ `AuthScreen.signUp`, `WebAuth.signUp` + `profiles` trigger |
+| Retrieve | ✅ `session.ts` role routing | ✅ | ✅ |
+| Update | ✅ own credentials (`AdminProfileSettingsView`, `ProfileSecurityPanel`) | ✅ own credentials | ✅ password/metadata (`AccountInfoModal`) |
+| Delete | 🔁 staff accounts only (`delete_app_user` via Deny/Remove) — **C-2** | ⛔ — **C-1** | 🔁 self-service `delete_my_account` |
+
+**Decision:** complete once **C-1** is approved. No code work.
+
+### M-02 · User Profile Management — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ sign-up trigger |
+| Retrieve | ✅ `fetchAdminAccounts` (view-only modal) | ✅ `studentCases.ts` | ✅ `PatientProfileScreen` |
+| Update | 🔶 edit other users' profiles — not built (**C-3**) | ✅ own profile | ✅ `AccountInfoModal` |
+| Delete | ⛔ patients not admin-deletable — **C-1/C-2** | — | — |
+
+**Decision:** deviate on Delete; **C-3** is optional Bucket B if the adviser wants admin
+correction of contact fields.
+
+### M-03 · User Health Background — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ `HealthSetupScreen` → `profiles.mental_conditions` / `physical_conditions` |
+| Retrieve | — | 🔧 **B-1** (columns absent from every doctor view) | ✅ profile + dashboard |
+| Update | — | — | ✅ re-run health setup |
+| Delete | — | — | 🔁 clear-all by re-run; no history table to purge |
+
+**Decision:** build **B-1** — highest clinical value per line changed (verify RLS allows
+the column read first; doctors already select other profile columns).
+
+### M-04 · Consent Management — *audit: Not implemented*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | 🔧 **B-3** (signup + face-scan consent modal currently persist nothing) |
+| Retrieve | 🔧 **B-3** read-only register | 🔶 | 🔁 own consent shown in Privacy/About |
+| Update | 🔁 withdrawal recorded as a new state, never an edit | — | 🔁 |
+| Delete | ⛔ proof of consent must outlive the account — **C-14** | — | — |
+
+**Decision:** build lean (**B-3**): `consent_records(user_id, consent_type, version,
+granted_at, withdrawn_at, source)`, written at registration and at the existing
+*"I Understand & Continue"* button (`FaceScanInstructionsScreen.tsx:337-343`). Deviate on
+Delete.
+
+### M-05 · Assessment Session — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ `AssessmentResultScreen.handleSaveResult` → `stress_sessions` |
+| Retrieve | ✅ `fetchAdminResults` | ✅ RLS-scoped + case detail | ✅ dashboard/history |
+| Update | ⛔ — **C-4** | 🔧 persist "Mark as Reviewed" (**A-3**) | ⛔ correct by retaking before save — **C-4** |
+| Delete | ⛔ — **C-4** | — | — |
+
+**Decision:** deviate on update/delete (clinical immutability); fix the non-persisted
+review state (**A-3**: either add `reviewed_at` or remove the button).
+
+### M-06 · Survey Assessment — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ✅ tool CRUD (`assessmentTools.ts`) | — | ✅ PSS-10 + `survey_answers` (0019) |
+| Retrieve | 🔶 item-level answers (title only today) | ✅ per-item in case detail | ✅ via session modal |
+| Update | ✅ edit tool | — | ⛔ answers immutable — **C-4** |
+| Delete | ✅ delete tool | — | — |
+
+**Defects:** admin-created supplementary tools are unreachable — `ToolSurveyScreen` has no
+navigation path (**A-4**); mobile PSS-10 text is hardcoded in i18n while the DB copy was
+rewritten by `0018`, so admin edits do not reach patients (**A-10** — decide: render from
+`assessment_tools.questions`, or declare PSS-10 version-locked content and scope the admin
+editor to supplementary tools, paired with A-4).
+
+### M-07 · Heart Rate Input — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ `HeartRateEntryScreen` (beats × 4), saved with the session |
+| Retrieve | ✅ | ✅ | ✅ |
+| Update | — | — | 🔁 re-run the timer before submitting — **C-4** |
+| Delete | ⛔ — **C-4** | — | — |
+
+**Decision:** deviate. No standalone HR record exists by design — the reading belongs to
+a session.
+
+### M-08 · Reaction Time Test — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ 3-round test; ✅ standalone flow now persists `reaction_time_ms` (**A-2 fixed**) |
+| Retrieve | ✅ | ✅ | ✅ |
+| Update | — | — | 🔁 retake before submitting — **C-4** |
+| Delete | ⛔ — **C-4** | — | — |
+
+**Decision:** deviate on update/delete; **A-2 fixed** — `handleFinalResultsDone` now
+forwards `reactionResult.average` the same way it already forwards `heartRateBpm`.
+
+### M-09 · Facial Analysis — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | — | ✅ hub flow; ❌ **A-9** standalone scan is an acknowledged non-persisting demo |
+| Retrieve | ✅ `emotion` now written with each session (**A-1 fixed**) → filters/ component stats read real labels; rows saved before the fix stay `NULL` | ✅ same | ✅ confidence |
+| Update | — | — | — |
+| Delete | ⛔ no scan artifacts stored at all (stateless inference) — **C-4** | — | — |
+
+**Decision:** **A-1 fixed** (emotion is now saved with the session; the existing `EMOTION_STRESS` map already contains happy/neutral/sad, so no label change was needed). **A-9 open** (persist the standalone scan like the hub flow, or remove the CTA). Deviate on delete: images and landmarks are never stored, which is also what the in-app Privacy Policy promises.
+
+### M-10 · Stress Calculation — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | 🔁 admin authors tool content; weights are fixed algorithm constants — **C-13** | — | ✅ score computed client-side |
+| Retrieve | ✅ | ✅ | ✅ |
+| Update | ⛔ weights not admin-editable — **C-13** | — | — |
+| Delete | — | — | — |
+
+**Defect:** three divergent formulas (mobile fusion vs `FinalStressScoreScreen` vs
+`assessmentOutcomes.ts`) mean admin component bars do not reflect how scores were
+computed — **A-6**: single source of truth, stored score stays authoritative.
+
+### M-11 · Result Display — *audit: Fully implemented*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Retrieve | ✅ | ✅ | ✅ `AssessmentResultScreen` / `FinalStressScoreScreen` |
+| Update | ⛔ results are read-only — **C-5** | — | — |
+
+**Decision:** complete pending **C-5**.
+
+### M-12 · Stress History — *audit: Fully implemented*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Retrieve | ✅ `AdminRecordsView` history modal | ✅ case detail | ✅ History segment + `SessionDetailModal` |
+| Update | ⛔ — **C-5** | — | — |
+| Delete | ⛔ — **C-5** | — | ✅ bulk erase own history (`PrivacyDataModal`) |
+
+**Decision:** complete pending **C-5**.
+
+### M-13 · Recommendation — *audit: Partial* *(guided by clinical consultation)*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ⛔ admin is not the treating clinician — **C-7** | ✅ `StudentCaseDetailView` | 🔁 self-care tips are system-authored (`SelfCareModal`) |
+| Retrieve | 🔶 read-only if adviser requires — **C-7** | ✅ `fetchDoctorRecommendations` | ⛔ **C-6** (per doctor's guidance) → patient reads *published* progress notes + self-care tips |
+| Update | ⛔ — **C-7** | ✅ mark completed | — |
+| Delete | — | ✅ *Remove* action wired to `deleteRecommendation` (**A-7 fixed**, RLS already allowed it) | — |
+
+**Decision:** deviate **C-6/C-7** with the doctor's guidance cited; **A-7 fixed** (the dead `deleteRecommendation` is now wired as a *Remove* action for the issuing doctor).
+
+### M-14 · Consultation Request — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ⛔ bookings are patient-initiated or doctor walk-in desk — **C-11** | 🔁 walk-in booking | ✅ `saveBookedAppointment` + payment |
+| Retrieve | ✅ consultation records | ✅ | ✅ `fetchMyBookings` |
+| Update | ⛔ — **C-11** | ✅ approve / decline / reschedule | 🔶 own cancel (status → `cancelled`) — **B-6** |
+| Delete | 🔶 admin cancel no-show — **B-6** | 🔁 decline = `cancelled`, never a row delete | — |
+
+**Decision:** deviate on admin create/update; optional patient-cancel and admin-cancel as
+status changes (B-6).
+
+### M-15 · Consultation Management — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ⛔ oversight role, not operator — **C-11** | ✅ schedule / walk-in | — |
+| Retrieve | ✅ `AdminRecordsView` | ✅ `ConsultationsView` | ✅ bookings + summaries |
+| Update | ⛔ — **C-11** | ✅ lifecycle, notes, video, payments | 🔶 — **B-6** |
+| Delete | ⛔ — **C-11** | 🔁 decline/cancel status only | — |
+
+**Decision:** deviate on admin operator cells; doctor side is complete.
+
+### M-16 · Messaging — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | — | ✅ `sendWebChatMessage` | ✅ `sendChatMessage` |
+| Retrieve | ⛔ admin does not read clinical correspondence — **C-8** | ✅ threads + read receipts | ✅ |
+| Update | — | — | — |
+| Delete | ⛔ chat records retained — **C-9** | ⛔ — **C-9** | ⛔ — **C-9** |
+
+**Decision:** deviate **C-8/C-9** — same privacy reasoning as **C-6**. The
+patient↔doctor channel itself is fully implemented (realtime, attachments, read receipts).
+
+### M-17 · Notification — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | 🔁 event-driven via `0008` triggers fired by admin/doctor actions — **C-10** | 🔁 — **C-10** | 🔁 (assessment completion) |
+| Retrieve | ✅ `AdminNotificationsView` | ✅ `NotificationHistorySheet` | ✅ `PatientNotifications` |
+| Update | ✅ mark one / mark all read | ✅ | ✅ |
+| Delete | 🔧 dismiss-from-my-list (delete own row) — **B-2** | 🔧 — **B-2** | 🔧 — **B-2** |
+
+**Decision:** build **B-2** (cheap, realistic); compose-by-hand stays out (**C-10**).
+
+### M-18 · Admin Dashboard — *audit: Fully implemented*
+
+| Operation | Admin |
+|---|---|
+| Retrieve | ✅ `fetchAdminOverview` / `fetchAdminDashboardCharts` (live data) |
+| Update | ✅ applied settings (system name, theme, session timeout) |
+
+**Decision:** complete. Note: cosmetic settings tabs are being cut under **A-5**, which
+*shrinks* this page to only what is real.
+
+### M-19 · User Monitoring — *audit: Fully implemented*
+
+| Operation | Admin |
+|---|---|
+| Retrieve | ✅ accounts list, records, at-risk, per-patient history |
+| Update | ✅ approve / verify / unverify |
+| Delete | 🔁 staff accounts only — **C-1/C-2** |
+
+**Decision:** complete pending **C-1/C-2**.
+
+### M-20 · Data Management — *audit: Partial*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ✅ JSON export (`dataExport.ts`) | — | — |
+| Retrieve | ✅ | ✅ records views | — |
+| Update | ❌ retention/anonymize/GDPR/2FA toggles are `localStorage`-only — **A-5** (cut or replace) | — | — |
+| Delete | 🔁 pending-staff removal + user self-service — **C-1/C-2**; ⛔ no admin record purge | — | ✅ erase history / delete account |
+
+**Decision:** fix **A-5** (remove controls that enforce nothing); deviate on admin purge.
+
+### M-21 · Security and Access Control — *audit: Fully implemented*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create | ✅ MFA enrollment (`ProfileSecurityPanel`) | ✅ same | 🔁 credentials at sign-up; mobile has password change only |
+| Retrieve | ✅ active sessions (`0026`), verification codes (`0027`) | ✅ | ✅ own security panel |
+| Update | ✅ password / MFA / session timeout | ✅ | ✅ |
+| Delete | 🔁 removes staff access; 🔶 revoke another user's sessions (**B-6**) | — | — |
+
+**Decision:** complete. Optional **B-6** only if the adviser wants admin-side session
+revocation for patients.
+
+### M-22 · Report Generation — *audit: Fully implemented*
+
+| Operation | Admin | Doctor |
+|---|---|---|
+| Create | ✅ 5 CSV reports (`adminReports.ts`) + analytics export | ✅ CSV exports in results/cases/transactions |
+| Retrieve | ✅ | ✅ |
+| Update | ⛔ generated on demand, nothing stored — **C-12** | — |
+| Delete | ⛔ — **C-12** | — |
+
+**Decision:** complete pending **C-12** (no report repository exists to edit or delete).
+
+### M-23 · Activity Log — *audit: Not implemented*
+
+| Operation | Admin | Doctor |
+|---|---|---|
+| Create | 🔧 **B-4** (database triggers) | — |
+| Retrieve | 🔧 **B-4** admin read-only view | 🔶 |
+| Update / Delete | — | — |
+
+**Decision:** build lean (**B-4**): `activity_log(actor, action, entity, entity_id,
+created_at)` written by triggers on `profiles`, `appointments`, `stress_sessions`,
+`consultation_notes` — mirrors `0008`, cannot be bypassed by the client, requires no
+changes to existing screens for capture.
+
+### M-24 · MindPlant Growth and Streak — *audit: Fully implemented*
+
+| Operation | Admin | Doctor | User |
+|---|---|---|---|
+| Create / Retrieve / Update | — | — | ✅ `plantProgress.ts` upsert + read, `streakLogic.ts` (unit-tested), `0011`/`0020` |
+| Delete | — | — | — |
+
+**Decision:** complete. Row deletion is by design absent — a plant only lapses through
+missed days.
+
+---
+
+## Appendix A · Defect fixes (Bucket A — do first, no schema change unless noted)
+
+| # | Defect | Location | Fix |
+|---|---|---|---|
+| A-1 | Detected emotion never persisted → admin/doctor emotion filters and facial component stats are empty | `mindpulse-mobile/src/services/dashboard.ts` `saveNewStressSession` insert list; `mindpulse-web/src/services/assessmentOutcomes.ts` label map | Write `emotion` with the session; align `EMOTION_STRESS` to the model's real labels (Happy/Neutral/Sad) |
+| A-2 | Standalone flow drops `reaction_time_ms` (survives only inside free-text notes) | `mindpulse-mobile/App.tsx` `handleFinalResultsDone` (passes 3 args) | Forward `reactionTimeMs` the way `heartRateBpm` already is |
+| A-3 | Doctor "Mark as Reviewed" is component-local state — a fake Update | `mindpulse-web/src/views/doctor/AssessmentResultsView.tsx:58` | Persist via nullable `reviewed_at` (small migration, B-5) **or** remove the control |
+| A-4 | Admin-created supplementary survey tools can never be taken | `StressAssessmentHubScreen.tsx` step list; dead `'ToolSurvey'` route in `AssessmentNavigator.tsx:75` | Wire an entry point **or** scope the admin form to the multi-modal tool only |
+| A-5 | Admin System Settings: retention, anonymize, GDPR, 2FA, IP whitelist, API key = `localStorage`-only | `AdminSystemSettingsView.tsx`, `services/adminSettings.ts` | Remove unenforceable controls; keep only what is real (system name, theme, session timeout, export) |
+| A-6 | Three divergent stress formulas — admin component bars ≠ how scores were computed | `AssessmentResultScreen.tsx` fusion vs `FinalStressScoreScreen.tsx` vs `assessmentOutcomes.ts` | One source of truth; stored score stays authoritative |
+| A-7 | `deleteRecommendation` is dead code (no caller) | `mindpulse-web/src/services/recommendations.ts:145` | Wire it for the doctor, or delete it |
+| A-8 | At-risk phone hardcoded `null` with a stale comment (`profiles.phone` exists and is read elsewhere) | `mindpulse-web/src/services/adminRecords.ts:211-212` | Populate the column or remove the Call affordance |
+| A-9 | Standalone face scan is an explicit non-persisting demo, but is reachable from dashboard CTAs | `mindpulse-mobile/App.tsx` ~539-543 | Persist like the hub flow, or remove the CTA and keep hub-only |
+| A-10 | Survey question source drift (DB rewritten by `0018`, mobile text hardcoded in i18n) | `mindpulse-mobile/src/i18n/translations.ts`, `assessment_tools` | Decide with the adviser: render from DB **or** declare PSS-10 version-locked (pair with A-4) |
+
+**Fix log**
+
+| Status | Items | Verification |
+|---|---|---|
+| ✅ Fixed 2026-10-31 | **A-1, A-2, A-7, A-8** — `emotion` now written with every session (hub flow), standalone flow now persists `reaction_time_ms`, doctor's *Remove recommendation* wired to `deleteRecommendation` (RLS `recommendations_delete` already allowed it), at-risk `phone` now reads `profiles.phone` so the Call action dials a real number | Web `tsc --noEmit` clean; web 97/97 tests (15 suites); mobile 51/51 tests (5 suites). Mobile's raw `tsc` baseline was already failing on pre-existing RN/Expo typing issues (`StatusBar.backgroundColor`, `ScrollView` refs, missing `@types/jest`) — no new errors in any changed file. *Note: `emotion` is populated for sessions saved from now on; rows written before this fix stay `NULL` until resubmitted.* |
+| ⏳ Open | A-3, A-4, A-5, A-6, A-9, A-10 — awaiting the decisions listed in §5 | — |
+
+## Appendix B · Lean builds (Bucket B — sequenced)
+
+| # | Build | Depends on | Notes |
+|---|---|---|---|
+| B-1 | Doctor reads health background in case detail | Verify RLS on `profiles` | ~2 columns added to an existing select |
+| B-2 | Notification dismiss (delete own row) | — | Mobile + web; satisfies the Delete cells realistically |
+| B-3 | Consent records table + writes at sign-up and face-scan consent + admin read-only view | Migration | Closes the only *fully* missing user-data module |
+| B-4 | Activity log table via DB triggers + admin read-only view | Migration (after B-3, same additive batch) | Follows `0008` pattern |
+| B-5 | `reviewed_at` persistence | Only if A-3 = persist (else not needed) | Additive nullable column |
+| B-6 | Optional, adviser-driven: patient cancels own booking (status change), admin cancels no-show, admin read of recommendations, mobile MFA panel, admin item-level survey answers, admin contact-field correction (C-3) | Adviser decision | Each is status-change or read-only — no new deletion paths |
+
+## Appendix C · Deviation log (require reviewer initials)
+
+| # | Deviation | Rationale |
+|---|---|---|
+| C-1 | Clinicians (doctor role) cannot delete patient records | No clinical system permits clinician-side destruction of patient records; retention and medico-legal duty |
+| C-2 | Admin deletion applies to staff accounts only; patient deletion is user self-service | Account erasure is the data subject's right and action (`delete_my_account`), not an operator shortcut |
+| C-3 | Admin does not edit patient identity fields (view-only) | Identity corrections are requested from the user; optional build B-6 if required |
+| C-4 | Submitted assessment, survey, heart-rate and reaction data are immutable; correction = retake before submission | Clinical record integrity; prevents post-hoc score editing |
+| C-5 | Results and history are read-only for staff | Same as C-4; bulk erasure is available to the data subject only |
+| C-6 | **Patients do not see clinician-authored recommendations** | Licensed doctor's guidance; patient channels are published consultation progress notes (`0021`, publish switch) and system-authored self-care tips |
+| C-7 | Admin neither authors nor edits clinical recommendations | Admin is an operational role, not the treating clinician |
+| C-8 | Admin cannot read private patient–doctor messages | Clinical confidentiality; same reasoning as C-6 |
+| C-9 | Chat messages are never deleted | Correspondence is part of the consultation record |
+| C-10 | Notifications are event-generated, not hand-composed | Matches `0008` trigger design; no realistic manual-broadcast requirement |
+| C-11 | Consultations are created/updated/cancelled by patient and doctor; admin is oversight (read-only) | Separation of operational oversight from clinical workflow |
+| C-12 | Reports are generated on demand; no stored reports to update or delete | Nothing persisted ⇒ no update/delete semantics |
+| C-13 | Stress weights are versioned algorithm constants, not admin-editable data | Changing weights silently would invalidate historical scores |
+| C-14 | Consent records are never deleted | Proof of consent must outlive the account |
+
+## Appendix D · Sign-off
+
+| Role | Name | Signature | Date |
+|---|---|---|---|
+| Programmer(s) | | | |
+| Clinical reviewer (doctor) — C-6 specifically | | | |
+| Adviser — Appendices A–C | | | |
+
+*Module status may only be reported as "covered" for a deviating cell once the
+corresponding Appendix C row is initialled above.*
