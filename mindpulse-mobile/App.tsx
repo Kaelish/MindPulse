@@ -34,7 +34,6 @@ import {
 } from './src/services/consultationLifecycle';
 import { ReactionGameScreen, ReactionResult } from './src/screens/reaction/ReactionGameScreen';
 import { FinalStressScoreScreen } from './src/screens/results/FinalStressScoreScreen';
-import { FaceScanNavigator } from './src/screens/facescan/FaceScanNavigator';
 import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTabBar';
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
@@ -51,7 +50,6 @@ type ScreenMode =
   | 'auth'
   | 'healthSetup'
   | 'main'
-  | 'faceScan'
   | 'reaction'
   | 'finalResults'
   | 'call'
@@ -328,11 +326,6 @@ function App() {
       setCurrentTab(userRole === 'doctor' ? 'clinics' : 'home');
       return;
     }
-    if (screenMode === 'faceScan') {
-      changeScreen('main');
-      setCurrentTab('analysis');
-      return;
-    }
     if (screenMode === 'reaction') {
       changeScreen('main');
       setCurrentTab('analysis');
@@ -534,23 +527,6 @@ function App() {
           </View>
         )}
 
-        {/* ── FACE SCAN ── */}
-        {screenMode === 'faceScan' && (
-          <View style={styles.mainWrapper}>
-            <View style={styles.tabViewArea}>
-              <FaceScanNavigator
-                onBack={handleBack}
-                onFinishScan={() => {
-                  // Demo scan result is not persisted anywhere
-                  changeScreen('main');
-                  setCurrentTab('analysis');
-                }}
-              />
-            </View>
-            <BottomTabBar activeTab="analysis" onNavigate={handleTabNavigate} />
-          </View>
-        )}
-
         {/* ── REACTION GAME ── */}
         {screenMode === 'reaction' && (
           <View style={styles.mainWrapper}>
@@ -628,7 +604,6 @@ function App() {
                         changeScreen('call');
                       }}
                   onRunSurvey={() => setCurrentTab('profile')}
-                  onRunFaceScan={() => changeScreen('faceScan')}
                   onRunDailyCheck={() => setCurrentTab('analysis')}
                 />
               )}

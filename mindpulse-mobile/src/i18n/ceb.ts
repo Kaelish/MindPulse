@@ -70,6 +70,11 @@ export const ceb: Translations = {
     completedToday: 'Human na karon',
     completedSuffix: 'Human na',
     sectionNote: 'Usa ka paghiusa nga adlaw-adlaw nga check-in: survey, face scan, heart rate ug oras sa reaksyon.',
+    extraTools: {
+      title: 'DUGANG MGA PAGSUSI',
+      note: 'Opsyonal nga mga questionnaire nga gi-publish sa imong administrator — lahi sa adlaw-adlaw nga check-in sa ibabaw.',
+      minutes: 'min',
+    },
     steps: {
       survey: { title: 'Survey bahin sa Stress', subtitle: 'PSS-10 + lawas nga mga timailha' },
       faceScan: { title: 'Pagsusi sa Emosyon sa Nawong', subtitle: 'AI nga pag-detek sa mga timailha sa nawong' },

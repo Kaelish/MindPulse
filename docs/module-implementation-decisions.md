@@ -158,11 +158,14 @@ optimistic UI that rolls back on rejection.
 | Update | ✅ edit tool | — | ⛔ answers immutable — **C-4** |
 | Delete | ✅ delete tool | — | — |
 
-**Defects:** admin-created supplementary tools are unreachable — `ToolSurveyScreen` has no
-navigation path (**A-4**); mobile PSS-10 text is hardcoded in i18n while the DB copy was
-rewritten by `0018`, so admin edits do not reach patients (**A-10** — decide: render from
-`assessment_tools.questions`, or declare PSS-10 version-locked content and scope the admin
-editor to supplementary tools, paired with A-4).
+**Defects → ✅ fixed (A-4 + A-10, 2026-11-02):** admin-created supplementary tools now
+have a real entry point — the hub lists published non-Multi-Modal tools under "More
+Assessments" and routes them into the already-built `ToolSurveyScreen`, which scores and
+saves a session (0019). **A-10:** the PSS-10 is declared **version-locked** — patients
+answer the app's built-in translated items (en/fil/ceb), so the admin form hides the
+questions editor for Multi-Modal tools and explains why (custom questions belong to
+supplementary tools). The Multi-Modal tool stays filtered out of the new list to avoid a
+second entry point to the same work.
 
 ### M-07 · Heart Rate Input — *audit: Partial*
 
@@ -192,12 +195,16 @@ forwards `reactionResult.average` the same way it already forwards `heartRateBpm
 
 | Operation | Admin | Doctor | User |
 |---|---|---|---|
-| Create | — | — | ✅ hub flow; ❌ **A-9** standalone scan is an acknowledged non-persisting demo |
+| Create | — | — | ✅ hub flow; ✅ standalone demo removed — **A-9 fixed** (it was already unreachable) |
 | Retrieve | ✅ `emotion` now written with each session (**A-1 fixed**) → filters/ component stats read real labels; rows saved before the fix stay `NULL` | ✅ same | ✅ confidence |
 | Update | — | — | — |
 | Delete | ⛔ no scan artifacts stored at all (stateless inference) — **C-4** | — | — |
 
-**Decision:** **A-1 fixed** (emotion is now saved with the session; the existing `EMOTION_STRESS` map already contains happy/neutral/sad, so no label change was needed). **A-9 open** (persist the standalone scan like the hub flow, or remove the CTA). Deviate on delete: images and landmarks are never stored, which is also what the in-app Privacy Policy promises.
+**Decision:** **A-1 fixed** (emotion is now saved with the session). **A-9 fixed** — the
+standalone non-persisting demo turned out to be already unreachable (dead `onRunFaceScan`
+prop; the dashboard CTA navigates to the analysis tab), so its wiring was deleted; the
+persisting hub flow is the only face-scan path. Deviate on delete: images and landmarks
+are never stored, which is also what the in-app Privacy Policy promises.
 
 ### M-10 · Stress Calculation — *audit: Partial*
 
@@ -208,9 +215,14 @@ forwards `reactionResult.average` the same way it already forwards `heartRateBpm
 | Update | ⛔ weights not admin-editable — **C-13** | — | — |
 | Delete | — | — | — |
 
-**Defect:** three divergent formulas (mobile fusion vs `FinalStressScoreScreen` vs
-`assessmentOutcomes.ts`) mean admin component bars do not reflect how scores were
-computed — **A-6**: single source of truth, stored score stays authoritative.
+**Defect → ✅ fixed (A-6, 2026-11-02):** three divergent formulas (mobile fusion vs
+`FinalStressScoreScreen` vs `assessmentOutcomes.ts`) meant admin component bars did not
+reflect how scores were computed. The hub fusion — canonical because it writes the
+stored `score` — is now the single source of truth: `mindpulse-mobile/src/services/stressFormula.ts`
+owns the transforms and weights; the hub, `FinalStressScoreScreen` (its `|bpm−70|×1.5`
++ 40/60 blend replaced by the canonical HR+reaction renormalized weights, and the dead
+`ReactionResult.score` removed) and the web component bars all derive from it. Stored
+scores stay authoritative — history is never re-computed.
 
 ### M-11 · Result Display — *audit: Fully implemented*
 
@@ -393,7 +405,11 @@ missed days.
 | ✅ Fixed 2026-10-31 | **A-5** — System Settings now only models settings that real code enforces. Removed: whole `detection` tab (sensitivity/confidence/model-version/scan-interval/real-time/multi-face), retention, anonymize, *store facial images*(!), GDPR toggle, performance/daily-summary alerts, primary e-mail, notification frequency, 2FA, IP whitelist, mock API-key row. Kept: system name/description, theme + density, high-stress alert gating, session timeout, password policy, data export. `loadAdminSettings` now picks known keys only, so legacy localStorage payloads load cleanly without reviving removed fields (covered by a new test case) | Web `tsc --noEmit` clean; full web suite 97/97 (15 suites) |
 | ✅ Fixed 2026-11-01 | **A-11** — reported by a teammate's build: the PSS-10 survey white-screens entering Part 2. This copy's logic was verified sound (Part-2 entry has always reset the index; en/fil/ceb all ship the complete 10/8/5 item sets), so the failing build is divergent or a stale Metro bundle — but the screen is now crash-proof regardless of cause: index clamp, `?.` on every `currentQuestion` access, `definedOnly()` filtering in the display helpers, and a direct `options?.[value]` label lookup. New regression test (`StressSurveyScreen.test.tsx`) walks Part 1 → interstitial → Part 2 → completion; validated to FAIL when the index reset is deliberately removed (renders q108 instead of q101 — degraded, not crashed) and PASS on HEAD. Also repaired a toolchain skew exposed by the test: `@react-native/jest-preset` 0.86.3 → 0.88.1 to match `react-native@0.88.0` (RN 0.88's internals import `react-native/react-private-interface`, unresolvable under the 0.86 preset's module mapper — this is why screen rendering previously could not run under jest) | Mobile jest **6/6 suites, 52/52 tests**; `StressSurveyScreen.tsx` + `translations.ts` compile clean (test-file `jest`/`expect` name errors are the pre-existing `@types/jest` baseline shared by all six test files) |
 | ✅ Fixed 2026-11-01 | **A-3** — "Mark as Reviewed" now persists. Migration `0030_assessment_review_flags.sql` adds nullable `reviewed_at`/`reviewed_by`, revokes client UPDATE on every other column of `stress_sessions` (server-enforcing deviation C-4 — nothing in either app or any trigger updated those columns), and adds an `stress_sessions_update_review` RLS policy limited to appointment-linked doctors. `AdminResultRow` carries `reviewedAt`; new `setResultReviewed()` writes it; the doctor's view uses optimistic flip + rollback and derives the Reviewed summary from real rows | Web `tsc --noEmit` clean; web 97/97 tests (15 suites). **Note: migration `0030` must be applied to Supabase before this path works in a live environment** (until then the write is rejected by RLS and the UI rolls back with an error message — no crash) |
-| ⏳ Open | A-4, A-6, A-9, A-10 — awaiting the decisions listed in §5 | — |
+| ✅ Fixed 2026-11-02 | **A-6** — one canonical stress formula. New `mindpulse-mobile/src/services/stressFormula.ts` extracts the hub fusion (the writer of the stored `score`), so `AssessmentResultScreen` calls it with identical arithmetic → saved scores unchanged; `FinalStressScoreScreen` switched from `|bpm−70|×1.5` + a 40/60 blend to the canonical HR+reaction weights renormalized over those two indicators (⅔ · ⅓ — the fusion-card title now states the real split); the dead second mapping `ReactionResult.score` (`(avg−150)/4`, single consumer) was deleted at the source; web `assessmentOutcomes.ts` mirrors the canonical transforms (legacy `EMOTION_STRESS` map → happy/neutral/sad + confidence pull, HR baseline 55 → 60 bpm, reaction `ms/2000` → `(ms−250)/3`) with bar maxes 50/20/20/10 = weights ×100 | Web `tsc` clean + 97/97 tests (15 suites); mobile jest **7/7 suites, 61/61 tests** including new `stressFormula.test.ts` contract tests (baselines, clamps, confidence pull, weight renormalization); changed files compile clean apart from pre-existing baselines |
+| ✅ Fixed 2026-11-02 | **A-9** — the non-persisting standalone face scan turned out to be *already unreachable*: the dashboard's "Face Scan" quick action navigates to the analysis tab, and the `onRunFaceScan` prop App.tsx passed was never called anywhere. Deleted the dead wiring (prop threading in `PatientDashboardScreen` + App.tsx, the `screenMode === 'faceScan'` render/back-handling blocks, the union member, the unused import). The persisting hub flow is now the only face-scan path — no fake feature remains reachable | Mobile jest green (8 suites / 62 tests); changed files compile clean apart from pre-existing baselines (verified: the `App.tsx` StatusBar error exists on HEAD) |
+| ✅ Fixed 2026-11-02 | **A-4** — admin-published supplementary tools are takeable. The hub lists active non-Multi-Modal tools under "More Assessments" (new i18n section title/note/duration unit in en/fil/ceb + `types.ts`) and routes each card into the already-built `ToolSurveyScreen`, which scores (`scoreToolAnswers`), saves a session (0019) and records completion. The Multi-Modal tool is filtered out — listing it would recreate the duplicate entry point the original tool list was removed for (rationale preserved in a hub comment). New `StressAssessmentHubScreen.test.tsx` guards both properties: the card fires `onNavigate('ToolSurvey', tool)` and the Multi-Modal title never appears; validated by failing when the filter is deliberately removed | Mobile jest **8/8 suites, 62/62 tests** |
+| ✅ Fixed 2026-11-02 | **A-10** — PSS-10 declared **version-locked** (adviser ruling, paired with A-4): patients answer the app's built-in translated items (en/fil/ceb), so the admin form hides the questions editor for Multi-Modal tools, states why, and `saveTool` no longer requires questions for that category (it carries none). Custom patient-facing questions live in Supplementary/Brief tools, which A-4 made real. Recorded as deviation **C-15** | Web `tsc --noEmit` clean + 97/97 tests (15 suites) |
+| 🎉 Phase 1 complete | **A-1 … A-11 all fixed** (2026-10-31 → 2026-11-02). Next: Phase 2 lean builds (B-1 doctor health-background read, B-2 notification dismiss) → Phase 3 additive migration (B-3 consent table, B-4 activity log) → Phase 4 optional adviser-driven items (B-6) | — |
 
 ## Appendix B · Lean builds (Bucket B — sequenced)
 
@@ -424,6 +440,7 @@ missed days.
 | C-12 | Reports are generated on demand; no stored reports to update or delete | Nothing persisted ⇒ no update/delete semantics |
 | C-13 | Stress weights are versioned algorithm constants, not admin-editable data | Changing weights silently would invalidate historical scores |
 | C-14 | Consent records are never deleted | Proof of consent must outlive the account |
+| C-15 | The built-in PSS-10 is version-locked in the app (translated en/fil/ceb) and is not editable through the admin form; the admin tool editor hides its questions for Multi-Modal tools | It is a licensed, published instrument — per-tenant edits would invalidate comparability; custom surveys are fully supported as DB-driven Supplementary/Brief tools (A-4) |
 
 ## Appendix D · Sign-off
 

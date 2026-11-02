@@ -229,10 +229,12 @@ export const StressAssessmentHubScreen = ({
 }) => {
   const { t } = useTranslation();
   const [state, setState] = useState<AssessmentState | null>(null);
-  // Still fetched: the Stress Survey step below hands the Multi-Modal tool
-  // definition to the survey screen. The standalone tool LIST is gone from
-  // this hub on purpose — those questionnaires live in the stress survey, so
-  // showing them here was a second entry point to the same work.
+  // Fetched so the Stress Survey step below can hand the Multi-Modal tool
+  // definition to the survey screen, and (A-4) so admin-published
+  // supplementary questionnaires get an entry point into ToolSurveyScreen.
+  // The Multi-Modal tool is filtered OUT of that list — it IS the daily
+  // survey step, so showing it twice would be a second entry point to the
+  // same work (the reason the original standalone tool list was removed).
   const [extras, setExtras] = useState<HubExtras>({ tools: [] });
 
   useEffect(() => {
@@ -264,6 +266,10 @@ export const StressAssessmentHubScreen = ({
     (state.survey === 'completed' &&
       state.heartRate === 'completed' &&
       state.reaction === 'completed');
+
+  // Admin-published supplementary questionnaires (A-4) — every active tool
+  // except the Multi-Modal category the Stress Survey step already covers.
+  const supplementaryTools = extras.tools.filter((tool) => tool.category !== 'Multi-Modal');
 
   return (
     <View style={styles.root}>
@@ -365,6 +371,42 @@ export const StressAssessmentHubScreen = ({
           />
         </View>
 
+        {/* Supplementary assessments (A-4): admin-published questionnaires,
+            rendered outside the daily steps because they are optional and save
+            their own session instead of feeding the daily fusion score. */}
+        {supplementaryTools.length > 0 && (
+          <View style={styles.extraToolsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{t.hub.extraTools.title}</Text>
+            </View>
+            <Text style={styles.sectionNote}>{t.hub.extraTools.note}</Text>
+            {supplementaryTools.map((tool) => (
+              <TouchableOpacity
+                key={tool.id}
+                style={styles.extraToolCard}
+                activeOpacity={0.75}
+                onPress={() => onNavigate('ToolSurvey', tool)}
+              >
+                <View style={styles.extraToolIconWrap}>
+                  <MaterialCommunityIcons
+                    name="file-document-edit-outline"
+                    size={22}
+                    color={tone('#6B79F2')}
+                  />
+                </View>
+                <View style={styles.extraToolTextContent}>
+                  <Text style={styles.extraToolTitle}>{tool.title}</Text>
+                  {!!tool.description && <Text style={styles.extraToolSubtitle}>{tool.description}</Text>}
+                  <Text style={styles.extraToolMeta}>
+                    {tool.durationMinutes} {t.hub.extraTools.minutes}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Tip Box */}
         <View style={styles.tipBox}>
           <Text style={styles.tipIcon}>💡</Text>
@@ -432,6 +474,32 @@ const makeStyles = () => StyleSheet.create({
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   sectionTitle: { color: Colors.textHint, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
   sectionNote: { color: Colors.textHint, fontSize: 12, lineHeight: 17 },
+  // Supplementary assessment cards (A-4) — same visual language as StepCard
+  // but without the day-complete state machine: these are optional, always
+  // available, and save their own session.
+  extraToolsSection: { gap: 12, marginTop: 20 },
+  extraToolCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: toneBg(Colors.white),
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: toneBg('#E4E7F0'),
+    padding: 14,
+  },
+  extraToolIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: toneBg('#EEF0FD'),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  extraToolTextContent: { flex: 1, marginRight: 8 },
+  extraToolTitle: { color: tone('#182033'), fontSize: 15, fontWeight: '700' },
+  extraToolSubtitle: { color: tone('#64748b'), fontSize: 12.5, lineHeight: 17, marginTop: 2 },
+  extraToolMeta: { color: tone('#8b95a5'), fontSize: 12, fontWeight: '600', marginTop: 4 },
   progressText: { color: Colors.btnBlue, fontSize: 13, fontWeight: '700' },
   
   stepCard: {

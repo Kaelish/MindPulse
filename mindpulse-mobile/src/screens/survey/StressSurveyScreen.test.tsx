@@ -65,6 +65,11 @@ const answerAndNext = async (renderer: Renderer): Promise<void> => {
 
 const renderedText = (renderer: Renderer): string => JSON.stringify(renderer.toJSON() ?? '');
 
+// The full walk mounts 18 question screens; it takes ~4 s alone and can
+// exceed jest's 5 s default when other suites (e.g. the web build) compete
+// for CPU, so give it headroom instead of a load-dependent flake.
+jest.setTimeout(20000);
+
 test('full survey walk (Part 1 → interstitial → Part 2 → complete) never crashes', async () => {
   const onBack = jest.fn();
   let renderer!: Renderer;

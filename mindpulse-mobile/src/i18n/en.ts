@@ -75,6 +75,11 @@ export const en: Translations = {
     completedToday: 'Completed today',
     completedSuffix: 'Completed',
     sectionNote: 'One combined daily check-in: survey, face scan, heart rate & reaction time.',
+    extraTools: {
+      title: 'MORE ASSESSMENTS',
+      note: 'Optional questionnaires published by your administrator — separate from the daily check-in above.',
+      minutes: 'min',
+    },
     steps: {
       survey: { title: 'Stress Survey', subtitle: 'PSS-10 + physiological indicators' },
       faceScan: { title: 'Face Emotion Scan', subtitle: 'AI facial cue detection' },

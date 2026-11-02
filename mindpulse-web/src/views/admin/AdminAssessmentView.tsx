@@ -185,7 +185,9 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
       setFormError('Give the assessment a title.');
       return;
     }
-    if (!questions.length) {
+    // Multi-Modal tools carry no patient-facing questions (A-10: the built-in
+    // PSS-10 is version-locked inside the app), so an empty set is valid there.
+    if (!questions.length && form.category !== 'Multi-Modal') {
       setFormError('Add at least one question.');
       return;
     }
@@ -517,12 +519,15 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
 
             {form.category === 'Multi-Modal' && (
               <div className="assessment-note">
-                ℹ Multi-Modal tools open the patient’s daily 4-step check-in, whose survey step uses the
-                app’s built-in PSS-10 rather than these questions. Switch to Supplementary or Brief to have
-                patients answer this tool’s own questions.
+                ℹ <strong>PSS-10 is version-locked (A-10).</strong> Patients answer the app’s built-in PSS-10
+                items — translated into English, Filipino and Cebuano — not the copy stored here, so edits made
+                in this form never reach a patient. The question editor is therefore hidden for Multi-Modal
+                tools. To author patient-facing questions of your own, set the category to Supplementary or Brief.
               </div>
             )}
 
+            {/* Questions editor hidden for Multi-Modal (A-10: version-locked PSS-10). */}
+            {form.category !== 'Multi-Modal' && (
             <div className="assessment-field">
               <span>{form.questions.length ? `Questions (${form.questions.length})` : 'Questions'}</span>
               <div className="question-box-list">
@@ -592,6 +597,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 Changes go live for patients once you save.
               </small>
             </div>
+            )}
 
             {formError && <div className="assessment-banner error">{formError}</div>}
 
