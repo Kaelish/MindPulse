@@ -141,11 +141,13 @@ Delete.
 |---|---|---|---|
 | Create | — | — | ✅ `AssessmentResultScreen.handleSaveResult` → `stress_sessions` |
 | Retrieve | ✅ `fetchAdminResults` | ✅ RLS-scoped + case detail | ✅ dashboard/history |
-| Update | ⛔ — **C-4** | 🔧 persist "Mark as Reviewed" (**A-3**) | ⛔ correct by retaking before save — **C-4** |
+| Update | ⛔ — **C-4** | ✅ *Mark as Reviewed* persists via `reviewed_at` (**A-3 fixed**, migration `0030`; only review columns are client-writable) | ⛔ correct by retaking before save — **C-4** |
 | Delete | ⛔ — **C-4** | — | — |
 
-**Decision:** deviate on update/delete (clinical immutability); fix the non-persisted
-review state (**A-3**: either add `reviewed_at` or remove the button).
+**Decision:** deviate on update/delete (clinical immutability); **A-3 fixed** — the
+doctor's *Mark as Reviewed* now writes `reviewed_at`/`reviewed_by` through a
+column-restricted grant and an appointment-linked RLS policy (migration `0030`), with an
+optimistic UI that rolls back on rejection.
 
 ### M-06 · Survey Assessment — *audit: Partial*
 
@@ -293,8 +295,9 @@ patient↔doctor channel itself is fully implemented (realtime, attachments, rea
 | Retrieve | ✅ `fetchAdminOverview` / `fetchAdminDashboardCharts` (live data) |
 | Update | ✅ applied settings (system name, theme, session timeout) |
 
-**Decision:** complete. Note: cosmetic settings tabs are being cut under **A-5**, which
-*shrinks* this page to only what is real.
+**Decision:** complete. Cosmetic settings tabs were cut under **A-5 (fixed)**, which
+*shrinks* this page to only what is real: system name, theme/density, high-stress alert
+gating, session timeout, password policy and data export.
 
 ### M-19 · User Monitoring — *audit: Fully implemented*
 
@@ -312,10 +315,11 @@ patient↔doctor channel itself is fully implemented (realtime, attachments, rea
 |---|---|---|---|
 | Create | ✅ JSON export (`dataExport.ts`) | — | — |
 | Retrieve | ✅ | ✅ records views | — |
-| Update | ❌ retention/anonymize/GDPR/2FA toggles are `localStorage`-only — **A-5** (cut or replace) | — | — |
+| Update | 🔁 applied settings only (system name, theme, session timeout, password policy) — unenforceable retention/anonymize/GDPR/2FA/whitelist toggles removed (**A-5 fixed**) | — | — |
 | Delete | 🔁 pending-staff removal + user self-service — **C-1/C-2**; ⛔ no admin record purge | — | ✅ erase history / delete account |
 
-**Decision:** fix **A-5** (remove controls that enforce nothing); deviate on admin purge.
+**Decision:** **A-5 fixed** (controls that enforce nothing were removed; only enforced
+settings remain). Deviate on admin purge.
 
 ### M-21 · Security and Access Control — *audit: Fully implemented*
 
@@ -379,13 +383,17 @@ missed days.
 | A-8 | At-risk phone hardcoded `null` with a stale comment (`profiles.phone` exists and is read elsewhere) | `mindpulse-web/src/services/adminRecords.ts:211-212` | Populate the column or remove the Call affordance |
 | A-9 | Standalone face scan is an explicit non-persisting demo, but is reachable from dashboard CTAs | `mindpulse-mobile/App.tsx` ~539-543 | Persist like the hub flow, or remove the CTA and keep hub-only |
 | A-10 | Survey question source drift (DB rewritten by `0018`, mobile text hardcoded in i18n) | `mindpulse-mobile/src/i18n/translations.ts`, `assessment_tools` | Decide with the adviser: render from DB **or** declare PSS-10 version-locked (pair with A-4) |
+| A-11 | *Reported at runtime:* stress survey white-screens with "Cannot read property 'options' of undefined" when Part 2 renders with a stale/undefined question — the patient loses all in-progress answers | `mindpulse-mobile/src/screens/survey/StressSurveyScreen.tsx:49`; `src/i18n/translations.ts` | Clamp the question index onto the list; optional-chain every `currentQuestion` access; drop empty locale slots in `part1Display`/`part2Display`; replace the `findIndex !== -1` label lookup (crashed on a question without `options`); full-survey regression test |
 
 **Fix log**
 
 | Status | Items | Verification |
 |---|---|---|
 | ✅ Fixed 2026-10-31 | **A-1, A-2, A-7, A-8** — `emotion` now written with every session (hub flow), standalone flow now persists `reaction_time_ms`, doctor's *Remove recommendation* wired to `deleteRecommendation` (RLS `recommendations_delete` already allowed it), at-risk `phone` now reads `profiles.phone` so the Call action dials a real number | Web `tsc --noEmit` clean; web 97/97 tests (15 suites); mobile 51/51 tests (5 suites). Mobile's raw `tsc` baseline was already failing on pre-existing RN/Expo typing issues (`StatusBar.backgroundColor`, `ScrollView` refs, missing `@types/jest`) — no new errors in any changed file. *Note: `emotion` is populated for sessions saved from now on; rows written before this fix stay `NULL` until resubmitted.* |
-| ⏳ Open | A-3, A-4, A-5, A-6, A-9, A-10 — awaiting the decisions listed in §5 | — |
+| ✅ Fixed 2026-10-31 | **A-5** — System Settings now only models settings that real code enforces. Removed: whole `detection` tab (sensitivity/confidence/model-version/scan-interval/real-time/multi-face), retention, anonymize, *store facial images*(!), GDPR toggle, performance/daily-summary alerts, primary e-mail, notification frequency, 2FA, IP whitelist, mock API-key row. Kept: system name/description, theme + density, high-stress alert gating, session timeout, password policy, data export. `loadAdminSettings` now picks known keys only, so legacy localStorage payloads load cleanly without reviving removed fields (covered by a new test case) | Web `tsc --noEmit` clean; full web suite 97/97 (15 suites) |
+| ✅ Fixed 2026-11-01 | **A-11** — reported by a teammate's build: the PSS-10 survey white-screens entering Part 2. This copy's logic was verified sound (Part-2 entry has always reset the index; en/fil/ceb all ship the complete 10/8/5 item sets), so the failing build is divergent or a stale Metro bundle — but the screen is now crash-proof regardless of cause: index clamp, `?.` on every `currentQuestion` access, `definedOnly()` filtering in the display helpers, and a direct `options?.[value]` label lookup. New regression test (`StressSurveyScreen.test.tsx`) walks Part 1 → interstitial → Part 2 → completion; validated to FAIL when the index reset is deliberately removed (renders q108 instead of q101 — degraded, not crashed) and PASS on HEAD. Also repaired a toolchain skew exposed by the test: `@react-native/jest-preset` 0.86.3 → 0.88.1 to match `react-native@0.88.0` (RN 0.88's internals import `react-native/react-private-interface`, unresolvable under the 0.86 preset's module mapper — this is why screen rendering previously could not run under jest) | Mobile jest **6/6 suites, 52/52 tests**; `StressSurveyScreen.tsx` + `translations.ts` compile clean (test-file `jest`/`expect` name errors are the pre-existing `@types/jest` baseline shared by all six test files) |
+| ✅ Fixed 2026-11-01 | **A-3** — "Mark as Reviewed" now persists. Migration `0030_assessment_review_flags.sql` adds nullable `reviewed_at`/`reviewed_by`, revokes client UPDATE on every other column of `stress_sessions` (server-enforcing deviation C-4 — nothing in either app or any trigger updated those columns), and adds an `stress_sessions_update_review` RLS policy limited to appointment-linked doctors. `AdminResultRow` carries `reviewedAt`; new `setResultReviewed()` writes it; the doctor's view uses optimistic flip + rollback and derives the Reviewed summary from real rows | Web `tsc --noEmit` clean; web 97/97 tests (15 suites). **Note: migration `0030` must be applied to Supabase before this path works in a live environment** (until then the write is rejected by RLS and the UI rolls back with an error message — no crash) |
+| ⏳ Open | A-4, A-6, A-9, A-10 — awaiting the decisions listed in §5 | — |
 
 ## Appendix B · Lean builds (Bucket B — sequenced)
 
@@ -395,7 +403,7 @@ missed days.
 | B-2 | Notification dismiss (delete own row) | — | Mobile + web; satisfies the Delete cells realistically |
 | B-3 | Consent records table + writes at sign-up and face-scan consent + admin read-only view | Migration | Closes the only *fully* missing user-data module |
 | B-4 | Activity log table via DB triggers + admin read-only view | Migration (after B-3, same additive batch) | Follows `0008` pattern |
-| B-5 | `reviewed_at` persistence | Only if A-3 = persist (else not needed) | Additive nullable column |
+| B-5 | `reviewed_at` persistence | ✅ delivered with A-3 (migration `0030`, 2026-11-01) | Additive nullable columns + column-level grant |
 | B-6 | Optional, adviser-driven: patient cancels own booking (status change), admin cancels no-show, admin read of recommendations, mobile MFA panel, admin item-level survey answers, admin contact-field correction (C-3) | Adviser decision | Each is status-change or read-only — no new deletion paths |
 
 ## Appendix C · Deviation log (require reviewer initials)

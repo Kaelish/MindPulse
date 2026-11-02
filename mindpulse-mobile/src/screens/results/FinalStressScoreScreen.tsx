@@ -13,6 +13,10 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { ReactionResult } from '../reaction/ReactionGameScreen';
+import {
+  heartRateStress as heartRateToStress,
+  reactionStress as reactionToStress,
+} from '../../services/stressFormula';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
@@ -86,15 +90,25 @@ const HotlineRow = ({
   </TouchableOpacity>
 );
 
+// Displayed split of the renormalized canonical weights in this two-indicator
+// flow (0.2 / 0.1 over 0.3 → 67% / 33%); the score itself uses the exact
+// fractions above. Shown in the fusion-card title so the patient is told the
+// real weighting.
+const HR_FUSION_PCT = Math.round((0.2 / 0.3) * 100);
+const RX_FUSION_PCT = 100 - HR_FUSION_PCT;
+
 export const FinalStressScoreScreen: React.FC<Props> = ({
   heartRate, reaction, onBack, onDone, onNavigateTab,
 }) => {
-  // Heart rate → stress: deviation from a 70 bpm resting baseline (higher = more stress)
-  const heartRateStress = Math.max(0, Math.min(100, Math.round(Math.abs(heartRate - 70) * 1.5)));
-  // Reaction score: higher = slower reactions = more stress (ReactionGame mapping)
-  const reactionStress = Math.max(0, Math.min(100, reaction.score));
+  // Canonical formula (services/stressFormula.ts, A-6): this standalone flow
+  // collects only heart rate + reaction, so the hub's canonical weights
+  // (HR 0.2, reaction 0.1) renormalize over those two indicators. The old
+  // |bpm−70|×1.5 transform and 40/60 blend are gone — the same measurements
+  // now produce the same number here as in the saved session.
+  const heartRateStress = heartRateToStress(heartRate);
+  const reactionStress = reactionToStress(reaction.average);
   // Weighted stress score — higher = more stress, same convention as saved sessions
-  const score = Math.round(heartRateStress * 0.4 + reactionStress * 0.6);
+  const score = Math.round(heartRateStress * (0.2 / 0.3) + reactionStress * (0.1 / 0.3));
   const level = getLevel(score);
   const activeTab = 'analysis' as const;
 
@@ -131,7 +145,7 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
 
         {/* ── Multi-Modal Fusion bars ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Multi-Modal Fusion (Heart Rate 40% · Reaction 60%)</Text>
+          <Text style={styles.cardTitle}>Multi-Modal Fusion (Heart Rate {HR_FUSION_PCT}% · Reaction {RX_FUSION_PCT}%)</Text>
           <FusionBar label="Heart Rate" value={heartRateStress} color={tone('#E05C5C')} />
           <FusionBar label="Reaction Time" value={reactionStress} color={tone('#F5A623')} />
         </View>

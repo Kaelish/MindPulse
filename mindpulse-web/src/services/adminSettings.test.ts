@@ -37,7 +37,24 @@ test('save then load round-trips and deep-merges partial storage', () => {
   window.localStorage.setItem(ADMIN_SETTINGS_STORAGE_KEY, JSON.stringify({ general: { compactView: true } }));
   const merged = loadAdminSettings();
   expect(merged.general.compactView).toBe(true);
-  expect(merged.detection).toEqual(DEFAULT_ADMIN_SETTINGS.detection);
+
+  // A-5: a legacy payload carrying the removed stub sections still loads, but
+  // the unenforceable sections are dropped instead of being revived.
+  window.localStorage.setItem(
+    ADMIN_SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      general: { systemName: 'Legacy' },
+      detection: { sensitivity: 40 },
+      dataPrivacy: { retentionPeriod: '30 days' },
+      security: { twoFactor: false },
+    }),
+  );
+  const legacy = loadAdminSettings();
+  expect(legacy.general.systemName).toBe('Legacy');
+  expect('detection' in legacy).toBe(false);
+  expect('dataPrivacy' in legacy).toBe(false);
+  expect(legacy.security).toEqual(DEFAULT_ADMIN_SETTINGS.security);
+  expect(legacy.notification).toEqual(DEFAULT_ADMIN_SETTINGS.notification);
 });
 
 test('default password policy requires 12 characters and a special character', () => {

@@ -3,12 +3,19 @@ import { AdminResultRow, fetchAdminResults } from './admin';
 /**
  * "Review Assessment Outcomes" aggregates the student's completed multi-modal
  * sessions (stress_sessions). Component scores are derived per session and
- * averaged; the formulas mirror the mobile app's fusion weights:
+ * averaged. The transforms mirror the canonical formula in the mobile app's
+ * `services/stressFormula.ts` (fix A-6) — each indicator's 0–100 stress value
+ * times its fusion weight, so the bar maxes (50/20/20/10) are exactly the
+ * weights 0.5/0.2/0.2/0.1 on the 0–100 scale:
  *
- *   Survey Score     survey_score / 2            → 0–50  (survey_score is 0–100)
- *   Heart Rate       (bpm − 55) / 45 clamped ×20 → 0–20  (55 bpm → 0, 100+ → 20)
- *   Facial Analysis  emotion stress map ×20      → 0–20  (angry 1.0 … calm 0.1)
- *   Reaction Time    rt_ms / 2000 clamped ×10    → 0–10  (slower → higher stress)
+ *   Survey Score     survey_score (0–100)          × 0.5 → 0–50
+ *   Heart Rate       clamp((bpm − 60) × 2, 0–100)  × 0.2 → 0–20
+ *   Facial Analysis  faceStress(emotion, conf)      × 0.2 → 0–20
+ *                    (happy 20, neutral 50, sad 80 — confidence pulls the
+ *                     value toward neutral; unknown labels fall back to 50)
+ *   Reaction Time    clamp((ms − 250) / 3, 0–100)  × 0.1 → 0–10
+ *
+ * Keep in sync with mindpulse-mobile/src/services/stressFormula.ts.
  */
 
 export interface ComponentStat {
@@ -31,34 +38,28 @@ export interface AssessmentOutcomes {
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
-const EMOTION_STRESS: Record<string, number> = {
-  angry: 1,
-  mad: 1,
-  fearful: 0.85,
-  anxious: 0.85,
-  stressed: 0.85,
-  sad: 0.7,
-  surprised: 0.5,
-  neutral: 0.4,
-  happy: 0.15,
-  calm: 0.1,
-  relaxed: 0.1,
+/** Emotion label → raw stress before the confidence pull (mirror of stressFormula.ts). */
+const FACE_STRESS: Record<string, number> = { happy: 20, neutral: 50, sad: 80 };
+
+/** Confidence pulls the value toward neutral so an unsure scan barely moves the score. */
+const faceStress = (expression: string, confidence: number | null): number => {
+  const base = FACE_STRESS[expression.trim().toLowerCase()] ?? 50;
+  return Math.round(50 + (base - 50) * clamp(confidence ?? 0, 0, 1));
 };
 
 export const surveyComponentOf = (row: AdminResultRow): number | null =>
-  row.surveyScore == null ? null : clamp(row.surveyScore / 2, 0, 50);
+  row.surveyScore == null ? null : clamp(row.surveyScore, 0, 100) * 0.5;
 
 export const heartRateComponentOf = (row: AdminResultRow): number | null =>
-  row.heartRate == null ? null : clamp((row.heartRate - 55) / 45, 0, 1) * 20;
+  row.heartRate == null ? null : clamp((row.heartRate - 60) * 2, 0, 100) * 0.2;
 
 export const facialComponentOf = (row: AdminResultRow): number | null => {
   if (!row.emotion) return null;
-  const stress = EMOTION_STRESS[row.emotion.trim().toLowerCase()] ?? 0.5;
-  return stress * 20;
+  return faceStress(row.emotion, row.faceConfidence) * 0.2;
 };
 
 export const reactionComponentOf = (row: AdminResultRow): number | null =>
-  row.reactionTimeMs == null ? null : clamp(row.reactionTimeMs / 2000, 0, 1) * 10;
+  row.reactionTimeMs == null ? null : clamp((row.reactionTimeMs - 250) / 3, 0, 100) * 0.1;
 
 const mean = (values: number[]): number | null =>
   values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
