@@ -48,6 +48,18 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', { name: 'Teleconsultation' })).toBeInTheDocument();
   });
 
+  test('renders the built-in mobile onboarding preview by default', () => {
+    render(<LandingPage onLogIn={jest.fn()} />);
+
+    expect(screen.getByText('Multi-modal analysis,')).toBeInTheDocument();
+    expect(screen.getByText('built for precision.')).toBeInTheDocument();
+    expect(screen.getByText(/Fuses your survey/)).toBeInTheDocument();
+    expect(screen.getByText('Emotion')).toBeInTheDocument();
+    expect(screen.getByText('Heart Rate')).toBeInTheDocument();
+    expect(screen.getByText('Survey')).toBeInTheDocument();
+    expect(screen.getByText('Reaction')).toBeInTheDocument();
+  });
+
   test('toggles the responsive navigation menu and closes it with Escape', () => {
     render(<LandingPage onLogIn={jest.fn()} />);
 
