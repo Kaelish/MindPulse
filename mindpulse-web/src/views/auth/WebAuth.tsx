@@ -10,6 +10,8 @@ export type AuthScreen = 'login' | 'register' | 'forgot' | 'reset' | 'confirm' |
 interface WebAuthProps {
   screen: AuthScreen;
   setScreen: (screen: AuthScreen) => void;
+  /** Returns to the public landing page. Omitted when there is nowhere to go back to. */
+  onBackToLanding?: () => void;
 }
 
 interface PasswordInputProps {
@@ -57,7 +59,7 @@ const SpecializationSelect: React.FC<{ value: string; onChange: (value: string) 
   </select>
 );
 
-export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
+export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLanding }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -612,6 +614,11 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen }) => {
         </aside>
 
         <div className="auth-form-panel">
+          {onBackToLanding && (
+            <button type="button" className="auth-back-link" onClick={onBackToLanding}>
+              <span aria-hidden="true">←</span> Back to home
+            </button>
+          )}
           <h1>Welcome back</h1>
           <p>Sign in to continue to your MindPulse workspace.</p>
           <form className="auth-form" onSubmit={handleLogin}>

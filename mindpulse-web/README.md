@@ -12,12 +12,28 @@ npm start
 
 Open `http://localhost:3000`.
 
-The app starts on the login screen; **Register as a doctor** opens the
-professional sign-up form. The destination after sign-in comes from Supabase:
-approved doctors get the Doctor Dashboard, administrators get the Admin
-Dashboard, and unverified doctors see a pending-approval screen until the
-administrator approves them (Manage Users → Doctors). Forgot Password and
-Reset Password are available from the login screen.
+The app opens on the public MindPulse landing page. **Log In** in the landing
+navigation opens the web portal login screen. **Register as a doctor** on that
+screen opens the professional sign-up form. The destination after sign-in comes
+from Supabase: approved doctors get the Doctor Dashboard, administrators get the
+Admin Dashboard, and unverified doctors see a pending-approval screen until the
+administrator approves them (Manage Users → Doctors). Forgot Password and Reset
+Password are available from the login screen.
+
+## Landing page configuration
+
+The hero **Download Now** action is separate from web login and is controlled by
+these optional environment values:
+
+| Variable | Purpose |
+| --- | --- |
+| `REACT_APP_MOBILE_APP_DOWNLOAD_URL` | APK download URL or the mobile app's distribution page. Leave empty (or keep the `[MINDPULSE_MOBILE_APP_DOWNLOAD_URL]` placeholder) to show the disabled button with “Download link coming soon”. |
+| `REACT_APP_MOBILE_APP_SCREENSHOT_SRC` | Optional real mobile screenshot, for example `/assets/mindpulse-app.png` served from `mindpulse-web/public`. When empty, the phone mockup renders a built-in preview of the patient app. |
+
+The landing styles live in
+`src/views/landing/LandingPage.css`, and the landing components are under
+`src/views/landing/`. The brand logo comes from `src/assets/logo.png` through
+the shared `BrandLogo` component.
 
 ## Video consultations
 

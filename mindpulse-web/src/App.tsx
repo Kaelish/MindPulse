@@ -22,6 +22,7 @@ import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
 import { HelpView } from './views/doctor/HelpView';
 import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth, AuthScreen } from './views/auth/WebAuth';
+import { LandingPage } from './views/landing/LandingPage';
 import './App.css';
 
 type Portal = 'doctor' | 'admin' | 'pending' | 'unauthorized';
@@ -194,6 +195,9 @@ function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; 
 
 function App() {
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
+  // Public landing page is the first screen; Log In (or signing out) opens the
+  // existing web login without touching the Admin/Doctor portal routing below.
+  const [showLogin, setShowLogin] = useState(false);
   const [portal, setPortal] = useState<Portal | null>(null);
   const [checkingSession, setCheckingSession] = useState(
     () => Boolean(supabase && typeof supabase.auth.getSession === 'function'),
@@ -277,6 +281,7 @@ function App() {
             setVerification(null);
             setVerificationFailure('');
             setAuthScreen('login');
+            setShowLogin(true);
           }
         });
         unsubscribe = listener.subscription.unsubscribe;
@@ -301,6 +306,7 @@ function App() {
     setVerification(null);
     setVerificationFailure('');
     setAuthScreen('login');
+    setShowLogin(true);
   };
 
   // Track this tab for as long as a staff portal is open. This is what makes
@@ -400,7 +406,17 @@ function App() {
     );
   }
 
-  return <WebAuth screen={authScreen} setScreen={setAuthScreen} />;
+  if (!showLogin) {
+    return <LandingPage onLogIn={() => setShowLogin(true)} />;
+  }
+
+  return (
+    <WebAuth
+      screen={authScreen}
+      setScreen={setAuthScreen}
+      onBackToLanding={() => setShowLogin(false)}
+    />
+  );
 }
 
 export default App;

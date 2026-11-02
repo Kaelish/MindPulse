@@ -35,6 +35,7 @@ test('registers a doctor account with professional details for approval', async 
 
   render(<App />);
 
+  fireEvent.click(await screen.findByRole('button', { name: 'Log In' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Register as a doctor' }));
 
   fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Maria' } });
@@ -88,6 +89,7 @@ test('register form supports Others specialization and password visibility toggl
 
   render(<App />);
 
+  fireEvent.click(await screen.findByRole('button', { name: 'Log In' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Register as a doctor' }));
 
   fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Juan' } });
@@ -162,9 +164,24 @@ test('pending screen: Continue re-checks approval and Sign out returns to login'
   expect(mockedSignOut).toHaveBeenCalledTimes(1);
 });
 
+test('landing Log In opens the web login and Back to home returns to the landing page', async () => {
+  render(<App />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Log In' }));
+  expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /back to home/i }));
+  expect(
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'Understand Your Stress. Connect with Care.',
+    }),
+  ).toBeInTheDocument();
+});
+
 test('tab title follows the portal instead of always showing the admin name', async () => {
   const { unmount } = render(<App />);
-  await screen.findByRole('button', { name: 'Register as a doctor' });
+  await screen.findByRole('button', { name: 'Log In' });
   expect(document.title).toBe('MindPulse');
   unmount();
 
