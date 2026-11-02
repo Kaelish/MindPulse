@@ -9,6 +9,8 @@ import { AssessmentTool } from '../../services/assessmentTools';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { useTranslation } from '../../i18n/language';
 import { part1Display, part2Display, likertDisplay } from '../../i18n/translations';
+import { en } from '../../i18n/en';
+import { fil } from '../../i18n/fil';
 import type { PssDisplayItem, LifestyleDisplayItem, LikertOption } from '../../i18n/types';
 
 type SurveyOption = LikertOption;
@@ -31,14 +33,21 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
   const isPart1 = phase === 'part1';
   const isPart2 = phase === 'part2';
 
-  /** Localized PSS-10 questions (part 1). */
-  const pssQuestions: PssQuestion[] = part1Display(t);
-  /** Localized lifestyle questions (part 2). */
-  const lifestyleQuestions: LifestyleQuestion[] = part2Display(t);
-  /** Localized 5-point Likert scale for part 1. */
-  const likertOptions: SurveyOption[] = likertDisplay(t);
+  /** Localized PSS-10 questions (part 1) — English is always shown primary. */
+  const pssQuestions: PssQuestion[] = part1Display(en);
+  /** Tagalog (Filipino) counterparts, shown beneath each English question. */
+  const pssQuestionsFil: PssQuestion[] = part1Display(fil);
+  /** Localized lifestyle questions (part 2) — English is always shown primary. */
+  const lifestyleQuestions: LifestyleQuestion[] = part2Display(en);
+  /** Tagalog (Filipino) counterparts, shown beneath each English question. */
+  const lifestyleQuestionsFil: LifestyleQuestion[] = part2Display(fil);
+  /** Localized 5-point Likert scale for part 1 — English is always shown primary. */
+  const likertOptions: SurveyOption[] = likertDisplay(en);
+  /** Tagalog (Filipino) counterparts, shown beneath each English option. */
+  const likertOptionsFil: SurveyOption[] = likertDisplay(fil);
 
   const currentQuestions = isPart1 ? pssQuestions : lifestyleQuestions;
+  const currentQuestionsFil = isPart1 ? pssQuestionsFil : lifestyleQuestionsFil;
   /**
    * Clamp the index onto the list before touching it. A stale index — language
    * switched mid-run, a locale that dropped a question, or an older bundle that
@@ -49,6 +58,8 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
    */
   const questionIndex = Math.max(0, Math.min(currentIndex, currentQuestions.length - 1));
   const currentQuestion = currentQuestions[questionIndex];
+  /** Tagalog (Filipino) counterpart of the current question, shown beneath the English text. */
+  const currentQuestionFil = currentQuestionsFil[questionIndex];
   const selectedValue = answers[currentQuestion?.id];
   const canProceed = selectedValue !== undefined;
 
@@ -208,12 +219,21 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         {/* Question Text */}
         <Text style={styles.questionText}>{currentQuestion?.text}</Text>
-        {isPart2 && (currentQuestion as LifestyleQuestion)?.sub && <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion)?.sub}</Text>}
+        {currentQuestionFil && <Text style={styles.questionTextFil}>{currentQuestionFil.text}</Text>}
+        {isPart2 && (currentQuestion as LifestyleQuestion)?.sub && (
+          <>
+            <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion).sub}</Text>
+            {currentQuestionFil && (currentQuestionFil as LifestyleQuestion)?.sub && (
+              <Text style={styles.questionSubTextFil}>{(currentQuestionFil as LifestyleQuestion).sub}</Text>
+            )}
+          </>
+        )}
 
         {/* Options */}
         <View style={styles.optionsContainer}>
           {currentOptions.map((opt) => {
             const isSelected = selectedValue === opt.value;
+            const filOpt = likertOptionsFil.find((o) => o.value === opt.value);
             return (
               <TouchableOpacity
                 key={opt.value}
@@ -231,9 +251,12 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
                     <Text style={styles.optionIconText}>{opt.value}</Text>
                   )}
                 </View>
-                <Text style={[styles.optionLabel, isSelected && { color: selectedThemeIconColor }]}>
-                  {opt.label}
-                </Text>
+                <View style={styles.optionLabelStack}>
+                  <Text style={[styles.optionLabel, isSelected && { color: selectedThemeIconColor }]}>
+                    {opt.label}
+                  </Text>
+                  {filOpt && <Text style={styles.optionLabelFil}>{filOpt.label}</Text>}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -305,11 +328,23 @@ const makeStyles = () => StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     lineHeight: 28,
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  /** Tagalog (Filipino) rendering shown beneath the English question text. */
+  questionTextFil: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 12,
   },
   questionSubText: {
     color: Colors.textSecondary,
     fontSize: 14,
+    marginBottom: 4,
+  },
+  /** Tagalog (Filipino) rendering shown beneath the English sub-text. */
+  questionSubTextFil: {
+    color: Colors.textSecondary,
+    fontSize: 12,
     marginBottom: 24,
   },
 
@@ -337,10 +372,22 @@ const makeStyles = () => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  optionLabelStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginRight: 16,
+  },
   optionLabel: {
     color: Colors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
+  },
+  /** Tagalog (Filipino) rendering shown beneath each English option label. */
+  optionLabelFil: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 16,
   },
 
   footer: {
