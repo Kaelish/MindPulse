@@ -57,7 +57,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const listRef = useRef<ScrollView | null>(null);
+  const listRef = useRef<React.ElementRef<typeof ScrollView> | null>(null);
 
   const refreshUnread = useCallback(() => {
     fetchUnreadNotificationCount()

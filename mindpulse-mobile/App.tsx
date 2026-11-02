@@ -455,10 +455,10 @@ function App() {
   /* ─────────── Render ─────────── */
   return (
     <SafeAreaProvider>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={themeMode === 'dark' ? Colors.pageBg : '#3D6FC7'}
-      />
+      {/* RN 0.88's StatusBar reads only barStyle/hidden/animated — its
+          implementation never consults backgroundColor (Android is
+          edge-to-edge), so the prop that used to sit here was a no-op. */}
+      <StatusBar barStyle="light-content" />
       <View style={styles.root}>
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
 

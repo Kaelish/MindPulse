@@ -61,7 +61,7 @@ export const InAppVideoCall: React.FC<InAppVideoCallProps> = ({
   subtitle,
   onClose,
 }) => {
-  const webRef = useRef<WebView>(null);
+  const webRef = useRef<React.ElementRef<typeof WebView>>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

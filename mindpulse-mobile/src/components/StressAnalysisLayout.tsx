@@ -46,7 +46,7 @@ interface Props {
    * the resource cards, which sit far above the button that reveals them).
    * Omit it and nothing changes — every other caller is unaffected.
    */
-  scrollViewRef?: React.Ref<ScrollView>;
+  scrollViewRef?: React.Ref<React.ElementRef<typeof ScrollView>>;
 }
 
 // ─── Module step tabs (top row of 4 chips) ────────────────────────────────────

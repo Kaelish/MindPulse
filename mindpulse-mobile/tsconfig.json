@@ -15,7 +15,10 @@
     "allowJs": true,
     "noEmit": true,
     "isolatedModules": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": [
+      "jest"
+    ]
   },
   "include": [
     "**/*.ts",

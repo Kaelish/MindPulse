@@ -50,7 +50,7 @@ const RefRow: React.FC<RefRowProps> = ({ range, badgeLabel, badgeBg, badgeText }
 export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) => {
   const [beatsInput, setBeatsInput] = useState('');
   const [focused, setFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const beats = parseInt(beatsInput, 10);
   const bpm: number | null =

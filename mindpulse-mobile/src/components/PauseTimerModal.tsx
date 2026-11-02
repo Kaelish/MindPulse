@@ -372,7 +372,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
       {/* Hide the system status bar while black — otherwise its clock and
           battery sit on a coloured strip above the darkened sheet. RN keeps
           these values on a stack, so unmounting restores the app's own. */}
-      {dark && <StatusBar hidden backgroundColor={BLACK} barStyle="light-content" />}
+      {dark && <StatusBar hidden barStyle="light-content" />}
     </Modal>
   );
 };

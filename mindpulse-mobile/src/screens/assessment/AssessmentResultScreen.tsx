@@ -90,7 +90,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const [panelLoading, setPanelLoading] = useState(false);
 
   // Scroll plumbing for Get Help: the resource block's offset inside the content.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const helpSectionY = useRef<number | null>(null);
   const pendingHelpScroll = useRef(false);
   const helpScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
