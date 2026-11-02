@@ -102,6 +102,16 @@ export interface Translations {
     /** Appended after "{n}/4 " — e.g. "Completed". */
     completedSuffix: string;
     sectionNote: string;
+    /**
+     * Supplementary admin-published questionnaires (A-4) listed under the daily
+     * steps. The Multi-Modal tool is excluded — it IS the daily survey step.
+     */
+    extraTools: {
+      title: string;
+      note: string;
+      /** Duration unit shown after "{n}" on each card. */
+      minutes: string;
+    };
     steps: {
       survey: { title: string; subtitle: string };
       faceScan: { title: string; subtitle: string };

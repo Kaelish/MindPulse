@@ -32,7 +32,6 @@ interface PatientDashboardScreenProps {
   onNavigate?: (tab: DashboardTab) => void;
   onStartVideoCall?: (doctorId?: string) => void;
   onRunSurvey?: () => void;
-  onRunFaceScan?: () => void;
   onRunDailyCheck?: () => void;
   /** Chat rows in the notifications sheet land on the Messages thread. */
   onOpenMessages?: () => void;
@@ -85,7 +84,6 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   onNavigate,
   onStartVideoCall,
   onRunSurvey,
-  onRunFaceScan,
   onRunDailyCheck,
   onOpenMessages,
 }) => {

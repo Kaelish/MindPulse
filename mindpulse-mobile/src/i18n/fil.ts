@@ -70,6 +70,11 @@ export const fil: Translations = {
     completedToday: 'Tapos na ngayon',
     completedSuffix: 'Tapos na',
     sectionNote: 'Isang pinagsamang pang-araw-araw na check-in: survey, face scan, heart rate at oras ng reaksyon.',
+    extraTools: {
+      title: 'IBA PANG MGA PAGSUSURI',
+      note: 'Mga opsyonal na questionnaire na inilathala ng iyong administrator — hiwalay sa araw-araw na check-in sa itaas.',
+      minutes: 'min',
+    },
     steps: {
       survey: { title: 'Survey tungkol sa Stress', subtitle: 'PSS-10 + pisikal na indikador' },
       faceScan: { title: 'Pagsusuri ng Emosyon ng Mukha', subtitle: 'AI detection ng mga senyales sa mukha' },

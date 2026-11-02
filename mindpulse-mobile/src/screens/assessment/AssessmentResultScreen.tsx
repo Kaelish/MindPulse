@@ -6,6 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
 import { saveNewStressSession } from '../../services/dashboard';
+import { faceStress, fuseStressScore, heartRateStress, reactionStress } from '../../services/stressFormula';
 import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
 import {
   actionableTipsFor,
@@ -142,38 +143,32 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   }
 
   // Four inputs, weighted; weights are renormalized over whichever are present.
+  // The transforms and weights live in services/stressFormula.ts (A-6): this
+  // fusion writes the session's stored score, so it is the canonical formula
+  // every other surface mirrors.
   const surveyVal = stateData.surveyScore;
   const hrBpm = stateData.heartRateBpm;
   const rxMs = stateData.reactionTimeMs;
   const face = stateData.faceScanData;
 
-  // Face expression → stress (happy low, neutral mid, sad high). Confidence
-  // pulls the value toward neutral so an unsure scan barely moves the score.
-  const FACE_STRESS: Record<string, number> = { happy: 20, neutral: 50, sad: 80 };
-  const faceBase = face ? FACE_STRESS[face.expression] ?? 50 : null;
-  const faceVal =
-    faceBase != null
-      ? Math.round(50 + (faceBase - 50) * Math.min(1, Math.max(0, face?.confidence ?? 0)))
-      : null;
+  const faceVal = faceStress(face?.expression, face?.confidence);
 
   // Re-opening these results after saving must not create a second row today.
   const alreadySavedToday = isDayComplete(stateData);
 
-  // Heart rate → stress (60 bpm baseline; higher bpm = more stress)
-  const hrVal = hrBpm != null ? Math.min(100, Math.max(0, (hrBpm - 60) * 2)) : null;
-  // Reaction time → stress (250ms baseline; slower reactions = more stress)
-  const rxVal = rxMs != null ? Math.min(100, Math.max(0, (rxMs - 250) / 3)) : null;
+  const hrVal = hrBpm != null ? heartRateStress(hrBpm) : null;
+  const rxVal = rxMs != null ? reactionStress(rxMs) : null;
 
-  const components: { value: number; weight: number }[] = [];
-  if (surveyVal != null) components.push({ value: surveyVal, weight: 0.5 });
-  if (hrVal != null) components.push({ value: hrVal, weight: 0.2 });
-  if (faceVal != null) components.push({ value: faceVal, weight: 0.2 });
-  if (rxVal != null) components.push({ value: rxVal, weight: 0.1 });
-  const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
-  const finalScore =
-    totalWeight > 0
-      ? Math.round(components.reduce((sum, c) => sum + c.value * c.weight, 0) / totalWeight)
-      : 0;
+  // No indicator at all → 0, matching the pre-A-6 behaviour of this screen.
+  const finalScore = Math.round(
+    fuseStressScore(
+      surveyVal,
+      hrBpm,
+      face?.expression ?? null,
+      face?.confidence ?? null,
+      rxMs,
+    ) ?? 0,
+  );
 
   // Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35)
   const isHighStress = finalScore > 60;
@@ -369,9 +364,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         `${t.toolSurvey.completeAssessment}: ${assessmentName} (multi-modal). HR: ${hrBpm ?? 'n/a'} bpm, Reaction: ${rxMs ?? 'n/a'} ms, Face: ${face?.expression ?? 'n/a'}`,
         hrBpm,
         surveyVal,
-            rxMs,
-            face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
-            snapshot ?? null,
+        rxMs,
+        face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
+        snapshot ?? null,
+        face?.expression,
       );
 
       // Today is now spent: keep the numbers for review, close every step, and

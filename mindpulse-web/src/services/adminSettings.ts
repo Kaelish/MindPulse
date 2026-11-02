@@ -1,5 +1,17 @@
 export const ADMIN_SETTINGS_STORAGE_KEY = 'mindpulse.adminSettings';
 
+/**
+ * Only settings that are actually enforced somewhere are modelled (A-5):
+ *
+ *   general.systemName/darkMode/compactView → applyAdminSettings (title, theme, density)
+ *   notification.highStressAlerts           → feedNotificationEnabled (bell feed gating)
+ *   security.sessionTimeout                 → App.tsx idle-logout timer
+ *   security.minPasswordLength/requireSpecialChars → passwordPolicyError (WebAuth)
+ *
+ * The former `detection`, `dataPrivacy` and the retention/anonymize/GDPR/2FA/
+ * IP-whitelist/daily-summary fields were localStorage-only stubs that enforced
+ * nothing, so they were removed rather than shipped as fake controls (A-5).
+ */
 export interface AdminSystemSettings {
   general: {
     systemName: string;
@@ -7,33 +19,13 @@ export interface AdminSystemSettings {
     darkMode: boolean;
     compactView: boolean;
   };
-  detection: {
-    sensitivity: number;
-    confidenceThreshold: number;
-    modelVersion: string;
-    scanInterval: string;
-    realTimeProcessing: boolean;
-    multiFaceDetection: boolean;
-  };
   notification: {
     highStressAlerts: boolean;
-    systemPerformanceAlerts: boolean;
-    dailySummaryReports: boolean;
-    primaryEmail: string;
-    notificationFrequency: string;
   };
   security: {
-    twoFactor: boolean;
-    ipWhitelisting: boolean;
     sessionTimeout: boolean;
     minPasswordLength: string;
     requireSpecialChars: boolean;
-  };
-  dataPrivacy: {
-    retentionPeriod: string;
-    anonymizeUserData: boolean;
-    storeFacialImages: boolean;
-    gdprCompliance: boolean;
   };
 }
 
@@ -46,34 +38,26 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSystemSettings = {
     darkMode: false,
     compactView: false,
   },
-  detection: {
-    sensitivity: 75,
-    confidenceThreshold: 85,
-    modelVersion: 'v2.4 (Latest - Recommended)',
-    scanInterval: '5 seconds',
-    realTimeProcessing: true,
-    multiFaceDetection: false,
-  },
   notification: {
     highStressAlerts: true,
-    systemPerformanceAlerts: true,
-    dailySummaryReports: false,
-    primaryEmail: '',
-    notificationFrequency: 'Immediate',
   },
   security: {
-    twoFactor: true,
-    ipWhitelisting: false,
     sessionTimeout: true,
     minPasswordLength: '12 characters',
     requireSpecialChars: true,
   },
-  dataPrivacy: {
-    retentionPeriod: '90 days',
-    anonymizeUserData: false,
-    storeFacialImages: false,
-    gdprCompliance: true,
-  },
+};
+
+/** Keeps only the fields the settings object still models (drops A-5-removed keys). */
+const pickKnown = <T extends object>(defaults: T, stored: unknown): T => {
+  const source = (stored ?? {}) as Record<string, unknown>;
+  const fallback = defaults as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  Object.keys(defaults).forEach((field) => {
+    const value = source[field];
+    out[field] = value === undefined ? fallback[field] : value;
+  });
+  return out as unknown as T;
 };
 
 export const loadAdminSettings = (): AdminSystemSettings => {
@@ -82,12 +66,13 @@ export const loadAdminSettings = (): AdminSystemSettings => {
     const raw = window.localStorage.getItem(ADMIN_SETTINGS_STORAGE_KEY);
     if (!raw) return DEFAULT_ADMIN_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<AdminSystemSettings>;
+    // Payloads written before A-5 may still carry the removed sections and
+    // fields; they are not read any more, and the next save rewrites a clean
+    // object without them.
     return {
-      general: { ...DEFAULT_ADMIN_SETTINGS.general, ...parsed.general },
-      detection: { ...DEFAULT_ADMIN_SETTINGS.detection, ...parsed.detection },
-      notification: { ...DEFAULT_ADMIN_SETTINGS.notification, ...parsed.notification },
-      security: { ...DEFAULT_ADMIN_SETTINGS.security, ...parsed.security },
-      dataPrivacy: { ...DEFAULT_ADMIN_SETTINGS.dataPrivacy, ...parsed.dataPrivacy },
+      general: pickKnown(DEFAULT_ADMIN_SETTINGS.general, parsed.general),
+      notification: pickKnown(DEFAULT_ADMIN_SETTINGS.notification, parsed.notification),
+      security: pickKnown(DEFAULT_ADMIN_SETTINGS.security, parsed.security),
     };
   } catch {
     return DEFAULT_ADMIN_SETTINGS;

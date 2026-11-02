@@ -39,17 +39,26 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
   const likertOptions: SurveyOption[] = likertDisplay(t);
 
   const currentQuestions = isPart1 ? pssQuestions : lifestyleQuestions;
-  const currentQuestion = currentQuestions[currentIndex];
+  /**
+   * Clamp the index onto the list before touching it. A stale index — language
+   * switched mid-run, a locale that dropped a question, or an older bundle that
+   * entered Part 2 without resetting the counter (the reported "Cannot read
+   * property 'options' of undefined" render crash) — must degrade to the
+   * nearest real question instead of white-screening the survey and destroying
+   * the patient's in-progress answers.
+   */
+  const questionIndex = Math.max(0, Math.min(currentIndex, currentQuestions.length - 1));
+  const currentQuestion = currentQuestions[questionIndex];
   const selectedValue = answers[currentQuestion?.id];
   const canProceed = selectedValue !== undefined;
 
   /** Options rendered for the current question. */
   const currentOptions = isPart1
     ? likertOptions
-    : (currentQuestion as LifestyleQuestion).options.map((label, value) => ({ value, label }));
+    : ((currentQuestion as LifestyleQuestion)?.options ?? []).map((label, value) => ({ value, label }));
 
   const handleNext = async () => {
-    if (currentIndex < currentQuestions.length - 1) {
+    if (questionIndex < currentQuestions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       if (isPart1) {
@@ -93,15 +102,15 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
           }),
           ...lifestyleQuestions.map((question) => {
             const value = answers[question.id] ?? 0;
-            const option = question.options?.findIndex((_, i) => i === value) !== -1
-              ? { value, label: question.options[value] }
-              : undefined;
+            // Direct index lookup — the previous findIndex dance evaluated
+            // `undefined !== -1` and then indexed into `options` anyway, which
+            // crashed on a locale that ships a question without options.
             return {
               id: question.id,
               text: question.text,
               reverse: false,
               value,
-              label: option?.label ?? String(value),
+              label: question.options?.[value] ?? String(value),
             };
           }),
         ];
@@ -117,7 +126,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
     }
   };
 
-  const progressPercent = ((currentIndex + 1) / currentQuestions.length) * 100;
+  const progressPercent = ((questionIndex + 1) / currentQuestions.length) * 100;
 
   if (phase === 'interstitial') {
     const { title, sub, start, gridSleep, gridBreathing, gridMood, gridEyes, gridStressors, gridSymptoms, gridDevice, gridEnergy } = t.survey.interstitial;
@@ -177,7 +186,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         <View style={[styles.headerPill, { backgroundColor: themeBg }]}>
           <Text style={[styles.headerPillText, { color: themeColor }]}>
-            Part {isPart1 ? 1 : 2} • {currentIndex + 1}/{currentQuestions.length}
+            Part {isPart1 ? 1 : 2} • {questionIndex + 1}/{currentQuestions.length}
           </Text>
         </View>
 
@@ -194,12 +203,12 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Question Pill */}
         <View style={[styles.questionPill, { backgroundColor: themeBg }]}>
-          <Text style={[styles.questionPillText, { color: themeColor }]}>{currentQuestion.pill}</Text>
+          <Text style={[styles.questionPillText, { color: themeColor }]}>{currentQuestion?.pill}</Text>
         </View>
 
         {/* Question Text */}
-        <Text style={styles.questionText}>{currentQuestion.text}</Text>
-        {isPart2 && (currentQuestion as LifestyleQuestion).sub && <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion).sub}</Text>}
+        <Text style={styles.questionText}>{currentQuestion?.text}</Text>
+        {isPart2 && (currentQuestion as LifestyleQuestion)?.sub && <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion)?.sub}</Text>}
 
         {/* Options */}
         <View style={styles.optionsContainer}>
@@ -213,7 +222,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
                   isSelected && { backgroundColor: selectedThemeBg, borderColor: selectedThemeBorder }
                 ]}
                 activeOpacity={0.7}
-                onPress={() => setAnswers({ ...answers, [currentQuestion.id]: opt.value })}
+                onPress={() => setAnswers({ ...answers, [currentQuestion?.id]: opt.value })}
               >
                 <View style={[styles.optionIcon, isSelected && { backgroundColor: selectedThemeBorder }]}>
                   {isSelected ? (
@@ -239,7 +248,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
           onPress={handleNext}
         >
           <Text style={[styles.nextBtnText, canProceed && styles.nextBtnTextActive]}>
-            {currentIndex === currentQuestions.length - 1 ? (isPart1 ? t.survey.footer.continueToPart2 : t.survey.footer.completeSurvey) : t.common.nextQuestion}
+            {questionIndex === currentQuestions.length - 1 ? (isPart1 ? t.survey.footer.continueToPart2 : t.survey.footer.completeSurvey) : t.common.nextQuestion}
           </Text>
           {canProceed && <Ionicons name="chevron-forward" size={20} color={Colors.white} />}
         </TouchableOpacity>

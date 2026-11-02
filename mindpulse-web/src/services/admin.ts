@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { requireUserId } from './session';
 import type { AppRole, StressLevel } from '../types/supabase';
 
 const notConfigured = () =>
@@ -448,6 +449,8 @@ export interface AdminResultRow {
   createdAt: string;
   /** Tool title stored in survey_answers.jsonb; null on sessions saved before per-item answers existed. */
   toolTitle: string | null;
+  /** When a doctor last marked this result as reviewed; null = not reviewed (A-3). */
+  reviewedAt: string | null;
 }
 
 /**
@@ -473,10 +476,11 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
     emotion: string | null;
     face_confidence: number | null;
     created_at: string;
+    reviewed_at: string | null;
     survey_answers: { toolTitle?: unknown } | null;
   }>(
     'stress_sessions',
-    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at, survey_answers',
+    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at, reviewed_at, survey_answers',
   );
   if (!rows.length) return [];
 
@@ -509,9 +513,30 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
       emotion: row.emotion,
       faceConfidence: row.face_confidence,
       createdAt: row.created_at,
+      reviewedAt: row.reviewed_at,
       toolTitle: typeof row.survey_answers?.toolTitle === 'string' ? row.survey_answers.toolTitle : null,
     };
   });
+};
+
+/**
+ * Persists the doctor's "Mark as Reviewed" marker (A-3) — the control used to
+ * be component-local state that reset on every reload. Only the review columns
+ * are client-writable (migration 0030 revokes UPDATE on everything else), and
+ * RLS additionally limits the write to appointment-linked doctors, so this
+ * can never touch the clinical values of the session (deviation C-4).
+ */
+export const setResultReviewed = async (id: string, reviewed: boolean): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const reviewerId = reviewed ? await requireUserId() : null;
+  const { error } = await supabase
+    .from('stress_sessions')
+    .update({
+      reviewed_at: reviewed ? new Date().toISOString() : null,
+      reviewed_by: reviewerId,
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 };
 
 /**

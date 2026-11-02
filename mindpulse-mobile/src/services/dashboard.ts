@@ -251,6 +251,8 @@ export const saveNewStressSession = async (
   faceConfidencePercent?: number,
   /** Raw questionnaire snapshot {toolId, toolTitle, items:[…]} (assessments). */
   surveyAnswers?: Record<string, unknown> | null,
+  /** Dominant expression from the facial scan ('happy' | 'neutral' | 'sad'). */
+  emotion?: string,
 ): Promise<StressSessionItem> => {
   const { id: userId } = await requireUser();
 
@@ -268,6 +270,10 @@ export const saveNewStressSession = async (
       reaction_time_ms: reactionTimeMs ?? null,
       face_confidence: faceConfidencePercent ?? null,
       survey_answers: surveyAnswers ?? null,
+      // Written alongside face_confidence so admin/doctor emotion filters,
+      // the facial component of the outcome stats and the session detail
+      // modal all have a label to read — previously this column stayed NULL.
+      emotion: emotion ?? null,
       notes,
     })
     .select()
@@ -325,6 +331,7 @@ export const saveNewStressSession = async (
     surveyScore: surveyScore ?? undefined,
     reactionTimeMs: reactionTimeMs ?? undefined,
     faceConfidencePercent: faceConfidencePercent ?? undefined,
+    emotion: emotion ?? undefined,
     notes,
   };
 };

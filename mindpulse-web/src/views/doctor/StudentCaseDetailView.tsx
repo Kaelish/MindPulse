@@ -13,6 +13,7 @@ import {
 } from '../../services/studentCases';
 import {
   createRecommendation,
+  deleteRecommendation,
   DoctorRecommendation,
   fetchDoctorRecommendations,
   updateRecommendation,
@@ -234,6 +235,23 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       setRecommendations(await fetchDoctorRecommendations(student.userId));
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to update the recommendation.');
+    }
+  };
+
+  /**
+   * The issuing doctor withdraws their own recommendation (RLS
+   * `recommendations_delete` already scopes it to doctor_id = auth.uid()).
+   * Completed entries stay withdrawable: a typo-ridden recommendation should
+   * not haunt the record just because it was ticked off.
+   */
+  const removeRecommendation = async (id: string) => {
+    if (!window.confirm('Remove this recommendation? This cannot be undone.')) return;
+    setSaveError('');
+    try {
+      await deleteRecommendation(id);
+      setRecommendations(await fetchDoctorRecommendations(student.userId));
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Unable to remove the recommendation.');
     }
   };
 
@@ -525,6 +543,9 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                           Mark completed
                         </button>
                       )}
+                      <button type="button" className="ghost-button" onClick={() => void removeRecommendation(item.id)}>
+                        Remove
+                      </button>
                     </div>
                   </li>
                 ))}
