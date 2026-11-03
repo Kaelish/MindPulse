@@ -114,12 +114,15 @@ correction of contact fields.
 | Operation | Admin | Doctor | User |
 |---|---|---|---|
 | Create | — | — | ✅ `HealthSetupScreen` → `profiles.mental_conditions` / `physical_conditions` |
-| Retrieve | — | 🔧 **B-1** (columns absent from every doctor view) | ✅ profile + dashboard |
+| Retrieve | — | ✅ case-detail **Health Background** panel (**B-1 built**, 2026-11-03) | ✅ profile + dashboard |
 | Update | — | — | ✅ re-run health setup |
 | Delete | — | — | 🔁 clear-all by re-run; no history table to purge |
 
-**Decision:** build **B-1** — highest clinical value per line changed (verify RLS allows
-the column read first; doctors already select other profile columns).
+**Decision:** **B-1 delivered** (2026-11-03) — `mental_conditions`/`physical_conditions`
+added to the shared case select (`PROFILE_COLUMNS`) and rendered as read-only chips on the
+case detail Overview tab. RLS check passed as written: `profiles` SELECT is a table-level
+grant (`0001` §12b) with a row-level policy only, so a doctor already linked by
+appointment reads the whole row — no migration needed.
 
 ### M-04 · Consent Management — *audit: Not implemented*
 
@@ -296,9 +299,13 @@ patient↔doctor channel itself is fully implemented (realtime, attachments, rea
 | Create | 🔁 event-driven via `0008` triggers fired by admin/doctor actions — **C-10** | 🔁 — **C-10** | 🔁 (assessment completion) |
 | Retrieve | ✅ `AdminNotificationsView` | ✅ `NotificationHistorySheet` | ✅ `PatientNotifications` |
 | Update | ✅ mark one / mark all read | ✅ | ✅ |
-| Delete | 🔧 dismiss-from-my-list (delete own row) — **B-2** | 🔧 — **B-2** | 🔧 — **B-2** |
+| Delete | ✅ dismiss-from-my-list (delete own row) — **B-2 built** | ✅ — **B-2 built** | ✅ — **B-2 built** |
 
-**Decision:** build **B-2** (cheap, realistic); compose-by-hand stays out (**C-10**).
+**Decision:** **B-2 delivered** (2026-11-03) — `dismissFeedNotification` (web) /
+`dismissNotification` (mobile) delete the row pinned to `user_id`; RLS `notifications_delete`
+already allowed it. Wired into the admin notification cards, the doctor history sheet (row ✕
+and detail-pane Dismiss) and both mobile bells, each with optimistic removal + rollback.
+Compose-by-hand stays out (**C-10**).
 
 ### M-18 · Admin Dashboard — *audit: Fully implemented*
 
@@ -410,13 +417,14 @@ missed days.
 | ✅ Fixed 2026-11-02 | **A-4** — admin-published supplementary tools are takeable. The hub lists active non-Multi-Modal tools under "More Assessments" (new i18n section title/note/duration unit in en/fil/ceb + `types.ts`) and routes each card into the already-built `ToolSurveyScreen`, which scores (`scoreToolAnswers`), saves a session (0019) and records completion. The Multi-Modal tool is filtered out — listing it would recreate the duplicate entry point the original tool list was removed for (rationale preserved in a hub comment). New `StressAssessmentHubScreen.test.tsx` guards both properties: the card fires `onNavigate('ToolSurvey', tool)` and the Multi-Modal title never appears; validated by failing when the filter is deliberately removed | Mobile jest **8/8 suites, 62/62 tests** |
 | ✅ Fixed 2026-11-02 | **A-10** — PSS-10 declared **version-locked** (adviser ruling, paired with A-4): patients answer the app's built-in translated items (en/fil/ceb), so the admin form hides the questions editor for Multi-Modal tools, states why, and `saveTool` no longer requires questions for that category (it carries none). Custom patient-facing questions live in Supplementary/Brief tools, which A-4 made real. Recorded as deviation **C-15** | Web `tsc --noEmit` clean + 97/97 tests (15 suites) |
 | 🎉 Phase 1 complete | **A-1 … A-11 all fixed** (2026-10-31 → 2026-11-02). Next: Phase 2 lean builds (B-1 doctor health-background read, B-2 notification dismiss) → Phase 3 additive migration (B-3 consent table, B-4 activity log) → Phase 4 optional adviser-driven items (B-6) | — |
+| 🎉 Phase 2 complete | **B-1 + B-2 built** (2026-11-03). **B-1:** case select gains `mental_conditions`/`physical_conditions` (single-literal `PROFILE_COLUMNS` so Supabase's select parser keeps its row type) and the case detail Overview shows a read-only *Health Background* panel (chips + "None recorded"); no migration — RLS verified as table-level SELECT grant with row-level policy. **B-2:** `dismissFeedNotification` / `dismissNotification` delete own rows pinned to `user_id`, wired into the admin notification cards, the doctor history sheet (row ✕ + detail-pane Dismiss) and both mobile bells (patient + doctor), all optimistic with rollback; badge/counts follow the row. Tests: DoctorChrome row queries narrowed to the row opener (the dismiss label also contains the title). Next: Phase 3 additive migration (B-3 consent table, B-4 activity log) → Phase 4 optional adviser-driven items (B-6) | Web `tsc --noEmit` clean + **111/111 tests (16 suites)** incl. 3 new B-2 cases (admin dismiss, failed-dismiss rollback, doctor sheet dismiss); mobile jest **65/65 tests (9 suites)** incl. new `notifications.test.ts` (delete pinned to `user_id`, DB error surfaced, no session → no delete); mobile `tsc --noEmit` clean |
 
 ## Appendix B · Lean builds (Bucket B — sequenced)
 
 | # | Build | Depends on | Notes |
 |---|---|---|---|
-| B-1 | Doctor reads health background in case detail | Verify RLS on `profiles` | ~2 columns added to an existing select |
-| B-2 | Notification dismiss (delete own row) | — | Mobile + web; satisfies the Delete cells realistically |
+| B-1 | Doctor reads health background in case detail | Verify RLS on `profiles` | ✅ **delivered 2026-11-03** — 2 columns added to the existing case select; Overview panel renders them as read-only chips (no migration: table-level SELECT grant + row-level policy) |
+| B-2 | Notification dismiss (delete own row) | — | ✅ **delivered 2026-11-03** — mobile + web service deletes pinned to `user_id`; dismiss wired into admin cards, doctor history sheet and both mobile bells (optimistic + rollback). Satisfies the Delete cells realistically |
 | B-3 | Consent records table + writes at sign-up and face-scan consent + admin read-only view | Migration | Closes the only *fully* missing user-data module |
 | B-4 | Activity log table via DB triggers + admin read-only view | Migration (after B-3, same additive batch) | Follows `0008` pattern |
 | B-5 | `reviewed_at` persistence | ✅ delivered with A-3 (migration `0030`, 2026-11-01) | Additive nullable columns + column-level grant |

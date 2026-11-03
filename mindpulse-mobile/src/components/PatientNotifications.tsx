@@ -22,6 +22,7 @@ import {
   isMessageNotification,
   markAllNotificationsRead,
   markNotificationRead,
+  dismissNotification,
   notificationFullTime,
   subscribeToMyNotificationFeed,
 } from '../services/notifications';
@@ -128,6 +129,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(false);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [suggestBand, setSuggestBand] = useState<StressBand>(null);
 
@@ -210,6 +212,33 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
       setActionError(e?.message || 'Could not mark notifications as read.');
     } finally {
       setMarking(false);
+    }
+  };
+
+  /**
+   * Dismiss (B-2): remove the row from my own list. Optimistic with a
+   * position-preserving rollback, and the unread badge follows the row.
+   */
+  const dismiss = async (row: FeedNotification) => {
+    if (dismissingId) return;
+    const index = rows.findIndex((item) => item.id === row.id);
+    setDismissingId(row.id);
+    setActionError('');
+    setRows((current) => current.filter((item) => item.id !== row.id));
+    if (!row.read) setUnread((count) => Math.max(0, count - 1));
+    try {
+      await dismissNotification(row.id);
+    } catch (e: any) {
+      setRows((current) => {
+        if (current.some((item) => item.id === row.id)) return current;
+        const next = [...current];
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, row);
+        return next;
+      });
+      if (!row.read) setUnread((count) => count + 1);
+      setActionError(e?.message || 'Could not dismiss this notification.');
+    } finally {
+      setDismissingId(null);
     }
   };
 
@@ -387,6 +416,20 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
                               )}
                             </View>
                           </View>
+                          <Pressable
+                            onPress={() => void dismiss(row)}
+                            disabled={dismissingId === row.id}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Dismiss notification: ${row.title}`}
+                            style={styles.dismissBtn}
+                          >
+                            <Ionicons
+                              name={dismissingId === row.id ? 'hourglass-outline' : 'close'}
+                              size={14}
+                              color={Colors.textHint}
+                            />
+                          </Pressable>
                         </TouchableOpacity>
                       );
                     })}
@@ -578,6 +621,17 @@ const makeStyles = () => StyleSheet.create({
   },
   rowBody: { flex: 1, gap: 4 },
   rowHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  dismissBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
   rowTitle: { flex: 1, fontSize: 13.5, fontWeight: '700', color: Colors.textPrimary },
   rowTitleUnread: { fontWeight: '900' },
   rowMessage: { fontSize: 12.5, color: Colors.textSecondary, lineHeight: 17 },

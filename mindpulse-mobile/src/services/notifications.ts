@@ -110,6 +110,21 @@ export const markNotificationRead = async (id: string): Promise<void> => {
 };
 
 /**
+ * Dismiss = delete the row from my own list (B-2). RLS `notifications_delete`
+ * already scopes the delete to the signed-in account; the extra `user_id`
+ * filter keeps the intent explicit and pins it even if the policy widens.
+ */
+export const dismissNotification = async (id: string): Promise<void> => {
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+};
+
+/**
  * True for the rows produced by the chat trigger (`New message from <name>`),
  * which the app routes to the message thread instead of a generic view.
  */

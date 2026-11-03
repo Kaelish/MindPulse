@@ -20,12 +20,21 @@ jest.mock('../../services/notifications', () => ({
   fetchUnreadNotificationCount: jest.fn(),
   markAllNotificationsRead: jest.fn(),
   markFeedNotificationRead: jest.fn(),
+  dismissFeedNotification: jest.fn(),
   notificationCategoryForPath: jest.fn(),
   notificationTimeAgo: jest.fn(),
   notificationFullTime: jest.fn(),
   isMessageNotification: (notification: { title: string }) =>
     /^new message from\b/i.test(notification.title.trim()),
 }));
+
+/**
+ * Matches only the row opener: since B-2 the list also carries a per-row
+ * "Dismiss notification: <title>" button whose label contains the same title.
+ */
+const rowButton = (title: string) => ({
+  name: (label: string) => label.startsWith(title),
+});
 
 const feed: FeedNotification[] = [
   {
@@ -134,7 +143,7 @@ test('clicking a row opens its detail and View details jumps the portal', async 
   fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
 
   const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
-  fireEvent.click(within(dialog).getByRole('button', { name: /High stress alert/ }));
+  fireEvent.click(within(dialog).getByRole('button', rowButton('High stress alert')));
 
   expect(await within(screen.getByRole('dialog')).findByText('Liberty Lair scored 85% stress.')).toBeInTheDocument();
 
@@ -153,7 +162,7 @@ test('tapping an unread row marks it read', async () => {
   fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
 
   const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
-  fireEvent.click(within(dialog).getByRole('button', { name: /High stress alert/ }));
+  fireEvent.click(within(dialog).getByRole('button', rowButton('High stress alert')));
 
   await waitFor(() => expect(markFeedNotificationRead).toHaveBeenCalledWith('n-new'));
   expect(within(screen.getByRole('dialog')).queryByText('Unread')).toBeNull();
@@ -184,7 +193,7 @@ test('a message notification jumps to the Messages tab of Consultations', async 
   fireEvent.click(await screen.findByRole('button', { name: /See all/ }));
 
   const dialog = await screen.findByRole('dialog', { name: 'All notifications' });
-  fireEvent.click(within(dialog).getByRole('button', { name: /New message from/ }));
+  fireEvent.click(within(dialog).getByRole('button', rowButton('New message from')));
   fireEvent.click(await screen.findByRole('button', { name: /View details/ }));
 
   await waitFor(() => expect(jump).toHaveBeenCalledTimes(1));

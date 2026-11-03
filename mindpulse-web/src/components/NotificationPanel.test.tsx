@@ -1,9 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NotificationPanel } from './NotificationPanel';
+import { NotificationHistorySheet } from './NotificationHistorySheet';
 import { AdminNotificationsView } from '../views/admin/AdminNotificationsView';
 import {
   categoryForNotification,
+  dismissFeedNotification,
   FeedNotification,
   fetchAllNotifications,
   fetchFeedNotifications,
@@ -16,6 +18,7 @@ jest.mock('../services/notifications', () => ({
   fetchFeedNotifications: jest.fn(),
   fetchAllNotifications: jest.fn(),
   markFeedNotificationRead: jest.fn(),
+  dismissFeedNotification: jest.fn(),
 }));
 
 const sampleNotifications: FeedNotification[] = [
@@ -154,4 +157,48 @@ test('the full notifications page marks a tapped card read too', async () => {
 
   await waitFor(() => expect(markFeedNotificationRead).toHaveBeenCalledWith('user-alert'));
   expect(onChanged).toHaveBeenCalledTimes(1);
+});
+
+test('dismissing an admin notification removes the card and tells the caller (B-2)', async () => {
+  (dismissFeedNotification as jest.Mock).mockResolvedValue(undefined);
+  const onChanged = jest.fn();
+
+  render(<AdminNotificationsView onNavigate={jest.fn()} embedded onChanged={onChanged} />);
+  const heading = await screen.findByRole('heading', { name: 'Doctor Capacity Reached' });
+  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Dismiss' }));
+
+  await waitFor(() => expect(dismissFeedNotification).toHaveBeenCalledWith('user-alert'));
+  await waitFor(() =>
+    expect(screen.queryByRole('heading', { name: 'Doctor Capacity Reached' })).not.toBeInTheDocument(),
+  );
+  expect(screen.getByRole('heading', { name: 'Critical Patient Alert' })).toBeInTheDocument();
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
+});
+
+test('a failed dismiss keeps the row and surfaces the error (B-2)', async () => {
+  (dismissFeedNotification as jest.Mock).mockRejectedValue(new Error('Could not reach the server'));
+
+  render(<AdminNotificationsView onNavigate={jest.fn()} embedded />);
+  const heading = await screen.findByRole('heading', { name: 'Doctor Capacity Reached' });
+  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Dismiss' }));
+
+  expect(await screen.findByText('Could not reach the server')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Doctor Capacity Reached' })).toBeInTheDocument();
+});
+
+test('the doctor history sheet dismisses a row straight from the list (B-2)', async () => {
+  (dismissFeedNotification as jest.Mock).mockResolvedValue(undefined);
+  const onChanged = jest.fn();
+
+  render(<NotificationHistorySheet scope="doctor" onClose={jest.fn()} onChanged={onChanged} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Dismiss notification: Doctor Capacity Reached' }));
+
+  await waitFor(() => expect(dismissFeedNotification).toHaveBeenCalledWith('user-alert'));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('button', { name: 'Dismiss notification: Doctor Capacity Reached' }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(screen.getByRole('button', { name: 'Dismiss notification: Critical Patient Alert' })).toBeInTheDocument();
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
 });

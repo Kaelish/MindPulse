@@ -21,6 +21,7 @@ import {
   isMessageNotification,
   markAllNotificationsRead,
   markNotificationRead,
+  dismissNotification,
   notificationFullTime,
   subscribeToMyNotificationFeed,
 } from '../services/notifications';
@@ -56,6 +57,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(false);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const listRef = useRef<React.ElementRef<typeof ScrollView> | null>(null);
 
@@ -139,6 +141,33 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
       setActionError(e?.message || 'Could not mark notifications as read.');
     } finally {
       setMarking(false);
+    }
+  };
+
+  /**
+   * Dismiss (B-2): remove the row from my own list — optimistic removal with a
+   * position-preserving rollback; the unread badge follows the row.
+   */
+  const dismiss = async (row: FeedNotification) => {
+    if (dismissingId) return;
+    const index = rows.findIndex((item) => item.id === row.id);
+    setDismissingId(row.id);
+    setActionError('');
+    setRows((current) => current.filter((item) => item.id !== row.id));
+    if (!row.read) setUnread((count) => Math.max(0, count - 1));
+    try {
+      await dismissNotification(row.id);
+    } catch (e: any) {
+      setRows((current) => {
+        if (current.some((item) => item.id === row.id)) return current;
+        const next = [...current];
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, row);
+        return next;
+      });
+      if (!row.read) setUnread((count) => count + 1);
+      setActionError(e?.message || 'Could not dismiss this notification.');
+    } finally {
+      setDismissingId(null);
     }
   };
 
@@ -286,6 +315,20 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
                       {isMessageNotification(row) && (
                         <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
                       )}
+                      <Pressable
+                        onPress={() => void dismiss(row)}
+                        disabled={dismissingId === row.id}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Dismiss notification: ${row.title}`}
+                        style={styles.dismissBtn}
+                      >
+                        <Ionicons
+                          name={dismissingId === row.id ? 'hourglass-outline' : 'close'}
+                          size={14}
+                          color={Colors.textHint}
+                        />
+                      </Pressable>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -417,6 +460,17 @@ const makeStyles = () => StyleSheet.create({
     borderRadius: Radius.full,
   },
   unreadTagText: { color: Colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  dismissBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
 });
 
 let styles = makeStyles();

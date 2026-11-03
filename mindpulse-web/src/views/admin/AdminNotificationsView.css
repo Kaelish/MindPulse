@@ -200,6 +200,16 @@
   color: #fff;
 }
 
+.admin-notification-actions .admin-notification-dismiss {
+  margin-left: auto;
+  border-color: #e2b4b7;
+  color: #c0393f;
+}
+
+.admin-notification-actions .admin-notification-dismiss:hover {
+  background: #fff1f1;
+}
+
 .admin-notifications-state,
 .admin-notifications-error {
   padding: 18px;

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
 import {
   adminPathForNotificationCategory,
+  dismissFeedNotification,
   FeedNotification,
   markFeedNotificationRead,
   NOTIFICATION_CATEGORIES,
@@ -40,6 +41,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
 
   const loadNotifications = useCallback(() => {
     setIsLoading(true);
@@ -112,6 +114,24 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   const openCard = (notification: FeedNotification) => {
     void markAsRead(notification);
     if (embedded) onNavigate(adminPathForNotificationCategory(notification.category));
+  };
+
+  /**
+   * Dismiss (B-2): delete the row from my own list — optimistic removal with
+   * rollback, so a failed delete never silently pretends the row is gone.
+   */
+  const dismissNotification = async (notification: FeedNotification) => {
+    setDismissingId(notification.id);
+    setActionError('');
+    try {
+      await dismissFeedNotification(notification.id);
+      setNotifications((current) => current.filter((row) => row.id !== notification.id));
+      onChanged?.();
+    } catch (dismissError) {
+      setActionError(dismissError instanceof Error ? dismissError.message : 'Unable to dismiss this notification.');
+    } finally {
+      setDismissingId(null);
+    }
   };
 
   /** "View Details" always leaves the feed for the matching admin section. */
@@ -221,6 +241,14 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                     onClick={() => viewDetails(notification)}
                   >
                     View Details
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-notification-dismiss"
+                    disabled={dismissingId === notification.id}
+                    onClick={() => void dismissNotification(notification)}
+                  >
+                    {dismissingId === notification.id ? 'Dismissing…' : 'Dismiss'}
                   </button>
                 </div>
               </div>

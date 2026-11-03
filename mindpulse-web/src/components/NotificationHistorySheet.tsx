@@ -5,6 +5,7 @@ import { DoctorView } from './navigation/DoctorSidebar';
 import {
   FeedNotification,
   fetchAllNotifications,
+  dismissFeedNotification,
   isMessageNotification,
   markAllNotificationsRead,
   markFeedNotificationRead,
@@ -64,6 +65,7 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isMarking, setIsMarking] = useState(false);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(initialId ?? null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -139,6 +141,25 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
       onChanged?.();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Unable to mark this notification as read.');
+    }
+  };
+
+  /**
+   * Dismiss (B-2): remove the row from my own list. Optimistic with rollback,
+   * and leaving the detail pane when the open row is the one dismissed.
+   */
+  const dismissOne = async (notification: FeedNotification) => {
+    setDismissingId(notification.id);
+    setActionError('');
+    try {
+      await dismissFeedNotification(notification.id);
+      setRows((current) => current.filter((row) => row.id !== notification.id));
+      setSelectedId((current) => (current === notification.id ? null : current));
+      onChanged?.();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Unable to dismiss this notification.');
+    } finally {
+      setDismissingId(null);
     }
   };
 
@@ -286,6 +307,15 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
                           </span>
                           {!row.read && <span className="notif-hs-unread-tag">Unread</span>}
                         </button>
+                        <button
+                          type="button"
+                          className="notif-hs-row-dismiss"
+                          aria-label={`Dismiss notification: ${row.title}`}
+                          disabled={dismissingId === row.id}
+                          onClick={() => void dismissOne(row)}
+                        >
+                          {dismissingId === row.id ? '…' : '✕'}
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -320,6 +350,14 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
                       onClick={() => void markOne(selected)}
                     >
                       {selected.read ? 'Read' : 'Mark as read'}
+                    </button>
+                    <button
+                      type="button"
+                      className="notif-hs-dismiss"
+                      disabled={dismissingId === selected.id}
+                      onClick={() => void dismissOne(selected)}
+                    >
+                      {dismissingId === selected.id ? 'Dismissing…' : 'Dismiss'}
                     </button>
                     <button type="button" className="notif-hs-primary" onClick={() => jumpToDoctorView(selected)}>
                       View details

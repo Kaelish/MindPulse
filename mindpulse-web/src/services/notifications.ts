@@ -190,6 +190,22 @@ export const markFeedNotificationRead = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
+/**
+ * Dismiss = remove the row from my own list (B-2). RLS `notifications_delete`
+ * already scopes deletes to the signed-in account; the extra `user_id` filter
+ * keeps the intent explicit and pins the write even if the policy ever widens.
+ */
+export const dismissFeedNotification = async (id: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const viewerId = await requireViewerId();
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', viewerId);
+  if (error) throw new Error(error.message);
+};
+
 export const notificationTimeAgo = timeAgo;
 
 const toFeedNotification = (row: NotificationRow): FeedNotification => ({

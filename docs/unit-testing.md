@@ -89,13 +89,14 @@ Unit testing involves testing the smallest components of each layer in isolation
 | Layer | Test file | Unit(s) under test | Tests |
 | --- | --- | --- | --- |
 | Backend | `core/tests.py` | Video-call API, health endpoint, emotion endpoint and error handling | 15 |
-| Web | `src/App.test.tsx` | Doctor registration, pending approval, portal title | 4 |
+| Web | `src/App.test.tsx` | Doctor registration, pending approval, portal title | 5 |
 | Web | `src/views/admin/AdminDashboardView.test.tsx` | Admin dashboard metrics, notification bell | 4 |
 | Web | `src/views/admin/AdminProfileSettingsView.test.tsx` | Admin profile form | 4 |
 | Web | `src/views/doctor/DoctorDashboardView.test.tsx` | Doctor dashboard metrics and empty states | 2 |
 | Web | `src/views/doctor/DoctorProfileSettingView.test.tsx` | Doctor personal and professional details | 13 |
 | Web | `src/views/doctor/DoctorSettingsView.test.tsx` | Doctor settings switches | 2 |
-| Web | `src/components/NotificationPanel.test.tsx` | Notification filtering, history, read state | 10 |
+| Web | `src/views/landing/LandingPage.test.tsx` | Landing page sections and CTA behaviour | 10 |
+| Web | `src/components/NotificationPanel.test.tsx` | Notification filtering, history, read state, dismiss (B-2) | 13 |
 | Web | `src/components/ProfileSecurityPanel.test.tsx` | Sessions, verification, MFA controls | 6 |
 | Web | `src/components/doctor/DoctorChrome.test.tsx` | Doctor portal navigation and header | 6 |
 | Web | `src/services/signInVerification.test.ts` | Sign-in verification methods and reset flows | 14 |
@@ -106,20 +107,24 @@ Unit testing involves testing the smallest components of each layer in isolation
 | Web | `src/services/internationalPhone.test.ts` | Phone parsing and validation | 4 |
 | Mobile | `src/services/streakLogic.test.ts` | MindPlant streak, freeze, stage, and points rules | 24 |
 | Mobile | `src/services/assessmentTools.test.ts` | Assessment scoring and reverse items | 6 |
-| Mobile | `src/services/pauseTimer.test.ts` | Pause start/stop/resume and wall-clock remaining time | 5 |
+| Mobile | `src/services/pauseTimer.test.ts` | Pause start/stop/resume and wall-clock remaining time | 6 |
+| Mobile | `src/services/stressFormula.test.ts` | Canonical stress formula transforms and weights | 9 |
 | Mobile | `src/services/notificationPrefs.test.ts` | Notification category mapping and persistence | 11 |
+| Mobile | `src/services/notifications.test.ts` | Notification dismiss pinned to the signed-in account (B-2) | 3 |
 | Mobile | `src/services/rememberMe.test.ts` | Remembered-login storage | 4 |
+| Mobile | `src/screens/assessment/StressAssessmentHubScreen.test.tsx` | Assessment hub entry points (A-4) | 1 |
+| Mobile | `src/screens/survey/StressSurveyScreen.test.tsx` | PSS-10 survey regression walk-through (A-11) | 1 |
 
 ### Test Execution and Results
 
 | Layer | Command | Result |
 | --- | --- | --- |
 | Backend | `cd mindpulse-backend` then `python manage.py test core` | **15 passed, 0 failed** |
-| Web | `cd mindpulse-web` then `npm test -- --watchAll=false` | **97 passed, 0 failed** (15 suites) |
-| Mobile | `cd mindpulse-mobile` then `npm test -- --runInBand` | **51 passed, 0 failed** (5 suites) |
+| Web | `cd mindpulse-web` then `npm test -- --watchAll=false` | **111 passed, 0 failed** (16 suites) |
+| Mobile | `cd mindpulse-mobile` then `npm test -- --runInBand` | **65 passed, 0 failed** (9 suites) |
 | Supplementary | `cd mindpulse-mobile` then `node scripts/verify-streak.js` | **40 checks passed, 0 failed** |
 
-**Total automated unit tests: 163 passed, 0 failed.**
+**Total automated unit tests: 231 passed, 0 failed.**
 
 On a Windows checkout that keeps the virtual environment at the repository root, the backend command is:
 
@@ -148,6 +153,7 @@ cd mindpulse-backend
 | UT-WEB-05 | Web | `profileSessions` | Start monitoring without a `session_id` claim | Current device still appears | Pass |
 | UT-WEB-06 | Web | Phone validation | Enter PH, US, and AU numbers | Valid numbers pass; invalid prefixes fail | Pass |
 | UT-WEB-07 | Web | Sign-in verification | Enable, use, and reset a method | Challenge is enforced and reset succeeds | Pass |
+| UT-WEB-08 | Web | Notification dismiss (B-2) | Dismiss a card, then fail a dismiss | Row is removed and the caller is told; on failure the row stays and the error shows | Pass |
 | UT-MOB-01 | Mobile | `scoreToolAnswers` | Answer every standard item at 4 | Score is `100` | Pass |
 | UT-MOB-02 | Mobile | `scoreToolAnswers` | Answer a reverse-scored item at 0 | It contributes the maximum value | Pass |
 | UT-MOB-03 | Mobile | `applyGap` | Miss one day with one freeze available | Streak is kept and one freeze is spent | Pass |
@@ -158,6 +164,7 @@ cd mindpulse-backend
 | UT-MOB-08 | Mobile | `pauseTimer` | Pause, wait, and resume | Paused time is excluded from the countdown | Pass |
 | UT-MOB-09 | Mobile | `notificationCategory` | Pass appointment, clinician, wellness, and alert rows | Each maps to the correct toggle | Pass |
 | UT-MOB-10 | Mobile | `rememberMe` | Save, reload, and clear the login | E-mail is stored only while opted in | Pass |
+| UT-MOB-11 | Mobile | `dismissNotification` (B-2) | Dismiss with a session, without one, and with a DB error | Delete is pinned to `user_id`; no session means no delete; errors propagate | Pass |
 
 ### How the Tests Are Isolated
 

@@ -22,6 +22,9 @@ export interface StudentCaseRecord {
   lastAssessment: string;
   score: number;
   trend: string;
+  /** Health background declared at onboarding (B-1); self-reported labels. */
+  mentalConditions: string[];
+  physicalConditions: string[];
 }
 
 type ProfileRow = {
@@ -35,6 +38,8 @@ type ProfileRow = {
   year_level: string | null;
   birth_date: string | null;
   sex: string | null;
+  mental_conditions: unknown;
+  physical_conditions: unknown;
 };
 
 type SessionRow = {
@@ -42,6 +47,16 @@ type SessionRow = {
   score: number | null;
   created_at: string;
 };
+
+/** Every profile column the case list and case detail share (B-1 adds the two health-background jsonb columns). Kept as one literal so the select parser keeps its row type. */
+const PROFILE_COLUMNS =
+  'id, first_name, last_name, email, phone, student_no, program, year_level, birth_date, sex, mental_conditions, physical_conditions';
+
+/** jsonb string array → clean label list; legacy/garbage rows read as "none recorded". */
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
 
 const formatAge = (birthDate: string | null) => {
   if (!birthDate) return 0;
@@ -101,6 +116,8 @@ const buildStudentCase = (
     lastAssessment: formatDate(latest?.created_at ?? null),
     score,
     trend,
+    mentalConditions: toStringArray(profile.mental_conditions),
+    physicalConditions: toStringArray(profile.physical_conditions),
   };
 };
 
@@ -111,7 +128,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, phone, student_no, program, year_level, birth_date, sex')
+    .select(PROFILE_COLUMNS)
     .eq('role', 'student')
     .order('created_at', { ascending: true });
   if (profilesError) throw new Error(profilesError.message);
@@ -154,7 +171,7 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, phone, student_no, program, year_level, birth_date, sex')
+    .select(PROFILE_COLUMNS)
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);

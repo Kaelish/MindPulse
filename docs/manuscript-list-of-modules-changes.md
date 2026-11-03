@@ -52,13 +52,13 @@ does. Original point order follows the signed PDF's operation × role cells.
 - **M-06 ➕** User: opens administrator-published *supplementary assessments* from the assessment hub and submits them as sessions.
 - **M-10 ➕** The system computes **one canonical stress formula** shared by the mobile app, the result screens and the admin/doctor component charts (survey 50%, heart rate 20%, face 20%, reaction 10%; renormalized over available indicators).
 - **M-09 ➕** Admin/Doctor: detected emotion label and scan confidence stored with each session and usable in filters/statistics.
+- **M-03 ➕** Doctor: reads the student's self-reported health background (mental/physical conditions) in the case detail.
+- **M-17 ➕** All roles: dismiss (remove) a notification from their own list.
 
 **Pending builds — word as "in progress" (do not claim complete):**
 
 | Module | Pending item |
 |---|---|
-| M-03 User Health Background | Doctor reads the student's health background in case detail (**B-1**, Phase 2) |
-| M-17 Notification | Dismiss/remove a notification from my list (**B-2**, Phase 2) |
 | M-04 Consent Management | Whole module: consent records written at sign-up and face-scan consent, admin read-only register (**B-3**, Phase 3) |
 | M-23 Activity Log | Whole module: trigger-written activity log + admin view (**B-4**, Phase 3) |
 
@@ -89,7 +89,7 @@ does. Original point order follows the signed PDF's operation × role cells.
 | Point | Action | Wording / reason |
 |---|---|---|
 | Create / Update (User) | ✅ Keep | Health setup screen; re-run to update |
-| Retrieve (Doctor) | ⏳ Pending | "Reads health background in case detail" — in progress (B-1) |
+| Retrieve (Doctor) | ✅ Keep | "Reads the student's health background in the case detail" (B-1) |
 | Retrieve (User) | ✅ Keep | — |
 | Delete (User) | ✏️ Rewrite | "Clear by re-running setup" |
 
@@ -215,7 +215,7 @@ does. Original point order follows the signed PDF's operation × role cells.
 | Create (all) | ✏️ Rewrite | "Generated automatically by database events" (C-10) |
 | Retrieve (all) | ✅ Keep | — |
 | Update (mark read) | ✅ Keep | — |
-| Delete (dismiss) | ⏳ Pending | "Remove from my list" — in progress (B-2) |
+| Delete (dismiss) | ✅ Keep | "Removes a notification from my own list" (B-2) |
 
 ### M-18 · Admin Dashboard
 | Point | Action | Wording / reason |

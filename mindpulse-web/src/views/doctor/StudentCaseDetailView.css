@@ -103,6 +103,18 @@
 .student-detail-content .ghost-button.is-danger { color: #e0454f; border-color: #f6c8c8; }
 .student-detail-content .ghost-button.is-danger:hover { background: #fff1f1; }
 
+/* Health background (B-1): the two onboarding jsonb columns, read-only for the doctor. */
+.health-background-panel .health-background-note { margin: -8px 0 14px; color: #94a3b8; font-size: 0.66rem; }
+.health-background-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.health-background-group > span { display: block; margin-bottom: 8px; color: #718096; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.health-background-group ul { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.condition-chip { padding: 5px 11px; border: 1px solid #dce4ee; border-radius: 999px; background: #f4f7fb; color: #4a5b73; font-size: 0.7rem; }
+.health-background-group .empty-table { margin: 0; color: #94a3b8; font-size: 0.72rem; font-style: italic; }
+
+@media (max-width: 760px) {
+  .health-background-groups { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 760px) {
   .student-contact-row { flex-direction: column; }
   .detail-stat-grid { grid-template-columns: 1fr 1fr; }

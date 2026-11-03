@@ -209,6 +209,12 @@
   padding: 0;
 }
 
+.notif-hs-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 .notif-hs-row + .notif-hs-row {
   border-top: 1px solid var(--hs-line);
 }
@@ -217,7 +223,8 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 13px 8px;
   border: 0;
   border-radius: 12px;
@@ -230,6 +237,32 @@
 
 .notif-hs-row-hit:hover {
   background: var(--hs-soft);
+}
+
+/* Dismiss (B-2): remove this row from my own list. */
+.notif-hs-row-dismiss {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin-top: 10px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--hs-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notif-hs-row-dismiss:hover:not(:disabled) {
+  border-color: var(--hs-line);
+  background: var(--hs-soft);
+  color: var(--hs-danger);
+}
+
+.notif-hs-row-dismiss:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .notif-hs-dot {
@@ -396,6 +429,7 @@
 
 .notif-hs-primary,
 .notif-hs-secondary,
+.notif-hs-dismiss,
 .notif-hs-retry {
   display: inline-flex;
   align-items: center;
@@ -434,6 +468,21 @@
 .notif-hs-secondary:disabled {
   color: var(--hs-muted);
   cursor: default;
+}
+
+.notif-hs-dismiss {
+  border: 1px solid var(--hs-line);
+  background: transparent;
+  color: var(--hs-danger);
+}
+
+.notif-hs-dismiss:hover:not(:disabled) {
+  border-color: var(--hs-danger);
+}
+
+.notif-hs-dismiss:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* ---- states ---- */
