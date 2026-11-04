@@ -1,0 +1,102 @@
+/* Admin → Consent register (M-04 / B-3) */
+
+.consent-register-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 30px 40px;
+  overflow-y: auto;
+}
+
+.consent-register-topbar h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  color: var(--doc-ink, #1a2e44);
+}
+
+.consent-register-panel {
+  background: var(--doc-panel, #fff);
+  border: 1px solid var(--doc-line, #dbe6f7);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.consent-register-panel h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--doc-ink, #1a2e44);
+}
+
+.consent-register-table-wrap {
+  overflow-x: auto;
+}
+
+.consent-register-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.consent-register-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--doc-line, #dbe6f7);
+  color: var(--doc-muted, #7a90a8);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.consent-register-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eef2f7;
+  color: var(--doc-ink-2, #374151);
+  vertical-align: top;
+}
+
+.consent-register-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.consent-register-table td strong {
+  display: block;
+  color: var(--doc-ink, #1a2e44);
+  font-size: 0.82rem;
+}
+
+.consent-register-table td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--doc-muted, #7a90a8);
+  font-size: 0.7rem;
+}
+
+.consent-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: rgba(91, 110, 245, 0.12);
+  color: #4756c4;
+}
+
+.consent-chip--face_scan {
+  background: rgba(15, 157, 99, 0.14);
+  color: #0e7f57;
+}
+
+.consent-register-main .empty-table {
+  padding: 22px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 760px) {
+  .consent-register-main {
+    padding: 18px 16px 32px;
+  }
+}

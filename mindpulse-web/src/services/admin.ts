@@ -75,6 +75,46 @@ export const fetchAllRows = async <T>(
   return rows;
 };
 
+export interface ProfileLabel {
+  name: string;
+  email: string;
+}
+
+/**
+ * Display labels for a set of profile ids in one round trip
+ * (full name -> first + last -> e-mail -> the id's first 8 characters).
+ * Used by the read-only registers that hold raw uuids: the consent register
+ * and the activity log.
+ */
+export const fetchProfileLabels = async (ids: string[]): Promise<Map<string, ProfileLabel>> => {
+  const labels = new Map<string, ProfileLabel>();
+  const unique = Array.from(new Set(ids.filter((id) => Boolean(id))));
+  if (unique.length === 0) return labels;
+  if (!supabase) throw notConfigured();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, full_name, email')
+    .in('id', unique);
+  if (error) throw new Error(error.message);
+
+  for (const row of (data ?? []) as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    full_name: string | null;
+    email: string | null;
+  }[]) {
+    const name =
+      (row.full_name ?? '').trim() ||
+      [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+      (row.email ?? '').trim() ||
+      row.id.slice(0, 8).toUpperCase();
+    labels.set(row.id, { name, email: row.email ?? '' });
+  }
+  return labels;
+};
+
 export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
   if (!supabase) throw notConfigured();
 

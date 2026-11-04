@@ -78,6 +78,8 @@ implemented-as, or deviating with an approved justification.
 |---|---|
 | Licensed doctor's guidance: **clinical recommendations must not be visible to patients** | Patient-facing channels are the *published consultation progress note* (`setPatientNotePublication`, `ConsultationSummaryView` publish switch, migration `0021_therapy_progress_note.sql`) and system-authored self-care tips (`SelfCareModal`). Recommendation cells for the User role → deviation **C-6**. |
 | `0008_notification_events.sql` | Notifications are created by database triggers fired by admin/doctor/patient actions — the basis for deviation **C-10** and the model for the Activity Log build (B-4). |
+| `0031_consent_records.sql` | Append-only proof of consent: no FK on `user_id` (C-14), client roles get SELECT + INSERT only (no UPDATE/DELETE), registration proof filed by an `auth.users` trigger so admin-provisioned accounts never get fabricated consent. |
+| `0032_activity_log.sql` | The Activity Log itself (B-4): `log_activity()` SECURITY DEFINER function + AFTER triggers on `profiles`, `appointments`, `stress_sessions`, `consultation_notes`, mirroring `0008`; SELECT granted to administrators only. |
 | `delete_my_account()` / `delete_app_user()` RPCs (`0001_canonical_schema.sql`) | Patient deletion is user-initiated; admin deletion applies to staff accounts → deviations **C-1/C-2**. |
 
 ---
@@ -124,19 +126,25 @@ case detail Overview tab. RLS check passed as written: `profiles` SELECT is a ta
 grant (`0001` §12b) with a row-level policy only, so a doctor already linked by
 appointment reads the whole row — no migration needed.
 
-### M-04 · Consent Management — *audit: Not implemented*
+### M-04 · Consent Management — *audit: Not implemented → **delivered** (B-3, 2026-11-04)*
 
 | Operation | Admin | Doctor | User |
 |---|---|---|---|
-| Create | — | — | 🔧 **B-3** (signup + face-scan consent modal currently persist nothing) |
-| Retrieve | 🔧 **B-3** read-only register | 🔶 | 🔁 own consent shown in Privacy/About |
-| Update | 🔁 withdrawal recorded as a new state, never an edit | — | 🔁 |
-| Delete | ⛔ proof of consent must outlive the account — **C-14** | — | — |
+| Create | — | — | ✅ sign-up checkbox (mobile + web) files `registration` via migration `0031`'s trigger; face-scan privacy sheet's *"I Understand & Continue"* files `face_scan` (`services/consent.ts`) |
+| Retrieve | ✅ read-only **Consent Register** (`AdminConsentRegisterView`) | 🔶 | 🔁 own consent shown in Privacy/About |
+| Update | 🔁 `withdrawn_at` column ships but **no withdrawal flow built** (deferred) | — | 🔁 |
+| Delete | ⛔ proof of consent must outlive the account — **C-14** (no DELETE grant) | — | — |
 
-**Decision:** build lean (**B-3**): `consent_records(user_id, consent_type, version,
-granted_at, withdrawn_at, source)`, written at registration and at the existing
-*"I Understand & Continue"* button (`FaceScanInstructionsScreen.tsx:337-343`). Deviate on
-Delete.
+**Decision:** built lean (**B-3**) per the shape above, migration `0031`. Registration consent
+is written by a trigger on `auth.users` keyed on `raw_user_meta_data->>'consent_source'`
+(the sign-up forms send `mobile_signup` / `web_signup` only once the required checkbox is
+ticked) — a session does not exist yet when e-mail confirmation is on, and admin-provisioned
+accounts (`create_app_user`) carry no `consent_source` so they are never filed as consenting.
+Face-scan consent is written client-side, idempotent by (user, type, version); the sheet stays
+open with an error if the write fails. **Deployment order: apply `0031` before deploying the
+app updates** (the trigger does not swallow failures). Withdrawal (`withdrawn_at`) is deferred
+and documented — honouring it would block future scans; there is no UPDATE grant and no
+withdrawal UI. Deviate on Delete.
 
 ### M-05 · Assessment Session — *audit: Partial*
 
@@ -363,18 +371,20 @@ revocation for patients.
 
 **Decision:** complete pending **C-12** (no report repository exists to edit or delete).
 
-### M-23 · Activity Log — *audit: Not implemented*
+### M-23 · Activity Log — *audit: Not implemented → **delivered** (B-4, 2026-11-04)*
 
 | Operation | Admin | Doctor |
 |---|---|---|
-| Create | 🔧 **B-4** (database triggers) | — |
-| Retrieve | 🔧 **B-4** admin read-only view | 🔶 |
-| Update / Delete | — | — |
+| Create | ✅ database triggers (migration `0032`) — not a client operation | — |
+| Retrieve | ✅ read-only **Activity Log** view (`AdminActivityLogView`, newest 500) | 🔶 |
+| Update / Delete | ⛔ no UPDATE/DELETE grant — an audit trail that can be edited is not a trail | — |
 
-**Decision:** build lean (**B-4**): `activity_log(actor, action, entity, entity_id,
-created_at)` written by triggers on `profiles`, `appointments`, `stress_sessions`,
-`consultation_notes` — mirrors `0008`, cannot be bypassed by the client, requires no
-changes to existing screens for capture.
+**Decision:** built lean (**B-4**) per the shape above, migration `0032`. `log_activity()`
+(SECURITY DEFINER) + AFTER INSERT/UPDATE/DELETE triggers on `profiles`, `appointments`,
+`stress_sessions`, `consultation_notes` — mirrors `0008`, cannot be bypassed by either app,
+and required no changes to existing screens for capture. Actor/entity are plain uuids with no
+FKs (a log must outlive its rows); the register resolves labels through `profiles` and shows
+`System` for database-authored changes. RLS admits administrators only.
 
 ### M-24 · MindPlant Growth and Streak — *audit: Fully implemented*
 
@@ -418,6 +428,7 @@ missed days.
 | ✅ Fixed 2026-11-02 | **A-10** — PSS-10 declared **version-locked** (adviser ruling, paired with A-4): patients answer the app's built-in translated items (en/fil/ceb), so the admin form hides the questions editor for Multi-Modal tools, states why, and `saveTool` no longer requires questions for that category (it carries none). Custom patient-facing questions live in Supplementary/Brief tools, which A-4 made real. Recorded as deviation **C-15** | Web `tsc --noEmit` clean + 97/97 tests (15 suites) |
 | 🎉 Phase 1 complete | **A-1 … A-11 all fixed** (2026-10-31 → 2026-11-02). Next: Phase 2 lean builds (B-1 doctor health-background read, B-2 notification dismiss) → Phase 3 additive migration (B-3 consent table, B-4 activity log) → Phase 4 optional adviser-driven items (B-6) | — |
 | 🎉 Phase 2 complete | **B-1 + B-2 built** (2026-11-03). **B-1:** case select gains `mental_conditions`/`physical_conditions` (single-literal `PROFILE_COLUMNS` so Supabase's select parser keeps its row type) and the case detail Overview shows a read-only *Health Background* panel (chips + "None recorded"); no migration — RLS verified as table-level SELECT grant with row-level policy. **B-2:** `dismissFeedNotification` / `dismissNotification` delete own rows pinned to `user_id`, wired into the admin notification cards, the doctor history sheet (row ✕ + detail-pane Dismiss) and both mobile bells (patient + doctor), all optimistic with rollback; badge/counts follow the row. Tests: DoctorChrome row queries narrowed to the row opener (the dismiss label also contains the title). Next: Phase 3 additive migration (B-3 consent table, B-4 activity log) → Phase 4 optional adviser-driven items (B-6) | Web `tsc --noEmit` clean + **111/111 tests (16 suites)** incl. 3 new B-2 cases (admin dismiss, failed-dismiss rollback, doctor sheet dismiss); mobile jest **65/65 tests (9 suites)** incl. new `notifications.test.ts` (delete pinned to `user_id`, DB error surfaced, no session → no delete); mobile `tsc --noEmit` clean |
+| 🎉 Phase 3 complete | **B-3 + B-4 built** (2026-11-04), one additive migration batch: **`0031_consent_records.sql`** (append-only `consent_records` — no FK to `auth.users`, SELECT/INSERT-only grants, own-row + admin RLS; registration proof filed by an `auth.users` trigger keyed on `raw_user_meta_data->>'consent_source'` so admin-provisioned accounts never get fabricated consent) and **`0032_activity_log.sql`** (`activity_log` + `log_activity()` SECURITY DEFINER + AFTER triggers on the four tables, mirroring `0008`; admin-only SELECT). Sign-up checkboxes added in both apps (mobile + web doctor form) — required, gate submit, send `consent_source`; face-scan privacy sheet now files an idempotent `face_scan` proof before `onReady()` (sheet stays open with an error if the write fails). Admin gains two read-only registers (`AdminConsentRegisterView`, `AdminActivityLogView`) reached from the sidebar; `AdminNavView` exported from `AdminSidebar` replaced 9 duplicated inline `onNavigate` unions. **Deployment order: apply `0031` before deploying the app updates** (the signup trigger does not swallow failures — a registration arriving before the table exists is rejected loudly). Withdrawal (`withdrawn_at`) ships in the schema but is deferred: no UI, no UPDATE grant, documented in M-04 — honouring it would block future scans | Web `tsc --noEmit` clean + **119/119 tests (18 suites)** incl. new `AdminConsentRegisterView.test.tsx` (4), `AdminActivityLogView.test.tsx` (4) and the consent gate in `App.test.tsx` (submit without tick → error, no `signUp`; metadata carries `consent_source: 'web_signup'`); mobile `tsc --noEmit` clean + jest **70/70 tests (10 suites)** incl. new `consent.test.ts` (5: pins to signed-in account, idempotent, read/write failures surfaced, missing session propagates). Next: Phase 4 optional adviser-driven items (B-6) |
 
 ## Appendix B · Lean builds (Bucket B — sequenced)
 
@@ -425,8 +436,8 @@ missed days.
 |---|---|---|---|
 | B-1 | Doctor reads health background in case detail | Verify RLS on `profiles` | ✅ **delivered 2026-11-03** — 2 columns added to the existing case select; Overview panel renders them as read-only chips (no migration: table-level SELECT grant + row-level policy) |
 | B-2 | Notification dismiss (delete own row) | — | ✅ **delivered 2026-11-03** — mobile + web service deletes pinned to `user_id`; dismiss wired into admin cards, doctor history sheet and both mobile bells (optimistic + rollback). Satisfies the Delete cells realistically |
-| B-3 | Consent records table + writes at sign-up and face-scan consent + admin read-only view | Migration | Closes the only *fully* missing user-data module |
-| B-4 | Activity log table via DB triggers + admin read-only view | Migration (after B-3, same additive batch) | Follows `0008` pattern |
+| B-3 | Consent records table + writes at sign-up and face-scan consent + admin read-only view | Migration | ✅ **delivered 2026-11-04** — migration `0031` (table + `auth.users` signup trigger + SELECT/INSERT-only grants); sign-up checkbox in both apps (gates submit, sends `consent_source`), `recordFaceScanConsent()` idempotent write behind the privacy sheet; `AdminConsentRegisterView` read-only (no edit/delete controls, per C-14). Withdrawal deferred and documented |
+| B-4 | Activity log table via DB triggers + admin read-only view | Migration (after B-3, same additive batch) | ✅ **delivered 2026-11-04** — migration `0032` (`log_activity()` + 4 AFTER triggers, mirroring `0008`); `AdminActivityLogView` read-only, newest 500, SELECT granted to administrators only |
 | B-5 | `reviewed_at` persistence | ✅ delivered with A-3 (migration `0030`, 2026-11-01) | Additive nullable columns + column-level grant |
 | B-6 | Optional, adviser-driven: patient cancels own booking (status change), admin cancels no-show, admin read of recommendations, mobile MFA panel, admin item-level survey answers, admin contact-field correction (C-3) | Adviser decision | Each is status-change or read-only — no new deletion paths |
 

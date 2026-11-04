@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminUsersView } from './AdminUsersView';
 import { AdminResultsView } from './AdminResultsView';
@@ -9,6 +9,8 @@ import { AdminAssessmentView } from './AdminAssessmentView';
 import { AdminRecordsView } from './AdminRecordsView';
 import { AdminSuggestionsView } from './AdminSuggestionsView';
 import { AdminGenerateReportsView } from './AdminGenerateReportsView';
+import { AdminConsentRegisterView } from './AdminConsentRegisterView';
+import { AdminActivityLogView } from './AdminActivityLogView';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminNotificationsView } from './AdminNotificationsView';
@@ -21,18 +23,7 @@ interface AdminDashboardViewProps {
   onSignOut: () => void;
 }
 
-type AdminView =
-  | 'dashboard'
-  | 'users'
-  | 'assessment'
-  | 'results'
-  | 'records'
-  | 'reports'
-  | 'analytics'
-  | 'profile'
-  | 'settings'
-  | 'suggestions'
-  | 'notifications';
+type AdminView = AdminNavView;
 
 const viewFromPath = (pathname: string): AdminView => {
   switch (pathname.replace(/\/+$/, '').split('/').pop()?.toLowerCase()) {
@@ -45,6 +36,8 @@ const viewFromPath = (pathname: string): AdminView => {
     case 'analytics': return 'analytics';
     case 'settings': return 'settings';
     case 'notifications': return 'notifications';
+    case 'consents': return 'consents';
+    case 'activity': return 'activity';
     default: return 'dashboard';
   }
 };
@@ -61,6 +54,8 @@ const pathForView = (view: AdminView): string => {
     case 'profile': return '/profile';
     case 'settings': return '/settings';
     case 'notifications': return '/notifications';
+    case 'consents': return '/consents';
+    case 'activity': return '/activity';
     default: return '/dashboard';
   }
 };
@@ -139,6 +134,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSignOu
   if (activeView === 'reports') return <AdminGenerateReportsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'profile') return <AdminProfileSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
   if (activeView === 'settings') return <AdminSystemSettingsView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'consents') return <AdminConsentRegisterView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
+  if (activeView === 'activity') return <AdminActivityLogView onSignOut={onSignOut} onNavigate={navigateAdminView} />;
 
   if (activeView === 'notifications') {
     return (

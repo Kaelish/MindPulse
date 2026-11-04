@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import {
@@ -20,7 +20,7 @@ type SettingsTab = 'general' | 'notification' | 'security' | 'data';
 
 interface AdminSystemSettingsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: AdminNavView) => void;
 }
 
 const TABS: { key: SettingsTab; label: string }[] = [

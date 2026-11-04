@@ -81,6 +81,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /* Consent for the registration record (M-04 / B-3): the ticked box is what
+     migration 0031's trigger turns into a consent_records row, via the
+     consent_source flag sent with signUp() below. */
+  const [regConsent, setRegConsent] = useState(false);
 
   useEffect(() => {
     setShowPassword(false);
@@ -124,6 +128,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
       setErrorMessage('The two passwords do not match.');
       return;
     }
+    if (!regConsent) {
+      setErrorMessage('Please accept the Privacy Policy and Terms of Use to create your account.');
+      return;
+    }
 
     if (!supabase) {
       setErrorMessage('Supabase is not configured. Add your project URL and publishable key first.');
@@ -155,6 +163,9 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
             specialization: finalSpecialization,
             contact_number: contactNumber.trim(),
             bio: bio.trim(),
+            // Only sent once the consent box was ticked (handleRegister rejects
+            // otherwise); the database turns it into a consent_records row.
+            consent_source: 'web_signup',
           },
         },
       });
@@ -577,6 +588,14 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
                   onToggle={() => setShowConfirmPassword((visible) => !visible)}
                   toggleLabel="confirm password"
                 />
+              </label>
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={regConsent}
+                  onChange={(e) => setRegConsent(e.target.checked)}
+                />
+                <span>I have read and agree to the Privacy Policy and Terms of Use.</span>
               </label>
               {errorMessage && <p className="auth-error">{errorMessage}</p>}
               {infoMessage && <p className="auth-error">{infoMessage}</p>}

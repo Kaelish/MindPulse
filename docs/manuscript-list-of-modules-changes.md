@@ -54,13 +54,18 @@ does. Original point order follows the signed PDF's operation × role cells.
 - **M-09 ➕** Admin/Doctor: detected emotion label and scan confidence stored with each session and usable in filters/statistics.
 - **M-03 ➕** Doctor: reads the student's self-reported health background (mental/physical conditions) in the case detail.
 - **M-17 ➕** All roles: dismiss (remove) a notification from their own list.
+- **M-04 ➕** Consent Management: a required consent checkbox now gates sign-up in both apps (mobile + web) and files a `registration` proof via a database trigger; the face-scan privacy sheet files a `face_scan` proof before the scan starts; administrators get a read-only consent register.
+- **M-23 ➕** Activity Log: what was created/updated/deleted is recorded by database triggers (cannot be bypassed by either app) and shown to administrators in a read-only log view.
 
-**Pending builds — word as "in progress" (do not claim complete):**
+**Pending builds — only the optional, adviser-gated items remain (B-6):**
 
-| Module | Pending item |
+| Module | Pending item (optional — B-6, each needs an adviser decision) |
 |---|---|
-| M-04 Consent Management | Whole module: consent records written at sign-up and face-scan consent, admin read-only register (**B-3**, Phase 3) |
-| M-23 Activity Log | Whole module: trigger-written activity log + admin view (**B-4**, Phase 3) |
+| M-02 / M-13 / M-06 | Admin contact-field correction (C-3); admin read of recommendations; admin item-level survey answers |
+| M-01 | Mobile MFA panel |
+| M-07 / M-08 / M-19 | Patient cancels own booking; admin cancels no-show (status changes only — no new deletion paths) |
+
+*Phase 3 (M-04 consent records, M-23 activity log) is complete — do not describe these two as "in progress" any more.*
 
 ---
 
@@ -93,14 +98,14 @@ does. Original point order follows the signed PDF's operation × role cells.
 | Retrieve (User) | ✅ Keep | — |
 | Delete (User) | ✏️ Rewrite | "Clear by re-running setup" |
 
-### M-04 · Consent Management *(not implemented)*
+### M-04 · Consent Management *(built in Phase 3 — B-3)*
 | Point | Action | Wording / reason |
 |---|---|---|
-| Create (User) | ⏳ Pending | Written at sign-up and at the face-scan consent dialog (B-3) |
-| Retrieve (Admin) | ⏳ Pending | Read-only consent register (B-3) |
-| Update (withdrawal) | ⏳ Pending | Withdrawal recorded as a new state, never an edit (B-3) |
+| Create (User) | ✅ Keep | Written at sign-up (required checkbox, filed by database trigger) and at the face-scan consent dialog (idempotent write) |
+| Retrieve (Admin) | ✅ Keep | Read-only consent register — no edit or delete controls |
+| Update (withdrawal) | ⏳ Deferred | `withdrawn_at` ships in the schema but no withdrawal flow is built; recorded as a new state, never an edit |
 | Delete (Admin) | ➖ Remove | Consent proof is never deleted (C-14) |
-| *Manuscript note* | ⏳ | Present this module as *under development* until B-3 ships |
+| *Manuscript note* | ✅ | Present as implemented; mention withdrawal as a future state |
 
 ### M-05 · Assessment Session
 | Point | Action | Wording / reason |
@@ -253,12 +258,13 @@ does. Original point order follows the signed PDF's operation × role cells.
 | Create/Retrieve (Admin/Doctor) | ✅ Keep | CSV exports on demand |
 | Update/Delete (Admin) | ➖ Remove | Nothing stored ⇒ no edit/delete (C-12) |
 
-### M-23 · Activity Log *(not implemented)*
+### M-23 · Activity Log *(built in Phase 3 — B-4)*
 | Point | Action | Wording / reason |
 |---|---|---|
-| Create | ⏳ Pending | Written automatically by database triggers (B-4) |
-| Retrieve (Admin) | ⏳ Pending | Read-only log view (B-4) |
-| *Manuscript note* | ⏳ | Present as *under development* until B-4 ships |
+| Create | ✅ Keep | Written automatically by database triggers (profiles, appointments, stress_sessions, consultation_notes) — the client cannot skip it |
+| Retrieve (Admin) | ✅ Keep | Read-only log view (newest 500) |
+| Update / Delete | ➖ Remove | No UPDATE/DELETE grant — an audit trail that can be edited is not a trail |
+| *Manuscript note* | ✅ | Present as implemented |
 
 ### M-24 · MindPlant Growth and Streak
 | Point | Action | Wording / reason |
@@ -276,6 +282,8 @@ does. Original point order follows the signed PDF's operation × role cells.
 > survey crash). Nine spec points were replaced with safer, clinically standard behaviour —
 > most importantly, clinical records and recommendations are immutable and are never
 > visible or deletable by non-clinicians — each with a written justification in the
-> deviation log. Four modules are being completed with additive, trigger-enforced builds
+> deviation log. Four modules were completed with additive, trigger-enforced builds
 > (consent records, activity log, doctor's view of health background, notification
-> dismissal); the remaining points are implemented as specified.
+> dismissal); the consent and activity-log modules are written by database triggers and
+> exposed through read-only administrator registers, and the remaining points are
+> implemented as specified. A final batch of optional, adviser-gated refinements remains.

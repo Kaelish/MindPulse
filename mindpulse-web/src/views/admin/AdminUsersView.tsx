@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminAccountRow, approveDoctor, denyDoctor, fetchAdminAccounts, setDoctorVerified } from '../../services/admin';
@@ -8,7 +8,7 @@ import './AdminUsersView.css';
 
 interface AdminUsersViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: AdminNavView) => void;
 }
 
 type UserRole = 'Students' | 'Doctors';

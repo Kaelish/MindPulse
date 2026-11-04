@@ -945,6 +945,26 @@ button {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Registration consent (M-04): one required tick before Create account. */
+.auth-form label.auth-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.auth-form label.auth-consent input {
+  width: auto;
+  min-height: 0;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
 .auth-password-field {
   position: relative;
   display: block;

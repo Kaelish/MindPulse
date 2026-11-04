@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
+import { recordFaceScanConsent } from '../../services/consent';
 
 interface Props {
   onBack?: () => void;
@@ -131,13 +132,32 @@ const CameraPreview = () => (
 /* ─── Main Screen ─── */
 export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, onSkip }) => {
   const [sheetStep, setSheetStep] = useState<0 | 1 | 2>(0); // 0 = hidden, 1 = checklist, 2 = privacy
+  // Consent is filed before the scan starts (M-04 / B-3). If the write fails
+  // the sheet stays open with the error shown: proceeding without proof would
+  // leave the register claiming an agreement that was never recorded.
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [consentError, setConsentError] = useState('');
 
   const handleStartPress = () => setSheetStep(1);
   const handleNext = () => setSheetStep(2);
-  const handleClose = () => setSheetStep(0);
-  const handleContinue = () => {
+  const handleClose = () => {
+    setConsentError('');
     setSheetStep(0);
-    onReady();
+  };
+  const handleContinue = async () => {
+    setConsentError('');
+    setConsentSaving(true);
+    try {
+      await recordFaceScanConsent();
+      setSheetStep(0);
+      onReady();
+    } catch (error) {
+      setConsentError(
+        error instanceof Error ? error.message : 'Your consent could not be recorded. Please try again.',
+      );
+    } finally {
+      setConsentSaving(false);
+    }
   };
 
   return (
@@ -330,16 +350,25 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
             </ScrollView>
 
             {/* Actions */}
+            {consentError !== '' && (
+              <Text style={sheet.consentError} role="alert">
+                {consentError}
+              </Text>
+            )}
             <View style={sheet.actions}>
-              <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose}>
+              <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose} disabled={consentSaving}>
                 <Text style={sheet.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[sheet.primaryBtn, { backgroundColor: toneBg('#00A8E8') }]}
+                style={[sheet.primaryBtn, { backgroundColor: toneBg('#00A8E8'), opacity: consentSaving ? 0.7 : 1 }]}
                 onPress={handleContinue}
+                disabled={consentSaving}
+                accessibilityLabel="I Understand and Continue"
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={tone('#FFF')} style={{ marginRight: 6 }} />
-                <Text style={sheet.primaryBtnText}>I Understand & Continue</Text>
+                <Text style={sheet.primaryBtnText}>
+                  {consentSaving ? 'Recording consent…' : 'I Understand & Continue'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -528,6 +557,7 @@ const makeSheet = () => StyleSheet.create({
   privacyCalloutText: { fontSize: 11.5, color: tone('#0284C7'), lineHeight: 17 },
 
   consentText: { color: tone('#64748B'), fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: 8 },
+  consentError: { color: tone('#B03440'), fontSize: 12, lineHeight: 16, fontWeight: '600', textAlign: 'center', paddingHorizontal: 12, marginBottom: 4 },
   consentBold: { color: tone('#0369A1'), fontWeight: '800' },
 
   actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },

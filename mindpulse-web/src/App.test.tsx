@@ -53,6 +53,13 @@ test('registers a doctor account with professional details for approval', async 
   fireEvent.change(screen.getByLabelText('Short bio'), { target: { value: 'Six years of practice.' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Str0ng!Pass2026' } });
   fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Str0ng!Pass2026' } });
+
+  // Consent gates the sign-up (M-04 / B-3): without the tick nothing is sent.
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+  expect(await screen.findByText('Please accept the Privacy Policy and Terms of Use to create your account.')).toBeInTheDocument();
+  expect(mockedSignUp).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('checkbox', { name: /privacy policy/i }));
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
   await waitFor(() => {
@@ -76,6 +83,7 @@ test('registers a doctor account with professional details for approval', async 
           specialization: 'Clinical Psychology',
           contact_number: '09171234567',
           bio: 'Six years of practice.',
+          consent_source: 'web_signup',
         },
       },
     });
@@ -126,6 +134,7 @@ test('register form supports Others specialization and password visibility toggl
   fireEvent.change(screen.getByLabelText('Other specialization'), {
     target: { value: 'Registered Guidance Counselor' },
   });
+  fireEvent.click(screen.getByRole('checkbox', { name: /privacy policy/i }));
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
   await waitFor(() => {

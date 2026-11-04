@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminAnalytics, bandForScore, fetchAdminAnalytics, fetchAdminResults } from '../../services/admin';
@@ -7,7 +7,7 @@ import './AdminAnalyticsView.css';
 
 interface AdminAnalyticsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: AdminNavView) => void;
 }
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);

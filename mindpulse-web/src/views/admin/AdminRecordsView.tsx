@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { AdminResultRow, assessmentNameOf, bandForScore, fetchAdminResults } from '../../services/admin';
@@ -18,19 +18,7 @@ type RecordsTab = 'assessments' | 'students' | 'at-risk' | 'consultations';
 
 interface AdminRecordsViewProps {
   onSignOut: () => void;
-  onNavigate: (
-    view:
-      | 'dashboard'
-      | 'users'
-      | 'assessment'
-      | 'results'
-      | 'records'
-      | 'suggestions'
-      | 'analytics'
-      | 'profile'
-      | 'settings'
-      | 'reports',
-  ) => void;
+  onNavigate: (view: AdminNavView) => void;
 }
 
 const TAB_META: Record<RecordsTab, { label: string; title: string; subtitle: string }> = {

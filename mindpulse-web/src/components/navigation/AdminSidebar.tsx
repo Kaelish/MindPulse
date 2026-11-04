@@ -12,14 +12,35 @@ import { BrandLogo } from '../BrandLogo';
 import './AdminSidebar.css';
 import '../../views/admin/admin-theme.css';
 
+/**
+ * Every destination the admin portal can navigate to — one union shared by
+ * the sidebar, the views' `onNavigate` props and AdminDashboardView's router,
+ * so a new module can never be reachable from one of them and missing from
+ * the others.
+ */
+export type AdminNavView =
+  | 'dashboard'
+  | 'users'
+  | 'assessment'
+  | 'results'
+  | 'records'
+  | 'suggestions'
+  | 'analytics'
+  | 'settings'
+  | 'profile'
+  | 'reports'
+  | 'notifications'
+  | 'consents'
+  | 'activity';
+
 interface AdminSidebarProps {
   onSignOut: () => void;
-  activeView?: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings' | 'notifications';
-  onNavigate?: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
+  activeView?: AdminNavView;
+  onNavigate?: (view: AdminNavView) => void;
 }
 
 interface NavEntry {
-  key: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'settings';
+  key: AdminNavView;
   icon: string;
   label: string;
 }
@@ -32,6 +53,8 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'records', icon: '▥', label: 'Records' },
   { key: 'suggestions', icon: '✦', label: 'Doctor Suggestions' },
   { key: 'analytics', icon: '◌', label: 'Analytics' },
+  { key: 'consents', icon: '⚖', label: 'Consent Register' },
+  { key: 'activity', icon: '≡', label: 'Activity Log' },
   { key: 'settings', icon: '⚙', label: 'Settings' },
 ];
 

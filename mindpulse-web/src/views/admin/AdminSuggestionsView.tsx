@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import {
@@ -11,22 +11,9 @@ import {
 } from '../../services/doctorSuggestions';
 import './AdminSuggestionsView.css';
 
-type AdminNavTarget =
-  | 'dashboard'
-  | 'users'
-  | 'assessment'
-  | 'results'
-  | 'records'
-  | 'analytics'
-  | 'profile'
-  | 'settings'
-  | 'reports'
-  | 'suggestions'
-  | 'notifications';
-
 interface AdminSuggestionsViewProps {
   onSignOut: () => void;
-  onNavigate?: (view: AdminNavTarget) => void;
+  onNavigate?: (view: AdminNavView) => void;
 }
 
 type FilterKey = 'All' | SuggestionStatus;

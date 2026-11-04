@@ -108,6 +108,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regConfirm, setRegConfirm] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
   const [showRegPw2, setShowRegPw2] = useState(false);
+  /* Consent for the registration record (M-04 / B-3): the ticked box is what
+     migration 0031's trigger turns into a consent_records row, via the
+     consent_source flag sent with signUp() below. */
+  const [regConsent, setRegConsent] = useState(false);
 
   /* Prefill the e-mail (and tick the box) from the last "Remember me" sign-in. */
   useEffect(() => {
@@ -164,6 +168,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
     if (regPassword !== regConfirm) {
       return 'The two passwords do not match.';
+    }
+    if (!regConsent) {
+      return 'Please accept the Privacy Policy and Terms of Use to create your account.';
     }
     return null;
   };
@@ -276,6 +283,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             phone: regPhone.trim(),
             birth_date: regDob,
             sex: regGender,
+            // Only sent once the consent box was ticked (handleRegister rejects
+            // otherwise); the database turns it into a consent_records row.
+            consent_source: 'mobile_signup',
           },
         },
       });
@@ -627,6 +637,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 )}
 
                 <Pressable
+                  style={styles.consentRow}
+                  onPress={() => setRegConsent(v => !v)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: regConsent }}
+                  accessibilityLabel="I have read and agree to the Privacy Policy and Terms of Use"
+                >
+                  <View style={[styles.checkbox, { marginTop: 2 }, regConsent && styles.checkboxOn]}>
+                    {regConsent && <Ionicons name="checkmark" size={12} color={tone('#FFF')} />}
+                  </View>
+                  <Text style={styles.consentText}>
+                    I have read and agree to the Privacy Policy and Terms of Use.
+                  </Text>
+                </Pressable>
+
+                <Pressable
                   style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
                   onPress={handleRegister}
                   disabled={loading}
@@ -850,6 +875,10 @@ const makeStyles = () => StyleSheet.create({
   },
   rememberText: { fontSize: 12, color: tone('#6B8CAA'), fontWeight: '500' },
   forgotText: { fontSize: 12, color: ACCENT, fontWeight: '700' },
+
+  /* Registration consent row (M-04 / B-3) */
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 16, marginBottom: 2 },
+  consentText: { flex: 1, fontSize: 12, lineHeight: 17, color: tone('#6B8CAA') },
 
   /* Primary button */
   primaryBtn: {

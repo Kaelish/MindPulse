@@ -89,7 +89,7 @@ Unit testing involves testing the smallest components of each layer in isolation
 | Layer | Test file | Unit(s) under test | Tests |
 | --- | --- | --- | --- |
 | Backend | `core/tests.py` | Video-call API, health endpoint, emotion endpoint and error handling | 15 |
-| Web | `src/App.test.tsx` | Doctor registration, pending approval, portal title | 5 |
+| Web | `src/App.test.tsx` | Doctor registration, consent gate, pending approval, portal title | 5 |
 | Web | `src/views/admin/AdminDashboardView.test.tsx` | Admin dashboard metrics, notification bell | 4 |
 | Web | `src/views/admin/AdminProfileSettingsView.test.tsx` | Admin profile form | 4 |
 | Web | `src/views/doctor/DoctorDashboardView.test.tsx` | Doctor dashboard metrics and empty states | 2 |
@@ -105,12 +105,15 @@ Unit testing involves testing the smallest components of each layer in isolation
 | Web | `src/services/adminSettings.test.ts` | Admin settings and password policy | 7 |
 | Web | `src/services/doctorProfile.test.ts` | Doctor profile save and fallback behavior | 5 |
 | Web | `src/services/internationalPhone.test.ts` | Phone parsing and validation | 4 |
+| Web | `src/views/admin/AdminConsentRegisterView.test.tsx` | Consent register rendering, filters, empty/error states (B-3) | 4 |
+| Web | `src/views/admin/AdminActivityLogView.test.tsx` | Activity log rendering, filters, empty/error states (B-4) | 4 |
 | Mobile | `src/services/streakLogic.test.ts` | MindPlant streak, freeze, stage, and points rules | 24 |
 | Mobile | `src/services/assessmentTools.test.ts` | Assessment scoring and reverse items | 6 |
 | Mobile | `src/services/pauseTimer.test.ts` | Pause start/stop/resume and wall-clock remaining time | 6 |
 | Mobile | `src/services/stressFormula.test.ts` | Canonical stress formula transforms and weights | 9 |
 | Mobile | `src/services/notificationPrefs.test.ts` | Notification category mapping and persistence | 11 |
 | Mobile | `src/services/notifications.test.ts` | Notification dismiss pinned to the signed-in account (B-2) | 3 |
+| Mobile | `src/services/consent.test.ts` | Face-scan consent write: idempotent, account-pinned, failures surfaced (B-3) | 5 |
 | Mobile | `src/services/rememberMe.test.ts` | Remembered-login storage | 4 |
 | Mobile | `src/screens/assessment/StressAssessmentHubScreen.test.tsx` | Assessment hub entry points (A-4) | 1 |
 | Mobile | `src/screens/survey/StressSurveyScreen.test.tsx` | PSS-10 survey regression walk-through (A-11) | 1 |
@@ -120,11 +123,11 @@ Unit testing involves testing the smallest components of each layer in isolation
 | Layer | Command | Result |
 | --- | --- | --- |
 | Backend | `cd mindpulse-backend` then `python manage.py test core` | **15 passed, 0 failed** |
-| Web | `cd mindpulse-web` then `npm test -- --watchAll=false` | **111 passed, 0 failed** (16 suites) |
-| Mobile | `cd mindpulse-mobile` then `npm test -- --runInBand` | **65 passed, 0 failed** (9 suites) |
+| Web | `cd mindpulse-web` then `npm test -- --watchAll=false` | **119 passed, 0 failed** (18 suites) |
+| Mobile | `cd mindpulse-mobile` then `npm test -- --runInBand` | **70 passed, 0 failed** (10 suites) |
 | Supplementary | `cd mindpulse-mobile` then `node scripts/verify-streak.js` | **40 checks passed, 0 failed** |
 
-**Total automated unit tests: 231 passed, 0 failed.**
+**Total automated unit tests: 244 passed, 0 failed.**
 
 On a Windows checkout that keeps the virtual environment at the repository root, the backend command is:
 
@@ -154,6 +157,8 @@ cd mindpulse-backend
 | UT-WEB-06 | Web | Phone validation | Enter PH, US, and AU numbers | Valid numbers pass; invalid prefixes fail | Pass |
 | UT-WEB-07 | Web | Sign-in verification | Enable, use, and reset a method | Challenge is enforced and reset succeeds | Pass |
 | UT-WEB-08 | Web | Notification dismiss (B-2) | Dismiss a card, then fail a dismiss | Row is removed and the caller is told; on failure the row stays and the error shows | Pass |
+| UT-WEB-09 | Web | Consent register + sign-up consent gate (B-3) | Render the register; then submit the sign-up form with the consent box unticked | Proofs list account/type/version/source with no edit or delete control; an unticked box shows the validation message and `signUp` is never called | Pass |
+| UT-WEB-10 | Web | Activity log (B-4) | Render log rows incl. a database-authored row; filter by record and action; fail a read | Actions/records resolve to labels, `System` marks trigger-written rows, filters narrow the table, and a failed read offers Retry | Pass |
 | UT-MOB-01 | Mobile | `scoreToolAnswers` | Answer every standard item at 4 | Score is `100` | Pass |
 | UT-MOB-02 | Mobile | `scoreToolAnswers` | Answer a reverse-scored item at 0 | It contributes the maximum value | Pass |
 | UT-MOB-03 | Mobile | `applyGap` | Miss one day with one freeze available | Streak is kept and one freeze is spent | Pass |
@@ -165,6 +170,7 @@ cd mindpulse-backend
 | UT-MOB-09 | Mobile | `notificationCategory` | Pass appointment, clinician, wellness, and alert rows | Each maps to the correct toggle | Pass |
 | UT-MOB-10 | Mobile | `rememberMe` | Save, reload, and clear the login | E-mail is stored only while opted in | Pass |
 | UT-MOB-11 | Mobile | `dismissNotification` (B-2) | Dismiss with a session, without one, and with a DB error | Delete is pinned to `user_id`; no session means no delete; errors propagate | Pass |
+| UT-MOB-12 | Mobile | `recordFaceScanConsent` (B-3) | File consent fresh, with one already on file, on read/write failure, and signed out | Inserts one proof per (account, type, version) pinned to `user_id`; duplicates are skipped; failures propagate so the sheet stays open; no session means no write | Pass |
 
 ### How the Tests Are Isolated
 

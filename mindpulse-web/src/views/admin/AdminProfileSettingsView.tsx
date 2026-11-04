@@ -1,7 +1,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { AdminSidebar } from '../../components/navigation/AdminSidebar';
+import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { ProfileSecurityPanel } from '../../components/ProfileSecurityPanel';
 import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { OwnProfile, OwnProfilePatch, fetchOwnProfile, updateOwnProfile } from '../../services/profile';
@@ -63,7 +63,7 @@ const formatDate = (value: string) => {
 
 interface AdminProfileSettingsViewProps {
   onSignOut: () => void;
-  onNavigate: (view: 'dashboard' | 'users' | 'assessment' | 'results' | 'records' | 'suggestions' | 'analytics' | 'profile' | 'settings') => void;
+  onNavigate: (view: AdminNavView) => void;
 }
 
 export const AdminProfileSettingsView: React.FC<AdminProfileSettingsViewProps> = ({ onSignOut, onNavigate }) => {
