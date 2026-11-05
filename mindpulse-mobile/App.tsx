@@ -43,6 +43,7 @@ import { isRememberMeEnabled } from './src/services/rememberMe';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
 import { loadThemeMode, registerThemeStyles, tone, toneBg, useThemeMode } from './src/theme/theme';
+import { loadLanguage } from './src/i18n/language';
 
 type ScreenMode =
   | 'splash'
@@ -159,10 +160,14 @@ function App() {
   const [autoJoinCall, setAutoJoinCall] = useState(false);
 
   /* Theme: the saved mode is restored while the splash screen is up, and every
-     later switch re-renders this tree against the rebuilt style sheets. */
+     later switch re-renders this tree against the rebuilt style sheets.
+     Language: restored on the same pass, so the assessment screens open in the
+     language the patient last picked instead of silently falling back to
+     English on every launch. */
   const themeMode = useThemeMode();
   useEffect(() => {
     void loadThemeMode();
+    void loadLanguage();
   }, []);
 
   /* Splash → Onboarding after 3 s. With "Remember me" opted in and a still

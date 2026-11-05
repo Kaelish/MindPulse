@@ -25,7 +25,7 @@ type LifestyleQuestion = LifestyleDisplayItem;
 const PSS_REVERSE_IDS = new Set([4, 5, 7, 8]);
 
 export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?: AssessmentTool }) => {
-  const { t } = useTranslation();
+  const { lang, t } = useTranslation();
   const [phase, setPhase] = useState<'part1' | 'interstitial' | 'part2'>('part1');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -33,21 +33,29 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
   const isPart1 = phase === 'part1';
   const isPart2 = phase === 'part2';
 
-  /** Localized PSS-10 questions (part 1) — English is always shown primary. */
-  const pssQuestions: PssQuestion[] = part1Display(en);
-  /** Tagalog (Filipino) counterparts, shown beneath each English question. */
-  const pssQuestionsFil: PssQuestion[] = part1Display(fil);
-  /** Localized lifestyle questions (part 2) — English is always shown primary. */
-  const lifestyleQuestions: LifestyleQuestion[] = part2Display(en);
-  /** Tagalog (Filipino) counterparts, shown beneath each English question. */
-  const lifestyleQuestionsFil: LifestyleQuestion[] = part2Display(fil);
-  /** Localized 5-point Likert scale for part 1 — English is always shown primary. */
-  const likertOptions: SurveyOption[] = likertDisplay(en);
-  /** Tagalog (Filipino) counterparts, shown beneath each English option. */
-  const likertOptionsFil: SurveyOption[] = likertDisplay(fil);
+  /** English arrays — scoring and the doctor-facing snapshot read only these,
+   *  so the language on screen can never change a score or what a doctor sees. */
+  const pssQuestionsEn: PssQuestion[] = part1Display(en);
+  const lifestyleQuestionsEn: LifestyleQuestion[] = part2Display(en);
+  const likertOptionsEn: SurveyOption[] = likertDisplay(en);
+
+  /** Primary line — the language the patient picked (English by default). */
+  const pssQuestions: PssQuestion[] = part1Display(t);
+  const lifestyleQuestions: LifestyleQuestion[] = part2Display(t);
+  const likertOptions: SurveyOption[] = likertDisplay(t);
+
+  /**
+   * Second line beneath — Filipino under English (the bilingual look the
+   * survey has always shipped with), English under Filipino or Cebuano, so
+   * whichever language is picked, the other one stays visible underneath.
+   */
+  const secondaryDict = lang === 'en' ? fil : en;
+  const pssQuestionsSecondary: PssQuestion[] = part1Display(secondaryDict);
+  const lifestyleQuestionsSecondary: LifestyleQuestion[] = part2Display(secondaryDict);
+  const likertOptionsSecondary: SurveyOption[] = likertDisplay(secondaryDict);
 
   const currentQuestions = isPart1 ? pssQuestions : lifestyleQuestions;
-  const currentQuestionsFil = isPart1 ? pssQuestionsFil : lifestyleQuestionsFil;
+  const currentQuestionsSecondary = isPart1 ? pssQuestionsSecondary : lifestyleQuestionsSecondary;
   /**
    * Clamp the index onto the list before touching it. A stale index — language
    * switched mid-run, a locale that dropped a question, or an older bundle that
@@ -58,8 +66,9 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
    */
   const questionIndex = Math.max(0, Math.min(currentIndex, currentQuestions.length - 1));
   const currentQuestion = currentQuestions[questionIndex];
-  /** Tagalog (Filipino) counterpart of the current question, shown beneath the English text. */
-  const currentQuestionFil = currentQuestionsFil[questionIndex];
+  /** Secondary-language counterpart of the current question; absent entries are
+   *  simply not rendered (never indexed into unguarded). */
+  const currentQuestionSecondary = currentQuestionsSecondary[questionIndex];
   const selectedValue = answers[currentQuestion?.id];
   const canProceed = selectedValue !== undefined;
 
@@ -67,6 +76,12 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
   const currentOptions = isPart1
     ? likertOptions
     : ((currentQuestion as LifestyleQuestion)?.options ?? []).map((label, value) => ({ value, label }));
+  /** Secondary labels come from the secondary dictionary's own options — Part 2
+   *  used to borrow the PSS Likert labels here, showing the wrong translation
+   *  under every lifestyle answer. */
+  const currentOptionsSecondary = isPart1
+    ? likertOptionsSecondary
+    : ((currentQuestionSecondary as LifestyleQuestion)?.options ?? []).map((label, value) => ({ value, label }));
 
   const handleNext = async () => {
     if (questionIndex < currentQuestions.length - 1) {
@@ -85,12 +100,13 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         // Score 0-100 (higher = more stress): PSS-10 with reverse-keyed items
         // (4,5,7,8) on a 0-40 scale + Part 2 on a 0-24 scale → max 64.
-        const pssSum = pssQuestions.reduce((sum, q) => {
+        // Computed from the English arrays regardless of what is on screen.
+        const pssSum = pssQuestionsEn.reduce((sum, q) => {
           const raw = answers[q.id] ?? 0;
           return sum + (PSS_REVERSE_IDS.has(q.id) ? 4 - raw : raw);
         }, 0);
-        const part2Sum = lifestyleQuestions.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
-        const maxPossible = pssQuestions.length * 4 + lifestyleQuestions.length * 3;
+        const part2Sum = lifestyleQuestionsEn.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
+        const maxPossible = pssQuestionsEn.length * 4 + lifestyleQuestionsEn.length * 3;
         const scaledScore = Math.round(((pssSum + part2Sum) / maxPossible) * 100);
 
         state.surveyScore = scaledScore;
@@ -100,9 +116,9 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         // All 18 items travel: the 10 PSS-10 items + the 8 physiological
         // indicators the doctor reviewed — nothing answered is dropped.
         const snapshotItems = [
-          ...pssQuestions.map((question) => {
+          ...pssQuestionsEn.map((question) => {
             const value = answers[question.id] ?? 0;
-            const option = likertOptions.find((candidate) => candidate.value === value);
+            const option = likertOptionsEn.find((candidate) => candidate.value === value);
             return {
               id: question.id,
               text: question.text,
@@ -111,7 +127,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
               label: option?.label ?? String(value),
             };
           }),
-          ...lifestyleQuestions.map((question) => {
+          ...lifestyleQuestionsEn.map((question) => {
             const value = answers[question.id] ?? 0;
             // Direct index lookup — the previous findIndex dance evaluated
             // `undefined !== -1` and then indexed into `options` anyway, which
@@ -197,7 +213,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
 
         <View style={[styles.headerPill, { backgroundColor: themeBg }]}>
           <Text style={[styles.headerPillText, { color: themeColor }]}>
-            Part {isPart1 ? 1 : 2} • {questionIndex + 1}/{currentQuestions.length}
+            {t.survey.partLabel} {isPart1 ? 1 : 2} • {questionIndex + 1}/{currentQuestions.length}
           </Text>
         </View>
 
@@ -217,14 +233,18 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
           <Text style={[styles.questionPillText, { color: themeColor }]}>{currentQuestion?.pill}</Text>
         </View>
 
-        {/* Question Text */}
+        {/* Question Text — primary language, with the other one beneath */}
         <Text style={styles.questionText}>{currentQuestion?.text}</Text>
-        {currentQuestionFil && <Text style={styles.questionTextFil}>{currentQuestionFil.text}</Text>}
+        {currentQuestionSecondary && (
+          <Text style={styles.questionTextSecondary}>{currentQuestionSecondary.text}</Text>
+        )}
         {isPart2 && (currentQuestion as LifestyleQuestion)?.sub && (
           <>
             <Text style={styles.questionSubText}>{(currentQuestion as LifestyleQuestion).sub}</Text>
-            {currentQuestionFil && (currentQuestionFil as LifestyleQuestion)?.sub && (
-              <Text style={styles.questionSubTextFil}>{(currentQuestionFil as LifestyleQuestion).sub}</Text>
+            {currentQuestionSecondary && (currentQuestionSecondary as LifestyleQuestion)?.sub && (
+              <Text style={styles.questionSubTextSecondary}>
+                {(currentQuestionSecondary as LifestyleQuestion).sub}
+              </Text>
             )}
           </>
         )}
@@ -233,7 +253,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         <View style={styles.optionsContainer}>
           {currentOptions.map((opt) => {
             const isSelected = selectedValue === opt.value;
-            const filOpt = likertOptionsFil.find((o) => o.value === opt.value);
+            const secondaryOpt = currentOptionsSecondary.find((o) => o.value === opt.value);
             return (
               <TouchableOpacity
                 key={opt.value}
@@ -255,7 +275,9 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
                   <Text style={[styles.optionLabel, isSelected && { color: selectedThemeIconColor }]}>
                     {opt.label}
                   </Text>
-                  {filOpt && <Text style={styles.optionLabelFil}>{filOpt.label}</Text>}
+                  {secondaryOpt && (
+                    <Text style={styles.optionLabelSecondary}>{secondaryOpt.label}</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -330,8 +352,8 @@ const makeStyles = () => StyleSheet.create({
     lineHeight: 28,
     marginBottom: 4,
   },
-  /** Tagalog (Filipino) rendering shown beneath the English question text. */
-  questionTextFil: {
+  /** Second-language rendering shown beneath the question text. */
+  questionTextSecondary: {
     color: Colors.textSecondary,
     fontSize: 13,
     marginBottom: 12,
@@ -341,8 +363,8 @@ const makeStyles = () => StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
-  /** Tagalog (Filipino) rendering shown beneath the English sub-text. */
-  questionSubTextFil: {
+  /** Second-language rendering shown beneath the sub-text. */
+  questionSubTextSecondary: {
     color: Colors.textSecondary,
     fontSize: 12,
     marginBottom: 24,
@@ -382,8 +404,8 @@ const makeStyles = () => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  /** Tagalog (Filipino) rendering shown beneath each English option label. */
-  optionLabelFil: {
+  /** Second-language rendering shown beneath each option label. */
+  optionLabelSecondary: {
     color: Colors.textSecondary,
     fontSize: 12,
     marginTop: 6,
