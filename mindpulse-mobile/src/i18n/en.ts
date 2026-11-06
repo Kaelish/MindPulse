@@ -147,6 +147,46 @@ export const en: Translations = {
     consentBold: '"I Understand & Continue"',
     consentAfter: ', you consent to the facial analysis process as described above.',
     understandContinue: 'I Understand & Continue',
+    /** Shown while the consent record is being written. */
+    consentSaving: 'Recording consent…',
+    /** Fallback when the consent write throws a non-Error. */
+    consentError: 'Your consent could not be recorded. Please try again.',
+    camera: {
+      subtitle: 'Position your face in the frame, then capture',
+      permissionTitle: 'Camera access needed',
+      permissionText: 'MindPulse uses the front camera to read your facial expression during the stress assessment.',
+      permissionBtn: 'Allow camera',
+      permissionHint: 'Enable camera access for MindPulse in your device settings, then try again.',
+      live: 'LIVE',
+      analyzing: 'ANALYZING',
+      readyTitle: 'Ready to scan',
+      readySub: 'Hold steady and tap capture',
+      analyzingTitle: 'Analyzing your expression…',
+      analyzingSub: 'Reading facial landmarks and predicting emotion',
+      shutter: 'Capture',
+      shutterBusy: 'Analyzing…',
+      errorRead: 'Could not read the captured image. Please try again.',
+      errorFailed: 'Face scan failed. Please try again.',
+    },
+    result: {
+      subtitle: 'Counts toward 20% of your stress score',
+      /** "Likely {expr} · {pct}%" — expression already localized by the caller. */
+      likelyFmt: 'Likely {expr} · {pct}%',
+      outputTitle: 'Scan Output',
+      captured: 'Captured',
+      detectedLabel: 'Detected expression:',
+      detectedHighlight: 'Estimated from your captured photo',
+      possibleLabel: 'Possible expression:',
+      confidenceLabel: 'Confidence level:',
+      aboutLabel: 'ABOUT THIS RESULT',
+      bullet1: 'Estimated from a single photo of your face',
+      bullet2: 'Contributes 20% to your final stress score',
+      bullet3: 'A wellness estimate, not a medical diagnosis',
+      confidenceTitle: 'Emotion Confidence',
+      rescan: 'Rescan',
+      /** Secondary action button label (goes to the analysis/results). */
+      next: 'Analysis',
+    },
   },
 
   heartRate: {
@@ -155,9 +195,50 @@ export const en: Translations = {
     row2: 'Press the button below to start a 15-second countdown timer.',
     row3: 'Count every beat you feel during those 15 seconds.',
     row4: 'Enter the number of beats — the system will calculate your BPM.',
+    /** "💡 Tip: " — emoji + label, trailing space included. */
+    tipLabel: '💡 Tip: ',
     tipHighlight: 'Find your pulse point first before pressing Start.',
     tipTail: ' Sit still and breathe normally.',
     cta: 'Start 15-Second Timer',
+    entry: {
+      title: 'Enter your beat count',
+      subtitle: 'How many beats did you count in 15 seconds?',
+      placeholder: 'e.g. 18',
+      refTitle: 'BPM Reference',
+      calc: 'Calculate My BPM',
+    },
+    status: {
+      normal: {
+        label: 'Normal',
+        interpretation: 'Your heart rate appears to be within the normal resting range.',
+      },
+      elevated: {
+        label: 'Slightly Elevated',
+        interpretation: 'Your heart rate may be mildly above the resting range.',
+      },
+      high: {
+        label: 'Possible Stress',
+        interpretation: 'Your heart rate may suggest elevated stress. Breathe slowly before continuing.',
+      },
+    },
+    timer: {
+      preparingTitle: 'Get ready to count your heartbeats!',
+      countingTitle: 'Count every heartbeat you feel.',
+      unit: 'seconds',
+      preparingPhase: 'Preparation time',
+      countingPhase: 'Counting... feel your pulse',
+      preparingTip: 'Place two fingers on your pulse point and sit still.',
+      countingTip: 'Keep counting. The timer will move to BPM entry when it reaches zero.',
+    },
+    result: {
+      summaryLead: 'Your heart rate input: ',
+      /** "{beats} beats in 15 seconds" */
+      beatsFmt: '{beats} beats in 15 seconds',
+      /** "{bpm} BPM (× 4)" */
+      bpmFmt: '{bpm} BPM (× 4)',
+      redo: 'Redo',
+      next: 'Next: Reaction Game',
+    },
   },
 
   reaction: {
@@ -176,6 +257,8 @@ export const en: Translations = {
     reactFast: 'React as fast as possible',
     reactionTimes: 'Reaction Times',
     averageLabel: 'Average',
+    /** Result-hero label above the big average number. */
+    averageTitle: 'Average Reaction Time',
     nextViewResults: 'Next: View Results',
     bands: {
       fast: { label: 'Fast', sub: 'Faster than average — sharp focus' },
@@ -202,7 +285,7 @@ export const en: Translations = {
     legendLow: 'Low (0-35)',
     legendModerate: 'Moderate (36-60)',
     legendHigh: 'High (61-100)',
-    faceExpressions: { happy: 'happy', neutral: 'neutral', sad: 'sad' },
+    faceExpressions: { happy: 'happy', neutral: 'neutral', sad: 'sad', stressed: 'stressed', anxious: 'anxious', calm: 'calm' },
     fusionTitle: 'Multi-Modal Fusion (Survey 50% · Heart Rate 20% · Face 20% · Reaction 10%)',
     fusionSurvey: 'Survey (PSS + Physio)',
     fusionFace: 'Facial Emotion',
@@ -221,7 +304,7 @@ export const en: Translations = {
       breathe: { label: 'Box breathing', meta: '4·4·4·4 guided · 5 min', cta: 'Start' },
       music: { label: 'Calming music', metaFmt: '{n} tracks · loops', cta: 'Listen' },
       exercise: { label: 'Guided exercises', metaAvailableFmt: '{n} available', metaGuidedFmt: '{n}s guided', metaStepwise: 'Step-by-step', cta: 'Begin' },
-      journal: { label: 'Journal', meta: 'On this device', cta: 'Write' },
+      journal: { label: 'Journal', meta: 'On this device', metaPromptsFmt: '{n} prompts', cta: 'Write' },
       pause: { label: 'No-screen pause', cta: 'Rest' },
     },
     clinics: {
@@ -232,6 +315,16 @@ export const en: Translations = {
       openToBook: 'Open Clinics to book',
     },
     hotlinesTitle: 'Emergency Mental Health Hotlines',
+    hotlineDescs: {
+      resultNational: '988 • 24/7 free & confidential',
+      resultInTouch: '0917-800-1123 • 24/7 support',
+      resultNcmh: '1553 • Free, Mon-Fri 8AM - 5PM',
+      resultCrisisText: 'Text HOME to 741741 • Text-based support',
+      finalNational: '988 · 24/7 free & confidential',
+      finalInTouch: '0917-558-4673 · 24/7 support',
+      finalNcmh: '1553 · Free, Mon–Fri 8AM–5PM',
+      finalCrisisText: 'Text HOME to 741741 · Text-based support',
+    },
     unsaved: "Not saved yet — tap Save Result to record today's assessment.",
     saveSaving: 'Saving...',
     saveSavedToday: 'Saved for today',
@@ -245,6 +338,36 @@ export const en: Translations = {
     leaveWithoutSaving: 'Leave without saving',
     errorTitle: 'Error',
     errorBody: 'Could not save your result. Try again.',
+  },
+
+  /**
+   * FinalStressScoreScreen (the standalone heart-rate + reaction flow).
+   * Band labels, advisory titles, fusion-bar labels and "Save Result" reuse
+   * their `results.*` equivalents — only this screen's own copy lives here.
+   */
+  finalScore: {
+    subtitle: 'Multi-modal stress assessment',
+    guideHigh: 'High Stress (61-100)',
+    guideModerate: 'Moderate Stress (36-60)',
+    guideLow: 'Low Stress (0-35)',
+    bandHighBody: 'Your signals suggest elevated stress. Consider a short recovery break.',
+    bandModerateBody: 'Your signals suggest some cognitive or physical load. Monitor closely.',
+    bandLowBody: 'Your signals suggest a calm and focused state. Keep it up!',
+    fusionTitleFmt: 'Multi-Modal Fusion (Heart Rate {hr}% · Reaction {rx}%)',
+    bulletsHigh: {
+      rest: 'Rest and avoid overloading tasks',
+      breathe: 'Practice deep breathing or meditation',
+      counselor: 'Reach out to a counselor',
+      telehealth: 'Consider a telehealth consultation',
+    },
+    bulletsLow: {
+      sleep: 'Keep up your sleep schedule',
+      hydrate: 'Stay hydrated and eat well',
+      activities: 'Continue positive activities you enjoy',
+    },
+    clinicTitle: 'Verified telehealth professionals',
+    clinicSub: 'Tap to open the Clinics tab and browse real clinicians to book a session.',
+    getHelp: 'Get Help  →',
   },
 
   toolSurvey: {

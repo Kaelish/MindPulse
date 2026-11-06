@@ -145,6 +145,7 @@ interface StepCardProps {
 const StepCard = ({
   title, subtitle, icon, iconColor, iconBg, status, onPress, weight, flag, flagLabel, lockedHint, dayComplete,
 }: StepCardProps) => {
+  const { t } = useTranslation();
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
   const isSkipped = status === 'skipped';
@@ -156,13 +157,13 @@ const StepCard = ({
       onPress={() => {
         if (dayComplete) {
           Alert.alert(
-            'Today’s assessment is complete',
-            'You already finished today’s check-in. The next one unlocks tomorrow.',
+            t.hub.alerts.dayCompleteTitle,
+            t.hub.alerts.dayCompleteBody,
           );
         } else if (isLocked) {
           Alert.alert(
-            'Not available yet',
-            lockedHint ?? 'Finish the previous step to unlock this one.',
+            t.hub.alerts.notAvailable,
+            lockedHint ?? t.hub.lockedHintDefault,
           );
         } else if (isCompleted) {
           // The checkmark has to mean something: a stray tap must not look
@@ -170,11 +171,11 @@ const StepCard = ({
           // the day is saved), but only after an explicit confirmation —
           // new answers replace the old ones.
           Alert.alert(
-            'You already completed this step',
-            'Retake it? Your new answers will replace the old ones.',
+            t.hub.alerts.completedTitle,
+            t.hub.alerts.retakePrompt,
             [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Retake', onPress },
+              { text: t.common.cancel, style: 'cancel' },
+              { text: t.hub.alerts.retake, onPress },
             ],
           );
         } else {
@@ -197,7 +198,7 @@ const StepCard = ({
             <Text
               style={[styles.flagText, flag === 'required' ? styles.flagTextRequired : styles.flagTextSkippable, isLocked && styles.flagTextLocked]}
             >
-              {flagLabel ?? (flag === 'required' ? 'Required' : 'Skippable')}
+              {flagLabel ?? (flag === 'required' ? t.hub.required : t.hub.skippable)}
             </Text>
           </View>
         )}
@@ -208,7 +209,7 @@ const StepCard = ({
         {status === 'unlocked' && <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />}
         {isSkipped && (
           <View style={styles.skippedPill}>
-            <Text style={styles.skippedPillText}>Skipped</Text>
+            <Text style={styles.skippedPillText}>{t.hub.skipped}</Text>
           </View>
         )}
       </View>

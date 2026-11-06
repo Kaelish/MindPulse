@@ -20,6 +20,7 @@ import { Colors } from '../theme/colors';
 import { Radius, Spacing, Typography } from '../theme/typography';
 import { BackButton } from './navigation/BackButton';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { useTranslation } from '../i18n/language';
 import {
   AssessmentStepStatus,
   isDayComplete,
@@ -104,9 +105,11 @@ export const StressAnalysisLayout: React.FC<Props> = ({
   children,
   heartRateDone,
   onBack,
-  subtitle = 'Complete all steps then view your fused result',
+  subtitle,
   scrollViewRef,
 }) => {
+  const { t } = useTranslation();
+  const subtitleText = subtitle ?? t.layout.subtitle;
   const [stepStatus, setStepStatus] = useState<Record<ModuleTab, AssessmentStepStatus>>({
     survey: 'locked',
     faceScan: 'locked',
@@ -146,36 +149,36 @@ export const StressAnalysisLayout: React.FC<Props> = ({
         {/* ── Page header ── */}
         <View style={layout.header}>
           <View style={layout.titlePill}>
-            <Text style={layout.title}>Stress Analysis</Text>
+            <Text style={layout.title}>{t.layout.title}</Text>
           </View>
-          <Text style={layout.subtitle}>{subtitle}</Text>
+          <Text style={layout.subtitle}>{subtitleText}</Text>
         </View>
 
         {/* ── Module step tabs — the single step list ── */}
         <View style={layout.moduleTabs}>
           <ModuleChip
-            label="Survey"
+            label={t.layout.chipSurvey}
             dotColor={Colors.tabSurveyDot}
             chipBg="#EEEEFF"
             active={activeModule === 'survey'}
             completed={isDone('survey')}
           />
           <ModuleChip
-            label="Face Scan"
+            label={t.layout.chipFaceScan}
             dotColor={Colors.tabFaceDot}
             chipBg={Colors.tabFaceBg}
             active={activeModule === 'faceScan'}
             completed={isDone('faceScan')}
           />
           <ModuleChip
-            label="Heart Rate"
+            label={t.layout.chipHeartRate}
             dotColor={Colors.tabHeartDot}
             chipBg={Colors.tabHeartBg}
             active={activeModule === 'heartRate'}
             completed={isDone('heartRate')}
           />
           <ModuleChip
-            label="Reaction"
+            label={t.layout.chipReaction}
             dotColor={Colors.tabReactionDot}
             active={activeModule === 'reaction'}
             completed={isDone('reaction')}

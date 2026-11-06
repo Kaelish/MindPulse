@@ -9,6 +9,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { registerThemeStyles } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onBack: () => void;
@@ -29,39 +30,26 @@ const InstructionRow: React.FC<InstructionRowProps> = ({ emoji, text }) => (
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export const HeartRateInstructionsScreen: React.FC<Props> = ({ onBack, onReady }) => {
+  const { t } = useTranslation();
   return (
     <StressAnalysisLayout activeModule="heartRate" onBack={onBack}>
 
       {/* ── Instruction card ── */}
       <View style={screen.card}>
-        <Text style={screen.cardTitle}>How to Measure Your Heart Rate</Text>
+        <Text style={screen.cardTitle}>{t.heartRate.title}</Text>
 
-        <InstructionRow
-          emoji="🤞"
-          text="Place 2 fingers on your neck (carotid) or wrist (radial) pulse point."
-        />
-        <InstructionRow
-          emoji="⏱"
-          text="Press the button below to start a 15-second countdown timer."
-        />
-        <InstructionRow
-          emoji="❤️"
-          text="Count every beat you feel during those 15 seconds."
-        />
-        <InstructionRow
-          emoji="📊"
-          text="Enter the number of beats — the system will calculate your BPM."
-        />
+        <InstructionRow emoji="🤞" text={t.heartRate.row1} />
+        <InstructionRow emoji="⏱" text={t.heartRate.row2} />
+        <InstructionRow emoji="❤️" text={t.heartRate.row3} />
+        <InstructionRow emoji="📊" text={t.heartRate.row4} />
       </View>
 
       {/* ── Tip box ── */}
       <View style={screen.tipBox}>
         <Text style={screen.tipText}>
-          <Text style={screen.tipLabel}>💡 Tip: </Text>
-          <Text style={screen.tipHighlight}>
-            Find your pulse point first before pressing Start.{' '}
-          </Text>
-          Sit still and breathe normally.
+          <Text style={screen.tipLabel}>{t.heartRate.tipLabel}</Text>
+          <Text style={screen.tipHighlight}>{t.heartRate.tipHighlight}</Text>
+          {t.heartRate.tipTail}
         </Text>
       </View>
 
@@ -73,7 +61,7 @@ export const HeartRateInstructionsScreen: React.FC<Props> = ({ onBack, onReady }
         accessibilityLabel="Start 15-Second Timer"
         style={screen.ctaBtn}>
         <Text style={screen.ctaHeart}>♥</Text>
-        <Text style={screen.ctaLabel}>Start 15-Second Timer</Text>
+        <Text style={screen.ctaLabel}>{t.heartRate.cta}</Text>
       </TouchableOpacity>
 
     </StressAnalysisLayout>

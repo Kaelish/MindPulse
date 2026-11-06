@@ -19,12 +19,11 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { registerThemeStyles } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 export type BPMStatus = 'normal' | 'elevated' | 'high';
 
 interface StatusConfig {
-  label: string;
-  interpretation: string;
   pillBg: string;
   pillText: string;
 }
@@ -35,23 +34,18 @@ const getStatus = (bpm: number): BPMStatus => {
   return 'high';
 };
 
+// Visual only — the label/interpretation copy comes from `t.heartRate.status`
+// so it follows the selected language.
 const makeStatusMap = (): Record<BPMStatus, StatusConfig> => ({
   normal: {
-    label: 'Normal',
-    interpretation: 'Your heart rate appears to be within the normal resting range.',
     pillBg: Colors.badgeNormalBg,
     pillText: Colors.badgeNormalText,
   },
   elevated: {
-    label: 'Slightly Elevated',
-    interpretation: 'Your heart rate may be mildly above the resting range.',
     pillBg: Colors.badgeElevatedBg,
     pillText: Colors.badgeElevatedText,
   },
   high: {
-    label: 'Possible Stress',
-    interpretation:
-      'Your heart rate may suggest elevated stress. Breathe slowly before continuing.',
     pillBg: Colors.badgeHighBg,
     pillText: Colors.badgeHighText,
   },
@@ -96,8 +90,10 @@ export const HeartRateResultScreen: React.FC<Props> = ({
   onRedo,
   onNext,
 }) => {
+  const { t } = useTranslation();
   const status = getStatus(bpm);
   const config = STATUS_MAP[status];
+  const copy = t.heartRate.status[status];
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -128,21 +124,25 @@ export const HeartRateResultScreen: React.FC<Props> = ({
         {/* Status pill */}
         <View style={[card.pill, { backgroundColor: config.pillBg }]}>
           <Text style={[card.pillText, { color: config.pillText }]}>
-            {config.label}
+            {copy.label}
           </Text>
         </View>
 
         {/* Interpretation line */}
-        <Text style={card.interpretation}>{config.interpretation}</Text>
+        <Text style={card.interpretation}>{copy.interpretation}</Text>
       </Animated.View>
 
       {/* ── Summary info card ── */}
       <View style={summary.card}>
         <Text style={summary.text}>
-          Your heart rate input:{' '}
-          <Text style={summary.bold}>{beats} beats in 15 seconds</Text>
+          {t.heartRate.result.summaryLead}
+          <Text style={summary.bold}>
+            {t.heartRate.result.beatsFmt.replace('{beats}', String(beats))}
+          </Text>
           {' → '}
-          <Text style={summary.bold}>{bpm} BPM (× 4)</Text>
+          <Text style={summary.bold}>
+            {t.heartRate.result.bpmFmt.replace('{bpm}', String(bpm))}
+          </Text>
         </Text>
       </View>
 
@@ -155,7 +155,7 @@ export const HeartRateResultScreen: React.FC<Props> = ({
           accessibilityLabel="Redo heart rate measurement"
           style={actions.redoBtn}>
           <Text style={actions.redoIcon}>↺</Text>
-          <Text style={actions.redoLabel}>Redo</Text>
+          <Text style={actions.redoLabel}>{t.heartRate.result.redo}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -164,7 +164,7 @@ export const HeartRateResultScreen: React.FC<Props> = ({
           accessibilityRole="button"
           accessibilityLabel="Next: Reaction Game"
           style={actions.nextBtn}>
-          <Text style={actions.nextLabel}>Next: Reaction Game</Text>
+          <Text style={actions.nextLabel}>{t.heartRate.result.next}</Text>
         </TouchableOpacity>
       </View>
 

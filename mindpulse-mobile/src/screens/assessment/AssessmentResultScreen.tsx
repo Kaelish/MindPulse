@@ -195,10 +195,10 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
     : undefined;
   const exerciseMeta =
     exerciseTips.length > 1
-      ? `${exerciseTips.length} available`
+      ? t.results.tools.exercise.metaAvailableFmt.replace('{n}', String(exerciseTips.length))
       : firstExercise
-        ? `${totalSeconds(firstExercise)}s guided`
-        : 'Step-by-step';
+        ? t.results.tools.exercise.metaGuidedFmt.replace('{n}', String(totalSeconds(firstExercise)))
+        : t.results.tools.exercise.metaStepwise;
 
   // Which prompt does this band's journal tip open? Every band ships exactly
   // one today; the `> 1` branch keeps the button honest if that ever changes.
@@ -208,7 +208,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   // Always the tip for the prompt actually on screen, not merely the band's first.
   const activeJournalTip = journalTips.find((t) => t.journalId === journalId);
   const journalMeta =
-    journalTips.length > 1 ? `${journalTips.length} prompts` : firstJournal?.meta ?? 'On this device';
+    journalTips.length > 1
+      ? t.results.tools.journal.metaPromptsFmt.replace('{n}', String(journalTips.length))
+      : firstJournal?.meta ?? t.results.tools.journal.meta;
 
   /** Default id each launcher button hands to `runAction`. */
   const defaultIdFor = (action: ToolAction): string | undefined =>
@@ -334,7 +336,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const toolUi = (() => {
     const base = TOOL_UI;
     return {
-      breathe: { ...base.breathe, label: t.results.tools.breathe.label, meta: '4·4·4·4 guided · 5 min', cta: t.results.tools.breathe.cta },
+      breathe: { ...base.breathe, label: t.results.tools.breathe.label, meta: t.results.tools.breathe.meta, cta: t.results.tools.breathe.cta },
       music: { ...base.music, label: t.results.tools.music.label, meta: t.results.tools.music.metaFmt.replace('{n}', String(CALM_TRACKS.length)), cta: t.results.tools.music.cta },
       exercise: { ...base.exercise, label: t.results.tools.exercise.label, meta: '', cta: t.results.tools.exercise.cta },
       journal: { ...base.journal, label: t.results.tools.journal.label, meta: '', cta: t.results.tools.journal.cta },
@@ -490,7 +492,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         {faceVal != null && face && (
           <View style={styles.fusionRow}>
             <View style={styles.fusionLabelRow}>
-              <Text style={styles.fusionLabel}>{t.results.fusionFace} ({face.expression})</Text>
+              <Text style={styles.fusionLabel}>
+                {t.results.fusionFace} ({(t.results.faceExpressions as Record<string, string>)[face.expression] ?? face.expression})
+              </Text>
               <View style={[styles.fusionBadge, { backgroundColor: toneBg('#FFF3E0') }]}><Text style={[styles.fusionBadgeText, { color: tone('#E08A00') }]}>20%</Text></View>
             </View>
             <View style={styles.fusionTrack}>
@@ -554,7 +558,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                     <View style={styles.advisorySpacer} />
                     <View style={styles.advisoryGo}>
                       <Text style={[styles.advisoryGoText, { color: tone('#2E7D32') }]}>
-                        {tip.action === 'clinics' ? 'Open' : 'Go'}
+                        {tip.action === 'clinics' ? t.common.open : t.common.go}
                       </Text>
                       <Ionicons name="arrow-forward" size={12} color={tone('#2E7D32')} />
                     </View>
@@ -590,7 +594,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
                     <View style={styles.advisorySpacer} />
                     <View style={styles.advisoryGo}>
                       <Text style={[styles.advisoryGoText, { color: tone('#D32F2F') }]}>
-                        {tip.action === 'clinics' ? 'Open' : 'Go'}
+                        {tip.action === 'clinics' ? t.common.open : t.common.go}
                       </Text>
                       <Ionicons name="arrow-forward" size={12} color={tone('#D32F2F')} />
                     </View>
@@ -730,7 +734,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>National Crisis Hotline</Text>
-                <Text style={styles.hotlineDesc}>988 • 24/7 free & confidential</Text>
+                <Text style={styles.hotlineDesc}>{t.results.hotlineDescs.resultNational}</Text>
               </View>
             </TouchableOpacity>
 
@@ -744,7 +748,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>In Touch Crisis Line (PH)</Text>
-                <Text style={styles.hotlineDesc}>0917-800-1123 • 24/7 support</Text>
+                <Text style={styles.hotlineDesc}>{t.results.hotlineDescs.resultInTouch}</Text>
               </View>
             </TouchableOpacity>
 
@@ -758,7 +762,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>NCMH Crisis Hotline</Text>
-                <Text style={styles.hotlineDesc}>1553 • Free, Mon-Fri 8AM - 5PM</Text>
+                <Text style={styles.hotlineDesc}>{t.results.hotlineDescs.resultNcmh}</Text>
               </View>
             </TouchableOpacity>
 
@@ -772,7 +776,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
               </View>
               <View style={styles.hotlineTextWrap}>
                 <Text style={styles.hotlineName}>Crisis Text Line</Text>
-                <Text style={styles.hotlineDesc}>Text HOME to 741741 • Text-based support</Text>
+                <Text style={styles.hotlineDesc}>{t.results.hotlineDescs.resultCrisisText}</Text>
               </View>
             </TouchableOpacity>
           </View>

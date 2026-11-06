@@ -19,6 +19,7 @@ import {
 } from '../../services/stressFormula';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   heartRate: number;
@@ -28,35 +29,42 @@ interface Props {
   onNavigateTab?: (tab: 'home' | 'analysis' | 'clinics' | 'profile') => void;
 }
 
-// Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35)
+type BandKey = 'high' | 'moderate' | 'low';
+
+// Bands match dashboard levelForScore (High > 60, Moderate > 35, Low ≤ 35).
+// Palette only — the label/body copy lives in the dictionaries so it follows
+// the selected language.
 const getLevel = (score: number) => {
   if (score > 60) return {
-    label: 'High Stress', color: tone('#E05C5C'), bg: toneBg('#FFD6D6'),
+    band: 'high' as const,
+    color: tone('#E05C5C'), bg: toneBg('#FFD6D6'),
     ringColor: tone('#E05C5C'), lightBg: toneBg('#FFF0F0'),
-    message: 'Your signals suggest elevated stress. Consider a short recovery break.',
     isHigh: true,
   };
   if (score > 35) return {
-    label: 'Moderate Stress', color: tone('#E08A00'), bg: toneBg('#FFF3CD'),
+    band: 'moderate' as const,
+    color: tone('#E08A00'), bg: toneBg('#FFF3CD'),
     ringColor: tone('#F5C842'), lightBg: toneBg('#FFFBE6'),
-    message: 'Your signals suggest some cognitive or physical load. Monitor closely.',
     isHigh: false,
   };
   return {
-    label: 'Low Stress', color: tone('#27AE60'), bg: toneBg('#D6F5E3'),
+    band: 'low' as const,
+    color: tone('#27AE60'), bg: toneBg('#D6F5E3'),
     ringColor: tone('#27AE60'), lightBg: toneBg('#EBF9F2'),
-    message: 'Your signals suggest a calm and focused state. Keep it up!',
     isHigh: false,
   };
 };
 
 // ── Score ring (circular border) ──
-const ScoreRing = ({ score, color }: { score: number; color: string }) => (
-  <View style={[styles.scoreRing, { borderColor: color }]}>
-    <Text style={styles.scoreNum}>{score}</Text>
-    <Text style={styles.scoreOutOf}>out of 100</Text>
-  </View>
-);
+const ScoreRing = ({ score, color }: { score: number; color: string }) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.scoreRing, { borderColor: color }]}>
+      <Text style={styles.scoreNum}>{score}</Text>
+      <Text style={styles.scoreOutOf}>{t.results.outOf100}</Text>
+    </View>
+  );
+};
 
 // ── Horizontal bar signal ──
 const FusionBar = ({ label, value, color }: { label: string; value: number; color: string }) => (
@@ -100,6 +108,7 @@ const RX_FUSION_PCT = 100 - HR_FUSION_PCT;
 export const FinalStressScoreScreen: React.FC<Props> = ({
   heartRate, reaction, onBack, onDone, onNavigateTab,
 }) => {
+  const { t } = useTranslation();
   // Canonical formula (services/stressFormula.ts, A-6): this standalone flow
   // collects only heart rate + reaction, so the hub's canonical weights
   // (HR 0.2, reaction 0.1) renormalize over those two indicators. The old
@@ -110,6 +119,16 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
   // Weighted stress score — higher = more stress, same convention as saved sessions
   const score = Math.round(heartRateStress * (0.2 / 0.3) + reactionStress * (0.1 / 0.3));
   const level = getLevel(score);
+  const levelLabel: Record<BandKey, string> = {
+    high: t.results.bandHigh,
+    moderate: t.results.bandModerate,
+    low: t.results.bandLow,
+  };
+  const levelMessage: Record<BandKey, string> = {
+    high: t.finalScore.bandHighBody,
+    moderate: t.finalScore.bandModerateBody,
+    low: t.finalScore.bandLowBody,
+  };
   const activeTab = 'analysis' as const;
 
   return (
@@ -119,25 +138,25 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         activeModule="reaction"
         heartRateDone
         onBack={onBack}
-        subtitle="Multi-modal stress assessment"
+        subtitle={t.finalScore.subtitle}
       >
         {/* ── Score card ── */}
         <View style={styles.scoreCard}>
-          <Text style={styles.sectionTitle}>Final Stress Score</Text>
+          <Text style={styles.sectionTitle}>{t.results.finalScore}</Text>
           <View style={styles.scoreRow}>
             <ScoreRing score={score} color={level.ringColor} />
             <View style={styles.scoreGuide}>
               <View style={[styles.levelPill, { backgroundColor: level.bg }]}>
-                <Text style={[styles.levelPillText, { color: level.color }]}>{level.label}</Text>
+                <Text style={[styles.levelPillText, { color: level.color }]}>{levelLabel[level.band]}</Text>
               </View>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color={tone('#E05C5C')} /> High Stress (61-100)
+                <Ionicons name="ellipse" size={8} color={tone('#E05C5C')} /> {t.finalScore.guideHigh}
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color={tone('#E08A00')} /> Moderate Stress (36-60)
+                <Ionicons name="ellipse" size={8} color={tone('#E08A00')} /> {t.finalScore.guideModerate}
               </Text>
               <Text style={styles.levelGuideRow}>
-                <Ionicons name="ellipse" size={8} color={tone('#27AE60')} /> Low Stress (0-35)
+                <Ionicons name="ellipse" size={8} color={tone('#27AE60')} /> {t.finalScore.guideLow}
               </Text>
             </View>
           </View>
@@ -145,9 +164,13 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
 
         {/* ── Multi-Modal Fusion bars ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Multi-Modal Fusion (Heart Rate {HR_FUSION_PCT}% · Reaction {RX_FUSION_PCT}%)</Text>
-          <FusionBar label="Heart Rate" value={heartRateStress} color={tone('#E05C5C')} />
-          <FusionBar label="Reaction Time" value={reactionStress} color={tone('#F5A623')} />
+          <Text style={styles.cardTitle}>
+            {t.finalScore.fusionTitleFmt
+              .replace('{hr}', String(HR_FUSION_PCT))
+              .replace('{rx}', String(RX_FUSION_PCT))}
+          </Text>
+          <FusionBar label={t.results.fusionHeartRate} value={heartRateStress} color={tone('#E05C5C')} />
+          <FusionBar label={t.results.fusionReaction} value={reactionStress} color={tone('#F5A623')} />
         </View>
 
         {/* ── Guidance card ── */}
@@ -159,22 +182,22 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
               color={level.color}
             />
             <Text style={[styles.guidanceTitle, { color: level.color }]}>
-              {level.isHigh ? 'Your stress indicators may be elevated' : 'You seem relaxed today.'}
+              {level.isHigh ? t.results.advisoryElevatedTitle : t.results.advisoryLowTitle}
             </Text>
           </View>
-          <Text style={styles.guidanceBody}>{level.message}</Text>
+          <Text style={styles.guidanceBody}>{levelMessage[level.band]}</Text>
           {level.isHigh ? (
             <>
-              <GuidanceBullet text="Rest and avoid overloading tasks" color={level.color} />
-              <GuidanceBullet text="Practice deep breathing or meditation" color={level.color} />
-              <GuidanceBullet text="Reach out to a counselor" color={level.color} />
-              <GuidanceBullet text="Consider a telehealth consultation" color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsHigh.rest} color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsHigh.breathe} color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsHigh.counselor} color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsHigh.telehealth} color={level.color} />
             </>
           ) : (
             <>
-              <GuidanceBullet text="Keep up your sleep schedule" color={level.color} />
-              <GuidanceBullet text="Stay hydrated and eat well" color={level.color} />
-              <GuidanceBullet text="Continue positive activities you enjoy" color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsLow.sleep} color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsLow.hydrate} color={level.color} />
+              <GuidanceBullet text={t.finalScore.bulletsLow.activities} color={level.color} />
             </>
           )}
         </View>
@@ -188,27 +211,28 @@ export const FinalStressScoreScreen: React.FC<Props> = ({
         >
           <View style={styles.clinicHeaderRow}>
             <Ionicons name="people" size={16} color={tone('#E05C5C')} />
-            <Text style={styles.clinicCardTitle}>Verified telehealth professionals</Text>
+            <Text style={styles.clinicCardTitle}>{t.finalScore.clinicTitle}</Text>
           </View>
-          <Text style={styles.clinicCardSub}>Tap to open the Clinics tab and browse real clinicians to book a session.</Text>
+          <Text style={styles.clinicCardSub}>{t.finalScore.clinicSub}</Text>
         </TouchableOpacity>
 
         {/* ── Emergency Hotlines ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Emergency Mental Health Hotlines</Text>
-          <HotlineRow name="National Crisis Hotline" number="988 · 24/7 free & confidential" color={toneBg('#E05C5C')} tel="tel:988" />
-          <HotlineRow name="In Touch Crisis Line (PH)" number="0917-558-4673 · 24/7 support" color={toneBg('#F5A623')} tel="tel:09175584673" />
-          <HotlineRow name="NCMH Crisis Hotline" number="1553 · Free, Mon–Fri 8AM–5PM" color={toneBg('#5B6EF5')} tel="tel:1553" />
-          <HotlineRow name="Crisis Text Line" number="Text HOME to 741741 · Text-based support" color={toneBg('#4A90D9')} tel="sms:741741" />
+          <Text style={styles.cardTitle}>{t.results.hotlinesTitle}</Text>
+          {/* Names are official organization names — only the descriptions localize. */}
+          <HotlineRow name="National Crisis Hotline" number={t.results.hotlineDescs.finalNational} color={toneBg('#E05C5C')} tel="tel:988" />
+          <HotlineRow name="In Touch Crisis Line (PH)" number={t.results.hotlineDescs.finalInTouch} color={toneBg('#F5A623')} tel="tel:09175584673" />
+          <HotlineRow name="NCMH Crisis Hotline" number={t.results.hotlineDescs.finalNcmh} color={toneBg('#5B6EF5')} tel="tel:1553" />
+          <HotlineRow name="Crisis Text Line" number={t.results.hotlineDescs.finalCrisisText} color={toneBg('#4A90D9')} tel="sms:741741" />
         </View>
 
         {/* ── Action buttons ── */}
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.saveBtn} onPress={() => onDone(score)}>
-            <Text style={styles.saveBtnText}>Save Result</Text>
+            <Text style={styles.saveBtnText}>{t.results.saveAction}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.helpBtn} onPress={() => onDone(score)}>
-            <Text style={styles.helpBtnText}>Get Help  →</Text>
+            <Text style={styles.helpBtnText}>{t.finalScore.getHelp}</Text>
           </TouchableOpacity>
         </View>
       </StressAnalysisLayout>

@@ -179,6 +179,45 @@ export interface Translations {
     consentBold: string;
     consentAfter: string;
     understandContinue: string;
+    /** Shown while the consent record is being written. */
+    consentSaving: string;
+    /** Fallback when the consent write throws a non-Error. */
+    consentError: string;
+    camera: {
+      subtitle: string;
+      permissionTitle: string;
+      permissionText: string;
+      permissionBtn: string;
+      permissionHint: string;
+      live: string;
+      analyzing: string;
+      readyTitle: string;
+      readySub: string;
+      analyzingTitle: string;
+      analyzingSub: string;
+      shutter: string;
+      shutterBusy: string;
+      errorRead: string;
+      errorFailed: string;
+    };
+    result: {
+      subtitle: string;
+      /** "Likely {expr} · {pct}%" — expression already localized by the caller. */
+      likelyFmt: string;
+      outputTitle: string;
+      captured: string;
+      detectedLabel: string;
+      detectedHighlight: string;
+      possibleLabel: string;
+      confidenceLabel: string;
+      aboutLabel: string;
+      bullet1: string;
+      bullet2: string;
+      bullet3: string;
+      confidenceTitle: string;
+      rescan: string;
+      next: string;
+    };
   };
 
   heartRate: {
@@ -187,9 +226,41 @@ export interface Translations {
     row2: string;
     row3: string;
     row4: string;
+    /** "💡 Tip: " — emoji + label, trailing space included. */
+    tipLabel: string;
     tipHighlight: string;
     tipTail: string;
     cta: string;
+    entry: {
+      title: string;
+      subtitle: string;
+      placeholder: string;
+      refTitle: string;
+      calc: string;
+    };
+    status: {
+      normal: { label: string; interpretation: string };
+      elevated: { label: string; interpretation: string };
+      high: { label: string; interpretation: string };
+    };
+    timer: {
+      preparingTitle: string;
+      countingTitle: string;
+      unit: string;
+      preparingPhase: string;
+      countingPhase: string;
+      preparingTip: string;
+      countingTip: string;
+    };
+    result: {
+      summaryLead: string;
+      /** "{beats} beats in 15 seconds" */
+      beatsFmt: string;
+      /** "{bpm} BPM (× 4)" */
+      bpmFmt: string;
+      redo: string;
+      next: string;
+    };
   };
 
   reaction: {
@@ -208,6 +279,8 @@ export interface Translations {
     reactFast: string;
     reactionTimes: string;
     averageLabel: string;
+    /** Result-hero label above the big average number. */
+    averageTitle: string;
     nextViewResults: string;
     bands: {
       fast: { label: string; sub: string };
@@ -234,7 +307,19 @@ export interface Translations {
     legendLow: string;
     legendModerate: string;
     legendHigh: string;
-    faceExpressions: { happy: string; neutral: string; sad: string };
+    /**
+     * Face expressions shown in results. The backend's FaceEmotion type only
+     * emits happy/neutral/sad today; stressed/anxious/calm exist because the
+     * camera screen's emoji map anticipates them — extended defensively.
+     */
+    faceExpressions: {
+      happy: string;
+      neutral: string;
+      sad: string;
+      stressed: string;
+      anxious: string;
+      calm: string;
+    };
     fusionTitle: string;
     fusionSurvey: string;
     fusionFace: string;
@@ -253,7 +338,7 @@ export interface Translations {
       breathe: { label: string; meta: string; cta: string };
       music: { label: string; metaFmt: string; cta: string };
       exercise: { label: string; metaAvailableFmt: string; metaGuidedFmt: string; metaStepwise: string; cta: string };
-      journal: { label: string; meta: string; cta: string };
+      journal: { label: string; meta: string; metaPromptsFmt: string; cta: string };
       pause: { label: string; cta: string };
     };
     clinics: {
@@ -264,6 +349,23 @@ export interface Translations {
       openToBook: string;
     };
     hotlinesTitle: string;
+    /**
+     * Description lines under each hotline entry. The names themselves
+     * (National Crisis Hotline, NCMH, …) are official organization names and
+     * stay in English on every screen.
+     */
+    hotlineDescs: {
+      /** AssessmentResultScreen list — "•" separators. */
+      resultNational: string;
+      resultInTouch: string;
+      resultNcmh: string;
+      resultCrisisText: string;
+      /** FinalStressScoreScreen list — "·" separators, its own numbers. */
+      finalNational: string;
+      finalInTouch: string;
+      finalNcmh: string;
+      finalCrisisText: string;
+    };
     unsaved: string;
     saveSaving: string;
     saveSavedToday: string;
@@ -277,6 +379,41 @@ export interface Translations {
     leaveWithoutSaving: string;
     errorTitle: string;
     errorBody: string;
+  };
+
+  /**
+   * FinalStressScoreScreen (the standalone heart-rate + reaction flow).
+   * Band labels, advisory titles, fusion-bar labels and "Save Result" reuse
+   * their `results.*` equivalents — only this screen's own copy lives here.
+   */
+  finalScore: {
+    /** Subtitle handed to StressAnalysisLayout on this screen. */
+    subtitle: string;
+    /** Score-ring legend rows ("High Stress (61-100)"). */
+    guideHigh: string;
+    guideModerate: string;
+    guideLow: string;
+    /** Per-band guidance body under the guidance-card title. */
+    bandHighBody: string;
+    bandModerateBody: string;
+    bandLowBody: string;
+    /** "{hr}/{rx} are the displayed fusion percentages (67 / 33). */
+    fusionTitleFmt: string;
+    bulletsHigh: {
+      rest: string;
+      breathe: string;
+      counselor: string;
+      telehealth: string;
+    };
+    bulletsLow: {
+      sleep: string;
+      hydrate: string;
+      activities: string;
+    };
+    clinicTitle: string;
+    clinicSub: string;
+    /** Help button label — "Get Help" plus the arrow glyph, verbatim. */
+    getHelp: string;
   };
 
   toolSurvey: {

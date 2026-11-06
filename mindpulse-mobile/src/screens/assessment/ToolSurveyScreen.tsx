@@ -11,6 +11,7 @@ import {
 } from '../../services/assessmentTools';
 import { saveNewStressSession } from '../../services/dashboard';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface ToolSurveyScreenProps {
   tool: AssessmentTool;
@@ -24,6 +25,7 @@ interface ToolSurveyScreenProps {
  * stress_sessions so the admin's "Review Assessment Outcomes" page reflects it.
  */
 export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenProps) => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [saving, setSaving] = useState(false);
@@ -75,10 +77,15 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
         surveyAnswers,
       );
       await recordToolCompletion(tool.id);
-      Alert.alert('Assessment complete', `${tool.title}\nYour score: ${score}/100 (saved).`);
+      Alert.alert(
+        t.toolSurvey.completeAlertTitle,
+        t.toolSurvey.completeAlertBodyFmt
+          .replace('{title}', tool.title)
+          .replace('{score}', String(score)),
+      );
       onComplete();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Could not save your result. Try again.');
+      setSaveError(error instanceof Error ? error.message : t.toolSurvey.saveError);
     } finally {
       setSaving(false);
     }
@@ -88,9 +95,9 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>This assessment has no questions yet.</Text>
+          <Text style={styles.emptyText}>{t.toolSurvey.noQuestions}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={onBack}>
-            <Text style={styles.retryText}>Go Back</Text>
+            <Text style={styles.retryText}>{t.toolSurvey.goBack}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -105,7 +112,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
           <Ionicons name="chevron-back" size={24} color={tone('#6B79F2')} />
-          <Text style={styles.headerBtnText}>Back</Text>
+          <Text style={styles.headerBtnText}>{t.common.back}</Text>
         </TouchableOpacity>
 
         <View style={styles.headerPill}>
@@ -115,7 +122,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
         </View>
 
         <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
-          <Text style={styles.headerExitText}>Exit</Text>
+          <Text style={styles.headerExitText}>{t.common.exit}</Text>
         </TouchableOpacity>
       </View>
 
@@ -169,10 +176,10 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
         >
           <Text style={[styles.nextBtnText, canProceed && styles.nextBtnTextActive]}>
             {saving
-              ? 'Saving…'
+              ? t.common.saving
               : currentIndex === questions.length - 1
-                ? 'Complete Assessment'
-                : 'Next Question'}
+                ? t.toolSurvey.completeAssessment
+                : t.common.nextQuestion}
           </Text>
           {canProceed && !saving && <Ionicons name="chevron-forward" size={20} color={tone('#fff')} />}
         </TouchableOpacity>

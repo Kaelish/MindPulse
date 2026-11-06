@@ -6,6 +6,7 @@ import { Radius, Spacing } from '../../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   expression: string;
@@ -25,9 +26,13 @@ const EXPR_EMOJI: Record<string, string> = {
 };
 
 export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBack, onRetry, onFinish }) => {
+  const { t } = useTranslation();
   const confidencePercent = Math.round(Math.min(1, Math.max(0, score)) * 100);
   const emoji = EXPR_EMOJI[expression] ?? '😐';
-  const expressionLabel = expression.charAt(0).toUpperCase() + expression.slice(1);
+  // Localized expression name; unknown labels (backend-only values) fall back
+  // to the raw string so nothing ever renders blank.
+  const localized = (t.results.faceExpressions as Record<string, string>)[expression] ?? expression;
+  const expressionLabel = localized.charAt(0).toUpperCase() + localized.slice(1);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -40,14 +45,14 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
             accessibilityRole="button"
             accessibilityLabel="Back to face scan instructions">
             <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t.common.back}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Header */}
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Counts toward 20% of your stress score</Text>
+          <Text style={styles.pageTitle}>{t.faceScan.pageTitle}</Text>
+          <Text style={styles.pageSubtitle}>{t.faceScan.result.subtitle}</Text>
         </View>
 
         {/* Emotion Display Card */}
@@ -64,7 +69,11 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           <Text style={styles.emojiDisplay}>{emoji}</Text>
           
           <View style={styles.resultPill}>
-            <Text style={styles.resultPillText}>Likely {expressionLabel} · {confidencePercent}%</Text>
+            <Text style={styles.resultPillText}>
+              {t.faceScan.result.likelyFmt
+                .replace('{expr}', expressionLabel)
+                .replace('{pct}', String(confidencePercent))}
+            </Text>
           </View>
         </View>
 
@@ -73,45 +82,45 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <Ionicons name="information-circle-outline" size={20} color={tone('#2C3473')} />
-              <Text style={styles.cardTitle}>Scan Output</Text>
+              <Text style={styles.cardTitle}>{t.faceScan.result.outputTitle}</Text>
             </View>
             <View style={styles.analyzedBadge}>
               <Ionicons name="checkmark-circle-outline" size={14} color={tone('#E08A00')} />
-              <Text style={styles.analyzedText}>Captured</Text>
+              <Text style={styles.analyzedText}>{t.faceScan.result.captured}</Text>
             </View>
           </View>
 
           <View style={styles.blueBox}>
-            <Text style={styles.blueBoxTitle}>Detected expression:</Text>
-            <Text style={styles.blueBoxHighlight}>Estimated from your captured photo</Text>
+            <Text style={styles.blueBoxTitle}>{t.faceScan.result.detectedLabel}</Text>
+            <Text style={styles.blueBoxHighlight}>{t.faceScan.result.detectedHighlight}</Text>
             
             <View style={styles.blueBoxRow}>
-              <Text style={styles.blueBoxLabel}>Possible expression:</Text>
+              <Text style={styles.blueBoxLabel}>{t.faceScan.result.possibleLabel}</Text>
               <Text style={styles.blueBoxValueOrange}>{expressionLabel}</Text>
             </View>
             <View style={styles.blueBoxRow}>
-              <Text style={styles.blueBoxLabel}>Confidence level:</Text>
+              <Text style={styles.blueBoxLabel}>{t.faceScan.result.confidenceLabel}</Text>
               <Text style={styles.blueBoxValue}>{confidencePercent}%</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>ABOUT THIS RESULT</Text>
+          <Text style={styles.sectionLabel}>{t.faceScan.result.aboutLabel}</Text>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Estimated from a single photo of your face</Text>
+            <Text style={styles.bulletText}>{t.faceScan.result.bullet1}</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>Contributes 20% to your final stress score</Text>
+            <Text style={styles.bulletText}>{t.faceScan.result.bullet2}</Text>
           </View>
           <View style={styles.bulletItem}>
             <View style={styles.bulletDot} />
-            <Text style={styles.bulletText}>A wellness estimate, not a medical diagnosis</Text>
+            <Text style={styles.bulletText}>{t.faceScan.result.bullet3}</Text>
           </View>
 
           {/* Emotion Confidence */}
           <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Emotion Confidence</Text>
+            <Text style={styles.cardTitle}>{t.faceScan.result.confidenceTitle}</Text>
 
             <View style={styles.barRow}>
               <Text style={styles.barEmoji}>{emoji}</Text>
@@ -133,10 +142,10 @@ export const FaceScanResultScreen: React.FC<Props> = ({ expression, score, onBac
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.rescanBtn} onPress={onRetry}>
             <Ionicons name="refresh" size={18} color={tone('#6B79F2')} />
-            <Text style={styles.rescanText}>Rescan</Text>
+            <Text style={styles.rescanText}>{t.faceScan.result.rescan}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.nextBtn} onPress={onFinish}>
-            <Text style={styles.nextText}>Analysis</Text>
+            <Text style={styles.nextText}>{t.faceScan.result.next}</Text>
             <Ionicons name="arrow-forward" size={18} color={tone('#FFF')} />
           </TouchableOpacity>
         </View>

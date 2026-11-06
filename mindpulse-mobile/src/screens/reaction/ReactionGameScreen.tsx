@@ -5,6 +5,7 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 type Phase = 'idle' | 'waiting' | 'go' | 'results';
 
@@ -20,52 +21,46 @@ interface Props {
 /**
  * Reaction time bands. The result used to be hard-coded red, which read as a
  * warning even for a perfectly healthy score — colour now follows the number.
+ * The label/sub copy lives in `t.reaction.bands` so only the palette stays here.
  */
 type ReactionBand = {
   key: 'fast' | 'normal' | 'slow';
-  label: string;
   accent: string;
   bg: string;
   pillBg: string;
   pillText: string;
-  sub: string;
 };
 
 const bandFor = (ms: number): ReactionBand => {
   if (ms <= 250) {
     return {
       key: 'fast',
-      label: 'Fast',
       accent: '#2E7D32',
       bg: '#E8F5E9',
       pillBg: '#CDE9D4',
       pillText: '#1F7A45',
-      sub: 'Faster than average — sharp focus',
     };
   }
   if (ms <= 400) {
     return {
       key: 'normal',
-      label: 'Normal',
       accent: '#2C7A7B',
       bg: '#E6F7F5',
       pillBg: '#C6ECE5',
       pillText: '#1F6E6E',
-      sub: 'Normal reaction time',
     };
   }
   return {
     key: 'slow',
-    label: 'Slow',
     accent: '#D32F2F',
     bg: '#FDECE6',
     pillBg: '#F8D5C8',
     pillText: '#B32D2D',
-    sub: 'Slower than average — may suggest stress',
   };
 };
 
 export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>('idle');
   const [round, setRound] = useState(1);
   const [attempts, setAttempts] = useState<number[]>([]);
@@ -118,14 +113,14 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
         <>
           {round === 1 && phase === 'idle' && (
             <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>How it works</Text>
+              <Text style={styles.infoTitle}>{t.reaction.howItWorks}</Text>
               <Text style={styles.infoBody}>
-                The screen will turn <Text style={{ color: tone('#E8A359'), fontWeight: 'bold' }}>yellow</Text> (wait)... then change to <Text style={{ color: tone('#5DB75D'), fontWeight: 'bold' }}>green</Text>. Tap as fast as you can when it turns green!
+                {t.reaction.infoBefore1}<Text style={{ color: tone('#E8A359'), fontWeight: 'bold' }}>{t.reaction.yellowWord}</Text>{t.reaction.infoBetween}<Text style={{ color: tone('#5DB75D'), fontWeight: 'bold' }}>{t.reaction.greenWord}</Text>{t.reaction.infoAfter}
               </Text>
               <View style={styles.tipBox}>
                 <Ionicons name="warning" size={16} color={tone('#B8860B')} />
                 <Text style={styles.tipText}>
-                  Because sometimes stress slows reaction time — higher reaction times may suggest fatigue, cognitive stress, or reduced attention.
+                  {t.reaction.tip}
                 </Text>
               </View>
             </View>
@@ -144,35 +139,35 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
             {phase === 'idle' && (
               <>
                 <Ionicons name="flash" size={64} color={tone('#FFF')} />
-                <Text style={styles.gameTitle}>Round {round}/3</Text>
-                <Text style={styles.gameSubtitle}>Tap to begin</Text>
+                <Text style={styles.gameTitle}>{t.reaction.roundLabel} {round}/3</Text>
+                <Text style={styles.gameSubtitle}>{t.reaction.tapToBegin}</Text>
               </>
             )}
             {phase === 'waiting' && (
               <>
                 <Ionicons name="radio-button-on" size={64} color={tone('#FFF')} />
-                <Text style={styles.gameTitle}>Wait for green...</Text>
-                <Text style={styles.gameSubtitle}>(Tap if you see the green!)</Text>
+                <Text style={styles.gameTitle}>{t.reaction.waitTitle}</Text>
+                <Text style={styles.gameSubtitle}>{t.reaction.waitSub}</Text>
               </>
             )}
             {phase === 'go' && (
               <>
-                <Text style={styles.gameTitleLarge}>TAP NOW!</Text>
-                <Text style={styles.gameSubtitle}>React as fast as possible</Text>
+                <Text style={styles.gameTitleLarge}>{t.reaction.tapNow}</Text>
+                <Text style={styles.gameSubtitle}>{t.reaction.reactFast}</Text>
               </>
             )}
           </TouchableOpacity>
 
           {attempts.length > 0 && phase === 'idle' && (
             <View style={styles.attemptsCard}>
-              <Text style={styles.attemptsTitle}>Reaction Times</Text>
+              <Text style={styles.attemptsTitle}>{t.reaction.reactionTimes}</Text>
               <View style={styles.attemptsRow}>
-                {attempts.map((t, i) => {
-                  const b = bandFor(t);
+                {attempts.map((ms, i) => {
+                  const b = bandFor(ms);
                   return (
                     <View key={i} style={[styles.attemptPill, { backgroundColor: toneBg(b.bg) }]}>
                       <Text style={styles.attemptLabel}>R{i + 1}</Text>
-                      <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{t}ms</Text>
+                      <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{ms}ms</Text>
                     </View>
                   );
                 })}
@@ -183,25 +178,25 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
       ) : (
         <>
           <View style={[styles.resultHero, { backgroundColor: toneBg(band.bg) }]}>
-            <Text style={styles.resultLabel}>Average Reaction Time</Text>
+            <Text style={styles.resultLabel}>{t.reaction.averageTitle}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={[styles.resultValue, { color: tone(band.accent) }]}>{average}</Text>
               <Text style={[styles.resultUnit, { color: tone(band.accent) }]}>ms</Text>
             </View>
             <View style={[styles.resultPill, { backgroundColor: toneBg(band.pillBg) }]}>
-              <Text style={[styles.resultPillText, { color: tone(band.pillText) }]}>{band.label}</Text>
+              <Text style={[styles.resultPillText, { color: tone(band.pillText) }]}>{t.reaction.bands[band.key].label}</Text>
             </View>
           </View>
 
           <View style={styles.attemptsCardResult}>
-            <Text style={styles.attemptsTitle}>Reaction Times</Text>
+            <Text style={styles.attemptsTitle}>{t.reaction.reactionTimes}</Text>
             <View style={styles.attemptsRowResult}>
-              {attempts.map((t, i) => {
-                const b = bandFor(t);
+              {attempts.map((ms, i) => {
+                const b = bandFor(ms);
                 return (
                   <View key={i} style={[styles.attemptPill, { backgroundColor: toneBg(b.bg) }]}>
                     <Text style={styles.attemptLabel}>R{i + 1}</Text>
-                    <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{t}ms</Text>
+                    <Text style={[styles.attemptValue, { color: tone(b.accent) }]}>{ms}ms</Text>
                   </View>
                 );
               })}
@@ -210,8 +205,8 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
             <View style={[styles.summaryBox, { backgroundColor: toneBg(band.bg) }]}>
               <Ionicons name="flash" size={16} color={tone(band.accent)} />
               <View style={{ marginLeft: 8 }}>
-                <Text style={[styles.summaryTitle, { color: tone(band.accent) }]}>Average: {average}ms</Text>
-                <Text style={styles.summarySub}>{band.sub}</Text>
+                <Text style={[styles.summaryTitle, { color: tone(band.accent) }]}>{t.reaction.averageLabel}: {average}ms</Text>
+                <Text style={styles.summarySub}>{t.reaction.bands[band.key].sub}</Text>
               </View>
             </View>
           </View>
@@ -220,7 +215,7 @@ export const ReactionGameScreen: React.FC<Props> = ({ onBack, onComplete }) => {
             style={styles.nextBtn}
             onPress={() => onComplete?.({ average })}
           >
-            <Text style={styles.nextBtnText}>Next: View Results</Text>
+            <Text style={styles.nextBtnText}>{t.reaction.nextViewResults}</Text>
             <Ionicons name="chevron-forward" size={20} color={tone('#FFF')} />
           </TouchableOpacity>
         </>

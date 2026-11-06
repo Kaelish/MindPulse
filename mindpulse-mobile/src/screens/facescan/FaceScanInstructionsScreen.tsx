@@ -22,6 +22,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 import { recordFaceScanConsent } from '../../services/consent';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onBack?: () => void;
@@ -30,53 +31,48 @@ interface Props {
   onSkip?: () => void;
 }
 
-/* ─── Preparation Checklist Items (Step 1) ─── */
+/* ─── Preparation Checklist Items (Step 1) ───
+   Text lives in `t.faceScan.checklist` — only presentation stays here. */
 const CHECKLIST = [
   {
     iconName: 'sunny-outline' as const,
     iconColor: '#F59E0B',
-    title: 'Good, even lighting',
-    desc: 'Face a light source such as a window or lamp. Avoid strong backlighting or harsh shadows on your face.',
+    key: 'lighting' as const,
     bg: '#FFFBEB',
     border: '#FDE68A',
   },
   {
     iconName: 'body-outline' as const,
     iconColor: '#06B6D4',
-    title: 'Calm & relaxed environment',
-    desc: 'Find a quiet, peaceful spot. Sit comfortably and take 2–3 slow, deep breaths before scanning.',
+    key: 'environment' as const,
     bg: '#ECFEFF',
     border: '#A5F3FC',
   },
   {
     iconName: 'camera-outline' as const,
     iconColor: '#3B82F6',
-    title: 'Camera at eye level',
-    desc: 'Hold or prop your device at eye level so your full face is centred in the frame. Don\'t tilt the phone.',
+    key: 'camera' as const,
     bg: '#EFF6FF',
     border: '#BFDBFE',
   },
   {
     iconName: 'happy-outline' as const,
     iconColor: '#10B981',
-    title: 'Neutral, relaxed expression',
-    desc: 'Relax your jaw and brow. Avoid forced smiling or frowning — let your natural resting expression show.',
+    key: 'expression' as const,
     bg: '#ECFDF5',
     border: '#A7F3D0',
   },
   {
     iconName: 'glasses-outline' as const,
     iconColor: '#8B5CF6',
-    title: 'Remove accessories if possible',
-    desc: 'Glasses, face coverings, or hair over your face may reduce detection accuracy. Remove them if comfortable.',
+    key: 'accessories' as const,
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
   {
     iconName: 'eye-off-outline' as const,
     iconColor: '#EF4444',
-    title: 'Clear background preferred',
-    desc: 'A plain, uncluttered background helps the system focus on your facial features without interference.',
+    key: 'background' as const,
     bg: '#FEF2F2',
     border: '#FCA5A5',
   },
@@ -87,50 +83,51 @@ const PRIVACY_ITEMS = [
   {
     iconName: 'lock-closed-outline' as const,
     iconColor: '#10B981',
-    title: 'One photo, sent for analysis',
-    desc: 'A single photo is captured and sent over the network to the MindPulse server to estimate your expression.',
+    key: 'captured' as const,
     bg: '#ECFDF5',
     border: '#A7F3D0',
   },
   {
     iconName: 'eye-off-outline' as const,
     iconColor: '#8B5CF6',
-    title: 'Not stored on the server',
-    desc: 'The photo is processed for facial landmarks and emotion estimation, then discarded. No camera feed is recorded.',
+    key: 'notStored' as const,
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
   {
     iconName: 'shield-outline' as const,
     iconColor: '#F59E0B',
-    title: 'Result feeds your score',
-    desc: 'The emotion estimate contributes 20% of your final stress score. The photo itself is still never stored.',
+    key: 'feedsScore' as const,
     bg: '#FFFBEB',
     border: '#FDE68A',
   },
 ];
 
 /* ─── Camera Preview ─── */
-const CameraPreview = () => (
-  <View style={styles.cameraPreview}>
-    {/* Grid lines */}
-    <View style={styles.gridRow}>
-      {[0, 1, 2].map(i => (
-        <View key={`v${i}`} style={[styles.gridCell]} />
-      ))}
+const CameraPreview = () => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.cameraPreview}>
+      {/* Grid lines */}
+      <View style={styles.gridRow}>
+        {[0, 1, 2].map(i => (
+          <View key={`v${i}`} style={[styles.gridCell]} />
+        ))}
+      </View>
+      {/* Face oval outline */}
+      <View style={styles.faceOval} />
+      {/* Camera icon */}
+      <View style={styles.cameraIconWrap}>
+        <Ionicons name="camera-outline" size={28} color={tone('#FFF')} />
+      </View>
+      <Text style={styles.cameraHint}>{t.faceScan.cameraHint}</Text>
     </View>
-    {/* Face oval outline */}
-    <View style={styles.faceOval} />
-    {/* Camera icon */}
-    <View style={styles.cameraIconWrap}>
-      <Ionicons name="camera-outline" size={28} color={tone('#FFF')} />
-    </View>
-    <Text style={styles.cameraHint}>Position your face in frame</Text>
-  </View>
-);
+  );
+};
 
 /* ─── Main Screen ─── */
 export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, onSkip }) => {
+  const { t } = useTranslation();
   const [sheetStep, setSheetStep] = useState<0 | 1 | 2>(0); // 0 = hidden, 1 = checklist, 2 = privacy
   // Consent is filed before the scan starts (M-04 / B-3). If the write fails
   // the sheet stays open with the error shown: proceeding without proof would
@@ -153,7 +150,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
       onReady();
     } catch (error) {
       setConsentError(
-        error instanceof Error ? error.message : 'Your consent could not be recorded. Please try again.',
+        error instanceof Error ? error.message : t.faceScan.consentError,
       );
     } finally {
       setConsentSaving(false);
@@ -172,15 +169,15 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
               accessibilityRole="button"
               accessibilityLabel="Back to assessment steps">
               <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
-              <Text style={styles.backText}>Back</Text>
+              <Text style={styles.backText}>{t.common.back}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Page Header */}
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-          <Text style={styles.pageSubtitle}>Camera scan — your photo is analyzed by the MindPulse server</Text>
+          <Text style={styles.pageTitle}>{t.faceScan.pageTitle}</Text>
+          <Text style={styles.pageSubtitle}>{t.faceScan.pageSubtitle}</Text>
         </View>
 
         {/* Camera Preview Box */}
@@ -190,12 +187,12 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
         <View style={styles.footer}>
           <TouchableOpacity style={styles.startBtn} onPress={handleStartPress} activeOpacity={0.88}>
             <Ionicons name="camera-outline" size={22} color={tone('#FFF')} />
-            <Text style={styles.startBtnText}>Start Face Scan</Text>
+            <Text style={styles.startBtnText}>{t.faceScan.startBtn}</Text>
           </TouchableOpacity>
 
           {onSkip && (
             <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.7}>
-              <Text style={styles.skipBtnText}>Skip Facial Analysis</Text>
+              <Text style={styles.skipBtnText}>{t.faceScan.skipBtn}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -215,8 +212,8 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
                   <Ionicons name="happy" size={20} color={tone('#FFF')} />
                 </View>
                 <View>
-                  <Text style={sheet.headerTitle}>Preparation Checklist</Text>
-                  <Text style={sheet.headerStep}>Step 1 of 2 — Before you scan</Text>
+                  <Text style={sheet.headerTitle}>{t.faceScan.checklistTitle}</Text>
+                  <Text style={sheet.headerStep}>{t.faceScan.checklistStep}</Text>
                 </View>
               </View>
 
@@ -239,38 +236,41 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
                 <Text style={{ fontSize: 16 }}>🧘</Text>
               </View>
               <Text style={sheet.infoText}>
-                To get the most accurate emotional analysis, please make sure you are in the{' '}
-                <Text style={sheet.infoTextBold}>right environment and mental state</Text> before
-                starting the scan.
+                {t.faceScan.infoBefore}
+                <Text style={sheet.infoTextBold}>{t.faceScan.infoBold}</Text>
+                {t.faceScan.infoAfter}
               </Text>
             </View>
 
-            <Text style={sheet.sectionLabel}>PREPARATION GUIDELINES</Text>
+            <Text style={sheet.sectionLabel}>{t.faceScan.sectionLabel}</Text>
 
             <ScrollView style={sheet.scroll} showsVerticalScrollIndicator={false}>
-              {CHECKLIST.map(item => (
-                <View
-                  key={item.title}
-                  style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
-                >
-                  <View style={sheet.cardIconBox}>
-                    <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
+              {CHECKLIST.map(item => {
+                const copy = t.faceScan.checklist[item.key];
+                return (
+                  <View
+                    key={item.key}
+                    style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
+                  >
+                    <View style={sheet.cardIconBox}>
+                      <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
+                    </View>
+                    <View style={sheet.checkCardText}>
+                      <Text style={sheet.checkCardTitle}>{copy.title}</Text>
+                      <Text style={sheet.checkCardDesc}>{copy.desc}</Text>
+                    </View>
                   </View>
-                  <View style={sheet.checkCardText}>
-                    <Text style={sheet.checkCardTitle}>{item.title}</Text>
-                    <Text style={sheet.checkCardDesc}>{item.desc}</Text>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </ScrollView>
 
             {/* Actions */}
             <View style={sheet.actions}>
               <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose}>
-                <Text style={sheet.cancelBtnText}>Cancel</Text>
+                <Text style={sheet.cancelBtnText}>{t.common.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[sheet.primaryBtn, { backgroundColor: toneBg('#8353E2') }]} onPress={handleNext}>
-                <Text style={sheet.primaryBtnText}>I'm Ready — Next ›</Text>
+                <Text style={sheet.primaryBtnText}>{t.faceScan.readyNext}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -291,8 +291,8 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
                   <Ionicons name="shield-checkmark" size={20} color={tone('#FFF')} />
                 </View>
                 <View>
-                  <Text style={sheet.headerTitle}>Privacy Notice</Text>
-                  <Text style={sheet.headerStep}>Step 2 of 2 — Your data & privacy</Text>
+                  <Text style={sheet.headerTitle}>{t.faceScan.privacyTitle}</Text>
+                  <Text style={sheet.headerStep}>{t.faceScan.privacyStep}</Text>
                 </View>
               </View>
 
@@ -316,36 +316,39 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
                   <Ionicons name="eye-off" size={22} color={tone('#FFF')} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={sheet.privacyCalloutTitle}>No Images or Videos Stored</Text>
+                  <Text style={sheet.privacyCalloutTitle}>{t.faceScan.calloutTitle}</Text>
                   <Text style={sheet.privacyCalloutText}>
-                    We would like to emphasize that{' '}
-                    <Text style={{ fontWeight: '800' }}>no raw facial images or video recordings</Text>{' '}
-                    will be stored in the system. Only the{' '}
-                    <Text style={{ fontWeight: '800' }}>processed results and extracted features</Text>{' '}
-                    necessary for stress assessment will be used.
+                    {t.faceScan.calloutBefore}
+                    <Text style={{ fontWeight: '800' }}>{t.faceScan.calloutBold1}</Text>
+                    {t.faceScan.calloutMid}
+                    <Text style={{ fontWeight: '800' }}>{t.faceScan.calloutBold2}</Text>
+                    {t.faceScan.calloutAfter}
                   </Text>
                 </View>
               </View>
 
-              {PRIVACY_ITEMS.map(item => (
-                <View
-                  key={item.title}
-                  style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
-                >
-                  <View style={sheet.cardIconBox}>
-                    <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
+              {PRIVACY_ITEMS.map(item => {
+                const copy = t.faceScan.privacyItems[item.key];
+                return (
+                  <View
+                    key={item.key}
+                    style={[sheet.checkCard, { backgroundColor: toneBg(item.bg), borderColor: toneBg(item.border)}]}
+                  >
+                    <View style={sheet.cardIconBox}>
+                      <Ionicons name={item.iconName} size={20} color={tone(item.iconColor)} />
+                    </View>
+                    <View style={sheet.checkCardText}>
+                      <Text style={sheet.checkCardTitle}>{copy.title}</Text>
+                      <Text style={sheet.checkCardDesc}>{copy.desc}</Text>
+                    </View>
                   </View>
-                  <View style={sheet.checkCardText}>
-                    <Text style={sheet.checkCardTitle}>{item.title}</Text>
-                    <Text style={sheet.checkCardDesc}>{item.desc}</Text>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
 
               <Text style={sheet.consentText}>
-                By tapping{' '}
-                <Text style={sheet.consentBold}>"I Understand & Continue"</Text>, you consent to the
-                facial analysis process as described above.
+                {t.faceScan.consentBefore}
+                <Text style={sheet.consentBold}>{t.faceScan.consentBold}</Text>
+                {t.faceScan.consentAfter}
               </Text>
             </ScrollView>
 
@@ -357,7 +360,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
             )}
             <View style={sheet.actions}>
               <TouchableOpacity style={sheet.cancelBtn} onPress={handleClose} disabled={consentSaving}>
-                <Text style={sheet.cancelBtnText}>Cancel</Text>
+                <Text style={sheet.cancelBtnText}>{t.common.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[sheet.primaryBtn, { backgroundColor: toneBg('#00A8E8'), opacity: consentSaving ? 0.7 : 1 }]}
@@ -367,7 +370,7 @@ export const FaceScanInstructionsScreen: React.FC<Props> = ({ onBack, onReady, o
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={tone('#FFF')} style={{ marginRight: 6 }} />
                 <Text style={sheet.primaryBtnText}>
-                  {consentSaving ? 'Recording consent…' : 'I Understand & Continue'}
+                  {consentSaving ? t.faceScan.consentSaving : t.faceScan.understandContinue}
                 </Text>
               </TouchableOpacity>
             </View>

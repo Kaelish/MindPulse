@@ -4,6 +4,7 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { registerThemeStyles } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onBack: () => void;
@@ -16,6 +17,7 @@ const COUNT_SECONDS = 15;
 type TimerPhase = 'preparing' | 'counting';
 
 export const HeartRateTimerScreen: React.FC<Props> = ({ onBack, onComplete }) => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<TimerPhase>('preparing');
   const [secondsLeft, setSecondsLeft] = useState(PREPARATION_SECONDS);
 
@@ -44,19 +46,19 @@ export const HeartRateTimerScreen: React.FC<Props> = ({ onBack, onComplete }) =>
     <StressAnalysisLayout activeModule="heartRate" onBack={onBack}>
       <View style={styles.card}>
         <Text style={styles.instruction}>
-          {isPreparing ? 'Get ready to count your heartbeats!' : 'Count every heartbeat you feel.'}
+          {isPreparing ? t.heartRate.timer.preparingTitle : t.heartRate.timer.countingTitle}
         </Text>
         <View style={[styles.timerCircle, isPreparing ? styles.preparingCircle : styles.countingCircle]}>
           <Text style={styles.timerValue}>{secondsLeft}</Text>
-          <Text style={styles.timerUnit}>seconds</Text>
+          <Text style={styles.timerUnit}>{t.heartRate.timer.unit}</Text>
         </View>
         <Text style={[styles.phaseLabel, !isPreparing && styles.countingLabel]}>
-          {isPreparing ? 'Preparation time' : 'Counting... feel your pulse'}
+          {isPreparing ? t.heartRate.timer.preparingPhase : t.heartRate.timer.countingPhase}
         </Text>
       </View>
       <View style={[styles.tip, !isPreparing && styles.countingTip]}>
         <Text style={styles.tipText}>
-          {isPreparing ? 'Place two fingers on your pulse point and sit still.' : 'Keep counting. The timer will move to BPM entry when it reaches zero.'}
+          {isPreparing ? t.heartRate.timer.preparingTip : t.heartRate.timer.countingTip}
         </Text>
       </View>
     </StressAnalysisLayout>

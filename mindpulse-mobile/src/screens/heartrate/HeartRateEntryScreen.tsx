@@ -20,6 +20,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onBack: () => void;
@@ -48,6 +49,7 @@ const RefRow: React.FC<RefRowProps> = ({ range, badgeLabel, badgeBg, badgeText }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) => {
+  const { t } = useTranslation();
   const [beatsInput, setBeatsInput] = useState('');
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
@@ -78,9 +80,9 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
         onPress={() => inputRef.current?.focus()}
         style={[screen.card, focused && screen.cardFocused]}>
 
-        <Text style={screen.cardTitle}>Enter your beat count</Text>
+        <Text style={screen.cardTitle}>{t.heartRate.entry.title}</Text>
         <Text style={screen.cardSubtitle}>
-          How many beats did you count in 15 seconds?
+          {t.heartRate.entry.subtitle}
         </Text>
 
         {/* Input row: large number field  +  ×4 = BPM */}
@@ -91,7 +93,7 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
               ref={inputRef}
               style={screen.input}
               keyboardType="number-pad"
-              placeholder="e.g. 18"
+              placeholder={t.heartRate.entry.placeholder}
               placeholderTextColor={Colors.textHint}
               value={beatsInput}
               onChangeText={t => setBeatsInput(t.replace(/[^0-9]/g, ''))}
@@ -122,22 +124,22 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
 
       {/* ── BPM Reference card ── */}
       <View style={screen.refCard}>
-        <Text style={screen.refTitle}>BPM Reference</Text>
+        <Text style={screen.refTitle}>{t.heartRate.entry.refTitle}</Text>
         <RefRow
           range="60-80 BPM"
-          badgeLabel="Normal"
+          badgeLabel={t.heartRate.status.normal.label}
           badgeBg={Colors.badgeNormalBg}
           badgeText={Colors.badgeNormalText}
         />
         <RefRow
           range="81-95 BPM"
-          badgeLabel="Slightly Elevated"
+          badgeLabel={t.heartRate.status.elevated.label}
           badgeBg={Colors.badgeElevatedBg}
           badgeText={Colors.badgeElevatedText}
         />
         <RefRow
           range="96+ BPM"
-          badgeLabel="Possible Stress"
+          badgeLabel={t.heartRate.status.high.label}
           badgeBg={Colors.badgeHighBg}
           badgeText={Colors.badgeHighText}
         />
@@ -152,7 +154,7 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
         accessibilityLabel="Calculate My BPM"
         style={[screen.calcBtn, isValid && screen.calcBtnActive]}>
         <Text style={[screen.calcBtnLabel, isValid && screen.calcBtnLabelActive]}>
-          Calculate My BPM
+          {t.heartRate.entry.calc}
         </Text>
       </TouchableOpacity>
 

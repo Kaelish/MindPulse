@@ -7,6 +7,7 @@ import { Spacing, Radius } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { analyzeFaceImage } from '../../services/emotionScan';
+import { useTranslation } from '../../i18n/language';
 
 interface Props {
   onComplete: (expression: string, confidence: number) => void;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) => {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -48,19 +50,19 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
     try {
       const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.6 });
       if (!photo?.base64) {
-        throw new Error('Could not read the captured image. Please try again.');
+        throw new Error(t.faceScan.camera.errorRead);
       }
 
       setIsAnalyzing(true);
       const result = await analyzeFaceImage(`data:image/jpeg;base64,${photo.base64}`);
       onComplete(result.expression, result.confidence);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Face scan failed. Please try again.');
+      setError(err instanceof Error ? err.message : t.faceScan.camera.errorFailed);
     } finally {
       setIsCapturing(false);
       setIsAnalyzing(false);
     }
-  }, [isCapturing, isAnalyzing, onComplete]);
+  }, [isCapturing, isAnalyzing, onComplete, t]);
 
   const busy = isCapturing || isAnalyzing;
 
@@ -77,10 +79,9 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
       return (
         <View style={styles.permissionWrap}>
           <Ionicons name="camera-outline" size={40} color={tone('#FFF')} />
-          <Text style={styles.permissionTitle}>Camera access needed</Text>
+          <Text style={styles.permissionTitle}>{t.faceScan.camera.permissionTitle}</Text>
           <Text style={styles.permissionText}>
-            MindPulse uses the front camera to read your facial expression during the stress
-            assessment.
+            {t.faceScan.camera.permissionText}
           </Text>
           {permission.canAskAgain ? (
             <TouchableOpacity
@@ -88,11 +89,11 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
               onPress={requestPermission}
               accessibilityRole="button"
               accessibilityLabel="Allow camera access">
-              <Text style={styles.permissionBtnText}>Allow camera</Text>
+              <Text style={styles.permissionBtnText}>{t.faceScan.camera.permissionBtn}</Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.permissionHint}>
-              Enable camera access for MindPulse in your device settings, then try again.
+              {t.faceScan.camera.permissionHint}
             </Text>
           )}
         </View>
@@ -117,7 +118,7 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
         <View style={styles.badgesRow} pointerEvents="none">
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>{isAnalyzing ? 'ANALYZING' : 'LIVE'}</Text>
+            <Text style={styles.liveText}>{isAnalyzing ? t.faceScan.camera.analyzing : t.faceScan.camera.live}</Text>
           </View>
           <View style={styles.aiBadge}>
             <Ionicons name="flash" size={12} color={tone('#FFF')} />
@@ -158,14 +159,14 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
           accessibilityRole="button"
           accessibilityLabel="Back to face scan instructions">
           <Ionicons name="chevron-back" size={22} color={tone('#6B79F2')} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t.common.back}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Header */}
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Face Emotion Analysis</Text>
-        <Text style={styles.pageSubtitle}>Position your face in the frame, then capture</Text>
+        <Text style={styles.pageTitle}>{t.faceScan.pageTitle}</Text>
+        <Text style={styles.pageSubtitle}>{t.faceScan.camera.subtitle}</Text>
       </View>
 
       <View style={styles.content}>
@@ -180,10 +181,10 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
           />
           <View style={styles.processingTextWrap}>
             <Text style={styles.processingTitle}>
-              {isAnalyzing ? 'Analyzing your expression…' : 'Ready to scan'}
+              {isAnalyzing ? t.faceScan.camera.analyzingTitle : t.faceScan.camera.readyTitle}
             </Text>
             <Text style={styles.processingSub}>
-              {isAnalyzing ? 'Reading facial landmarks and predicting emotion' : 'Hold steady and tap capture'}
+              {isAnalyzing ? t.faceScan.camera.analyzingSub : t.faceScan.camera.readySub}
             </Text>
           </View>
         </View>
@@ -197,7 +198,7 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
           accessibilityLabel="Capture and analyze face"
           accessibilityState={{ disabled: busy || !permission?.granted }}>
           <Ionicons name="scan" size={26} color={tone('#FFF')} />
-          <Text style={styles.shutterText}>{isAnalyzing ? 'Analyzing…' : 'Capture'}</Text>
+          <Text style={styles.shutterText}>{isAnalyzing ? t.faceScan.camera.shutterBusy : t.faceScan.camera.shutter}</Text>
         </TouchableOpacity>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
