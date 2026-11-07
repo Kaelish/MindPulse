@@ -22,7 +22,8 @@ import {
 import { PatientNotifications } from '../../components/PatientNotifications';
 import { SelfCareModal } from '../../components/SelfCareModal';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
-import { StressBand, bandLabel, previewTipsFor } from '../../services/selfCareTips';
+import { StressBand, previewTipsFor } from '../../services/selfCareTips';
+import { useTranslation } from '../../i18n/language';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
 export type DashboardTab = 'home' | 'analysis' | 'clinics' | 'profile';
@@ -93,6 +94,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const [selectedSession, setSelectedSession] = useState<StressSessionItem | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [showSelfCare, setShowSelfCare] = useState(false);
+  const { t } = useTranslation();
 
   const loadData = async () => {
     setLoading(true);
@@ -267,12 +269,22 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.careTitle}>
-                  {latestBand === 'high' ? 'Consider reaching out' : 'Self-care ideas'}
+                  {latestBand === 'high' ? t.selfCare.dashboard.careTitleHigh : t.selfCare.dashboard.careTitle}
                 </Text>
-                <Text style={styles.careSub}>Based on your latest {bandLabel(latestBand).toLowerCase()} result</Text>
+                <Text style={styles.careSub}>
+                  {t.selfCare.dashboard.careSubFmt.replace(
+                    '{band}',
+                    (latestBand === 'high'
+                      ? t.results.bandHigh
+                      : latestBand === 'low'
+                        ? t.results.bandLow
+                        : t.results.bandModerate
+                    ).toLowerCase(),
+                  )}
+                </Text>
                 <View style={styles.carePreviewRow}>
                   {careTips.map(tip => (
-                    <View key={tip.title} style={[styles.carePip, { borderColor: tone(carePalette.accent) }]}>
+                    <View key={tip.id} style={[styles.carePip, { borderColor: tone(carePalette.accent) }]}>
                       {tip.material ? (
                         <MaterialCommunityIcons name={tip.icon as any} size={13} color={tone(carePalette.accent)} />
                       ) : (
@@ -280,7 +292,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
                       )}
                     </View>
                   ))}
-                  <Text style={[styles.careMore, { color: tone(carePalette.accent) }]}>Tap to see all</Text>
+                  <Text style={[styles.careMore, { color: tone(carePalette.accent) }]}>{t.selfCare.dashboard.careMore}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={tone(carePalette.accent)} />
@@ -289,16 +301,16 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
           {/* Recent Sessions */}
           <View style={styles.sessionsHeaderRow}>
-            <Text style={styles.sectionTitle}>Recent Sessions</Text>
+            <Text style={styles.sectionTitle}>{t.selfCare.dashboard.sessionsTitle}</Text>
             <Pressable onPress={() => setShowAllSessions(v => !v)}>
-              <Text style={styles.seeAll}>{showAllSessions ? 'Show less' : 'See all'}</Text>
+              <Text style={styles.seeAll}>
+                {showAllSessions ? t.selfCare.dashboard.seeLess : t.selfCare.dashboard.seeAll}
+              </Text>
             </Pressable>
           </View>
           <View style={styles.sessionsList}>
             {recentSessions.length === 0 && (
-              <Text style={styles.sessionsEmpty}>
-                No sessions yet — complete an assessment to see it here.
-              </Text>
+              <Text style={styles.sessionsEmpty}>{t.selfCare.dashboard.sessionsEmpty}</Text>
             )}
             {displaySessions.map(session => (
               <SessionRow key={session.id} session={session} onPress={() => setSelectedSession(session)} />

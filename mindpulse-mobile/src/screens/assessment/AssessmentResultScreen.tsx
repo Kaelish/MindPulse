@@ -545,14 +545,14 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             const routing = isRoutingTip(tip);
             return (
               <TouchableOpacity
-                key={tip.title}
+                key={tip.id}
                 style={styles.advisoryCheck}
                 disabled={!routing}
                 onPress={routing ? () => runAction(tip.action as SelfCareAction) : undefined}
                 activeOpacity={0.65}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={tone('#2E7D32')} />
-                <Text style={styles.advisoryCheckText}>{tip.title}</Text>
+                <Text style={styles.advisoryCheckText}>{t.selfCare.tips[tip.id].title}</Text>
                 {routing && (
                   <>
                     <View style={styles.advisorySpacer} />
@@ -581,14 +581,14 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             const routing = isRoutingTip(tip);
             return (
               <TouchableOpacity
-                key={tip.title}
+                key={tip.id}
                 style={styles.advisoryCheck}
                 disabled={!routing}
                 onPress={routing ? () => runAction(tip.action as SelfCareAction) : undefined}
                 activeOpacity={0.65}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={tone('#D32F2F')} />
-                <Text style={styles.advisoryCheckText}>{tip.title}</Text>
+                <Text style={styles.advisoryCheckText}>{t.selfCare.tips[tip.id].title}</Text>
                 {routing && (
                   <>
                     <View style={styles.advisorySpacer} />
@@ -843,7 +843,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         visible={journalOpen}
         onClose={() => setJournalOpen(false)}
         templateId={journalId}
-        hint={activeJournalTip?.desc}
+        hint={activeJournalTip ? t.selfCare.tips[activeJournalTip.id].desc : undefined}
       />
       <PauseTimerModal visible={pauseOpen} onClose={() => setPauseOpen(false)} />
 

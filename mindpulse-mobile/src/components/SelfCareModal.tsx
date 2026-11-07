@@ -6,9 +6,9 @@ import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import {
   StressBand,
-  bandLabel,
   tipsForBand,
 } from '../services/selfCareTips';
+import { useTranslation } from '../i18n/language';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 
 interface SelfCareModalProps {
@@ -46,30 +46,42 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
   onOpenClinics,
 }) => {
   const colors = palette(band);
+  const { t } = useTranslation();
+  const copy = t.selfCare.modal;
   const tips = tipsForBand(band);
 
   const headline =
     band === 'high'
-      ? 'Reach out to a professional'
+      ? copy.headlineHigh
       : band === 'low'
-        ? 'Nice — keep it up!'
-        : 'Ways to unwind right now';
+        ? copy.headlineLow
+        : copy.headlineModerate;
   const subline =
     band === 'high'
-      ? 'High stress is a good reason to talk to someone trained to help. A few things that can bridge you there:'
+      ? copy.subHigh
       : band === 'low'
-        ? 'Your latest check-in was low. These keep it that way:'
-        : 'Your latest check-in was moderate. Pick one and try it for a few minutes:';
+        ? copy.subLow
+        : copy.subModerate;
 
   const primary =
     band === 'high'
-      ? { label: 'Book a session', onPress: onOpenClinics }
-      : { label: 'View my analysis', onPress: onOpenAnalysis };
+      ? { label: copy.bookSession, onPress: onOpenClinics }
+      : { label: copy.viewAnalysis, onPress: onOpenAnalysis };
+
+  /** Chip text — `null` band has no label of its own, so the chip is hidden. */
+  const bandChipText =
+    band === 'high'
+      ? t.results.bandHigh
+      : band === 'low'
+        ? t.results.bandLow
+        : band === 'moderate'
+          ? t.results.bandModerate
+          : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close suggestions" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={copy.close} />
         <View style={styles.dialog}>
           <LinearGradient
             start={{ x: 0, y: 0 }}
@@ -82,11 +94,13 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headTitle}>{headline}</Text>
-              <View style={[styles.bandChip, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-                <Text style={styles.bandChipText}>{bandLabel(band)}</Text>
-              </View>
+              {bandChipText != null && (
+                <View style={[styles.bandChip, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
+                  <Text style={styles.bandChipText}>{bandChipText}</Text>
+                </View>
+              )}
             </View>
-            <Pressable onPress={onClose} style={styles.closeBtn} accessibilityLabel="Close suggestions">
+            <Pressable onPress={onClose} style={styles.closeBtn} accessibilityLabel={copy.close}>
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
           </LinearGradient>
@@ -99,7 +113,7 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
             showsVerticalScrollIndicator={false}
           >
             {tips.map((tip) => (
-              <View key={tip.title} style={[styles.tipRow, { borderColor: tone(colors.soft) }]}>
+              <View key={tip.id} style={[styles.tipRow, { borderColor: tone(colors.soft) }]}>
                 <View style={[styles.tipIcon, { backgroundColor: tone(colors.soft) }]}>
                   {tip.material ? (
                     <MaterialCommunityIcons name={tip.icon as any} size={18} color={tone(colors.accent)} />
@@ -108,15 +122,12 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.tipTitle}>{tip.title}</Text>
-                  <Text style={styles.tipDesc}>{tip.desc}</Text>
+                  <Text style={styles.tipTitle}>{t.selfCare.tips[tip.id].title}</Text>
+                  <Text style={styles.tipDesc}>{t.selfCare.tips[tip.id].desc}</Text>
                 </View>
               </View>
             ))}
-            <Text style={styles.footerNote}>
-              If stress lasts more than two weeks or affects your daily life, please talk to a
-              professional — that is what the Clinics tab is for.
-            </Text>
+            <Text style={styles.footerNote}>{copy.footer}</Text>
           </ScrollView>
 
           <View style={styles.actions}>
@@ -132,7 +143,7 @@ export const SelfCareModal: React.FC<SelfCareModalProps> = ({
               <Text style={styles.primaryText}>{primary.label}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.laterBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.laterText}>Maybe later</Text>
+              <Text style={styles.laterText}>{copy.maybeLater}</Text>
             </TouchableOpacity>
           </View>
         </View>

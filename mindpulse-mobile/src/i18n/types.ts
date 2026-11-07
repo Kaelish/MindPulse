@@ -14,6 +14,8 @@
 
 export type Language = 'en' | 'fil' | 'ceb';
 
+import type { SelfCareTipId } from '../services/selfCareTips';
+
 export interface PssDisplayItem {
   id: number;
   pill: string;
@@ -423,6 +425,42 @@ export interface Translations {
     completeAlertTitle: string;
     completeAlertBodyFmt: string;
     saveError: string;
+  };
+
+  /**
+   * Self-care suggestions: the tip bank rendered on the result screen, the
+   * Home card and the self-care popup. `services/selfCareTips.ts` now carries
+   * only structure (icon, action, tool id) — the wording exists exactly once
+   * per locale, keyed by `SelfCareTipId`, so a tip can never render in only
+   * one language. Adding a tip or a locale without copy fails this type.
+   */
+  selfCare: {
+    modal: {
+      headlineLow: string;
+      headlineModerate: string;
+      headlineHigh: string;
+      subLow: string;
+      subModerate: string;
+      subHigh: string;
+      bookSession: string;
+      viewAnalysis: string;
+      maybeLater: string;
+      footer: string;
+      /** Accessibility label on the popup's close buttons. */
+      close: string;
+    };
+    dashboard: {
+      careTitleHigh: string;
+      careTitle: string;
+      /** `{band}` receives the lowercased band label, e.g. "low stress". */
+      careSubFmt: string;
+      careMore: string;
+      sessionsTitle: string;
+      seeAll: string;
+      seeLess: string;
+      sessionsEmpty: string;
+    };
+    tips: Record<SelfCareTipId, { title: string; desc: string }>;
   };
 
   settings: {
