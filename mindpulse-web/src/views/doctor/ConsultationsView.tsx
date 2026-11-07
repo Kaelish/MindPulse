@@ -158,7 +158,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
         title="Open this patient's assessment history"
         onClick={() => void openAssessmentHistory(item)}
       >
-        {historyBusy === item.id ? 'Opening…' : '📊 Assessments'}
+        {historyBusy === item.id ? 'Opening…' : 'Assessments'}
       </button>
     ) : null;
 
@@ -830,7 +830,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     const busy = decisionBusy === item.id;
     if (item.rawStatus === 'scheduled') {
       return (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="consult-actions">
           {assessmentHistoryButton(item)}
           <button
             type="button"
@@ -838,7 +838,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             disabled={busy}
             onClick={() => void handleApprove(item)}
           >
-            {busy ? 'Approving…' : '✓ Approve'}
+            {busy ? 'Approving…' : 'Approve'}
           </button>
           <button
             type="button"
@@ -846,15 +846,14 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             disabled={busy || declineBusy}
             onClick={() => openDeclineModal(item)}
           >
-            ✕ Decline
+            Decline
           </button>
           <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
             Edit Time
           </button>
           <button
             type="button"
-            className="view-case-btn"
-            style={{ background: 'var(--primary-strong)' }}
+            className="view-case-btn view-case-btn-primary"
             onClick={() => setActiveSessionItem(item)}
           >
             Message
@@ -864,9 +863,9 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     }
     if (item.rawStatus === 'awaiting_payment') {
       return (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="consult-actions">
           {assessmentHistoryButton(item)}
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309' }}>
+          <span className="consult-hint">
             Waiting for patient payment
           </span>
           <button type="button" className="view-case-btn" onClick={() => openEditTimeModal(item)}>
@@ -874,8 +873,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           </button>
           <button
             type="button"
-            className="view-case-btn"
-            style={{ background: 'var(--primary-strong)' }}
+            className="view-case-btn view-case-btn-primary"
             onClick={() => setActiveSessionItem(item)}
           >
             Message
@@ -885,7 +883,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     }
     if (item.rawStatus === 'confirmed') {
       return (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="consult-actions">
           {assessmentHistoryButton(item)}
           <button
             type="button"
@@ -896,8 +894,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           </button>
           <button
             type="button"
-            className="view-case-btn"
-            style={{ background: 'var(--primary-strong)' }}
+            className="view-case-btn view-case-btn-primary"
             onClick={() => setActiveSessionItem(item)}
           >
             Message
@@ -923,7 +920,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
             title="Session held on Zoom, Meet, Teams or in person? Completes the booking so you can write the consultation note."
             onClick={() => void handleMarkCompleted(item)}
           >
-            {busy ? 'Completing…' : '✓ Complete (held elsewhere)'}
+            {busy ? 'Completing…' : 'Complete'}
           </button>
         </div>
       );
@@ -957,8 +954,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
         {assessmentHistoryButton(item)}
         <button
           type="button"
-          className="view-case-btn"
-          style={{ background: 'var(--primary-strong)' }}
+          className="view-case-btn view-case-btn-primary"
           onClick={() => setActiveSessionItem(item)}
         >
           Message
@@ -1337,7 +1333,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
                   </div>
 
                   <div className="consult-item-right">
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div className="consult-actions">
                       {statusPill(item)}
                       {renderActions(item)}
                     </div>
