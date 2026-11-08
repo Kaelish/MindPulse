@@ -672,7 +672,7 @@ const makeStyles = () => StyleSheet.create({
   statLbl: { fontSize: 9, fontWeight: '600', color: tone('#5B6EF5'), marginTop: 1 },
 
   /* Segment tabs */
-  tabRow: { flexDirection: 'row', paddingHorizontal: 12 },
+  tabRow: { flexDirection: 'row', flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 12 },
   tabBtn: { paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
   tabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
