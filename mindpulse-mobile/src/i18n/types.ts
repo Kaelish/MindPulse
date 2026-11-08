@@ -15,6 +15,8 @@
 export type Language = 'en' | 'fil' | 'ceb';
 
 import type { SelfCareTipId } from '../services/selfCareTips';
+import type { JournalId } from '../services/journal';
+import type { ExerciseId } from '../services/guidedExercises';
 
 export interface PssDisplayItem {
   id: number;
@@ -340,8 +342,127 @@ export interface Translations {
       breathe: { label: string; meta: string; cta: string };
       music: { label: string; metaFmt: string; cta: string };
       exercise: { label: string; metaAvailableFmt: string; metaGuidedFmt: string; metaStepwise: string; cta: string };
-      journal: { label: string; meta: string; metaPromptsFmt: string; cta: string };
-      pause: { label: string; cta: string };
+      journal: {
+        label: string;
+        meta: string;
+        metaPromptsFmt: string;
+        cta: string;
+        /** Meta under the journal card — was hardcoded in `journal.ts`. */
+        templateMeta: Record<JournalId, string>;
+      };
+      pause: { label: string; /** `{n}` receives the pause length in minutes. */ metaFmt: string; cta: string };
+
+      /** Controls shared by every tool sheet (Pause / Resume / Done / …). */
+      player: {
+        pause: string;
+        resume: string;
+        play: string;
+        again: string;
+        reset: string;
+        done: string;
+        wellDone: string;
+        complete: string;
+        /** `{n}` = minutes, e.g. "Start · 5 min". */
+        startFmt: string;
+        close: string;
+        closeBreath: string;
+        closeExercise: string;
+        closeMusic: string;
+        closeJournal: string;
+        closePause: string;
+      };
+
+      /** Chrome of the sheet each launcher card opens. */
+      views: {
+        breathe: {
+          headSub: string;
+          phaseIn: { label: string; hint: string };
+          phaseHold1: { label: string; hint: string };
+          phaseOut: { label: string; hint: string };
+          phaseHold2: { label: string; hint: string };
+          doneCount: string;
+          doneBody: string;
+          statCycle: string;
+          statLeft: string;
+          statPerPhase: string;
+          startBtn: string;
+        };
+        music: {
+          headSub: string;
+          preparing: string;
+          tracksLabel: string;
+          restartA11y: string;
+          loopOnA11y: string;
+          loopOffA11y: string;
+        };
+        exercise: {
+          /** `{n}` = step number, `{m}` = total steps. */
+          stepFmt: string;
+          /** `{title}` = the localized exercise title, lowercased by the caller. */
+          finishedFmt: string;
+          statSteps: string;
+          statTotal: string;
+          statDone: string;
+          nextStep: string;
+        };
+        journal: {
+          saving: string;
+          saved: string;
+          saveBtn: string;
+          error: string;
+          privacy: string;
+          recentLabel: string;
+          tapCollapse: string;
+          tapReadAll: string;
+          collapseA11y: string;
+          /** `{preview}` = the note's own text. */
+          showAllFmt: string;
+          deleteA11y: string;
+          /** Abbreviated month names for entry stamps, Jan → Dec. */
+          months: string[];
+        };
+        pause: {
+          /** `{n}` = minutes. */
+          headSubFmt: string;
+          kicker: { idle: string; leadin: string; running: string; paused: string };
+          body: {
+            idleFmt: string;
+            leadinFmt: string;
+            running: string;
+            pausedFmt: string;
+            done: string;
+          };
+          startNow: string;
+          endEarly: string;
+          hideControlsA11y: string;
+          showControlsA11y: string;
+          returnBlackA11y: string;
+          /** `{time}` = mm:ss remaining. */
+          runningA11yFmt: string;
+        };
+      };
+
+      /**
+       * Copy for the guided-exercise library — `services/guidedExercises.ts`
+       * keeps only structure (id/icon/color/seconds), so an exercise can never
+       * render in only one language. Step arrays must mirror the data file's
+       * order and length (enforced by `i18n/toolCopy.test.ts`).
+       */
+      exercises: Record<
+        ExerciseId,
+        { title: string; subtitle: string; steps: { label: string; text: string }[] }
+      >;
+
+      /**
+       * Copy for the journal prompts — `services/journal.ts` keeps only
+       * structure (id/icon/color/field keys). Field keys must match the data
+       * file (enforced by `i18n/toolCopy.test.ts`); the card meta line lives
+       * at `tools.journal.templateMeta`.
+       */
+      journalTemplates: Record<
+        JournalId,
+        { title: string; subtitle: string; fields: Record<string, { label: string; placeholder: string }> }
+      >;
     };
     clinics: {
       title: string;

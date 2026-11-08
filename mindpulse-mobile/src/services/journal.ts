@@ -48,23 +48,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type JournalId = 'gratitude' | 'worry' | 'nextStep';
 
+/**
+ * Field structure only — labels and placeholders live in the dictionaries
+ * under `t.results.tools.journalTemplates[id].fields`, so a prompt form can
+ * never render in only one language. `i18n/toolCopy.test.ts` keeps the key
+ * sets here and there identical.
+ */
 export interface JournalField {
   /** Key inside `JournalEntry.values`. */
   key: string;
-  label: string;
-  placeholder: string;
   lines: number;
 }
 
+/** Structure only — all wording lives in `t.results.tools.journalTemplates`. */
 export interface JournalTemplate {
   id: JournalId;
-  title: string;
-  subtitle: string;
   icon: string;
   /** Accent colour for the header and the save button. */
   color: string;
-  /** Short line shown on the launcher button. */
-  meta: string;
   fields: JournalField[];
 }
 
@@ -83,75 +84,30 @@ const MAX_ENTRIES = 100;
 export const JOURNAL_TEMPLATES: JournalTemplate[] = [
   {
     id: 'gratitude',
-    title: 'Gratitude note',
-    subtitle: 'Three things that went well',
     icon: 'create-outline',
     color: '#2E7D32',
-    meta: '3 prompts',
     fields: [
-      {
-        key: 'one',
-        label: '1 — Something that went well',
-        placeholder: 'Ate lunch with a friend instead of at my desk',
-        lines: 2,
-      },
-      {
-        key: 'two',
-        label: '2 — Something you are grateful for',
-        placeholder: 'The bus showed up exactly when I needed it',
-        lines: 2,
-      },
-      {
-        key: 'three',
-        label: '3 — Something you handled well',
-        placeholder: 'Finished the problem set even though it was hard',
-        lines: 2,
-      },
+      { key: 'one', lines: 2 },
+      { key: 'two', lines: 2 },
+      { key: 'three', lines: 2 },
     ],
   },
   {
     id: 'worry',
-    title: 'Worry journal',
-    subtitle: 'Name it, then shrink it',
     icon: 'alert-circle-outline',
     color: '#E65100',
-    meta: 'worry + 1 step',
     fields: [
-      {
-        key: 'worry',
-        label: 'The worry, written down',
-        placeholder:
-          "I'm behind on the thesis and the deadline is close. Writing it down stops it circling.",
-        lines: 3,
-      },
-      {
-        key: 'nextStep',
-        label: 'Smallest next action',
-        placeholder: 'Open the document and write one paragraph. Nothing more.',
-        lines: 3,
-      },
+      { key: 'worry', lines: 3 },
+      { key: 'nextStep', lines: 3 },
     ],
   },
   {
     id: 'nextStep',
-    title: 'Next small step',
-    subtitle: 'One thing — only one',
     icon: 'arrow-forward-circle-outline',
     color: '#C62828',
-    meta: 'one step',
     fields: [
-      {
-        key: 'step',
-        label: 'The single next thing to do',
-        placeholder: 'Email my adviser to move the meeting.',
-        lines: 3,
-      },
-      {
-        key: 'defer',
-        label: 'Everything else waits until…',
-        placeholder: 'After I have rested tonight.',
-        lines: 2,
-      },
+      { key: 'step', lines: 3 },
+      { key: 'defer', lines: 2 },
     ],
   },
 ];
@@ -221,13 +177,15 @@ export const deleteJournalEntry = async (id: string): Promise<void> => {
 export const entryPreview = (entry: JournalEntry): string =>
   Object.values(entry.values).filter(Boolean).join(' · ');
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** Deterministic on-device timestamp — no Intl dependency in the render path. */
-export const entryStamp = (iso: string): string => {
+/**
+ * Deterministic on-device timestamp — no Intl dependency in the render path.
+ * `months` is the caller's localized abbreviated month list
+ * (`t.results.tools.journal.months`, Jan → Dec, index-aligned with `Date`).
+ */
+export const entryStamp = (iso: string, months: string[]): string => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${MONTHS[d.getMonth()]} ${d.getDate()} · ${hh}:${mm}`;
+  return `${months[d.getMonth()]} ${d.getDate()} · ${hh}:${mm}`;
 };

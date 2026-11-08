@@ -40,6 +40,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { useTranslation } from '../i18n/language';
 import {
   PAUSE_SECONDS,
   PauseClock,
@@ -75,23 +76,29 @@ const mmss = (totalSecondsLeft: number) => {
   return `${m}:${String(s).padStart(2, '0')}`;
 };
 
-const KICKER: Record<Phase, string> = {
-  idle: 'READY',
-  leadin: 'GET READY',
-  running: 'PAUSE IN PROGRESS',
-  paused: 'PAUSED',
-  done: 'COMPLETE',
-};
-
-const BODY: Record<Phase, string> = {
-  idle: `${pauseMinutes} minutes away from every screen. Put your phone down and look at something about twenty feet away — the countdown keeps correct time even if the screen sleeps.`,
-  leadin: `The screen turns black in a moment. Set the phone down now and keep your eyes off it for all ${pauseMinutes} minutes.`,
-  running: 'Nothing to read here. Set the phone face down and let your eyes rest.',
-  paused: `Paused. Resume when you are ready to finish the full ${pauseMinutes} minutes.`,
-  done: 'Minutes off every screen. Notice how your eyes and shoulders feel before you move on.',
-};
-
 export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
+  const pauseCopy = copy.views.pause;
+
+  // Built per render from the dictionary — the phase words are localized and
+  // the minute count is interpolated, so they cannot live at module scope.
+  const KICKER: Record<Phase, string> = {
+    idle: pauseCopy.kicker.idle,
+    leadin: pauseCopy.kicker.leadin,
+    running: pauseCopy.kicker.running,
+    paused: pauseCopy.kicker.paused,
+    done: copy.player.complete,
+  };
+
+  const BODY: Record<Phase, string> = {
+    idle: pauseCopy.body.idleFmt.replace('{n}', String(pauseMinutes)),
+    leadin: pauseCopy.body.leadinFmt.replace('{n}', String(pauseMinutes)),
+    running: pauseCopy.body.running,
+    paused: pauseCopy.body.pausedFmt.replace('{n}', String(pauseMinutes)),
+    done: pauseCopy.body.done,
+  };
+
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainSec, setRemainSec] = useState(PAUSE_SECONDS);
   /** Lead-in counter (3 → 1) shown big on the ready card. */
@@ -278,16 +285,24 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
 
   const primary =
     phase === 'running'
-      ? { icon: 'pause', text: 'Pause', onPress: pause }
+      ? { icon: 'pause', text: copy.player.pause, onPress: pause }
       : phase === 'paused'
-        ? { icon: 'play', text: 'Resume', onPress: resume }
+        ? { icon: 'play', text: copy.player.resume, onPress: resume }
         : phase === 'leadin'
-          ? { icon: 'play', text: 'Start now', onPress: beginRun }
+          ? { icon: 'play', text: pauseCopy.startNow, onPress: beginRun }
           : done
-            ? { icon: 'refresh', text: 'Do it again', onPress: reset }
-            : { icon: 'play', text: `Start · ${pauseMinutes} min`, onPress: start };
+            ? { icon: 'refresh', text: copy.player.again, onPress: reset }
+            : {
+                icon: 'play',
+                text: copy.player.startFmt.replace('{n}', String(pauseMinutes)),
+                onPress: start,
+              };
 
-  const secondaryLabel = done ? 'Done' : phase === 'idle' ? 'Close' : 'End early';
+  const secondaryLabel = done
+    ? copy.player.done
+    : phase === 'idle'
+      ? copy.player.close
+      : pauseCopy.endEarly;
   const secondaryPress = done || phase === 'idle' ? onClose : endEarly;
 
   return (
@@ -297,7 +312,11 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
           style={StyleSheet.absoluteFill}
           onPress={onBackdropPress}
           accessibilityLabel={
-            dark ? (revealed ? 'Hide pause controls' : 'Show pause controls') : 'Close pause timer'
+            dark
+              ? revealed
+                ? pauseCopy.hideControlsA11y
+                : pauseCopy.showControlsA11y
+              : copy.player.closePause
           }
         />
         <View style={styles.card} onTouchStart={dark ? pokeReveal : undefined}>
@@ -306,15 +325,15 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
               <Ionicons name="eye-off-outline" size={16} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headTitle}>No-screen pause</Text>
+              <Text style={styles.headTitle}>{copy.pause.label}</Text>
               <Text style={styles.headSub}>
-                {pauseMinutes} minutes away from every screen
+                {pauseCopy.headSubFmt.replace('{n}', String(pauseMinutes))}
               </Text>
             </View>
             <Pressable
               onPress={onBackdropPress}
               style={styles.closeBtn}
-              accessibilityLabel={dark ? 'Return to the black screen' : 'Close pause timer'}
+              accessibilityLabel={dark ? pauseCopy.returnBlackA11y : copy.player.closePause}
             >
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
@@ -362,7 +381,7 @@ export const PauseTimerModal: React.FC<Props> = ({ visible, onClose }) => {
           <Pressable
             style={styles.blackStage}
             onPress={reveal}
-            accessibilityLabel={`No-screen pause running, ${mmss(remainSec)} remaining. Tap to show the controls.`}
+            accessibilityLabel={pauseCopy.runningA11yFmt.replace('{time}', mmss(remainSec))}
           >
             <Text style={styles.blackCount}>{mmss(remainSec)}</Text>
           </Pressable>

@@ -19,7 +19,7 @@ import {
 import { CALM_TRACKS } from '../../services/calmAudio';
 import { exerciseById, ExerciseId, totalSeconds } from '../../services/guidedExercises';
 import { JournalId, journalTemplateById } from '../../services/journal';
-import { PAUSE_META } from '../../services/pauseTimer';
+import { pauseMinutes } from '../../services/pauseTimer';
 import { BoxBreathingModal } from '../../components/BoxBreathingModal';
 import { CalmMusicModal } from '../../components/CalmMusicModal';
 import { GuidedExerciseModal } from '../../components/GuidedExerciseModal';
@@ -210,7 +210,9 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   const journalMeta =
     journalTips.length > 1
       ? t.results.tools.journal.metaPromptsFmt.replace('{n}', String(journalTips.length))
-      : firstJournal?.meta ?? t.results.tools.journal.meta;
+      : firstJournal
+        ? t.results.tools.journal.templateMeta[firstJournal.id]
+        : t.results.tools.journal.meta;
 
   /** Default id each launcher button hands to `runAction`. */
   const defaultIdFor = (action: ToolAction): string | undefined =>
@@ -340,7 +342,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
       music: { ...base.music, label: t.results.tools.music.label, meta: t.results.tools.music.metaFmt.replace('{n}', String(CALM_TRACKS.length)), cta: t.results.tools.music.cta },
       exercise: { ...base.exercise, label: t.results.tools.exercise.label, meta: '', cta: t.results.tools.exercise.cta },
       journal: { ...base.journal, label: t.results.tools.journal.label, meta: '', cta: t.results.tools.journal.cta },
-      pause: { ...base.pause, label: t.results.tools.pause.label, meta: PAUSE_META, cta: t.results.tools.pause.cta },
+      pause: { ...base.pause, label: t.results.tools.pause.label, meta: t.results.tools.pause.metaFmt.replace('{n}', String(pauseMinutes)), cta: t.results.tools.pause.cta },
     };
   })();
 

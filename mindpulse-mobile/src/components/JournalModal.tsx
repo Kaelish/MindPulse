@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { useTranslation } from '../i18n/language';
 import {
   deleteJournalEntry,
   entryPreview,
@@ -48,6 +49,9 @@ interface Props {
 const RECENT_LIMIT = 3;
 
 export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hint }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
+  const jView = copy.views.journal;
   const [values, setValues] = useState<Record<string, string>>({});
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [saving, setSaving] = useState(false);
@@ -97,6 +101,7 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
 
   if (!template) return null;
 
+  const tplCopy = copy.journalTemplates[template.id];
   const dirty = template.fields.some((f) => (values[f.key] ?? '').trim().length > 0);
 
   const setField = (key: string, text: string) => {
@@ -123,7 +128,7 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
       if (flashRef.current) clearTimeout(flashRef.current);
       flashRef.current = setTimeout(() => setSaved(false), 2200);
     } catch {
-      setError('Couldn’t save that note. Your text is still here — try again.');
+      setError(jView.error);
     } finally {
       setSaving(false);
     }
@@ -140,7 +145,11 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close journal" />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel={copy.player.closeJournal}
+        />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.kav}
@@ -151,10 +160,14 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                 <Ionicons name={template.icon as any} size={16} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.headTitle}>{template.title}</Text>
-                <Text style={styles.headSub}>{template.subtitle}</Text>
+                <Text style={styles.headTitle}>{tplCopy.title}</Text>
+                <Text style={styles.headSub}>{tplCopy.subtitle}</Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeBtn} accessibilityLabel="Close journal">
+              <Pressable
+                onPress={onClose}
+                style={styles.closeBtn}
+                accessibilityLabel={copy.player.closeJournal}
+              >
                 <Ionicons name="close" size={18} color="#FFFFFF" />
               </Pressable>
             </View>
@@ -164,22 +177,25 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                 <Text style={styles.hint}>{hint}</Text>
               ) : null}
 
-              {template.fields.map((f) => (
-                <View key={f.key} style={styles.fieldWrap}>
-                  <Text style={styles.fieldLabel}>{f.label}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={values[f.key] ?? ''}
-                    onChangeText={(t) => setField(f.key, t)}
-                    placeholder={f.placeholder}
-                    placeholderTextColor={Colors.textHint}
-                    multiline
-                    numberOfLines={f.lines}
-                    textAlignVertical="top"
-                    accessibilityLabel={f.label}
-                  />
-                </View>
-              ))}
+              {template.fields.map((f) => {
+                const fieldCopy = tplCopy.fields[f.key];
+                return (
+                  <View key={f.key} style={styles.fieldWrap}>
+                    <Text style={styles.fieldLabel}>{fieldCopy.label}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={values[f.key] ?? ''}
+                      onChangeText={(text) => setField(f.key, text)}
+                      placeholder={fieldCopy.placeholder}
+                      placeholderTextColor={Colors.textHint}
+                      multiline
+                      numberOfLines={f.lines}
+                      textAlignVertical="top"
+                      accessibilityLabel={fieldCopy.label}
+                    />
+                  </View>
+                );
+              })}
 
               {error ? (
                 <View style={styles.errorBox}>
@@ -190,13 +206,13 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
 
               {recent.length > 0 && (
                 <View style={styles.recentBlock}>
-                  <Text style={styles.recentLabel}>RECENT</Text>
+                  <Text style={styles.recentLabel}>{jView.recentLabel}</Text>
                   {recent.map((e) => {
                     const expanded = expandedId === e.id;
-                    const hint = expanded
-                      ? 'Tap to collapse'
+                    const rowHint = expanded
+                      ? jView.tapCollapse
                       : truncated[e.id]
-                        ? 'Tap to read all'
+                        ? jView.tapReadAll
                         : '';
                     return (
                       <View key={e.id} style={styles.recentRow}>
@@ -209,8 +225,8 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                           accessibilityRole="button"
                           accessibilityLabel={
                             expanded
-                              ? 'Collapse this note'
-                              : `Show the whole note. ${entryPreview(e)}`
+                              ? jView.collapseA11y
+                              : jView.showAllFmt.replace('{preview}', entryPreview(e))
                           }
                         >
                           <Text
@@ -232,13 +248,15 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                             {entryPreview(e)}
                           </Text>
                           <Text style={styles.recentStamp}>
-                            {[entryStamp(e.createdAt), hint].filter(Boolean).join('  ·  ')}
+                            {[entryStamp(e.createdAt, jView.months), rowHint]
+                              .filter(Boolean)
+                              .join('  ·  ')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => onDelete(e.id)}
                           style={styles.deleteBtn}
-                          accessibilityLabel="Delete this note"
+                          accessibilityLabel={jView.deleteA11y}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <Ionicons name="trash-outline" size={16} color={Colors.textHint} />
@@ -253,7 +271,7 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
             <View style={styles.footer}>
               <View style={styles.privacyPill}>
                 <Ionicons name="lock-closed-outline" size={11} color={tone('#55607A')} />
-                <Text style={styles.privacyText}>Stored on this device only</Text>
+                <Text style={styles.privacyText}>{jView.privacy}</Text>
               </View>
 
               <TouchableOpacity
@@ -272,12 +290,16 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                   color="#FFFFFF"
                 />
                 <Text style={styles.saveText}>
-                  {saving ? 'Saving…' : saved ? 'Saved to this device' : 'Save note'}
+                  {saving ? jView.saving : saved ? jView.saved : jView.saveBtn}
                 </Text>
               </TouchableOpacity>
 
-              <Pressable onPress={onClose} style={styles.doneLink} accessibilityLabel="Close journal">
-                <Text style={styles.doneLinkText}>Done</Text>
+              <Pressable
+                onPress={onClose}
+                style={styles.doneLink}
+                accessibilityLabel={copy.player.closeJournal}
+              >
+                <Text style={styles.doneLinkText}>{copy.player.done}</Text>
               </Pressable>
             </View>
           </View>

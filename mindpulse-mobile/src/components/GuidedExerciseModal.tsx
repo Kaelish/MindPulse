@@ -20,7 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
-import { exerciseById, ExerciseStep, GuidedExercise, totalSeconds } from '../services/guidedExercises';
+import { exerciseById, ExerciseId, ExerciseStep, GuidedExercise, totalSeconds } from '../services/guidedExercises';
+import { useTranslation } from '../i18n/language';
 
 const TICK_MS = 50;
 
@@ -87,6 +88,8 @@ export const GuidedExerciseModal: React.FC<Props> = ({
   exerciseIds,
   initialId,
 }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
   const list = useMemo(
     () => exerciseIds.map((id) => exerciseById(id)).filter((e): e is GuidedExercise => !!e),
     [exerciseIds],
@@ -194,7 +197,10 @@ export const GuidedExerciseModal: React.FC<Props> = ({
 
   if (!exercise) return null;
 
-  const step = steps[Math.min(view.step, Math.max(0, steps.length - 1))];
+  const exCopy = copy.exercises[exercise.id as ExerciseId];
+  const stepIdx = Math.min(view.step, Math.max(0, steps.length - 1));
+  const stepCopy = exCopy.steps[stepIdx];
+  const exView = copy.views.exercise;
   const accent = tone(exercise.color);
   const totalMin = Math.max(1, Math.round(totalSeconds(exercise) / 60));
 
@@ -204,7 +210,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={requestClose}
-          accessibilityLabel="Close guided exercise"
+          accessibilityLabel={copy.player.closeExercise}
         />
         <View style={styles.card}>
           <View style={[styles.head, { backgroundColor: toneBg(exercise.color) }]}>
@@ -212,13 +218,13 @@ export const GuidedExerciseModal: React.FC<Props> = ({
               <Ionicons name={exercise.icon as any} size={16} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headTitle}>{exercise.title}</Text>
-              <Text style={styles.headSub}>{exercise.subtitle}</Text>
+              <Text style={styles.headTitle}>{exCopy.title}</Text>
+              <Text style={styles.headSub}>{exCopy.subtitle}</Text>
             </View>
             <Pressable
               onPress={requestClose}
               style={styles.closeBtn}
-              accessibilityLabel="Close guided exercise"
+              accessibilityLabel={copy.player.closeExercise}
             >
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
@@ -245,7 +251,9 @@ export const GuidedExerciseModal: React.FC<Props> = ({
                       size={13}
                       color={on ? '#FFFFFF' : tone(Colors.textSecondary)}
                     />
-                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{ex.title}</Text>
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>
+                      {copy.exercises[ex.id as ExerciseId].title}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -254,21 +262,27 @@ export const GuidedExerciseModal: React.FC<Props> = ({
 
           <View style={styles.stage}>
             <Text style={styles.stageKicker}>
-              {done ? 'COMPLETE' : `STEP ${view.step + 1} OF ${steps.length}`}
+              {done
+                ? copy.player.complete
+                : exView.stepFmt
+                    .replace('{n}', String(view.step + 1))
+                    .replace('{m}', String(steps.length))}
             </Text>
             <Text style={[styles.stageLabel, { color: accent }]}>
-              {done ? 'Well done' : step?.label ?? ''}
+              {done ? copy.player.wellDone : stepCopy?.label ?? ''}
             </Text>
             <Text style={styles.stageCount}>{done ? '✓' : `${view.remain}`}</Text>
             <Text style={styles.stageText}>
-              {done ? `You finished ${exercise.title.toLowerCase()}.` : step?.text ?? ''}
+              {done
+                ? exView.finishedFmt.replace('{title}', exCopy.title.toLowerCase())
+                : stepCopy?.text ?? ''}
             </Text>
           </View>
 
           <View style={styles.pips}>
-            {steps.map((s, i) => (
+            {steps.map((_s, i) => (
               <View
-                key={`${s.label}-${i}`}
+                key={`step-${i}`}
                 style={[
                   styles.pip,
                   { backgroundColor: toneBg('#E0E0E0') },
@@ -282,17 +296,17 @@ export const GuidedExerciseModal: React.FC<Props> = ({
           <View style={styles.stats}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>{steps.length}</Text>
-              <Text style={styles.statLabel}>steps</Text>
+              <Text style={styles.statLabel}>{exView.statSteps}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>~{totalMin} min</Text>
-              <Text style={styles.statLabel}>total</Text>
+              <Text style={styles.statLabel}>{exView.statTotal}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>{Math.round(view.overall)}%</Text>
-              <Text style={styles.statLabel}>done</Text>
+              <Text style={styles.statLabel}>{exView.statDone}</Text>
             </View>
           </View>
 
@@ -312,10 +326,10 @@ export const GuidedExerciseModal: React.FC<Props> = ({
                 <Ionicons name={running ? 'pause' : 'play'} size={17} color="#FFFFFF" />
                 <Text style={styles.primaryText}>
                   {running
-                    ? 'Pause'
+                    ? copy.player.pause
                     : elapsedRef.current > 0
-                      ? 'Resume'
-                      : `Start · ${totalMin} min`}
+                      ? copy.player.resume
+                      : copy.player.startFmt.replace('{n}', String(totalMin))}
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -325,7 +339,7 @@ export const GuidedExerciseModal: React.FC<Props> = ({
                 activeOpacity={0.85}
               >
                 <Ionicons name="refresh" size={17} color="#FFFFFF" />
-                <Text style={styles.primaryText}>Do it again</Text>
+                <Text style={styles.primaryText}>{copy.player.again}</Text>
               </TouchableOpacity>
             )}
 
@@ -336,14 +350,14 @@ export const GuidedExerciseModal: React.FC<Props> = ({
                 disabled={done || steps.length < 2}
                 activeOpacity={0.7}
               >
-                <Text style={styles.secondaryText}>Next step</Text>
+                <Text style={styles.secondaryText}>{exView.nextStep}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => resetTo(idx)} activeOpacity={0.7}>
                 <Ionicons name="refresh-outline" size={15} color={tone('#666')} />
-                <Text style={styles.secondaryText}>Reset</Text>
+                <Text style={styles.secondaryText}>{copy.player.reset}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.7}>
-                <Text style={styles.secondaryText}>Done</Text>
+                <Text style={styles.secondaryText}>{copy.player.done}</Text>
               </TouchableOpacity>
             </View>
           </View>

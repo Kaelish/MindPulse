@@ -21,6 +21,7 @@ import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 import { CALM_TRACKS, CalmTrack } from '../services/calmAudio';
+import { useTranslation } from '../i18n/language';
 
 const fmt = (sec: number) => {
   if (!Number.isFinite(sec) || sec < 0) return '0:00';
@@ -37,6 +38,8 @@ interface PlayerBodyProps {
 }
 
 const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, onClose }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
   const player = useAudioPlayer(track.source, { updateInterval: 500 });
   const status = useAudioPlayerStatus(player);
   const [barWidth, setBarWidth] = useState(0);
@@ -112,7 +115,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
         </Text>
 
         {!status.isLoaded && !status.error && (
-          <Text style={m.statusNote}>Preparing…</Text>
+          <Text style={m.statusNote}>{copy.views.music.preparing}</Text>
         )}
         {!!status.error && <Text style={m.errorNote}>{status.error}</Text>}
 
@@ -138,7 +141,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
             onPress={() => player.seekTo(0).catch(() => {})}
             disabled={!status.duration}
             activeOpacity={0.7}
-            accessibilityLabel="Restart track"
+            accessibilityLabel={copy.views.music.restartA11y}
           >
             <Ionicons name="play-skip-back" size={19} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -148,7 +151,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
             onPress={togglePlay}
             disabled={!status.isLoaded}
             activeOpacity={0.85}
-            accessibilityLabel={status.playing ? 'Pause' : 'Play'}
+            accessibilityLabel={status.playing ? copy.player.pause : copy.player.play}
           >
             <Ionicons name={status.playing ? 'pause' : 'play'} size={26} color="#FFFFFF" />
           </TouchableOpacity>
@@ -157,7 +160,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
             style={[m.ctlBtn, loop && m.ctlBtnActive]}
             onPress={() => setLoop((v) => !v)}
             activeOpacity={0.7}
-            accessibilityLabel={loop ? 'Turn looping off' : 'Turn looping on'}
+            accessibilityLabel={loop ? copy.views.music.loopOffA11y : copy.views.music.loopOnA11y}
           >
             <Ionicons
               name="repeat"
@@ -173,7 +176,7 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
         contentContainerStyle={m.listContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={m.listLabel}>TRACKS</Text>
+        <Text style={m.listLabel}>{copy.views.music.tracksLabel}</Text>
         {CALM_TRACKS.map((t) => {
           const active = t.id === selectedId;
           return (
@@ -207,8 +210,8 @@ const PlayerBody: React.FC<PlayerBodyProps> = ({ track, selectedId, onSelect, on
           </Text>
         )}
 
-        <Pressable style={m.doneLink} onPress={onClose} accessibilityLabel="Close calming music">
-          <Text style={m.doneLinkText}>Done</Text>
+        <Pressable style={m.doneLink} onPress={onClose} accessibilityLabel={copy.player.closeMusic}>
+          <Text style={m.doneLinkText}>{copy.player.done}</Text>
         </Pressable>
       </ScrollView>
     </>
@@ -221,23 +224,33 @@ interface Props {
 }
 
 export const CalmMusicModal: React.FC<Props> = ({ visible, onClose }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
   const [selectedId, setSelectedId] = useState(CALM_TRACKS[0]?.id ?? '');
-  const track = CALM_TRACKS.find((t) => t.id === selectedId) ?? CALM_TRACKS[0] ?? null;
+  const track = CALM_TRACKS.find((x) => x.id === selectedId) ?? CALM_TRACKS[0] ?? null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={m.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close calming music" />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel={copy.player.closeMusic}
+        />
         <View style={m.card}>
           <View style={m.head}>
             <View style={m.headIcon}>
               <Ionicons name="musical-notes" size={16} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={m.headTitle}>Calming music</Text>
-              <Text style={m.headSub}>Tap play and let it run in the background</Text>
+              <Text style={m.headTitle}>{copy.music.label}</Text>
+              <Text style={m.headSub}>{copy.views.music.headSub}</Text>
             </View>
-            <Pressable onPress={onClose} style={m.closeBtn} accessibilityLabel="Close calming music">
+            <Pressable
+              onPress={onClose}
+              style={m.closeBtn}
+              accessibilityLabel={copy.player.closeMusic}
+            >
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
           </View>

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius } from '../theme/typography';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
+import { useTranslation } from '../i18n/language';
 
 const TICK_MS = 50;
 const PHASE_MS = 4000;
@@ -21,11 +22,12 @@ const CYCLE_MS = PHASE_MS * 4;
 const MIN_SCALE = 0.6;
 const TOTAL_CYCLES = Math.floor(SESSION_MS / CYCLE_MS);
 
+/** Circle scale only — the labels/hints are localized per render (`views.breathe`). */
 const PHASES = [
-  { label: 'Breathe in', hint: 'In through your nose', from: MIN_SCALE, to: 1 },
-  { label: 'Hold', hint: 'Let the air settle', from: 1, to: 1 },
-  { label: 'Breathe out', hint: 'Out through your mouth', from: 1, to: MIN_SCALE },
-  { label: 'Hold', hint: 'Stay empty for a beat', from: MIN_SCALE, to: MIN_SCALE },
+  { from: MIN_SCALE, to: 1 },
+  { from: 1, to: 1 },
+  { from: 1, to: MIN_SCALE },
+  { from: MIN_SCALE, to: MIN_SCALE },
 ];
 
 const smoothstep = (p: number) => p * p * (3 - 2 * p);
@@ -43,6 +45,8 @@ interface Props {
 }
 
 export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
+  const { t } = useTranslation();
+  const copy = t.results.tools;
   const scale = useRef(new Animated.Value(MIN_SCALE)).current;
   const elapsedRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,7 +129,9 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   const progress = ((SESSION_SECONDS - ui.remainSec) / SESSION_SECONDS) * 100;
-  const phase = PHASES[ui.phase];
+  const breathe = copy.views.breathe;
+  const phaseCopy = [breathe.phaseIn, breathe.phaseHold1, breathe.phaseOut, breathe.phaseHold2];
+  const phase = phaseCopy[ui.phase];
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={requestClose}>
@@ -133,7 +139,7 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={requestClose}
-          accessibilityLabel="Close breathing exercise"
+          accessibilityLabel={copy.player.closeBreath}
         />
         <View style={styles.card}>
           <View style={styles.head}>
@@ -141,13 +147,13 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
               <Ionicons name="leaf-outline" size={16} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headTitle}>Box breathing</Text>
-              <Text style={styles.headSub}>In 4 · Hold 4 · Out 4 · Hold 4 — 5 minutes</Text>
+              <Text style={styles.headTitle}>{copy.breathe.label}</Text>
+              <Text style={styles.headSub}>{breathe.headSub}</Text>
             </View>
             <Pressable
               onPress={requestClose}
               style={styles.closeBtn}
-              accessibilityLabel="Close breathing exercise"
+              accessibilityLabel={copy.player.closeBreath}
             >
               <Ionicons name="close" size={18} color="#FFFFFF" />
             </Pressable>
@@ -157,21 +163,21 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
             <View style={styles.ring}>
               <Animated.View style={[styles.blob, { transform: [{ scale }] }]} />
               <View style={styles.blobContent}>
-                <Text style={styles.phaseLabel}>{done ? 'Well done' : phase.label}</Text>
+                <Text style={styles.phaseLabel}>
+                  {done ? copy.player.wellDone : phase.label}
+                </Text>
                 <Text style={styles.phaseCount}>
-                  {done ? '5 minutes complete' : `${ui.phaseLeft}`}
+                  {done ? breathe.doneCount : `${ui.phaseLeft}`}
                 </Text>
               </View>
             </View>
-            <Text style={styles.hint}>
-              {done ? 'You completed 5 minutes of paced breathing.' : phase.hint}
-            </Text>
+            <Text style={styles.hint}>{done ? breathe.doneBody : phase.hint}</Text>
           </View>
 
           <View style={styles.pips}>
-            {PHASES.map((p, i) => (
+            {PHASES.map((_p, i) => (
               <View
-                key={`${p.label}-${i}`}
+                key={`phase-${i}`}
                 style={[styles.pip, !done && i === ui.phase && styles.pipActive]}
               />
             ))}
@@ -180,17 +186,17 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
           <View style={styles.stats}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>{ui.cycle}</Text>
-              <Text style={styles.statLabel}>cycle</Text>
+              <Text style={styles.statLabel}>{breathe.statCycle}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>{mmss(ui.remainSec)}</Text>
-              <Text style={styles.statLabel}>left</Text>
+              <Text style={styles.statLabel}>{breathe.statLeft}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>4s</Text>
-              <Text style={styles.statLabel}>per phase</Text>
+              <Text style={styles.statLabel}>{breathe.statPerPhase}</Text>
             </View>
           </View>
 
@@ -207,23 +213,27 @@ export const BoxBreathingModal: React.FC<Props> = ({ visible, onClose }) => {
               >
                 <Ionicons name={running ? 'pause' : 'play'} size={17} color="#FFFFFF" />
                 <Text style={styles.primaryText}>
-                  {running ? 'Pause' : elapsedRef.current > 0 ? 'Resume' : 'Start breathing'}
+                  {running
+                    ? copy.player.pause
+                    : elapsedRef.current > 0
+                      ? copy.player.resume
+                      : breathe.startBtn}
                 </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.primaryBtn} onPress={reset} activeOpacity={0.85}>
                 <Ionicons name="refresh" size={17} color="#FFFFFF" />
-                <Text style={styles.primaryText}>Do it again</Text>
+                <Text style={styles.primaryText}>{copy.player.again}</Text>
               </TouchableOpacity>
             )}
 
             <View style={styles.secondaryRow}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={reset} activeOpacity={0.7}>
                 <Ionicons name="refresh-outline" size={15} color={tone('#666')} />
-                <Text style={styles.secondaryText}>Reset</Text>
+                <Text style={styles.secondaryText}>{copy.player.reset}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.7}>
-                <Text style={styles.secondaryText}>Done</Text>
+                <Text style={styles.secondaryText}>{copy.player.done}</Text>
               </TouchableOpacity>
             </View>
           </View>
