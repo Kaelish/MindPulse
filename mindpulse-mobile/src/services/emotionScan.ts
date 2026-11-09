@@ -43,9 +43,41 @@ const BACKEND_LABEL_TO_EXPRESSION: Record<string, FaceEmotion> = {
   sad: 'sad',
 };
 
-// Render's free service can sleep, and the first request may also load the
-// TensorFlow/MediaPipe model. Allow enough time for that cold start.
+// Render's free service can sleep. Allow enough time for the cold start.
 const REQUEST_TIMEOUT_MS = 90000;
+// A sleeping instance can reset the first connection. Retry once when the
+// failure happens immediately, but do not make the user wait twice as long
+// after a genuine timeout.
+const RETRY_DELAY_MS = 1500;
+const RETRY_WINDOW_MS = 15000;
+
+const postFrame = async (url: string, body: string): Promise<Response> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const isAbortError = (err: unknown): boolean =>
+  err instanceof Error && err.name === 'AbortError';
+
+const timeoutError = (): Error =>
+  new Error(
+    'The emotion service took too long to respond. The server may be waking up; please try again.',
+  );
+
+const unreachableError = (): Error =>
+  new Error(
+    'Could not reach the emotion service. Please check your internet connection and try again.',
+  );
 
 const getApiBaseUrl = (): string => {
   // Must be a literal `process.env.EXPO_PUBLIC_*` member access: babel-preset-expo
@@ -72,30 +104,26 @@ export const analyzeFaceImage = async (
   sadBias?: number,
 ): Promise<FaceScanResult> => {
   const url = `${getApiBaseUrl()}/api/predict-emotion/`;
+  const body = JSON.stringify({
+    image: base64Image,
+    ...(sadBias != null ? { sad_bias: sadBias } : {}),
+  });
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
+  const startedAt = Date.now();
   let response: Response;
   try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: base64Image,
-        ...(sadBias != null ? { sad_bias: sadBias } : {}),
-      }),
-      signal: controller.signal,
-    });
+    response = await postFrame(url, body);
   } catch (err) {
-    const aborted = err instanceof Error && err.name === 'AbortError';
-    throw new Error(
-      aborted
-        ? 'The emotion service took too long to respond. The server may be waking up; please try again.'
-        : 'Could not reach the emotion service. Check EXPO_PUBLIC_MINDPULSE_API_URL and your network.',
-    );
-  } finally {
-    clearTimeout(timeout);
+    if (isAbortError(err)) throw timeoutError();
+    if (Date.now() - startedAt > RETRY_WINDOW_MS) throw unreachableError();
+
+    // The service may have reset an in-flight connection while waking up.
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    try {
+      response = await postFrame(url, body);
+    } catch (retryErr) {
+      throw isAbortError(retryErr) ? timeoutError() : unreachableError();
+    }
   }
 
   let payload: EmotionApiResponse | null = null;

@@ -14,7 +14,7 @@ if not logger.handlers:
     logger.addHandler(_handler)
     logger.setLevel(logging.INFO)
 
-# Management commands where loading the TF model would be wasted work.
+# Management commands where loading the emotion model would be wasted work.
 _SKIP_WARMUP_COMMANDS = {
     'makemigrations', 'migrate', 'test', 'shell', 'createsuperuser',
     'collectstatic', 'flush', 'check', 'showmigrations', 'makemessages',

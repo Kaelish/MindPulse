@@ -90,7 +90,7 @@ def predict_emotion_view(request):
 			return Response({'detail': 'sad_bias must be a number.'},
 							status=status.HTTP_400_BAD_REQUEST)
 
-	# Validate the request before loading the ~700 MB model stack. A malformed
+	# Validate the request before loading the face-model stack. A malformed
 	# request must stay a 400 even when the inference dependencies are absent.
 	try:
 		from emotion_model import predict_image

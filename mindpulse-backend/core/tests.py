@@ -18,9 +18,9 @@ PREDICTION = {
 
 
 def fake_emotion_model(result=PREDICTION, side_effect=None):
-	"""Stand-in for the TensorFlow/MediaPipe module used by the view.
+	"""Stand-in for the MediaPipe/NumPy module used by the view.
 
-	Unit tests must not need the ~700 MB inference stack, so the module is
+	Unit tests must not need the inference stack, so the module is
 	injected into sys.modules and predict_image is a mock. The test can then
 	assert the request parsing and response mapping in isolation.
 	"""

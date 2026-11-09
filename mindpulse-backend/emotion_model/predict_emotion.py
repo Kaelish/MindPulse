@@ -13,25 +13,30 @@ Or reuse one loaded instance across requests:
     result = get_predictor().predict(image_bytes)
 
 Artifacts expected in this folder:
-    hybrid_improved_cnn_model.h5           CNN pixel branch (64x64 gray -> 64-d)
-    hybrid_improved_scaler.joblib          StandardScaler over [emb | 1434 lm]
-    hybrid_improved_multinomial_lr.joblib  Multinomial logistic regression
-    hybrid_improved_encoder.joblib         {0: Happy, 1: Neutral, 2: Sad}
-    face_landmarker.task                   MediaPipe FaceLandmarker (478 landmarks)
-    landmark_utils.py                      nose-tip/inter-ocular normalization
+    hybrid_improved_inference.npz         Pixel branch + scaler + classifier
+                                          weights (extracted from the original
+                                          Keras/scikit-learn artifacts)
+    face_landmarker.task                  MediaPipe FaceLandmarker (478 landmarks)
+    landmark_utils.py                     nose-tip/inter-ocular normalization
 
 Pipeline (identical to the capstone camera validation):
     1. MediaPipe FaceLandmarker -> 478x3 raw coords
     2. normalize_landmarks (center=nose tip lm1, scale=eye dist lm33<->lm263)
-    3. face crop (bbox + 25% pad) -> grayscale -> 64x64 -> /255  -> CNN -> 64-d
-    4. concat [64-d emb | 1434 lm] -> scaler.transform -> LR.predict_proba
+    3. face crop (bbox + 25% pad) -> grayscale -> 64x64 -> /255 -> dense branch
+    4. concat [64-d emb | 1434 lm] -> standardise -> multinomial logistic
+       regression -> softmax
+
+The saved pixel branch is a small multi-layer perceptron (Flatten -> Dense
+512/256/128/64), and the classifier is a standard scaler + logistic regression.
+Both are evaluated with NumPy instead of TensorFlow/scikit-learn, which keeps
+the Render free instance under its memory limit and avoids cross-version pickle
+incompatibilities. The original model files are retained for provenance.
 """
 
 import os
 import threading
 
 import cv2
-import joblib
 import numpy as np
 
 try:  # works as a package (emotion_model.predict_emotion) or a flat script
@@ -41,7 +46,14 @@ except ImportError:  # pragma: no cover
 
 MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_SIZE = 64
-DEFAULT_CLASS_NAMES = ["Happy", "Neutral", "Sad"]
+BN_EPSILON = 1e-3  # matches BatchNormalization(epsilon=0.001) in the saved model
+
+_DENSE_BLOCKS = (
+    ("cnn_dense_512", "cnn_bn_512", 512),
+    ("cnn_dense_256", "cnn_bn_256", 256),
+    ("cnn_dense_128", "cnn_bn_128", 128),
+    ("cnn_dense_64", "cnn_bn_64", 64),
+)
 
 _predictor = None  # module-level singleton
 _predictor_lock = threading.Lock()
@@ -67,38 +79,59 @@ def crop_face(frame, coords):
 
 
 class EmotionPredictor:
-    """Loads the 4 hybrid artifacts once and predicts on images."""
+    """Loads the numeric artifacts once and predicts on images."""
 
     def __init__(self, model_dir=MODEL_DIR, image_size=IMAGE_SIZE,
-                 sad_bias=0.0, num_faces=1):
-        from keras import models as kmodels
-        import keras
-
+                 sad_bias=0.0, num_faces=1, weights_path=None):
         self.image_size = image_size
         self.sad_bias = float(sad_bias)
         self._landmarker = None
         self._num_faces = num_faces
 
-        cnn_path = os.path.join(model_dir, "hybrid_improved_cnn_model.h5")
-        try:
-            self.cnn = kmodels.load_model(cnn_path, custom_objects=None)
-        except Exception:
-            self.cnn = keras.models.load_model(
-                cnn_path, custom_objects=None, safe_mode=False)
+        weights_path = weights_path or os.path.join(
+            model_dir, "hybrid_improved_inference.npz")
+        if not os.path.exists(weights_path):
+            raise FileNotFoundError(
+                "Inference weights not found: %s. Generate the file with "
+                "emotion_model/extract_cnn_weights.py." % weights_path)
 
-        self.scaler = joblib.load(
-            os.path.join(model_dir, "hybrid_improved_scaler.joblib"))
-        self.lr = joblib.load(
-            os.path.join(model_dir, "hybrid_improved_multinomial_lr.joblib"))
+        with np.load(weights_path) as weights:
+            self._dense_blocks = []
+            for dense_name, bn_name, units in _DENSE_BLOCKS:
+                kernel = np.ascontiguousarray(
+                    weights[dense_name + "_kernel"], dtype=np.float32)
+                bias = np.ascontiguousarray(
+                    weights[dense_name + "_bias"], dtype=np.float32)
+                gamma = np.ascontiguousarray(
+                    weights[bn_name + "_gamma"], dtype=np.float32)
+                beta = np.ascontiguousarray(
+                    weights[bn_name + "_beta"], dtype=np.float32)
+                mean = np.ascontiguousarray(
+                    weights[bn_name + "_moving_mean"], dtype=np.float32)
+                variance = np.ascontiguousarray(
+                    weights[bn_name + "_moving_variance"], dtype=np.float32)
+                if kernel.shape != (kernel.shape[0], units):
+                    raise ValueError(
+                        "Unexpected %s kernel shape %r" % (dense_name, kernel.shape))
+                # Fold BatchNormalization into a single scale/offset per unit.
+                scale = gamma / np.sqrt(variance + BN_EPSILON)
+                self._dense_blocks.append(
+                    (kernel, bias, scale, beta - mean * scale))
 
-        enc_path = os.path.join(model_dir, "hybrid_improved_encoder.joblib")
-        if os.path.exists(enc_path):
-            encoder = joblib.load(enc_path)
-            names = encoder.get("classes") if isinstance(encoder, dict) else None
-            self.class_names = list(names) if names is not None else list(
-                DEFAULT_CLASS_NAMES)
-        else:
-            self.class_names = list(DEFAULT_CLASS_NAMES)
+            self._scaler_mean = np.asarray(
+                weights["scaler_mean"], dtype=np.float64)
+            self._scaler_scale = np.asarray(
+                weights["scaler_scale"], dtype=np.float64)
+            self._lr_coef = np.asarray(weights["lr_coef"], dtype=np.float64)
+            self._lr_intercept = np.asarray(
+                weights["lr_intercept"], dtype=np.float64)
+            self._lr_classes = np.asarray(weights["lr_classes"], dtype=np.int64)
+            names = weights["class_names"]
+            self.class_names = [str(name) for name in names]
+
+        if len(self.class_names) != len(self._lr_classes):
+            raise ValueError(
+                "class_names and lr_classes must have the same length")
 
         self._landmarker_path = os.path.join(model_dir, "face_landmarker.task")
 
@@ -116,6 +149,17 @@ class EmotionPredictor:
                 )
             )
         return self._landmarker
+
+    def _embed_pixels(self, pixels):
+        """Dense pixel branch: Flatten -> (Dense -> ReLU -> BN) x4."""
+        x = np.asarray(pixels, dtype=np.float32).reshape(-1)
+        for kernel, bias, scale, offset in self._dense_blocks:
+            x = x @ kernel
+            x += bias
+            np.maximum(x, 0, out=x)
+            x *= scale
+            x += offset
+        return x
 
     @staticmethod
     def _load_bgr(image):
@@ -156,17 +200,21 @@ class EmotionPredictor:
         if norm is None:
             return None
 
-        # CNN pixel branch input
+        # Pixel-branch input
         face = crop_face(frame, coords)
         gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, (self.image_size, self.image_size))
-        pixels = (gray.astype(np.float32) / 255.0)[None, :, :, None]
-        flat = norm.reshape(-1)[None, :]
+        pixels = gray.astype(np.float32) / 255.0
 
-        # direct call: model(x) is far cheaper than model.predict(x) for one sample
-        emb = np.asarray(self.cnn(pixels, training=False))
-        fused = np.concatenate([emb, flat], axis=1)
-        probs = self.lr.predict_proba(self.scaler.transform(fused))[0]
+        embedding = self._embed_pixels(pixels).astype(np.float64, copy=False)
+        fused = np.concatenate([embedding, norm.reshape(-1)])
+
+        # StandardScaler + multinomial LogisticRegression, evaluated directly.
+        scaled = (fused - self._scaler_mean) / self._scaler_scale
+        logits = self._lr_coef @ scaled + self._lr_intercept
+        logits -= logits.max()
+        probs = np.exp(logits)
+        probs /= probs.sum()
 
         bias = self.sad_bias if sad_bias is None else float(sad_bias)
         if bias > 0 and "Sad" in self.class_names:
