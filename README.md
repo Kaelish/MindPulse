@@ -39,9 +39,9 @@ Gunicorn, migrations, and the `/api/health/` health check. To deploy it:
 4. After deployment, copy the service's HTTPS URL into the mobile build
    environment as `EXPO_PUBLIC_MINDPULSE_API_URL`.
 
-The free plan may sleep and may not have enough memory for TensorFlow and
-MediaPipe. The deployment configuration is ready to try, but hosting limits
-are controlled by Render and cannot be verified from this repository alone.
+The free plan may sleep, so the first request can take up to a minute to wake
+it. The pixel branch runs in NumPy rather than TensorFlow, which keeps the
+service inside the free tier's 512 MB memory limit.
 
 ## Shared Supabase connection
 

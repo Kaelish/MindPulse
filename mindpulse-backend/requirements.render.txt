@@ -6,14 +6,14 @@ python-dotenv==1.2.1
 supabase==2.31.0
 gunicorn==23.0.0
 
-# TensorFlow 2.19.1 is compatible with MediaPipe's protobuf requirements.
-tensorflow==2.19.1
-keras==3.15.0
-# MediaPipe is installed with --no-deps in render.yaml so its non-headless
-# OpenCV dependency does not replace this headless Linux build.
+# The pixel branch, scaler, and logistic-regression head all run in NumPy from
+# hybrid_improved_inference.npz, so TensorFlow/Keras and scikit-learn are not
+# runtime deps. This keeps the free Render instance inside its memory limit.
+# MediaPipe itself is installed with --no-deps in render.yaml so its
+# non-headless OpenCV dependency does not replace this headless Linux build.
+attrs==25.4.0
+flatbuffers==25.12.19
+matplotlib==3.9.4
 opencv-contrib-python-headless==4.11.0.86
 protobuf==4.25.8
-scikit-learn==1.7.2
-joblib==1.5.3
 numpy==1.26.4
-matplotlib==3.9.4

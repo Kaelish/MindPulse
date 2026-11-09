@@ -5,15 +5,29 @@ services:
     plan: free
     rootDir: mindpulse-backend
     buildCommand: pip install -r requirements.render.txt && pip install --no-deps mediapipe==0.10.18 && python manage.py migrate
-    startCommand: gunicorn mindpulse_api.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: gunicorn mindpulse_api.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --graceful-timeout 30
     healthCheckPath: /api/health/
     envVars:
       - key: DJANGO_DEBUG
         value: "False"
       - key: PYTHON_VERSION
         value: "3.12.10"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: NUMEXPR_NUM_THREADS
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       - key: CUDA_VISIBLE_DEVICES
         value: "-1"
+      # Landmark detection deadline; keeps a stuck graph from being killed by
+      # the gunicorn timeout (the API answers 503 with a clear message).
+      - key: MINDPULSE_DETECT_TIMEOUT_S
+        value: "60"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_ALLOWED_HOSTS

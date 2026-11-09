@@ -56,8 +56,9 @@ def predict_emotion_view(request):
 	  - multipart/form-data with an "image" file field (web upload), or
 	  - JSON {"image": "<base64 or data-URL>", "sad_bias": 0.15} (mobile).
 
-	Returns 200 with {"label", "confidence", "probabilities", "runner_up"}
-	or 400 when the image is missing/invalid or no face is detected.
+	Returns 200 with {"label", "confidence", "probabilities", "runner_up"},
+	400 when the image is missing/invalid or no face is detected, and 503 when
+	the model is unavailable or detection exceeds its deadline.
 	"""
 	raw = None
 	sad_bias = None
@@ -90,7 +91,7 @@ def predict_emotion_view(request):
 			return Response({'detail': 'sad_bias must be a number.'},
 							status=status.HTTP_400_BAD_REQUEST)
 
-	# Validate the request before loading the ~700 MB model stack. A malformed
+	# Validate the request before loading the face-model stack. A malformed
 	# request must stay a 400 even when the inference dependencies are absent.
 	try:
 		from emotion_model import predict_image
@@ -102,6 +103,14 @@ def predict_emotion_view(request):
 
 	try:
 		result = predict_image(raw, sad_bias=sad_bias)
+	except TimeoutError:
+		# Landmark detection has its own deadline (see emotion_model.predict_emotion)
+		# so a stuck model returns quickly instead of being killed by gunicorn.
+		logger.warning('Emotion prediction timed out')
+		return Response(
+			{'detail': 'The emotion service took too long to process this image. '
+					   'Please try again.'},
+			status=status.HTTP_503_SERVICE_UNAVAILABLE)
 	except (ValueError, TypeError) as exc:
 		return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 	except Exception:
