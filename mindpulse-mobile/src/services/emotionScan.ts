@@ -43,7 +43,9 @@ const BACKEND_LABEL_TO_EXPRESSION: Record<string, FaceEmotion> = {
   sad: 'sad',
 };
 
-const REQUEST_TIMEOUT_MS = 20000;
+// Render's free service can sleep, and the first request may also load the
+// TensorFlow/MediaPipe model. Allow enough time for that cold start.
+const REQUEST_TIMEOUT_MS = 90000;
 
 const getApiBaseUrl = (): string => {
   // Must be a literal `process.env.EXPO_PUBLIC_*` member access: babel-preset-expo
@@ -89,7 +91,7 @@ export const analyzeFaceImage = async (
     const aborted = err instanceof Error && err.name === 'AbortError';
     throw new Error(
       aborted
-        ? 'The emotion analysis timed out. Check your connection and try again.'
+        ? 'The emotion service took too long to respond. The server may be waking up; please try again.'
         : 'Could not reach the emotion service. Check EXPO_PUBLIC_MINDPULSE_API_URL and your network.',
     );
   } finally {
