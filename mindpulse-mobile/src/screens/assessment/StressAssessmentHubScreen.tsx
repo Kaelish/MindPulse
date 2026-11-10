@@ -8,6 +8,7 @@ import {
   AssessmentTool,
   fetchActiveAssessmentTools,
 } from '../../services/assessmentTools';
+import { requireUserId } from '../../services/session';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { useTranslation } from '../../i18n/language';
 
@@ -79,12 +80,33 @@ export const markDayComplete = (state: AssessmentState): AssessmentState => ({
   completedOn: todayKey(),
 });
 
+export const getAssessmentKey = (userId?: string): string =>
+  userId ? `assessment_state_${userId}` : 'assessment_state';
+
+export const clearAllAssessmentKeys = async (): Promise<void> => {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const assessmentKeys = keys.filter(k => k.startsWith('assessment_state'));
+    if (assessmentKeys.length > 0) await AsyncStorage.multiRemove(assessmentKeys);
+  } catch { /* ignore storage failures */ }
+};
+
 export const loadAssessmentState = async (): Promise<AssessmentState> => {
+  let userId: string | undefined;
+  try {
+    userId = await requireUserId();
+  } catch {
+    userId = undefined;
+  }
+
   let stored: AssessmentState = DEFAULT_STATE;
   try {
-    const json = await AsyncStorage.getItem('assessment_state');
+    const key = userId ? getAssessmentKey(userId) : 'assessment_state';
+    const json = await AsyncStorage.getItem(key);
     if (json) {
       stored = { ...DEFAULT_STATE, ...(JSON.parse(json) as AssessmentState) };
+    } else if (userId) {
+      return { ...DEFAULT_STATE };
     }
   } catch (e) {
     console.error('Failed to load assessment state', e);
@@ -99,8 +121,19 @@ export const loadAssessmentState = async (): Promise<AssessmentState> => {
 };
 
 export const saveAssessmentState = async (state: AssessmentState) => {
+  let userId: string | undefined;
   try {
-    await AsyncStorage.setItem('assessment_state', JSON.stringify(state));
+    userId = await requireUserId();
+  } catch {
+    userId = undefined;
+  }
+  try {
+    if (userId) {
+      await AsyncStorage.setItem(getAssessmentKey(userId), JSON.stringify(state));
+      await AsyncStorage.removeItem('assessment_state');
+    } else {
+      await AsyncStorage.setItem('assessment_state', JSON.stringify(state));
+    }
   } catch (e) {
     console.error('Failed to save assessment state', e);
   }

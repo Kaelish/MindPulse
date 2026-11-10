@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/typography';
 import { supabase } from '../../supabase/client';
+import { clearAllAssessmentKeys } from '../assessment/StressAssessmentHubScreen';
 import {
   DoctorProfileData,
   changeAccountPassword,
@@ -141,6 +142,7 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
         onPress: () => {
           void (async () => {
             try {
+              await clearAllAssessmentKeys().catch(() => {});
               await supabase.auth.signOut();
             } finally {
               onSignOut?.();

@@ -51,7 +51,14 @@ const describeAuthError = (error: any): string => {
   ) {
     return 'An account with that e-mail address already exists. Sign in instead.';
   }
-  if (code === 'weak_password' || /password should be at least/i.test(msg)) {
+  if (
+    code === 'weak_password' ||
+    /weak password/i.test(msg) ||
+    /password too short/i.test(msg) ||
+    /at least 6 characters/i.test(msg) ||
+    /6 characters/i.test(msg) ||
+    /password should be at least/i.test(msg)
+  ) {
     return 'Your password must be at least 6 characters long.';
   }
   if (code === 'email_address_invalid' || /invalid.*e?mail|not a valid/i.test(msg)) {

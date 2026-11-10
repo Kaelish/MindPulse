@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
+import { clearAllAssessmentKeys } from '../../assessment/StressAssessmentHubScreen';
 import { fetchDashboardData, StressSessionItem } from '../../../services/dashboard';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
@@ -114,6 +115,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               const { error } = await supabase.rpc('delete_my_account');
               if (error) throw new Error(error.message);
               // The auth row is gone; clear this device's session as well.
+              await clearAllAssessmentKeys().catch(() => {});
               await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
               onAccountDeleted?.();
             } catch (e: any) {
