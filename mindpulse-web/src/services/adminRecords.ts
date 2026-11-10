@@ -285,11 +285,9 @@ export interface ConsultationRecordRow {
   studentEmail: string;
   doctorName: string;
   scheduledFor: string;
-  summary: string;
-  observations: string;
-  recommendation: string;
   followUp: string | null;
   updatedAt: string | null;
+  patientNoteWritten: boolean;
 }
 
 const personLabel = (entry: { name: string; email: string } | undefined): string =>
@@ -301,27 +299,50 @@ export const fetchConsultationRecords = async (): Promise<ConsultationRecordRow[
   const { data, error } = await supabase
     .from('consultation_notes')
     .select(
-      'appointment_id, patient_id, doctor_id, summary, observations, recommendation, follow_up, updated_at, appointments(scheduled_for)',
+      'appointment_id, patient_id, doctor_id, follow_up, created_at, updated_at, appointments(scheduled_for)',
     )
     .order('updated_at', { ascending: false })
     .limit(200);
   if (error) throw new Error(error.message);
 
+  // A consultation only reaches the notes table once the doctor writes the
+  // after-visit summary, so pull the booked/completed appointments in too —
+  // otherwise recent consultations are missing from the admin's records.
+  const { data: appointmentRows, error: appointmentError } = await supabase
+    .from('appointments')
+    .select('id, patient_id, doctor_id, scheduled_for, status, created_at')
+    .in('status', ['scheduled', 'awaiting_payment', 'confirmed', 'completed'])
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (appointmentError) throw new Error(appointmentError.message);
+
   type RawNote = {
     appointment_id: string;
     patient_id: string;
     doctor_id: string;
-    summary: string | null;
-    observations: string | null;
-    recommendation: string | null;
     follow_up: string | null;
+    created_at: string | null;
     updated_at: string | null;
     appointments: { scheduled_for?: string } | { scheduled_for?: string }[] | null;
   };
 
+  type RawAppointment = {
+    id: string;
+    patient_id: string;
+    doctor_id: string;
+    scheduled_for: string | null;
+    status: string;
+    created_at: string | null;
+  };
+
   const rows = (data ?? []) as unknown as RawNote[];
+  const appointments = (appointmentRows ?? []) as unknown as RawAppointment[];
   const ids = Array.from(
-    new Set(rows.flatMap((row) => [row.patient_id, row.doctor_id]).filter((id): id is string => !!id)),
+    new Set(
+      [...rows.flatMap((row) => [row.patient_id, row.doctor_id]), ...appointments.flatMap((row) => [row.patient_id, row.doctor_id])].filter(
+        (id): id is string => !!id,
+      ),
+    ),
   );
 
   const people = new Map<string, { name: string; email: string }>();
@@ -346,7 +367,9 @@ export const fetchConsultationRecords = async (): Promise<ConsultationRecordRow[
     }
   }
 
-  return rows.map((row) => {
+  const noteByAppointment = new Map(rows.map((row) => [row.appointment_id, row]));
+
+  const records: (ConsultationRecordRow & { sortAt: string })[] = rows.map((row) => {
     const appointment = Array.isArray(row.appointments) ? row.appointments[0] : row.appointments;
     return {
       appointmentId: row.appointment_id,
@@ -356,11 +379,32 @@ export const fetchConsultationRecords = async (): Promise<ConsultationRecordRow[
       studentEmail: people.get(row.patient_id)?.email ?? '',
       doctorName: personLabel(people.get(row.doctor_id)),
       scheduledFor: appointment?.scheduled_for ?? '',
-      summary: row.summary ?? '',
-      observations: row.observations ?? '',
-      recommendation: row.recommendation ?? '',
       followUp: row.follow_up ?? null,
       updatedAt: row.updated_at,
+      patientNoteWritten: true,
+      sortAt: row.updated_at ?? row.created_at ?? '',
     };
   });
+
+  // Consultations whose note was never written still belong in the records;
+  // they render with patientNoteWritten false and "—" in Last Updated.
+  for (const appointment of appointments) {
+    if (noteByAppointment.has(appointment.id)) continue;
+    records.push({
+      appointmentId: appointment.id,
+      studentId: appointment.patient_id,
+      doctorId: appointment.doctor_id,
+      studentName: personLabel(people.get(appointment.patient_id)),
+      studentEmail: people.get(appointment.patient_id)?.email ?? '',
+      doctorName: personLabel(people.get(appointment.doctor_id)),
+      scheduledFor: appointment.scheduled_for ?? '',
+      followUp: null,
+      updatedAt: null,
+      patientNoteWritten: false,
+      sortAt: appointment.created_at ?? '',
+    });
+  }
+
+  records.sort((a, b) => b.sortAt.localeCompare(a.sortAt));
+  return records.map(({ sortAt: _sortAt, ...row }) => row);
 };

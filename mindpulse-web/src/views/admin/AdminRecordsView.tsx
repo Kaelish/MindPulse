@@ -40,7 +40,7 @@ const TAB_META: Record<RecordsTab, { label: string; title: string; subtitle: str
   consultations: {
     label: 'Consultation Records',
     title: 'View Consultation Records',
-    subtitle: 'After-visit summaries written after each video consultation',
+    subtitle: 'Consultations booked or completed, with patient note status',
   },
 };
 
@@ -622,7 +622,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                 {filteredConsultations.length === 0 ? (
                   <p className="empty-table">
                     {data.consultations.length === 0
-                      ? 'No consultation summaries have been written yet.'
+                      ? 'No consultation records have been logged yet.'
                       : 'No records match your search.'}
                   </p>
                 ) : (
@@ -634,7 +634,7 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                           <th>Doctor</th>
                           <th>Appointment</th>
                           <th>Last Updated</th>
-                          <th>Follow-up</th>
+                          <th>Patient Note</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
@@ -648,7 +648,13 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
                             <td>{row.doctorName}</td>
                             <td>{row.scheduledFor || '—'}</td>
                             <td>{row.updatedAt ? formatStamp(row.updatedAt) : '—'}</td>
-                            <td>{row.followUp || '—'}</td>
+                            <td>
+                              <span
+                                className={`status-pill ${row.patientNoteWritten ? 'status-pill-low' : 'status-pill-grey'}`}
+                              >
+                                {row.patientNoteWritten ? 'Yes' : 'No'}
+                              </span>
+                            </td>
                             <td>
                               <button
                                 type="button"
@@ -766,20 +772,28 @@ export const AdminRecordsView: React.FC<AdminRecordsViewProps> = ({ onSignOut, o
 
             <dl className="records-detail-grid">
               <div>
-                <dt>Session summary</dt>
-                <dd>{viewingConsultation.summary || '—'}</dd>
+                <dt>Patient</dt>
+                <dd>{viewingConsultation.studentName}</dd>
               </div>
               <div>
-                <dt>Observations</dt>
-                <dd>{viewingConsultation.observations || '—'}</dd>
+                <dt>Doctor</dt>
+                <dd>{viewingConsultation.doctorName}</dd>
               </div>
               <div>
-                <dt>Recommendation</dt>
-                <dd>{viewingConsultation.recommendation || '—'}</dd>
+                <dt>Appointment</dt>
+                <dd>{viewingConsultation.scheduledFor || '—'}</dd>
               </div>
               <div>
-                <dt>Follow-up</dt>
-                <dd>{viewingConsultation.followUp || '—'}</dd>
+                <dt>Last Updated</dt>
+                <dd>{viewingConsultation.updatedAt ? formatStamp(viewingConsultation.updatedAt) : '—'}</dd>
+              </div>
+              <div>
+                <dt>Patient Note</dt>
+                <dd>
+                  {viewingConsultation.patientNoteWritten
+                    ? `Written on ${formatDate(viewingConsultation.updatedAt)}`
+                    : 'No patient note written'}
+                </dd>
               </div>
             </dl>
 
