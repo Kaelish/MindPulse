@@ -119,6 +119,13 @@ export const AdminActivityLogView: React.FC<AdminActivityLogViewProps> = ({ onSi
             <div className="account-actions">
               <button
                 type="button"
+                className="records-row-button"
+                onClick={() => onNavigate('settings')}
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
                 className="notification-button"
                 aria-label="Notifications"
                 onClick={() => setShowNotifications((open) => !open)}

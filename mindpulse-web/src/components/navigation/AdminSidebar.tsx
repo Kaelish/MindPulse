@@ -53,8 +53,6 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'records', icon: '▥', label: 'Records' },
   { key: 'suggestions', icon: '✦', label: 'Doctor Suggestions' },
   { key: 'analytics', icon: '◌', label: 'Analytics' },
-  { key: 'consents', icon: '⚖', label: 'Consent Register' },
-  { key: 'activity', icon: '≡', label: 'Activity Log' },
   { key: 'settings', icon: '⚙', label: 'Settings' },
 ];
 

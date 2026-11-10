@@ -16,7 +16,7 @@ import './AdminSystemSettingsView.css';
 // A-5: tabs whose controls enforced nothing (Detection, Data & Privacy policy
 // toggles) were removed; each remaining tab only holds settings that are read
 // by real code paths (see adminSettings.ts for where each one is enforced).
-type SettingsTab = 'general' | 'notification' | 'security' | 'data';
+type SettingsTab = 'general' | 'notification' | 'security' | 'data' | 'compliance';
 
 interface AdminSystemSettingsViewProps {
   onSignOut: () => void;
@@ -28,6 +28,7 @@ const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'notification', label: 'Notification' },
   { key: 'security', label: 'Security' },
   { key: 'data', label: 'Data' },
+  { key: 'compliance', label: 'Compliance & Audit' },
 ];
 
 export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = ({ onSignOut, onNavigate }) => {
@@ -265,6 +266,27 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               {exportState && <span className="settings-export-state">{exportState}</span>}
             </div>
             {saveButton}
+          </section>
+        )}
+
+        {tab === 'compliance' && (
+          <section className="settings-card">
+            <div className="settings-card-heading">
+              <span className="settings-icon">⚖</span>
+              <div>
+                <h2>Compliance & Audit</h2>
+                <p>Review consent records and system activity history</p>
+              </div>
+            </div>
+
+            <div className="settings-export-row">
+              <button type="button" className="settings-button primary" onClick={() => onNavigate('consents')}>
+                Consent Register
+              </button>
+              <button type="button" className="settings-button primary" onClick={() => onNavigate('activity')}>
+                Activity Log
+              </button>
+            </div>
           </section>
         )}
       </main>
