@@ -1737,8 +1737,8 @@ const makeStyles = () => StyleSheet.create({
 
   /* Tabs */
   tabRow: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  tabRowInner: { flexDirection: 'row', paddingHorizontal: 20 },
-  tabBtn: { paddingVertical: 10, paddingHorizontal: 4, marginRight: 16 },
+  tabRowInner: { flexDirection: 'row', paddingHorizontal: 20, justifyContent: 'center' },
+  tabBtn: { paddingVertical: 10, paddingHorizontal: 14 },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: ACCENT },
   tabText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   tabTextActive: { color: ACCENT },
