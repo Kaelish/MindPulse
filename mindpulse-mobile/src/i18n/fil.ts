@@ -62,7 +62,7 @@ export const fil: Translations = {
 
   hub: {
     title: 'Pagsusuri sa Stress',
-    subtitleReady: 'Kumpletin ang lahat ng hakbang para sa pinakatumpak na resulta',
+    subtitleReady: 'Kumpletuhin ang lahat ng hakbang para sa pinakatumpak na resulta',
     subtitleDone: 'Tapos na para sa ngayon — nasa ibaba ang iyong mga resulta',
     bannerTitle: 'Kumpleto na ang pagsusuri ngayong araw!',
     bannerSub: 'Bubukas ang susunod na pang-araw-araw na check-in bukas. Makikita mo pa rin ang mga resulta ngayon.',
