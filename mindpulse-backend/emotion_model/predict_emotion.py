@@ -37,25 +37,28 @@ the Render free instance under its memory limit and avoids cross-version pickle
 incompatibilities. The original model files are retained for provenance.
 
 Runtime notes (important on small shared-CPU hosts such as Render's free plan):
-    * The landmarker is created and used from one dedicated worker thread, so
-      the MediaPipe graph never has to be shared between threads.
-    * XNNPACK is pinned to a single thread through the acceleration proto
-      (`Acceleration.xnnpack.num_threads`). By default MediaPipe spawns one
-      spinning worker per visible CPU; inside a container limited to a fraction
-      of a core those workers burn the whole CPU quota and a 20 ms detection can
-      stretch into minutes. One thread produces bit-identical results.
+    * The landmarker is created and used from one dedicated daemon thread, so
+      the MediaPipe graph is never shared between threads and a graph that
+      wedges inside C++ cannot keep the process from exiting.
+    * MediaPipe sizes XNNPACK's pool from the number of *visible* CPUs, which
+      says nothing about a container that is allowed a fraction of a core. The
+      pool is therefore capped explicitly through the acceleration proto
+      (`Acceleration.xnnpack.num_threads`, `MINDPULSE_XNNPACK_THREADS`).
     * OpenCV's own worker pool is disabled for the same reason.
     * Detection runs under a deadline (`MINDPULSE_DETECT_TIMEOUT_S`, 60 s by
-      default) so a stuck graph returns a 503 instead of the web worker being
-      killed by the gunicorn timeout.
+      default). On expiry the worker thread is abandoned (a fresh graph is
+      built for the next request) and the request answers 503 well before the
+      gunicorn timeout kills the worker.
+    * Every prediction logs decode/detect/overall timings, and the boot log
+      reports the CPU and memory limits the process actually has, so a slow
+      host can be diagnosed from the Render log alone.
 """
 
 import logging
 import os
+import queue
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeoutError
 
 import cv2
 import numpy as np
@@ -99,28 +102,105 @@ _DENSE_BLOCKS = (
 _predictor = None  # module-level singleton
 _predictor_lock = threading.Lock()
 
-# One worker: MediaPipe graphs are not designed for concurrent use, and this
-# serialises detection without holding locks across the C++ call.
-_detect_pool = None
-_detect_pool_pid = None
-_detect_pool_lock = threading.Lock()
+# The current detector worker (owns the MediaPipe graph and one daemon thread).
+_worker = None
+_worker_pid = None
+_worker_lock = threading.Lock()
 
 
 class DetectionTimeoutError(TimeoutError):
     """Raised when face landmark detection exceeds DETECT_TIMEOUT_S."""
 
 
-def _get_detect_pool():
-    """Lazily create the detector thread, once per process (fork-safe)."""
-    global _detect_pool, _detect_pool_pid
+class _DetectWorker:
+    """One daemon thread that owns a MediaPipe face-landmarker graph.
+
+    Keeping the graph thread-confined avoids sharing MediaPipe state between
+    request threads. This is deliberately not a `ThreadPoolExecutor`: those
+    worker threads are joined at interpreter exit, so a graph wedged inside C++
+    would block shutdown too. A daemon thread can simply be abandoned
+    (`MINDPULSE_DETECT_TIMEOUT_S`); the next request gets a fresh graph.
+    """
+
+    def __init__(self, model_path, num_faces):
+        self._model_path = model_path
+        self._num_faces = num_faces
+        self._landmarker = None  # only touched from the worker thread
+        self._jobs = queue.Queue()
+        self._thread = None
+        self._lock = threading.Lock()
+
+    def _ensure_thread(self):
+        with self._lock:
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(
+                    target=self._loop, name='emotion-detect', daemon=True)
+                self._thread.start()
+
+    def _loop(self):
+        while True:
+            name, payload, box = self._jobs.get()
+            try:
+                if name == 'detect':
+                    box['value'] = self._detect(payload)
+                else:
+                    box['value'] = self._ensure_landmarker()
+            except Exception as exc:  # noqa: BLE001 - re-raised by the caller
+                box['error'] = exc
+            finally:
+                box['done'].set()
+
+    def call(self, name, payload, timeout):
+        box = {'done': threading.Event()}
+        self._ensure_thread()
+        self._jobs.put((name, payload, box))
+        if not box['done'].wait(timeout):
+            raise DetectionTimeoutError(
+                'Face landmark detection timed out after %.0fs.' % timeout)
+        if 'error' in box:
+            raise box['error']
+        return box.get('value')
+
+    def _ensure_landmarker(self):
+        if self._landmarker is None:
+            import mediapipe as mp
+            base_options = _pinned_base_options(mp, self._model_path)
+            self._landmarker = mp.tasks.vision.FaceLandmarker.create_from_options(
+                mp.tasks.vision.FaceLandmarkerOptions(
+                    base_options=base_options,
+                    running_mode=mp.tasks.vision.RunningMode.IMAGE,
+                    num_faces=self._num_faces,
+                    output_face_blendshapes=False,
+                    output_facial_transformation_matrixes=False,
+                )
+            )
+        return self._landmarker
+
+    def _detect(self, rgb):
+        import mediapipe as mp
+        landmarker = self._ensure_landmarker()
+        return landmarker.detect(
+            mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
+
+
+def _get_worker(model_path, num_faces):
+    """Current detector worker for this process (a graph cannot be forked)."""
+    global _worker, _worker_pid
     pid = os.getpid()
-    if _detect_pool is None or _detect_pool_pid != pid:
-        with _detect_pool_lock:
-            if _detect_pool is None or _detect_pool_pid != pid:
-                _detect_pool = ThreadPoolExecutor(
-                    max_workers=1, thread_name_prefix='emotion-detect')
-                _detect_pool_pid = pid
-    return _detect_pool
+    with _worker_lock:
+        if _worker is None or _worker_pid != pid:
+            _worker = _DetectWorker(model_path, num_faces)
+            _worker_pid = pid
+        return _worker
+
+
+def _abandon_worker(worker):
+    """Drop `worker` so the next request builds a fresh thread and graph."""
+    global _worker, _worker_pid
+    with _worker_lock:
+        if _worker is worker:
+            _worker = None
+            _worker_pid = None
 
 
 def crop_face(frame, coords):
@@ -176,7 +256,6 @@ class EmotionPredictor:
         self.sad_bias = float(sad_bias)
         self.detect_timeout = float(detect_timeout)
         self.max_input_side = int(max_input_side)
-        self._landmarker = None
         self._num_faces = num_faces
 
         weights_path = weights_path or os.path.join(
@@ -226,42 +305,21 @@ class EmotionPredictor:
 
         self._landmarker_path = os.path.join(model_dir, "face_landmarker.task")
 
-    def _get_landmarker(self):
-        """Create the MediaPipe graph on the detector thread (first use only)."""
-        if self._landmarker is None:
-            import mediapipe as mp
-            self._landmarker = mp.tasks.vision.FaceLandmarker.create_from_options(
-                mp.tasks.vision.FaceLandmarkerOptions(
-                    base_options=_pinned_base_options(
-                        mp, self._landmarker_path),
-                    running_mode=mp.tasks.vision.RunningMode.IMAGE,
-                    num_faces=self._num_faces,
-                    output_face_blendshapes=False,
-                    output_facial_transformation_matrixes=False,
-                )
-            )
-        return self._landmarker
-
-    def _run_detect(self, rgb):
-        """Runs on the detector thread: create/use the graph there only."""
-        import mediapipe as mp
-        landmarker = self._get_landmarker()
-        return landmarker.detect(
-            mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
-
     def _detect_landmarks(self, rgb):
-        """Run detection under a deadline so a stuck graph cannot wedge the
-        web worker until gunicorn kills it."""
-        future = _get_detect_pool().submit(self._run_detect, rgb)
+        """Run detection on the dedicated worker under a deadline.
+
+        On timeout the worker (and its graph) is abandoned so one bad request
+        cannot wedge every later one; the next request starts a fresh graph.
+        """
+        worker = _get_worker(self._landmarker_path, self._num_faces)
         try:
-            return future.result(timeout=self.detect_timeout)
-        except FutureTimeoutError:
+            return worker.call('detect', rgb, self.detect_timeout)
+        except DetectionTimeoutError:
+            _abandon_worker(worker)
             logger.error(
-                'Face landmark detection exceeded %.0fs; the detector thread '
-                'is still busy.', self.detect_timeout)
-            raise DetectionTimeoutError(
-                'Face landmark detection timed out after %.0fs.'
-                % self.detect_timeout)
+                'Face landmark detection exceeded %.0fs; abandoned the '
+                'detector thread and its graph.', self.detect_timeout)
+            raise
 
     def _embed_pixels(self, pixels):
         """Dense pixel branch: Flatten -> (Dense -> ReLU -> BN) x4."""
@@ -275,7 +333,58 @@ class EmotionPredictor:
         return x
 
     @staticmethod
-    def _load_bgr(image):
+    def _encoded_size(data):
+        """Best-effort (width, height) parsed from a JPEG/PNG header.
+
+        Phone captures are 12 MP and the pipeline only needs ~1024 px, so it is
+        worth peeking at the header to pick a reduced-scale decode instead of
+        allocating the full frame first.
+        """
+        if len(data) >= 24 and data[:8] == b'\x89PNG\r\n\x1a\n':
+            return (int.from_bytes(data[16:20], 'big'),
+                    int.from_bytes(data[20:24], 'big'))
+        if len(data) < 4 or data[0] != 0xFF or data[1] != 0xD8:  # not JPEG
+            return None
+        index, total = 2, len(data)
+        while index + 3 < total:
+            if data[index] != 0xFF:
+                index += 1
+                continue
+            marker = data[index + 1]
+            if marker == 0xFF:  # fill byte
+                index += 1
+                continue
+            if marker in (0xD8, 0xD9) or 0xD0 <= marker <= 0xD7:  # no payload
+                index += 2
+                continue
+            if (0xC0 <= marker <= 0xCF
+                    and marker not in (0xC4, 0xC8, 0xCC)):  # SOFn: has frame size
+                if index + 9 > total:
+                    return None
+                height = int.from_bytes(data[index + 5:index + 7], 'big')
+                width = int.from_bytes(data[index + 7:index + 9], 'big')
+                return (width, height)
+            length = int.from_bytes(data[index + 2:index + 4], 'big')
+            if length < 2:
+                return None
+            index += 2 + length
+        return None
+
+    def _decode_flag(self, data):
+        """Pick a reduced-scale decode for images far larger than we need."""
+        if self.max_input_side <= 0:
+            return cv2.IMREAD_COLOR
+        size = self._encoded_size(data)
+        if not size:
+            return cv2.IMREAD_COLOR
+        longest = max(size)
+        if longest > 4 * self.max_input_side:
+            return cv2.IMREAD_REDUCED_COLOR_4
+        if longest > 2 * self.max_input_side:
+            return cv2.IMREAD_REDUCED_COLOR_2
+        return cv2.IMREAD_COLOR
+
+    def _load_bgr(self, image):
         """Accept a file path, raw bytes, or a numpy array (BGR or RGB)."""
         if isinstance(image, (str, os.PathLike)):
             frame = cv2.imread(str(image))
@@ -283,8 +392,9 @@ class EmotionPredictor:
                 raise ValueError("Could not read image: %s" % image)
             return frame
         if isinstance(image, (bytes, bytearray)):
-            arr = np.frombuffer(bytes(image), dtype=np.uint8)
-            frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            data = bytes(image)
+            arr = np.frombuffer(data, dtype=np.uint8)
+            frame = cv2.imdecode(arr, self._decode_flag(data))
             if frame is None:
                 raise ValueError("Could not decode image bytes")
             return frame
@@ -310,6 +420,7 @@ class EmotionPredictor:
         """Run the full pipeline. Returns a dict, or None when no face is found."""
         started = time.perf_counter()
         frame = self._load_bgr(image)
+        loaded_size = (frame.shape[1], frame.shape[0])
         frame, resized = self._limit_size(frame)
         decoded = time.perf_counter()
 
@@ -317,7 +428,9 @@ class EmotionPredictor:
         results = self._detect_landmarks(rgb)
         detected = time.perf_counter()
 
-        size_note = ' resized=%dx%d' % (frame.shape[1], frame.shape[0]) if resized else ''
+        size_note = ' %dx%d' % loaded_size
+        if resized:
+            size_note += '->%dx%d' % (frame.shape[1], frame.shape[0])
         if not results.face_landmarks:
             logger.info(
                 'predict: no face (decode %.0fms, detect %.0fms)%s',
@@ -380,29 +493,53 @@ class EmotionPredictor:
         }
 
     def warmup(self):
-        """Create the landmarker on the detector thread and run one real
-        prediction, so the first user request does not pay the graph and
-        interpreter start-up cost. Also proves the pipeline works at boot."""
+        """Create the landmarker and run one real prediction, so the first user
+        request does not pay the graph and interpreter start-up cost. Also
+        proves the pipeline works at boot."""
         started = time.perf_counter()
-        self._get_landmarker_ready()
+        _log_host_limits()
         sample = os.path.join(
             os.path.dirname(self._landmarker_path), "warmup_face.jpg")
         if os.path.exists(sample):
             with open(sample, 'rb') as handle:
                 self.predict(handle.read())
+        else:  # still build the graph even without a sample image
+            worker = _get_worker(self._landmarker_path, self._num_faces)
+            worker.call('warmup', None, self.detect_timeout)
         logger.info('Emotion model warmed up in %.1fs',
                     time.perf_counter() - started)
         return self
 
-    def _get_landmarker_ready(self):
-        """Block until the detector thread has built the graph."""
-        future = _get_detect_pool().submit(self._get_landmarker)
-        return future.result(timeout=self.detect_timeout)
-
     def close(self):
-        if self._landmarker is not None:
-            self._landmarker.close()
-            self._landmarker = None
+        """Drop the detector worker (its graph is closed with the thread)."""
+        global _worker, _worker_pid
+        with _worker_lock:
+            worker, _worker, _worker_pid = _worker, None, None
+        return worker
+
+
+def _log_host_limits():
+    """Log the CPU/memory limits this process is actually running under.
+
+    Python and MediaPipe size their thread pools from `os.cpu_count()`, which
+    inside a container is the host's CPU count - not the quota. When a request
+    is mysteriously slow on a shared host, these numbers are the first thing
+    worth knowing.
+    """
+    parts = ['cpus=%s' % os.cpu_count()]
+    try:
+        affinity = len(os.sched_getaffinity(0))  # Linux only
+        parts.append('affinity=%d' % affinity)
+    except (AttributeError, OSError):
+        pass
+    for label, path in (('cpu.max', '/sys/fs/cgroup/cpu.max'),
+                        ('memory.max', '/sys/fs/cgroup/memory.max')):
+        try:
+            with open(path, 'r', encoding='ascii') as handle:
+                parts.append('%s=%s' % (label, handle.read().strip()))
+        except OSError:
+            pass
+    logger.info('Host limits: %s', ' '.join(parts))
 
 
 def get_predictor(**kwargs):

@@ -28,8 +28,10 @@ def _warm_emotion_model():
         from emotion_model import get_predictor
         get_predictor().warmup()
         logger.info('Emotion model warmed up and ready for requests.')
-    except Exception as exc:
-        logger.warning('Emotion model warm-up failed: %s', exc)
+    except Exception:
+        # Full traceback: a warm-up failure means every scan request will fail,
+        # and the Render log is the only place this is visible.
+        logger.error('Emotion model warm-up failed', exc_info=True)
 
 
 class CoreConfig(AppConfig):

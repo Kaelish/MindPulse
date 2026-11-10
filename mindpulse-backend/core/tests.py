@@ -217,6 +217,20 @@ class PredictEmotionApiTests(APITestCase):
 		self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 		self.assertIn('unavailable', response.data['detail'])
 
+	def test_prediction_timeout_returns_503(self):
+		# Landmark detection has its own deadline (emotion_model), so a stalled
+		# model must answer 503 instead of waiting for the gunicorn timeout.
+		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
+		model = fake_emotion_model(
+			side_effect=TimeoutError('Face landmark detection timed out'))
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			response = self.client.post(
+				'/api/predict-emotion/', {'image': payload}, format='json')
+
+		self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+		self.assertIn('took too long', response.data['detail'])
+
 	def test_prediction_value_error_returns_400(self):
 		payload = base64.b64encode(b'fake-jpeg-bytes').decode('ascii')
 		model = fake_emotion_model(side_effect=ValueError('Unreadable image'))
