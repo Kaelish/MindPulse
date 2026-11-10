@@ -1737,9 +1737,22 @@ const makeStyles = () => StyleSheet.create({
 
   /* Tabs */
   tabRow: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  tabRowInner: { flexDirection: 'row', paddingHorizontal: 20, justifyContent: 'center' },
-  tabBtn: { paddingVertical: 10, paddingHorizontal: 14 },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: ACCENT },
+  // flexGrow:1 makes the content container fill the viewport when the tabs fit,
+  // which is what lets justifyContent:'center' actually centre them (a plain
+  // horizontal ScrollView container shrinks to content width and ignores it).
+  tabRowInner: { flexGrow: 1, flexDirection: 'row', paddingHorizontal: 16, justifyContent: 'center' },
+  // Every tab carries the same 2px bottom border — transparent unless active —
+  // so switching tabs never changes button height and the labels stay on one
+  // baseline. justifyContent:'center' vertically centres each label, which
+  // matters for the Messages tab: its unread badge makes that button taller.
+  tabBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    justifyContent: 'center',
+  },
+  tabBtnActive: { borderBottomColor: ACCENT },
   tabText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   tabTextActive: { color: ACCENT },
 

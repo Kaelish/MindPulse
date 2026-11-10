@@ -268,6 +268,10 @@ export const StressAssessmentHubScreen = ({
       state.heartRate === 'completed' &&
       state.reaction === 'completed');
 
+  // Admin-published supplementary questionnaires (A-4) — every active tool
+  // except the Multi-Modal category the Stress Survey step already covers.
+  const supplementaryTools = extras.tools.filter((tool) => tool.category !== 'Multi-Modal');
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -367,6 +371,42 @@ export const StressAssessmentHubScreen = ({
             onPress={() => onNavigate('ReactionGame')}
           />
         </View>
+
+        {/* Supplementary assessments (A-4): admin-published questionnaires,
+            rendered outside the daily steps because they are optional and save
+            their own session instead of feeding the daily fusion score. */}
+        {supplementaryTools.length > 0 && (
+          <View style={styles.extraToolsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{t.hub.extraTools.title}</Text>
+            </View>
+            <Text style={styles.sectionNote}>{t.hub.extraTools.note}</Text>
+            {supplementaryTools.map((tool) => (
+              <TouchableOpacity
+                key={tool.id}
+                style={styles.extraToolCard}
+                activeOpacity={0.75}
+                onPress={() => onNavigate('ToolSurvey', tool)}
+              >
+                <View style={styles.extraToolIconWrap}>
+                  <MaterialCommunityIcons
+                    name="file-document-edit-outline"
+                    size={22}
+                    color={tone('#6B79F2')}
+                  />
+                </View>
+                <View style={styles.extraToolTextContent}>
+                  <Text style={styles.extraToolTitle}>{tool.title}</Text>
+                  {!!tool.description && <Text style={styles.extraToolSubtitle}>{tool.description}</Text>}
+                  <Text style={styles.extraToolMeta}>
+                    {tool.durationMinutes} {t.hub.extraTools.minutes}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Tip Box */}
         <View style={styles.tipBox}>
