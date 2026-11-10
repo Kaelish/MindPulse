@@ -134,7 +134,18 @@ class HealthApiTests(APITestCase):
 		response = self.client.get('/api/health/')
 
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertEqual(response.json(), {'status': 'ok'})
+		self.assertEqual(response.json()['status'], 'ok')
+
+	def test_health_reports_the_reason_the_model_is_unavailable(self):
+		# A deploy that cannot import the inference stack must say why, because
+		# the health endpoint is the only diagnostic reachable from outside.
+		with patch.dict(sys.modules, {'emotion_model': None}):
+			response = self.client.get('/api/health/')
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertTrue(
+			response.json()['emotion_model'].startswith('unavailable: '))
+		self.assertIn('emotion_model', response.json()['emotion_model'])
 
 
 class PredictEmotionApiTests(APITestCase):

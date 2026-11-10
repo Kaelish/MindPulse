@@ -1,6 +1,8 @@
 import base64
 import binascii
+import importlib
 import logging
+import sys
 
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -14,9 +16,33 @@ from .serializers import VideoCallSessionSerializer, VideoCallStatusSerializer
 
 logger = logging.getLogger(__name__)
 
+# Runtime pieces the face scan needs. Reporting them from /api/health/ makes a
+# broken deployment visible from outside: no dashboard access required.
+DIAGNOSTIC_MODULES = ('emotion_model', 'mediapipe', 'cv2', 'numpy')
+# `emotion_model` only pulls in cv2 + numpy, so it is safe (and cheap) to import
+# on a health check. `mediapipe` is deliberately *not* imported here: it is slow
+# on a small instance and would stall the health check while warm-up runs.
+HEALTH_IMPORTS = {'emotion_model'}
+
+
+def _module_status(name):
+	"""'ok', a version string, or 'unavailable: <error>'."""
+	if name in HEALTH_IMPORTS:
+		try:
+			module = importlib.import_module(name)
+		except Exception as exc:  # ImportError, OSError (missing .so), ...
+			return 'unavailable: %s: %s' % (type(exc).__name__, exc)
+	else:
+		module = sys.modules.get(name)
+		if module is None:
+			return 'not imported'
+	return getattr(module, '__version__', 'ok')
+
 
 def health_view(request):
-	return JsonResponse({'status': 'ok'})
+	report = {name: _module_status(name) for name in DIAGNOSTIC_MODULES}
+	report['status'] = 'ok'
+	return JsonResponse(report)
 
 
 class VideoCallSessionListCreateView(generics.ListCreateAPIView):
@@ -95,10 +121,10 @@ def predict_emotion_view(request):
 	# request must stay a 400 even when the inference dependencies are absent.
 	try:
 		from emotion_model import predict_image
-	except ImportError:
+	except ImportError as exc:
 		logger.exception('Emotion model unavailable')
 		return Response(
-			{'detail': 'Emotion model unavailable.'},
+			{'detail': 'Emotion model unavailable: %s' % exc},
 			status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 	try:
