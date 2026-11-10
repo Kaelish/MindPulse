@@ -25,6 +25,8 @@ _SKIP_WARMUP_COMMANDS = {
 # Warm-up progress, reported by /api/health/. On a deployment without log
 # access this is how a broken scan shows why it is broken.
 WARMUP_STATE = {'status': 'not started', 'detail': None}
+_warmup_lock = threading.Lock()
+_warmup_pid = None
 
 
 def _set_state(status, detail=None):
@@ -33,10 +35,10 @@ def _set_state(status, detail=None):
 
 
 def _warm_emotion_model(get_predictor):
-    """Load the hybrid emotion model once, in the background, at server start.
+    """Build the graph and run one real prediction, on a background thread.
 
-    `get_predictor` is passed in because `emotion_model` must only ever be
-    imported by `ready()` (the main thread); see the comment there.
+    `get_predictor` is passed in so this thread never has to import
+    `emotion_model`; see the comment in `ready()`.
     """
     _set_state('running')
     try:
@@ -52,14 +54,46 @@ def _warm_emotion_model(get_predictor):
         logger.info('Emotion model warmed up and ready for requests.')
 
 
+def ensure_warmup():
+    """Start warm-up in *this* process, once, without blocking.
+
+    Gunicorn loads the app in the master and then forks its workers, so a
+    thread started by ready() does not exist in the process that actually
+    serves requests - the worker inherited WARMUP_STATE ('running') but no
+    warm-up thread, and MediaPipe was never imported. Tracking the pid means
+    whichever process handles the first request starts the warm-up itself.
+    """
+    global _warmup_pid
+    pid = os.getpid()
+    with _warmup_lock:
+        if _warmup_pid == pid:
+            return
+        _warmup_pid = pid
+        try:
+            from emotion_model import get_predictor
+        except Exception as exc:
+            _set_state('failed', '%s: %s' % (type(exc).__name__, exc))
+            logger.error(
+                'Emotion model could not be imported; scan requests will fail\n%s',
+                traceback.format_exc())
+            return
+        # A forked child inherits the parent's predictor object but not the
+        # detector thread, so a warm-up must run here too (warmup() rebuilds
+        # the graph in this process; see _get_worker's pid check).
+        _set_state('starting')
+        threading.Thread(
+            target=_warm_emotion_model, args=(get_predictor,),
+            name='emotion-warmup', daemon=True).start()
+
+
 class CoreConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'core'
 
     def ready(self):
         # With the reloader, ready() runs twice (parent + child); only the
-        # child (RUN_MAIN=true) should warm. With --noreload there is no child,
-        # so warm directly. Non-server commands are skipped via the set above.
+        # child (RUN_MAIN=true) should import. With --noreload there is no
+        # child. Non-server commands are skipped via the set above.
         if ('runserver' in sys.argv and '--noreload' not in sys.argv
                 and os.environ.get('RUN_MAIN') != 'true'):
             return
@@ -72,15 +106,12 @@ class CoreConfig(AppConfig):
         #   ImportError: cannot import name 'predict_image' from partially
         #   initialized module 'emotion_model'
         # and answered "Emotion model unavailable" to every scan. `ready()` is
-        # called from django.setup(), which gunicorn completes before it serves
-        # a single request, so a fully initialized module is guaranteed.
+        # called from django.setup(), which completes before a single request
+        # is served, so a fully initialized module is guaranteed.
         #
         # MediaPipe is deliberately *not* imported here: it takes seconds even
-        # on a fast CPU and would delay the worker from serving at all. It is
-        # imported by the warm-up thread, and its progress is reported by
-        # /api/health/ as `warmup`.
+        # on a fast CPU and would delay the worker from serving at all.
         try:
-            from emotion_model import get_predictor
             import emotion_model
             if not hasattr(emotion_model, 'predict_image'):
                 # A module that exists but is missing its exports can never
@@ -93,7 +124,9 @@ class CoreConfig(AppConfig):
                 'Emotion model could not be imported; scan requests will fail\n%s',
                 traceback.format_exc())
             return
-        _set_state('imported')
-        threading.Thread(
-            target=_warm_emotion_model, args=(get_predictor,),
-            name='emotion-warmup', daemon=True).start()
+        # Warm-up is deliberately *not* started here: gunicorn loads the app in
+        # its master and then forks its worker, so a thread started here would
+        # build a MediaPipe graph in a process that never serves a scan - on a
+        # 0.1 vCPU / 512 MB instance that is double the work and double the
+        # memory. ensure_warmup() runs in whichever process handles the first
+        # request (/api/health/ is polled immediately after deploy).

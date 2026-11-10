@@ -60,7 +60,13 @@ def _thread_stacks(limit=8):
 
 
 def health_view(request):
-	from .apps import WARMUP_STATE
+	from .apps import WARMUP_STATE, ensure_warmup
+
+	# The health check runs in the process that serves requests, which is not
+	# necessarily the process that ran ready() (gunicorn forks its workers).
+	# Starting warm-up here means the deployed worker always warms itself, and
+	# Render's health check does it before the first user scan arrives.
+	ensure_warmup()
 
 	report = {name: _module_status(name) for name in DIAGNOSTIC_MODULES}
 	report['warmup'] = WARMUP_STATE['status']

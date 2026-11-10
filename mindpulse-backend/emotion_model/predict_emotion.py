@@ -107,6 +107,11 @@ _worker = None
 _worker_pid = None
 _worker_lock = threading.Lock()
 
+# Set while a warm-up is paying the MediaPipe import/graph cost on the detector
+# worker. Requests submitted meanwhile are queued behind it, so they get the
+# larger warm-up deadline instead of timing out while they wait their turn.
+_warmup_in_progress = threading.Event()
+
 
 class DetectionTimeoutError(TimeoutError):
     """Raised when face landmark detection exceeds DETECT_TIMEOUT_S."""
@@ -129,6 +134,9 @@ class _DetectWorker:
         self._jobs = queue.Queue()
         self._thread = None
         self._lock = threading.Lock()
+        # Set once the graph exists in this process, so callers can give the
+        # very first detection the (larger) graph-build allowance.
+        self.ready = threading.Event()
 
     def _ensure_thread(self):
         with self._lock:
@@ -174,6 +182,7 @@ class _DetectWorker:
                     output_facial_transformation_matrixes=False,
                 )
             )
+            self.ready.set()
         return self._landmarker
 
     def _detect(self, rgb):
@@ -255,6 +264,11 @@ class EmotionPredictor:
         self.image_size = image_size
         self.sad_bias = float(sad_bias)
         self.detect_timeout = float(detect_timeout)
+        # Warm-up pays the one-off MediaPipe import and graph build as well as
+        # a detection, which on a 0.1 vCPU instance can take minutes.
+        self.warmup_timeout = max(
+            self.detect_timeout,
+            float(os.environ.get('MINDPULSE_WARMUP_TIMEOUT_S', '300')))
         self.max_input_side = int(max_input_side)
         self._num_faces = num_faces
 
@@ -305,20 +319,39 @@ class EmotionPredictor:
 
         self._landmarker_path = os.path.join(model_dir, "face_landmarker.task")
 
-    def _detect_landmarks(self, rgb):
+    def _detect_landmarks(self, rgb, timeout=None):
         """Run detection on the dedicated worker under a deadline.
 
         On timeout the worker (and its graph) is abandoned so one bad request
         cannot wedge every later one; the next request starts a fresh graph.
+
+        A request keeps the request deadline (`MINDPULSE_DETECT_TIMEOUT_S`),
+        which has to stay below gunicorn's `--timeout`; only the background
+        warm-up uses the longer warm-up budget. If a request expires while a
+        warm-up is running, the worker is left alone rather than abandoned, so
+        the warm-up's graph build is not thrown away.
         """
         worker = _get_worker(self._landmarker_path, self._num_faces)
+        if timeout is None:
+            timeout = self.detect_timeout
+            if not worker.ready.is_set():
+                # The first job in this process also pays the one-off MediaPipe
+                # import and graph build, so allow more than a normal detection
+                # - but stay under gunicorn's --timeout, which kills a worker
+                # that is silent for 120 s.
+                timeout = max(timeout, min(self.warmup_timeout, 90.0))
         try:
-            return worker.call('detect', rgb, self.detect_timeout)
+            return worker.call('detect', rgb, timeout)
         except DetectionTimeoutError:
-            _abandon_worker(worker)
-            logger.error(
-                'Face landmark detection exceeded %.0fs; abandoned the '
-                'detector thread and its graph.', self.detect_timeout)
+            if _warmup_in_progress.is_set():
+                logger.warning(
+                    'Detection exceeded %.0fs while the model was warming up; '
+                    'leaving the warm-up running.', timeout)
+            else:
+                _abandon_worker(worker)
+                logger.error(
+                    'Face landmark detection exceeded %.0fs; abandoned the '
+                    'detector thread and its graph.', timeout)
             raise
 
     def _embed_pixels(self, pixels):
@@ -416,7 +449,7 @@ class EmotionPredictor:
         size = (max(1, int(round(w * scale))), max(1, int(round(h * scale))))
         return cv2.resize(frame, size, interpolation=cv2.INTER_AREA), True
 
-    def predict(self, image, sad_bias=None):
+    def predict(self, image, sad_bias=None, detect_timeout=None):
         """Run the full pipeline. Returns a dict, or None when no face is found."""
         started = time.perf_counter()
         frame = self._load_bgr(image)
@@ -425,7 +458,7 @@ class EmotionPredictor:
         decoded = time.perf_counter()
 
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self._detect_landmarks(rgb)
+        results = self._detect_landmarks(rgb, detect_timeout)
         detected = time.perf_counter()
 
         size_note = ' %dx%d' % loaded_size
@@ -492,20 +525,25 @@ class EmotionPredictor:
             "has_face": True,
         }
 
-    def warmup(self):
+    def warmup(self, timeout=None):
         """Create the landmarker and run one real prediction, so the first user
         request does not pay the graph and interpreter start-up cost. Also
         proves the pipeline works at boot."""
         started = time.perf_counter()
         _log_host_limits()
-        sample = os.path.join(
-            os.path.dirname(self._landmarker_path), "warmup_face.jpg")
-        if os.path.exists(sample):
-            with open(sample, 'rb') as handle:
-                self.predict(handle.read())
-        else:  # still build the graph even without a sample image
-            worker = _get_worker(self._landmarker_path, self._num_faces)
-            worker.call('warmup', None, self.detect_timeout)
+        timeout = timeout or self.warmup_timeout
+        _warmup_in_progress.set()
+        try:
+            sample = os.path.join(
+                os.path.dirname(self._landmarker_path), "warmup_face.jpg")
+            if os.path.exists(sample):
+                with open(sample, 'rb') as handle:
+                    self.predict(handle.read(), detect_timeout=timeout)
+            else:  # still build the graph even without a sample image
+                worker = _get_worker(self._landmarker_path, self._num_faces)
+                worker.call('warmup', None, timeout)
+        finally:
+            _warmup_in_progress.clear()
         logger.info('Emotion model warmed up in %.1fs',
                     time.perf_counter() - started)
         return self

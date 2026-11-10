@@ -167,6 +167,46 @@ class HealthApiTests(APITestCase):
 		self.assertTrue(response.json()['warmup'])
 
 
+class WarmupLifecycleTests(APITestCase):
+	def setUp(self):
+		from . import apps as core_apps
+
+		self.apps = core_apps
+		core_apps._warmup_pid = None
+		core_apps.WARMUP_STATE.update(status='not started', detail=None)
+
+	def test_warmup_starts_once_per_process(self):
+		model = fake_emotion_model()
+		model.get_predictor = Mock(return_value=Mock())
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			with patch.object(self.apps.os, 'getpid', return_value=1000):
+				with patch.object(self.apps.threading, 'Thread') as thread:
+					self.apps.ensure_warmup()
+					self.apps.ensure_warmup()
+
+		self.assertEqual(thread.call_count, 1)
+
+	def test_warmup_restarts_in_a_forked_process(self):
+		# gunicorn loads the app in the master and forks its workers, so a
+		# worker inherits 'running' plus the pid but no warm-up thread. The
+		# worker must warm itself or every scan stays slow (or 503s).
+		model = fake_emotion_model()
+		model.get_predictor = Mock(return_value=Mock())
+
+		with patch.dict(sys.modules, {'emotion_model': model}):
+			with patch.object(self.apps.os, 'getpid', return_value=1000):
+				with patch.object(self.apps.threading, 'Thread'):
+					self.apps.ensure_warmup()
+
+			self.apps.WARMUP_STATE.update(status='running', detail=None)
+			with patch.object(self.apps.os, 'getpid', return_value=2000):
+				with patch.object(self.apps.threading, 'Thread') as thread:
+					self.apps.ensure_warmup()
+
+		self.assertEqual(thread.call_count, 1)
+
+
 class PredictEmotionApiTests(APITestCase):
 	def test_missing_image_returns_400_without_loading_the_model(self):
 		# Even with inference dependencies unavailable, a malformed request is
