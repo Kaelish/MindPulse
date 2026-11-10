@@ -147,6 +147,25 @@ class HealthApiTests(APITestCase):
 			response.json()['emotion_model'].startswith('unavailable: '))
 		self.assertIn('emotion_model', response.json()['emotion_model'])
 
+	def test_health_rejects_a_partially_initialized_model(self):
+		# The startup race that broke live scans looked importable but had no
+		# attributes yet; health must not describe that state as 'ok'.
+		partial = ModuleType('emotion_model')
+
+		with patch.dict(sys.modules, {'emotion_model': partial}):
+			response = self.client.get('/api/health/')
+
+		self.assertEqual(response.json()['emotion_model'],
+						 'partially initialized')
+
+	def test_health_reports_warmup_progress(self):
+		response = self.client.get('/api/health/')
+
+		# Warm-up is skipped under `manage.py test`, so only its presence and
+		# shape can be asserted here.
+		self.assertIsInstance(response.json()['warmup'], str)
+		self.assertTrue(response.json()['warmup'])
+
 
 class PredictEmotionApiTests(APITestCase):
 	def test_missing_image_returns_400_without_loading_the_model(self):

@@ -2,7 +2,10 @@ import base64
 import binascii
 import importlib
 import logging
+import os
 import sys
+import threading
+import traceback
 
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -19,17 +22,19 @@ logger = logging.getLogger(__name__)
 # Runtime pieces the face scan needs. Reporting them from /api/health/ makes a
 # broken deployment visible from outside: no dashboard access required.
 DIAGNOSTIC_MODULES = ('emotion_model', 'mediapipe', 'cv2', 'numpy')
-# `emotion_model` only pulls in cv2 + numpy, so it is safe (and cheap) to import
-# on a health check. `mediapipe` is deliberately *not* imported here: it is slow
-# on a small instance and would stall the health check while warm-up runs.
-HEALTH_IMPORTS = {'emotion_model'}
+# Modules that are safe (and useful) to import from a health check, mapped to
+# an attribute that only exists once the import has completely finished.
+HEALTH_IMPORTS = {'emotion_model': 'predict_image'}
 
 
 def _module_status(name):
 	"""'ok', a version string, or 'unavailable: <error>'."""
-	if name in HEALTH_IMPORTS:
+	required = HEALTH_IMPORTS.get(name)
+	if required:
 		try:
 			module = importlib.import_module(name)
+			if not hasattr(module, required):
+				return 'partially initialized'
 		except Exception as exc:  # ImportError, OSError (missing .so), ...
 			return 'unavailable: %s: %s' % (type(exc).__name__, exc)
 	else:
@@ -39,9 +44,33 @@ def _module_status(name):
 	return getattr(module, '__version__', 'ok')
 
 
+def _thread_stacks(limit=8):
+	"""Current Python stack of every live thread (diagnostic aid)."""
+	frames = sys._current_frames()
+	stacks = {}
+	for thread in threading.enumerate():
+		frame = frames.get(thread.ident)
+		if frame is None:
+			continue
+		stacks['%s|%s' % (thread.name, thread.ident)] = [
+			'%s:%s %s' % (os.path.basename(entry.filename), entry.lineno,
+						  entry.name)
+			for entry in traceback.extract_stack(frame)[-limit:]]
+	return stacks
+
+
 def health_view(request):
+	from .apps import WARMUP_STATE
+
 	report = {name: _module_status(name) for name in DIAGNOSTIC_MODULES}
+	report['warmup'] = WARMUP_STATE['status']
+	if WARMUP_STATE['detail']:
+		report['warmup_detail'] = WARMUP_STATE['detail']
 	report['status'] = 'ok'
+	if request.GET.get('stacks'):
+		# `/api/health/?stacks=1` shows where a stuck thread is, which is the
+		# only way to see inside a deployment that hangs without log access.
+		report['threads'] = _thread_stacks()
 	return JsonResponse(report)
 
 
