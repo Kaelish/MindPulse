@@ -547,6 +547,18 @@ export interface Translations {
     completeAlertTitle: string;
     completeAlertBodyFmt: string;
     saveError: string;
+    result: {
+      resultTitle: string;
+      scoreLabel: string;
+      bandLow: string;
+      bandModerate: string;
+      bandHigh: string;
+      interpretationLow: string;
+      interpretationModerate: string;
+      interpretationHigh: string;
+      answersTitle: string;
+      done: string;
+    };
   };
 
   /**

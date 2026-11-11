@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { StressSessionItem } from '../services/dashboard';
+import { supabase } from '../supabase/client';
 import { registerThemeStyles, tone, toneBg } from '../theme/theme';
 
 interface SessionDetailModalProps {
@@ -27,11 +28,62 @@ const formatTime = (iso?: string): string | null => {
 const formatReactionTime = (ms: number): string =>
   ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${ms} ms`;
 
+interface AnswerItem {
+  text: string;
+  label: string;
+  value: number;
+}
+
+const readAnswerItems = (source: unknown): AnswerItem[] => {
+  if (!source || typeof source !== 'object') return [];
+  const items = (source as { items?: unknown }).items;
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter(
+      (item): item is AnswerItem =>
+        !!item &&
+        typeof item === 'object' &&
+        typeof (item as { text?: unknown }).text === 'string' &&
+        typeof (item as { label?: unknown }).label === 'string' &&
+        typeof (item as { value?: unknown }).value === 'number',
+    )
+    .map((item) => ({ text: item.text, label: item.label, value: item.value }));
+};
+
 export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   visible, session, onClose,
 }) => {
   const lp = session ? levelPalette(session.status) : null;
   const time = session ? formatTime(session.createdAt) : null;
+  const [answerItems, setAnswerItems] = useState<AnswerItem[]>([]);
+
+  useEffect(() => {
+    setAnswerItems([]);
+    if (!visible || !session) return;
+    const embedded = readAnswerItems((session as unknown as { survey_answers?: unknown }).survey_answers);
+    if (embedded.length > 0) {
+      setAnswerItems(embedded);
+      return;
+    }
+    let cancelled = false;
+    const loadAnswers = async () => {
+      try {
+        const { data } = await supabase
+          .from('stress_sessions')
+          .select('survey_answers')
+          .eq('id', session.id)
+          .maybeSingle();
+        if (cancelled) return;
+        setAnswerItems(readAnswerItems((data as { survey_answers?: unknown } | null)?.survey_answers));
+      } catch {
+        if (!cancelled) setAnswerItems([]);
+      }
+    };
+    void loadAnswers();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, session]);
 
   const metrics: { icon: any; label: string; value: string; color: string; bg: string }[] = [];
   if (session) {
@@ -109,6 +161,28 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                     </View>
                   ))}
                 </View>
+              )}
+
+              {answerItems.length > 0 && (
+                <>
+                  <Text style={styles.sectionLabel}>ANSWERS</Text>
+                  <View style={styles.answerList}>
+                    {answerItems.map((item, index) => (
+                      <View key={`${item.text}-${index}`} style={styles.answerRow}>
+                        <View style={styles.answerIndexBox}>
+                          <Text style={styles.answerIndexText}>{index + 1}</Text>
+                        </View>
+                        <View style={styles.answerBody}>
+                          <Text style={styles.answerText}>{item.text}</Text>
+                          <View style={styles.answerMeta}>
+                            <Text style={styles.answerLabel}>{item.label}</Text>
+                            <Text style={styles.answerValue}>{item.value}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </>
               )}
 
               {/* ── NOTES ── */}
@@ -191,6 +265,31 @@ const makeStyles = () => StyleSheet.create({
 
   notesCard: { backgroundColor: toneBg('#EEEDFE'), borderRadius: 14, padding: 14 },
   notesText: { fontSize: 13, color: Colors.textPrimary, lineHeight: 19 },
+
+  answerList: { gap: 10 },
+  answerRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+  },
+  answerIndexBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: toneBg('#EEEDFE'),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  answerIndexText: { fontSize: 12, fontWeight: '800', color: tone('#5B6EF5') },
+  answerBody: { flex: 1, gap: 6 },
+  answerText: { fontSize: 13, color: Colors.textPrimary, lineHeight: 19 },
+  answerMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  answerLabel: { fontSize: 13, fontWeight: '700', color: tone('#5B6EF5'), flex: 1 },
+  answerValue: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
 
   closeBtn: { marginTop: 20, height: 50, borderRadius: 14, backgroundColor: toneBg('#5B6EF5'), alignItems: 'center', justifyContent: 'center' },
   closeBtnText: { color: tone('#FFF'), fontWeight: '800', fontSize: 15 },

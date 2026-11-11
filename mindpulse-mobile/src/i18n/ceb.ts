@@ -526,6 +526,18 @@ export const ceb: Translations = {
     completeAlertTitle: 'Human na ang pagsusi',
     completeAlertBodyFmt: '{title}\nAng imong iskor: {score}/100 (na-save).',
     saveError: 'Wala ma-save ang imong resulta. Sulay pag-usab.',
+    result: {
+      resultTitle: 'Resulta sa Pagsusi',
+      scoreLabel: 'Ang imong iskor',
+      bandLow: 'Ubos',
+      bandModerate: 'Katamtaman',
+      bandHigh: 'Taas',
+      interpretationLow: 'Ang imong mga tubag nagpakita og ubos nga stress niining bahina.',
+      interpretationModerate: 'Ang imong mga tubag nagpakita og katamtamang stress niining bahina.',
+      interpretationHigh: 'Ang imong mga tubag nagpakita og taas nga stress niining bahina. Hunaa ang pagsulti sa usa ka propesyonal.',
+      answersTitle: 'Ang Imong mga Tubag',
+      done: 'Tapos',
+    },
   },
 
   selfCare: {

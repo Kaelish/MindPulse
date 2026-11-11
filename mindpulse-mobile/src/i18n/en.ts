@@ -543,6 +543,18 @@ export const en: Translations = {
     completeAlertTitle: 'Assessment complete',
     completeAlertBodyFmt: '{title}\nYour score: {score}/100 (saved).',
     saveError: 'Could not save your result. Try again.',
+    result: {
+      resultTitle: 'Assessment Result',
+      scoreLabel: 'Your score',
+      bandLow: 'Low',
+      bandModerate: 'Moderate',
+      bandHigh: 'High',
+      interpretationLow: 'Your responses indicate low stress in this area.',
+      interpretationModerate: 'Your responses suggest moderate stress in this area.',
+      interpretationHigh: 'Your responses indicate high stress in this area. Consider speaking with a professional.',
+      answersTitle: 'Your Answers',
+      done: 'Done',
+    },
   },
 
   /** Self-care copy — see `selfCareTips.ts` (structure) and the type in `i18n/types.ts`. */

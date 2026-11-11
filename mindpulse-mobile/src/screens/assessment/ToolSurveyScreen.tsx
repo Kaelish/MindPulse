@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -9,6 +9,7 @@ import {
   scoreToolAnswers,
   recordToolCompletion,
 } from '../../services/assessmentTools';
+import { ToolResultScreen } from './ToolResultScreen';
 import { saveNewStressSession } from '../../services/dashboard';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { useTranslation } from '../../i18n/language';
@@ -30,6 +31,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [resultScore, setResultScore] = useState<number | null>(null);
 
   const questions: AssessmentToolQuestion[] = tool.questions;
   const currentQuestion = questions[currentIndex];
@@ -77,19 +79,25 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
         surveyAnswers,
       );
       await recordToolCompletion(tool.id);
-      Alert.alert(
-        t.toolSurvey.completeAlertTitle,
-        t.toolSurvey.completeAlertBodyFmt
-          .replace('{title}', tool.title)
-          .replace('{score}', String(score)),
-      );
-      onComplete();
+      setResultScore(score);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : t.toolSurvey.saveError);
     } finally {
       setSaving(false);
     }
   };
+
+  if (resultScore !== null) {
+    return (
+      <ToolResultScreen
+        tool={tool}
+        score={resultScore}
+        answers={answers}
+        questions={questions}
+        onDone={onComplete}
+      />
+    );
+  }
 
   if (!currentQuestion) {
     return (

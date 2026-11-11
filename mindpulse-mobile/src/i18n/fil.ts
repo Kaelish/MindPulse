@@ -526,6 +526,18 @@ export const fil: Translations = {
     completeAlertTitle: 'Tapos na ang pagsusuri',
     completeAlertBodyFmt: '{title}\nAng iyong iskor: {score}/100 (na-save).',
     saveError: 'Hindi ma-save ang iyong resulta. Subukan muli.',
+    result: {
+      resultTitle: 'Resulta ng Pagsusuri',
+      scoreLabel: 'Ang iyong iskor',
+      bandLow: 'Mababa',
+      bandModerate: 'Katamtaman',
+      bandHigh: 'Mataas',
+      interpretationLow: 'Ang iyong mga sagot ay nagpapakita ng mababang stress sa aspetong ito.',
+      interpretationModerate: 'Ang iyong mga sagot ay nagmumungkahi ng katamtamang stress sa aspetong ito.',
+      interpretationHigh: 'Ang iyong mga sagot ay nagpapakita ng mataas na stress sa aspetong ito. Isaalang-alang ang pakikipag-usap sa isang propesyonal.',
+      answersTitle: 'Ang Iyong mga Sagot',
+      done: 'Tapos',
+    },
   },
 
   selfCare: {
