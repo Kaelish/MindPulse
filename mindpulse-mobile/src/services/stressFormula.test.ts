@@ -22,11 +22,12 @@ test('survey transform passes the PSS-10 total through, clamped to 0–100', () 
   expect(surveyStress(140)).toBe(100);
 });
 
-test('heart rate: 60 bpm baseline, +2 stress per bpm, clamped', () => {
-  expect(heartRateStress(60)).toBe(0);
-  expect(heartRateStress(75)).toBe(30);
-  expect(heartRateStress(45)).toBe(0); // below baseline clamps to 0, never negative
+test('heart rate: 70 bpm baseline, bidirectional U-shape, clamped to 0–100', () => {
+  expect(heartRateStress(70)).toBe(0);
+  expect(heartRateStress(90)).toBe(40);
+  expect(heartRateStress(50)).toBe(40);
   expect(heartRateStress(120)).toBe(100);
+  expect(heartRateStress(0)).toBe(100);
 });
 
 test('reaction: 250 ms baseline, +1 stress per 3 ms, clamped', () => {
@@ -55,15 +56,15 @@ test('face: unknown or missing labels fall back to neutral, no scan → null', (
 });
 
 test('fusion uses canonical weights (0.5/0.2/0.2/0.1) when all four are present', () => {
-  // 70 survey, 75 bpm, sad@1.0, 400 ms → 70×.5 + 30×.2 + 80×.2 + 50×.1
-  // = 35 + 6 + 16 + 5 = 62 (callers round — the hub always has)
-  expect(fuseStressScore(70, 75, 'sad', 1, 400)).toBeCloseTo(62, 5);
+  // 70 survey, 75 bpm, sad@1.0, 400 ms → 70×.5 + 10×.2 + 80×.2 + 50×.1
+  // = 35 + 2 + 16 + 5 = 58 (callers round — the hub always has)
+  expect(fuseStressScore(70, 75, 'sad', 1, 400)).toBeCloseTo(58, 5);
 });
 
 test('fusion renormalizes over the indicators actually present', () => {
   // HR + reaction only (the standalone flow): weights 0.2/0.1 → 2/3, 1/3.
-  // 75 bpm → 30, 400 ms → 50: 30×(2/3) + 50×(1/3) = 36.666… → not rounded here.
-  expect(fuseStressScore(null, 75, null, null, 400)).toBeCloseTo(36.667, 2);
+  // 75 bpm → 10, 400 ms → 50: 10×(2/3) + 50×(1/3) = 23.333… → not rounded here.
+  expect(fuseStressScore(null, 75, null, null, 400)).toBeCloseTo(23.333, 2);
   // Single indicator → its value, full stop.
   expect(fuseStressScore(63, null, null, null, null)).toBe(63);
   // Nothing at all → null (callers substitute their own fallback).

@@ -9,7 +9,7 @@ import { AdminResultRow, fetchAdminResults } from './admin';
  * weights 0.5/0.2/0.2/0.1 on the 0–100 scale:
  *
  *   Survey Score     survey_score (0–100)          × 0.5 → 0–50
- *   Heart Rate       clamp((bpm − 60) × 2, 0–100)  × 0.2 → 0–20
+ *   Heart Rate       clamp(|bpm − 70| × 2, 0–100)  × 0.2 → 0–20
  *   Facial Analysis  faceStress(emotion, conf)      × 0.2 → 0–20
  *                    (happy 20, neutral 50, sad 80 — confidence pulls the
  *                     value toward neutral; unknown labels fall back to 50)
@@ -51,7 +51,7 @@ export const surveyComponentOf = (row: AdminResultRow): number | null =>
   row.surveyScore == null ? null : clamp(row.surveyScore, 0, 100) * 0.5;
 
 export const heartRateComponentOf = (row: AdminResultRow): number | null =>
-  row.heartRate == null ? null : clamp((row.heartRate - 60) * 2, 0, 100) * 0.2;
+  row.heartRate == null ? null : clamp(Math.abs(row.heartRate - 70) * 2, 0, 100) * 0.2;
 
 export const facialComponentOf = (row: AdminResultRow): number | null => {
   if (!row.emotion) return null;

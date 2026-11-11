@@ -15,7 +15,8 @@
  *
  * All four indicators map to a 0–100 stress scale (higher = more stress):
  *   - survey: the PSS-10 score is already 0–100.
- *   - heart rate: 60 bpm baseline, +2 stress per bpm, clamped.
+ *   - heart rate: bidirectional around a 70 bpm baseline, 2 stress per bpm of
+ *     deviation in either direction, clamped.
  *   - face: happy 20, neutral 50, sad 80 — confidence pulls the value toward
  *     neutral so an unsure scan barely moves the score. Legacy FER labels
  *     (angry, fearful, …) fall back to neutral.
@@ -37,8 +38,11 @@ const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 /** PSS-10 total (0–100) → stress value on the same scale. */
 export const surveyStress = (pssScore: number): number => Math.min(100, Math.max(0, pssScore));
 
-/** Heart rate in bpm → 0–100 stress (60 bpm baseline; higher = more stress). */
-export const heartRateStress = (bpm: number): number => Math.min(100, Math.max(0, (bpm - 60) * 2));
+/** Heart rate in bpm → 0–100 stress (U-shaped around a 70 bpm baseline). */
+export const heartRateStress = (bpm: number): number => {
+  const deviation = Math.abs(bpm - 70);
+  return Math.min(100, Math.max(0, deviation * 2));
+};
 
 /**
  * Detected emotion + scan confidence → 0–100 stress. Returns null when the
