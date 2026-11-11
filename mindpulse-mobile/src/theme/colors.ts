@@ -73,6 +73,8 @@ export const Colors = {
   // ── Legacy tokens (backward compat with HeartRate & Survey screens) ──
   ctaRed: '#C95C3A',
   ctaRedLight: '#FCEAE4',
+  badgeLowBg: '#D8E9FF',
+  badgeLowText: '#2E7CE0',
   badgeNormalBg: '#D6F5E3',
   badgeNormalText: '#27AE60',
   badgeElevatedBg: '#FFF3CD',

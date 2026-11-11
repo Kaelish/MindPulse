@@ -243,6 +243,7 @@ export interface Translations {
       calc: string;
     };
     status: {
+      low: { label: string; interpretation: string };
       normal: { label: string; interpretation: string };
       elevated: { label: string; interpretation: string };
       high: { label: string; interpretation: string };

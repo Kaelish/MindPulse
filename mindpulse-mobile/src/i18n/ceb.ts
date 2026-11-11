@@ -198,6 +198,10 @@ export const ceb: Translations = {
       calc: 'Kalculaha ang Akong BPM',
     },
     status: {
+      low: {
+        label: 'Masyado Nindot / Mababa',
+        interpretation: 'Ang imong pitik sa kasingkasing ubos sa normal nga resting range (iba sa 60 BPM). Maayo nga tumokon sa usa ka propesyonal sa kalusugan.',
+      },
       normal: {
         label: 'Normal',
         interpretation: 'Mura og naa sa normal nga resting range ang imong pitik sa kasingkasing.',

@@ -198,6 +198,10 @@ export const fil: Translations = {
       calc: 'Kalkulahin ang BPM Ko',
     },
     status: {
+      low: {
+        label: 'Masyadong Mababa',
+        interpretation: 'Nabaaba ang iyong tibok ng puso sa normal na resting range (baba sa 60 BPM). Maaring abnormal ito — magpakonsulta sa isang propesyonal sa kalusugan.',
+      },
       normal: {
         label: 'Normal',
         interpretation: 'Mukhang nasa normal na resting range ang iyong tibok ng puso.',

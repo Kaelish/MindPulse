@@ -21,7 +21,7 @@ import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
 import { registerThemeStyles } from '../../theme/theme';
 import { useTranslation } from '../../i18n/language';
 
-export type BPMStatus = 'normal' | 'elevated' | 'high';
+export type BPMStatus = 'low' | 'normal' | 'elevated' | 'high';
 
 interface StatusConfig {
   pillBg: string;
@@ -29,6 +29,7 @@ interface StatusConfig {
 }
 
 const getStatus = (bpm: number): BPMStatus => {
+  if (bpm < 60) return 'low';
   if (bpm <= 80) return 'normal';
   if (bpm <= 95) return 'elevated';
   return 'high';
@@ -37,6 +38,10 @@ const getStatus = (bpm: number): BPMStatus => {
 // Visual only — the label/interpretation copy comes from `t.heartRate.status`
 // so it follows the selected language.
 const makeStatusMap = (): Record<BPMStatus, StatusConfig> => ({
+  low: {
+    pillBg: Colors.badgeLowBg,
+    pillText: Colors.badgeLowText,
+  },
   normal: {
     pillBg: Colors.badgeNormalBg,
     pillText: Colors.badgeNormalText,

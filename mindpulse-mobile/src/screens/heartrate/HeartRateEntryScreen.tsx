@@ -60,7 +60,7 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
       ? beats * MULTIPLIER
       : null;
 
-  const isValid = bpm !== null && bpm >= 30 && bpm <= 250;
+  const isValid = bpm !== null && bpm >= 40 && bpm <= 250;
 
   const handleCalculate = () => {
     if (isValid && bpm !== null) {
@@ -125,6 +125,12 @@ export const HeartRateEntryScreen: React.FC<Props> = ({ onBack, onCalculate }) =
       {/* ── BPM Reference card ── */}
       <View style={screen.refCard}>
         <Text style={screen.refTitle}>{t.heartRate.entry.refTitle}</Text>
+        <RefRow
+          range="Below 60 BPM"
+          badgeLabel={t.heartRate.status.low.label}
+          badgeBg={Colors.badgeLowBg}
+          badgeText={Colors.badgeLowText}
+        />
         <RefRow
           range="60-80 BPM"
           badgeLabel={t.heartRate.status.normal.label}

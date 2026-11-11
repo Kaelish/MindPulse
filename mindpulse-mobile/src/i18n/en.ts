@@ -208,6 +208,10 @@ export const en: Translations = {
       calc: 'Calculate My BPM',
     },
     status: {
+      low: {
+        label: 'Too Low',
+        interpretation: 'Your heart rate is below the normal resting range (under 60 BPM). This can be abnormal — consider checking with a healthcare professional.',
+      },
       normal: {
         label: 'Normal',
         interpretation: 'Your heart rate appears to be within the normal resting range.',
