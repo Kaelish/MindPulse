@@ -15,7 +15,6 @@ import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { supabase } from '../../supabase/client';
-import { clearAllAssessmentKeys } from '../assessment/StressAssessmentHubScreen';
 import {
   PatientDashboardData,
   StressSessionItem,
@@ -286,7 +285,6 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
   const currentStage = PLANT_STAGES[currentStageIndex];
 
   const handleSignOut = async () => {
-    await clearAllAssessmentKeys().catch(() => {});
     await supabase.auth.signOut().catch(() => {});
     onSignOut?.();
   };

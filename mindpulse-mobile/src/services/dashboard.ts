@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUser } from './session';
+import { dayKey } from './streakLogic';
 import { recordPlantSession } from './plantProgress';
 import { isNotificationEnabled, loadNotificationPrefs } from './notificationPrefs';
 
@@ -333,5 +334,37 @@ export const saveNewStressSession = async (
     faceConfidencePercent: faceConfidencePercent ?? undefined,
     emotion: emotion ?? undefined,
     notes,
+  };
+};
+
+export const fetchTodayStressSession = async (): Promise<StressSessionItem | null> => {
+  const { id: userId } = await requireUser();
+  const today = dayKey();
+  const { data, error } = await supabase
+    .from('stress_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('created_at', today + 'T00:00:00.000Z')
+    .lt('created_at', today + 'T23:59:59.999Z')
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) return null;
+  const row = data[0];
+  const score = Number(row.score ?? 0);
+  return {
+    id: String(row.id),
+    score,
+    title: `${levelForScore(score)} Stress`,
+    date: row.created_at ? formatDate(row.created_at) : '',
+    status: row.stress_level ?? levelForScore(score),
+    statusColor: colorForScore(score),
+    createdAt: row.created_at ?? undefined,
+    heartRate: row.heart_rate ?? undefined,
+    surveyScore: row.survey_score ?? undefined,
+    emotion: row.emotion ?? undefined,
+    reactionTimeMs: row.reaction_time_ms ?? undefined,
+    faceConfidencePercent: row.face_confidence ?? undefined,
+    notes: row.notes ?? '',
   };
 };

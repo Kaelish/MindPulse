@@ -4,8 +4,8 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StressAnalysisLayout } from '../../components/StressAnalysisLayout';
-import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, AssessmentState } from './StressAssessmentHubScreen';
-import { saveNewStressSession } from '../../services/dashboard';
+import { loadAssessmentState, saveAssessmentState, markDayComplete, isDayComplete, todayKey, AssessmentState } from './StressAssessmentHubScreen';
+import { saveNewStressSession, fetchTodayStressSession } from '../../services/dashboard';
 import { faceStress, fuseStressScore, heartRateStress, reactionStress } from '../../services/stressFormula';
 import { fetchDoctorPanel, PanelDoctor } from '../../services/appointments';
 import {
@@ -131,7 +131,24 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
   }, []);
 
   useEffect(() => {
-    loadAssessmentState().then(setStateData);
+    loadAssessmentState().then((loadedState) => {
+      setStateData(loadedState);
+      return fetchTodayStressSession();
+    }).then((todaySession) => {
+      setStateData((prevState) => {
+        if (!todaySession || !prevState) return prevState;
+        return {
+          ...prevState,
+          completedOn: todayKey(),
+          surveyScore: todaySession.surveyScore != null ? todaySession.surveyScore : prevState.surveyScore,
+          heartRateBpm: todaySession.heartRate != null ? todaySession.heartRate : prevState.heartRateBpm,
+          reactionTimeMs: todaySession.reactionTimeMs != null ? todaySession.reactionTimeMs : prevState.reactionTimeMs,
+          faceScanData: todaySession.emotion && todaySession.faceConfidencePercent != null
+            ? { expression: todaySession.emotion as 'happy' | 'neutral' | 'sad', confidence: todaySession.faceConfidencePercent / 100 }
+            : prevState.faceScanData,
+        };
+      });
+    }).catch(() => {});
   }, []);
 
   if (!stateData) {

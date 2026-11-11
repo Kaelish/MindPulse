@@ -9,6 +9,7 @@ import {
   fetchActiveAssessmentTools,
 } from '../../services/assessmentTools';
 import { requireUserId } from '../../services/session';
+import { fetchTodayStressSession } from '../../services/dashboard';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 import { useTranslation } from '../../i18n/language';
 
@@ -272,7 +273,28 @@ export const StressAssessmentHubScreen = ({
   const [extras, setExtras] = useState<HubExtras>({ tools: [] });
 
   useEffect(() => {
-    loadAssessmentState().then(setState);
+    loadAssessmentState().then((loadedState) => {
+      setState(loadedState);
+      return fetchTodayStressSession();
+    }).then((todaySession) => {
+      setState((prevState) => {
+        if (!todaySession || !prevState) return prevState;
+        return {
+          ...prevState,
+          completedOn: todayKey(),
+          survey: todaySession.surveyScore != null ? 'completed' : prevState.survey,
+          faceScan: todaySession.faceConfidencePercent != null ? 'completed' : prevState.faceScan,
+          heartRate: todaySession.heartRate != null ? 'completed' : prevState.heartRate,
+          reaction: todaySession.reactionTimeMs != null ? 'completed' : prevState.reaction,
+          surveyScore: todaySession.surveyScore != null ? todaySession.surveyScore : prevState.surveyScore,
+          heartRateBpm: todaySession.heartRate != null ? todaySession.heartRate : prevState.heartRateBpm,
+          reactionTimeMs: todaySession.reactionTimeMs != null ? todaySession.reactionTimeMs : prevState.reactionTimeMs,
+          faceScanData: todaySession.emotion && todaySession.faceConfidencePercent != null
+            ? { expression: todaySession.emotion as 'happy' | 'neutral' | 'sad', confidence: todaySession.faceConfidencePercent / 100 }
+            : prevState.faceScanData,
+        };
+      });
+    }).catch(() => {});
     fetchActiveAssessmentTools().then((result) => setExtras({ tools: result.tools }));
   }, []);
 
