@@ -719,9 +719,9 @@ const makeStyles = () => StyleSheet.create({
   /* MindPlant */
   plantIllustration: { alignItems: 'center', paddingVertical: 12 },
   plantEmoji: { fontSize: 64 },
-  plantDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  plantTip: { fontSize: 12, color: tone('#27AE60'), fontStyle: 'italic' },
-  stageLabel: { fontSize: 12, fontWeight: '700', color: tone('#27AE60'), backgroundColor: toneBg('#D6F5E3'), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  plantDesc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 21 },
+  plantTip: { fontSize: 14, color: tone('#27AE60'), fontStyle: 'italic' },
+  stageLabel: { fontSize: 14, fontWeight: '700', color: tone('#27AE60'), backgroundColor: toneBg('#D6F5E3'), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   stageDots: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   stageDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.border },
   stageDotActive: { backgroundColor: toneBg('#27AE60'), width: 12, height: 12, borderRadius: 6 },
