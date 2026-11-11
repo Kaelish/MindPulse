@@ -294,6 +294,7 @@ export const en: Translations = {
     fusionSurvey: 'Survey (PSS + Physio)',
     fusionFace: 'Facial Emotion',
     fusionHeartRate: 'Heart Rate',
+    belowBaseline: 'Below baseline',
     fusionReaction: 'Reaction Time',
     advisoryLowTitle: 'You seem relaxed today.',
     advisoryLowBody: 'Maintain healthy routines — good sleep, regular physical activity, and social connections keep stress low.',

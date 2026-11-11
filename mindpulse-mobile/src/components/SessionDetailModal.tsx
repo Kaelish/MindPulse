@@ -94,7 +94,8 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
       metrics.push({ icon: 'clipboard', label: 'Survey Score', value: `${session.surveyScore}`, color: tone('#5B6EF5'), bg: toneBg('#EEEDFE') });
     }
     if (session.emotion) {
-      metrics.push({ icon: 'happy-outline', label: 'Detected Emotion', value: session.emotion, color: tone('#8353E2'), bg: toneBg('#F0E8FB') });
+      const emotionValue = session.emotion.charAt(0).toUpperCase() + session.emotion.slice(1);
+      metrics.push({ icon: 'happy-outline', label: 'Detected Emotion', value: emotionValue, color: tone('#8353E2'), bg: toneBg('#F0E8FB') });
     }
     if (typeof session.reactionTimeMs === 'number') {
       metrics.push({ icon: 'flash-outline', label: 'Reaction Time', value: formatReactionTime(session.reactionTimeMs), color: tone('#2C7A7B'), bg: toneBg('#E6F7F5') });

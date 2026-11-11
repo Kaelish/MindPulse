@@ -131,6 +131,14 @@ const SessionRow = ({
   session, onPress,
 }: { session: StressSessionItem; onPress: () => void }) => {
   const lp = levelProps(session.status);
+  const notes = session.notes ?? '';
+  const typeLabel = notes.includes('(multi-modal)')
+    ? 'Daily Assessment'
+    : notes.startsWith('Completed assessment:')
+      ? 'Supplementary Tool'
+      : null;
+  const typeBg = typeLabel === 'Supplementary Tool' ? toneBg('#EEEDFE') : toneBg('#D6F5E3');
+  const typeColor = typeLabel === 'Supplementary Tool' ? tone('#5B6EF5') : tone('#27AE60');
   return (
     <TouchableOpacity style={sessionStyles.row} onPress={onPress} activeOpacity={0.8}>
       <View style={[sessionStyles.scorePill, { backgroundColor: lp.bg }]}>
@@ -139,6 +147,11 @@ const SessionRow = ({
       <View style={{ flex: 1 }}>
         <View style={sessionStyles.rowTop}>
           <Text style={sessionStyles.title}>{session.title}</Text>
+          {typeLabel && (
+            <View style={[sessionStyles.typeBadge, { backgroundColor: typeBg }]}>
+              <Text style={[sessionStyles.typeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
+            </View>
+          )}
           <View style={[sessionStyles.badge, { backgroundColor: lp.bg }]}>
             <Text style={[sessionStyles.badgeText, { color: lp.color }]}>{lp.label}</Text>
           </View>
@@ -167,6 +180,8 @@ const makeSessionStyles = () => StyleSheet.create({
   title: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
   badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   badgeText: { fontSize: 10, fontWeight: '700' },
+  typeBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  typeBadgeText: { fontSize: 10, fontWeight: '700' },
   date: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
 });
 

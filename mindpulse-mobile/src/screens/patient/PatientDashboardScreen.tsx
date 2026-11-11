@@ -63,13 +63,29 @@ const SessionRow = ({ session, onPress }: { session: StressSessionItem; onPress:
   const scoreText = isHigh ? '#E05C5C' : isModerate ? '#E08A00' : '#27AE60';
   const pillLabel = isHigh ? 'High' : isModerate ? 'Moderate' : 'Low';
 
+  const notes = session.notes ?? '';
+  const typeLabel = notes.includes('(multi-modal)')
+    ? 'Daily Assessment'
+    : notes.startsWith('Completed assessment:')
+      ? 'Supplementary Tool'
+      : null;
+  const typeBg = typeLabel === 'Supplementary Tool' ? '#EEEDFE' : '#D6F5E3';
+  const typeColor = typeLabel === 'Supplementary Tool' ? '#5B6EF5' : '#27AE60';
+
   return (
     <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.85}>
       <View style={[styles.sessionScoreCircle, { backgroundColor: scoreBg }]}>
         <Text style={[styles.sessionScoreText, { color: scoreText }]}>{session.score}</Text>
       </View>
       <View style={styles.sessionTextWrap}>
-        <Text style={styles.sessionTitle}>{session.title}</Text>
+        <View style={styles.sessionTitleRow}>
+          <Text style={styles.sessionTitle}>{session.title}</Text>
+          {typeLabel && (
+            <View style={[styles.sessionTypeBadge, { backgroundColor: typeBg }]}>
+              <Text style={[styles.sessionTypeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.sessionDate}>{session.date}</Text>
       </View>
       <View style={[styles.sessionPill, { backgroundColor: scoreBg }]}>
@@ -434,7 +450,10 @@ const makeStyles = () => StyleSheet.create({
   sessionScoreCircle: { width: 52, height: 52, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   sessionScoreText: { fontSize: 18, fontWeight: '900' },
   sessionTextWrap: { flex: 1 },
-  sessionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  sessionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sessionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  sessionTypeBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  sessionTypeBadgeText: { fontSize: 10, fontWeight: '700' },
   sessionDate: { color: Colors.textSecondary, fontSize: 12, marginTop: 2 },
   sessionPill: { borderRadius: Radius.full, paddingVertical: 5, paddingHorizontal: 12 },
   sessionPillText: { fontSize: 12, fontWeight: '700' },

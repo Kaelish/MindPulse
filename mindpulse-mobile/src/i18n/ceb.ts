@@ -281,6 +281,7 @@ export const ceb: Translations = {
     fusionSurvey: 'Survey (PSS + Lawas)',
     fusionFace: 'Emosyon sa Nawong',
     fusionHeartRate: 'Pitik sa Kasingkasing',
+    belowBaseline: 'Ubos sa baseline',
     fusionReaction: 'Oras sa Reaksyon',
     advisoryLowTitle: 'Mura’g gawasnon ka karon.',
     advisoryLowBody: 'Padayon sa himsog nga mga batasan — maayo nga tulog, regular nga lawas nga kalihokan, ug mga koneksyon sa katawhan mubaba ang stress.',

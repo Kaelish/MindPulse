@@ -515,7 +515,13 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
             <View style={styles.fusionTrack}>
               <View style={[styles.fusionFill, { width: `${Math.min(100, Math.max(0, hrVal))}%`, backgroundColor: toneBg('#EF5350') }]} />
             </View>
-            <Text style={[styles.fusionScore, { color: tone('#F44336') }]}>{Math.round(hrVal)}</Text>
+            {hrVal === 0 && hrBpm != null && hrBpm < 60 ? (
+              <Text style={[styles.fusionScore, styles.fusionScoreNote, { color: tone('#8b95a5') }]}>
+                {t.results.belowBaseline}
+              </Text>
+            ) : (
+              <Text style={[styles.fusionScore, { color: tone('#F44336') }]}>{Math.round(hrVal)}</Text>
+            )}
           </View>
         )}
 
@@ -877,6 +883,7 @@ const makeStyles = () => StyleSheet.create({
   fusionTrack: { flex: 1, height: 6, backgroundColor: toneBg('#E0E0E0'), borderRadius: 3, marginHorizontal: 8 },
   fusionFill: { height: '100%', borderRadius: 3 },
   fusionScore: { fontSize: 12, fontWeight: '800', width: 24, textAlign: 'right' },
+  fusionScoreNote: { width: 92, fontSize: 10 },
 
   advisoryCard: { borderRadius: 16, padding: 20, marginBottom: 16 },
   advisoryHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
