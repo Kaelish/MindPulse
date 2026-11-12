@@ -281,7 +281,6 @@ export const fil: Translations = {
     fusionSurvey: 'Survey (PSS + Pisikal)',
     fusionFace: 'Emosyon ng Mukha',
     fusionHeartRate: 'Tibok ng Puso',
-    belowBaseline: 'Mababa sa baseline',
     fusionReaction: 'Oras ng Reaksyon',
     advisoryLowTitle: 'Mukhang relaxed ka ngayon.',
     advisoryLowBody: 'Panatilihin ang mga malusog na gawi — magandang tulog, regular na pisikal na aktibidad, at mga ugnayang panlipunan ang nagpapanatiling mababa ang stress.',

@@ -329,7 +329,6 @@ export interface Translations {
     fusionSurvey: string;
     fusionFace: string;
     fusionHeartRate: string;
-    belowBaseline: string;
     fusionReaction: string;
     advisoryLowTitle: string;
     advisoryLowBody: string;

@@ -114,7 +114,9 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
             try {
               const { error } = await supabase.rpc('delete_my_account');
               if (error) throw new Error(error.message);
-              // The auth row is gone; clear this device's session as well.
+              // The account is gone; erase this device's cached assessment
+              // state too (every account's scoped key), then drop the session.
+              await clearAllAssessmentKeys();
               await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
               onAccountDeleted?.();
             } catch (e: any) {

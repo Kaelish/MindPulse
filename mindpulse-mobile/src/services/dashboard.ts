@@ -337,20 +337,41 @@ export const saveNewStressSession = async (
   };
 };
 
+/**
+ * Today's *daily multi-modal* session for the signed-in student, or null.
+ *
+ * This is the server-side half of the once-per-day gate (the Hub and the
+ * Result screen both backfill from it), so two things matter:
+ *
+ *   * The window is the device's LOCAL calendar day — `dayKey()` is local, so
+ *     the bounds must be local midnight expressed as UTC instants. Building
+ *     them from `date + 'T00:00:00.000Z'` would open the window at 08:00 in
+ *     UTC+8 and hide every check-in made between 00:00 and 07:59.
+ *   * Only the daily run gates the day. Supplementary questionnaires save
+ *     into the same table ("Completed assessment: <tool>", no reaction time),
+ *     so taking one must not mark today complete or overwrite the fusion
+ *     inputs — the row is picked by shape, not merely by recency.
+ */
 export const fetchTodayStressSession = async (): Promise<StressSessionItem | null> => {
   const { id: userId } = await requireUser();
-  const today = dayKey();
+  const [year, month, day] = dayKey().split('-').map(Number);
+  const dayStart = new Date(year, month - 1, day);
+  const dayEnd = new Date(year, month - 1, day + 1);
   const { data, error } = await supabase
     .from('stress_sessions')
     .select('*')
     .eq('user_id', userId)
-    .gte('created_at', today + 'T00:00:00.000Z')
-    .lt('created_at', today + 'T23:59:59.999Z')
+    .gte('created_at', dayStart.toISOString())
+    .lt('created_at', dayEnd.toISOString())
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(10);
   if (error) throw new Error(error.message);
-  if (!data || data.length === 0) return null;
-  const row = data[0];
+  const row = (data ?? []).find(
+    (candidate: any) =>
+      typeof candidate.reaction_time_ms === 'number' ||
+      (typeof candidate.notes === 'string' && candidate.notes.includes('(multi-modal)')),
+  );
+  if (!row) return null;
   const score = Number(row.score ?? 0);
   return {
     id: String(row.id),
