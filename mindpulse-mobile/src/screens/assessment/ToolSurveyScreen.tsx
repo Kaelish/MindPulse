@@ -87,6 +87,20 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
     }
   };
 
+  /**
+   * Header Back — previous question. On the first question there is nothing
+   * before it, so Back leaves the survey exactly like the Exit button does.
+   * Answers already given stay in `answers`, so the user can review or change
+   * them and continue forward again.
+   */
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    } else {
+      onBack();
+    }
+  };
+
   if (resultScore !== null) {
     return (
       <ToolResultScreen
@@ -118,7 +132,7 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={onBack} disabled={saving}>
+        <TouchableOpacity style={styles.headerBtn} onPress={handleBack} disabled={saving}>
           <Ionicons name="chevron-back" size={24} color={tone('#6B79F2')} />
           <Text style={styles.headerBtnText}>{t.common.back}</Text>
         </TouchableOpacity>

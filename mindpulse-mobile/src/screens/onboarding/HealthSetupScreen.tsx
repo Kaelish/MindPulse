@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
+import { YEAR_LEVEL_OPTIONS } from '../../constants/academicOptions';
 
 interface HealthSetupScreenProps {
   userName?: string;
@@ -19,11 +20,6 @@ interface HealthSetupScreenProps {
 }
 
 /* ─────────── Constants ─────────── */
-const YEAR_OPTIONS = [
-  '1st Year', '2nd Year', '3rd Year', '4th Year',
-  '5th Year', 'Graduate / Postgrad', 'Faculty / Staff',
-];
-
 const LIVING_OPTIONS = [
   'With family',
   'On-campus dormitory',
@@ -138,7 +134,7 @@ const Step1 = ({ year, setYear, program, setProgram, living, setLiving, onContin
 
       <Text style={styles.fieldLabel}>Year / Academic Level</Text>
       <View style={styles.chipGrid}>
-        {YEAR_OPTIONS.map(opt => (
+        {YEAR_LEVEL_OPTIONS.map(opt => (
           <Pressable key={opt} onPress={() => setYear(opt)} style={[styles.chip, year === opt && styles.chipActive]}>
             <Text style={[styles.chipText, year === opt && styles.chipTextActive]}>{opt}</Text>
           </Pressable>
@@ -161,7 +157,13 @@ const Step1 = ({ year, setYear, program, setProgram, living, setLiving, onContin
         ))}
       </View>
 
-      <Pressable onPress={onContinue} style={[styles.continueBtn, isValid && styles.continueBtnActive]}>
+      {/* Year level and living situation are required; the program field is
+          optional, so it never blocks Continue. */}
+      <Pressable
+        onPress={onContinue}
+        disabled={!isValid}
+        style={[styles.continueBtn, isValid && styles.continueBtnActive]}
+      >
         <Text style={[styles.continueBtnText, isValid && styles.continueBtnTextActive]}>Continue  ›</Text>
       </Pressable>
     </ScrollView>
@@ -174,6 +176,7 @@ const Step2 = ({
   toggleMental, togglePhysical, toggleLifestyle, toggleNone, 
   onBack, onContinue 
 }: any) => {
+  const isValid = noneApply || mentalChecked.length > 0 || physicalChecked.length > 0 || lifestyleChecked.length > 0;
   return (
     <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
       <View style={[styles.infoBanner, { backgroundColor: toneBg('#E9F5E9'), borderColor: toneBg('#A3D9A5') }]}>
@@ -208,9 +211,12 @@ const Step2 = ({
         <Text style={[styles.checkLabel, noneApply && { fontWeight: '700' }]}>None of the above apply to me</Text>
       </Pressable>
 
+      {/* The "None of the above" checkbox makes this section optional. At least one of the three
+          condition categories (Mental Health, Physical Health, Lifestyle) must be selected, OR the user
+          can simply check "None of the above" to skip the health conditions entirely. */}
       <View style={styles.navRow}>
         <Pressable onPress={onBack} style={styles.backBtn}><Text style={styles.backBtnText}>← Back</Text></Pressable>
-        <Pressable onPress={onContinue} style={[styles.continueBtn, styles.continueBtnActive, styles.continueBtnSmall]}>
+        <Pressable onPress={onContinue} disabled={!isValid} style={[styles.continueBtn, styles.continueBtnActive, styles.continueBtnSmall, !isValid && { opacity: 0.5 }]}>
           <Text style={styles.continueBtnTextActive}>Continue  ›</Text>
         </Pressable>
       </View>
@@ -321,6 +327,19 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
     onBack();
   };
 
+  /**
+   * Header Back — one step back through the wizard (3 → 2 → 1). On Step 1
+   * there is nothing before it, so Back leaves the setup exactly like the
+   * hardware/exit path does. Step 3's "Edit" also returns to Step 2.
+   */
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      handleExit();
+    }
+  };
+
   const toggle = (list: string[], setter: (v: string[]) => void, val: string) => {
     setNoneApply(false);
     setter(list.includes(val) ? list.filter(x => x !== val) : [...list, val]);
@@ -377,7 +396,7 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Pressable
-            onPress={handleExit}
+            onPress={handleBack}
             disabled={loading}
             style={[styles.headerBack, loading && { opacity: 0.6 }]}
             accessibilityRole="button"
@@ -395,7 +414,7 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
 
       {step === 1 && <Step1 year={year} setYear={setYear} program={program} setProgram={setProgram} living={living} setLiving={setLiving} onContinue={() => setStep(2)} />}
       {step === 2 && <Step2 mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} toggleMental={(v: string) => toggle(mentalChecked, setMentalChecked, v)} togglePhysical={(v: string) => toggle(physicalChecked, setPhysicalChecked, v)} toggleLifestyle={(v: string) => toggle(lifestyleChecked, setLifestyleChecked, v)} toggleNone={toggleNone} onBack={() => setStep(1)} onContinue={() => setStep(3)} />}
-      {step === 3 && <Step3 userName={userName} year={year} program={program} living={living} mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} onEdit={() => setStep(1)} onSave={handleSaveToSupabase} loading={loading} />}
+      {step === 3 && <Step3 userName={userName} year={year} program={program} living={living} mentalChecked={mentalChecked} physicalChecked={physicalChecked} lifestyleChecked={lifestyleChecked} noneApply={noneApply} onEdit={() => setStep(2)} onSave={handleSaveToSupabase} loading={loading} />}
     </SafeAreaView>
   );
 };

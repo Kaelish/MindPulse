@@ -398,11 +398,10 @@ const makeStyles = () => StyleSheet.create({
   sectionTitle: { color: Colors.textPrimary, ...Typography.h3, marginTop: 4 },
 
   /* Quick actions */
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  quickActionCard: { width: '46.5%', borderRadius: Radius.md, padding: 16, alignItems: 'center', gap: 10 },
-  quickActionIconBox: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  quickActionIconText: { fontSize: 22 },
-  quickActionLabel: { fontSize: 13, fontWeight: '700' },
+  quickActionsGrid: { flexDirection: 'row', flexWrap: 'nowrap', gap: 10 },
+  quickActionCard: { width: '22%', minWidth: 80, borderRadius: Radius.md, padding: 12, alignItems: 'center', gap: 8 },
+  quickActionIconBox: { width: 44, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  quickActionLabel: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
 
   /* Daily Check Banner */
   dailyCheckBanner: { backgroundColor: Colors.dashStressCheckBg, borderRadius: Radius.md, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 14 },

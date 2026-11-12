@@ -387,31 +387,36 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
         {/* ══════════ MY PROFILE TAB ══════════ */}
         {activeSegment === 'profile' && (
           <>
-            {/* Health Background */}
+            {/* Combined Health Background + Academic Information Card */}
             <View style={styles.card}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>Health Background</Text>
+                <Text style={styles.cardTitle}>Health & Academic Information</Text>
                 <TouchableOpacity onPress={onOpenHealthSetup}>
                   <Text style={styles.editLink}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.emptyText}>
-                {data.healthConditions.length > 0
-                  ? data.healthConditions.join(', ')
-                  : 'No health conditions flagged'}
-              </Text>
-            </View>
-
-            {/* Academic Information */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Academic Information</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoKey}>Year Level</Text>
-                <Text style={styles.infoVal}>{data.yearLevel ?? 'Not set'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoKey}>Living With</Text>
-                <Text style={styles.infoVal}>{data.livingSituation ?? 'Not set'}</Text>
+              <View style={styles.combinedInfoContainer}>
+                {/* Health Background Section */}
+                <View style={styles.combinedSection}>
+                  <Text style={styles.sectionSubtitle}>Health Background</Text>
+                  <Text style={styles.emptyText}>
+                    {data.healthConditions.length > 0
+                      ? data.healthConditions.join(', ')
+                      : 'No health conditions flagged'}
+                  </Text>
+                </View>
+                {/* Academic Information Section */}
+                <View style={styles.combinedSection}>
+                  <Text style={styles.sectionSubtitle}>Academic Information</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoKey}>Year Level</Text>
+                    <Text style={styles.infoVal}>{data.yearLevel ?? 'Not set'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoKey}>Living With</Text>
+                    <Text style={styles.infoVal}>{data.livingSituation ?? 'Not set'}</Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -710,6 +715,9 @@ const makeStyles = () => StyleSheet.create({
   cardTitle: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   editLink: { fontSize: 12, fontWeight: '700', color: Colors.primary },
   emptyText: { fontSize: 13, color: Colors.textHint, fontStyle: 'italic' },
+  combinedInfoContainer: { flexDirection: 'row', gap: 20, marginTop: 8 },
+  combinedSection: { flex: 1, gap: 8 },
+  sectionSubtitle: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoKey: { fontSize: 13, color: Colors.textSecondary },
   infoVal: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
