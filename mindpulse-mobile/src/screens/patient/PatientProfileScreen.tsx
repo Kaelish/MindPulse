@@ -395,7 +395,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                   <Text style={styles.editLink}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.combinedInfoContainer}>
+              <View>
                 {/* Health Background Section */}
                 <View style={styles.combinedSection}>
                   <Text style={styles.sectionSubtitle}>Health Background</Text>
@@ -405,7 +405,7 @@ export const PatientProfileScreen: React.FC<PatientProfileScreenProps> = ({
                       : 'No health conditions flagged'}
                   </Text>
                 </View>
-                {/* Academic Information Section */}
+                {/* Academic Information Section - positioned below health background */}
                 <View style={styles.combinedSection}>
                   <Text style={styles.sectionSubtitle}>Academic Information</Text>
                   <View style={styles.infoRow}>
@@ -716,7 +716,7 @@ const makeStyles = () => StyleSheet.create({
   editLink: { fontSize: 12, fontWeight: '700', color: Colors.primary },
   emptyText: { fontSize: 13, color: Colors.textHint, fontStyle: 'italic' },
   combinedInfoContainer: { flexDirection: 'row', gap: 20, marginTop: 8 },
-  combinedSection: { flex: 1, gap: 8 },
+  combinedSection: { width: '100%', gap: 8, marginBottom: 14 },
   sectionSubtitle: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoKey: { fontSize: 13, color: Colors.textSecondary },

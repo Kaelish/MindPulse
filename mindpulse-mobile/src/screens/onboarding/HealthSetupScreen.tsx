@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,7 @@ import { Colors } from '../../theme/colors';
 import { Radius, Spacing, Typography } from '../../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { YEAR_LEVEL_OPTIONS } from '../../constants/academicOptions';
+import { supabase } from '../../supabase/client';
 
 interface HealthSetupScreenProps {
   userName?: string;
@@ -35,6 +36,7 @@ const MENTAL_HEALTH_OPTIONS = [
   'PTSD or trauma history',
   'Sleep disorders (insomnia, etc.)',
   'OCD or intrusive thoughts',
+  'Others',
 ];
 
 const PHYSICAL_HEALTH_OPTIONS = [
@@ -44,6 +46,7 @@ const PHYSICAL_HEALTH_OPTIONS = [
   'Regular prescribed medication',
   'Respiratory conditions (asthma, etc.)',
   'Diabetes or blood sugar issues',
+  'Others',
 ];
 
 const LIFESTYLE_OPTIONS = [
@@ -53,6 +56,7 @@ const LIFESTYLE_OPTIONS = [
   'Consistently poor sleep quality',
   'Currently experiencing a major life stressor',
   'Regular alcohol or substance use',
+  'Others',
 ];
 
 /* ─────────── Sub-components ─────────── */
@@ -286,7 +290,6 @@ const Step3 = ({ userName, year, program, living, mentalChecked, physicalChecked
   );
 };
 
-import { supabase } from '../../supabase/client';
 import { Alert } from 'react-native';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
@@ -301,6 +304,37 @@ export const HealthSetupScreen: React.FC<HealthSetupScreenProps> = ({ userName =
   const [lifestyleChecked, setLifestyleChecked] = useState<string[]>([]);
   const [noneApply, setNoneApply] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Pre-select every option that already exists in the profile so returning
+   * users pick up exactly where they left off instead of starting from blank.
+   */
+  useEffect(() => {
+    let active = true;
+    const loadExisting = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('year_level, program, living_situation, mental_conditions, physical_conditions, lifestyle_habits, none_apply')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!active || !data) return;
+        setYear(data.year_level ?? '');
+        setProgram(data.program ?? '');
+        setLiving(data.living_situation ?? '');
+        setMentalChecked(Array.isArray(data.mental_conditions) ? data.mental_conditions : []);
+        setPhysicalChecked(Array.isArray(data.physical_conditions) ? data.physical_conditions : []);
+        setLifestyleChecked(Array.isArray(data.lifestyle_habits) ? data.lifestyle_habits : []);
+        setNoneApply(Boolean(data.none_apply));
+      } catch {
+        // Leave every field at its default rather than inventing values.
+      }
+    };
+    void loadExisting();
+    return () => { active = false; };
+  }, []);
 
   /**
    * Leaving without saving. The health form is only shown once per account,
@@ -492,7 +526,7 @@ const makeStyles = () => StyleSheet.create({
 
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   checkBox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: toneBg('#D1D5DB'), backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
-  checkMark: { display: 'none' },
+  checkMark: { color: Colors.white, fontSize: 11, fontWeight: '800' },
   checkLabel: { flex: 1, color: Colors.textPrimary, fontSize: 13, lineHeight: 18 },
 
   noneBox: { flexDirection: 'row', alignItems: 'center', height: 56, borderColor: toneBg('#E2E8F0'), borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, backgroundColor: Colors.surface, gap: 12, marginBottom: 12 },
