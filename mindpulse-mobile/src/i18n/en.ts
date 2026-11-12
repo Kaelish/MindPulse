@@ -39,7 +39,7 @@ export const en: Translations = {
     lifestyle: {
       q101: { id: 101, pill: 'Sleep Hours', text: 'How many hours did you sleep last night?', options: ['8+ hours', '6-7 hours', '4-5 hours', 'Less than 4 hours'] },
       q102: { id: 102, pill: 'Breathing Pattern', text: 'How is your breathing right now?', sub: 'Are you breathing fast, or feeling shortness of breath?', options: ['Not at all', 'Slightly', 'Sometimes', 'Often'] },
-      q103: { id: 103, pill: 'Mood Check', text: 'How has your mood been today?', options: ['Good and stable', 'Mostly okay', 'Low or irritable', 'Very low or overwhelmed'] },
+      q103: { id: 103, pill: 'Mood Check', text: 'How is your mood been today?', options: ['Good and stable', 'Mostly okay', 'Low or irritable', 'Very low or overwhelmed'] },
       q104: { id: 104, pill: 'Eye Fatigue', text: 'How tired are your eyes right now?', options: ['Not tired', 'Mildly tired', 'Quite tired', 'Very tired or sore'] },
       q105: { id: 105, pill: 'Stressors', text: 'How many sources of stress (school, work, relationships, money) are affecting you right now?', options: ['None', 'One or two', 'Three or four', 'Five or more'] },
       q106: { id: 106, pill: 'Physical Symptoms', text: 'Have you noticed physical signs of stress (headache, tense muscles, stomach trouble)?', options: ['None', 'Rarely', 'Sometimes', 'Often'] },
