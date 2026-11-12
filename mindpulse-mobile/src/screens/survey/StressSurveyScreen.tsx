@@ -153,6 +153,33 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
     }
   };
 
+  /**
+   * Last question of Part 1. The interstitial's Back and the first Part 2
+   * question's Back both land here, so Back walks one continuous stack through
+   * the whole survey instead of leaving it.
+   */
+  const goToPart1End = () => {
+    setPhase('part1');
+    setCurrentIndex(pssQuestions.length - 1);
+  };
+
+  /**
+   * Header Back — previous question, crossing parts when needed (Part 2 q1 →
+   * last Part 1 question). On the very first question there is nothing before
+   * it, so Back leaves the survey exactly like the Exit button does. Answers
+   * already given stay in `answers`, so the user can review or change them and
+   * continue forward again. Exit is the button that always returns to the hub.
+   */
+  const handleBack = () => {
+    if (questionIndex > 0) {
+      setCurrentIndex(questionIndex - 1);
+    } else if (isPart2) {
+      goToPart1End();
+    } else {
+      onBack();
+    }
+  };
+
   const progressPercent = ((questionIndex + 1) / currentQuestions.length) * 100;
 
   if (phase === 'interstitial') {
@@ -184,7 +211,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
         </View>
 
         <View style={styles.interstitialFooter}>
-          <TouchableOpacity style={styles.interstitialBackBtn} onPress={onBack}>
+          <TouchableOpacity style={styles.interstitialBackBtn} onPress={goToPart1End}>
             <Text style={styles.interstitialBackText}>{t.common.back}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.interstitialStartBtn} onPress={() => { setPhase('part2'); setCurrentIndex(0); }}>
@@ -206,7 +233,7 @@ export const StressSurveyScreen = ({ onBack, tool }: { onBack: () => void; tool?
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={onBack}>
+        <TouchableOpacity style={styles.headerBtn} onPress={handleBack}>
           <Ionicons name="chevron-back" size={24} color={themeColor} />
           <Text style={[styles.headerBtnText, { color: themeColor }]}>{t.common.back}</Text>
         </TouchableOpacity>

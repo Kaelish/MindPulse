@@ -98,3 +98,72 @@ test('full survey walk (Part 1 → interstitial → Part 2 → complete) never c
   // Completing the survey saves through AsyncStorage and hands back to the hub.
   expect(onBack).toHaveBeenCalledTimes(1);
 });
+
+test('header Back returns to the previous question and keeps answers; Exit leaves the survey', async () => {
+  const onBack = jest.fn();
+  let renderer!: Renderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<StressSurveyScreen onBack={onBack} />);
+  });
+
+  const buttons = () => renderer.root.findAllByType(TouchableOpacity);
+  const headerBack = () => buttons()[0];
+  const headerExit = () => buttons()[1];
+  const next = () => buttons()[buttons().length - 1];
+
+  // Answer question 1 and advance to question 2.
+  await tap(buttons()[2]);
+  await tap(next());
+  expect(renderedText(renderer)).toContain('Control'); // q2 pill
+
+  // Header Back returns to question 1 instead of leaving, and the answer
+  // already given is still selected (Next is enabled).
+  await tap(headerBack());
+  expect(onBack).not.toHaveBeenCalled();
+  expect(renderedText(renderer)).toContain('Unexpected Event'); // q1 pill
+  expect(next().props.disabled).toBe(false);
+
+  // Header Exit is the one that returns to the assessment hub.
+  await tap(headerExit());
+  expect(onBack).toHaveBeenCalledTimes(1);
+});
+
+test('Back walks one continuous stack across parts and exits from question 1', async () => {
+  const onBack = jest.fn();
+  let renderer!: Renderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<StressSurveyScreen onBack={onBack} />);
+  });
+
+  const buttons = () => renderer.root.findAllByType(TouchableOpacity);
+  const headerBack = () => buttons()[0];
+  const next = () => buttons()[buttons().length - 1];
+
+  // Walk all of Part 1 into the interstitial.
+  for (let question = 0; question < 10; question += 1) {
+    await answerAndNext(renderer);
+  }
+  expect(renderedText(renderer)).toContain('Part 2: Psychological Check');
+
+  // Interstitial Back returns to the last Part 1 question, not the hub.
+  await tap(buttons()[0]);
+  expect(onBack).not.toHaveBeenCalled();
+  expect(renderedText(renderer)).toContain('Overwhelm'); // q10 pill
+
+  // Continue forward to Part 2 and start it.
+  await tap(next());
+  await tap(buttons()[buttons().length - 1]); // interstitial Start
+  expect(renderedText(renderer)).toContain('Sleep Hours');
+
+  // Back on Part 2 question 1 crosses into the last Part 1 question.
+  await tap(headerBack());
+  expect(renderedText(renderer)).toContain('Overwhelm'); // q10 pill
+
+  // Keep walking back to question 1, where Back leaves the survey.
+  for (let question = 0; question < 9; question += 1) {
+    await tap(headerBack());
+  }
+  expect(renderedText(renderer)).toContain('Unexpected Event'); // q1 pill
+  await tap(headerBack());
+  expect(onBack).toHaveBeenCalledTimes(1);
+});
