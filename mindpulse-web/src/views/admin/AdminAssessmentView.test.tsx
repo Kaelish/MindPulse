@@ -83,6 +83,10 @@ const questionBoxes = () =>
 /** The two card edit buttons, in the order fetchAssessmentTools resolved them. */
 const cardEditButtons = () => screen.getAllByRole('button', { name: /^✏ Edit/ });
 
+/** Every option label input inside a question modal, in list order. */
+const optionTexts = (dialog: HTMLElement) =>
+  within(dialog).getAllByLabelText(/^Option \d+ text$/) as HTMLInputElement[];
+
 describe('AdminAssessmentView', () => {
   beforeEach(() => {
     (fetchAssessmentTools as jest.Mock).mockResolvedValue([pss10Tool, briefTool]);
@@ -257,5 +261,108 @@ describe('AdminAssessmentView', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Create assessment' })).toBeNull(),
     );
+  });
+
+  it('edits answer options in the scoped modal, isolated until Save', async () => {
+    renderView();
+    await screen.findByText('Follow-up Wellness Check');
+    fireEvent.click(cardEditButtons()[1]);
+
+    // Default mode: the standard 0–4 scale is summarised read-only.
+    fireEvent.click(screen.getAllByRole('button', { name: /^Edit question/ })[0]);
+    let dialog = screen.getByRole('dialog', { name: 'Edit question 1' });
+    expect(within(dialog).getByLabelText('Custom options')).not.toBeChecked();
+    expect(within(dialog).getByText(/Default scale:/)).toBeInTheDocument();
+
+    // Custom mode seeds the current default labels as editable rows.
+    fireEvent.click(within(dialog).getByLabelText('Custom options'));
+    expect(optionTexts(dialog)).toHaveLength(5);
+    expect(optionTexts(dialog)[0].value).toBe('Never');
+
+    // State isolation: edits live only in the modal; Cancel discards them.
+    fireEvent.change(optionTexts(dialog)[0], { target: { value: 'Not at all' } });
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Remove option' })[2]);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'Edit question 1' })).toBeNull();
+
+    // Reopening proves nothing leaked into the parent form.
+    fireEvent.click(screen.getAllByRole('button', { name: /^Edit question/ })[0]);
+    dialog = screen.getByRole('dialog', { name: 'Edit question 1' });
+    expect(within(dialog).getByLabelText('Custom options')).not.toBeChecked();
+    fireEvent.click(within(dialog).getByLabelText('Custom options'));
+    expect(optionTexts(dialog)).toHaveLength(5);
+    expect(optionTexts(dialog)[0].value).toBe('Never');
+
+    // Customise to "Not at all → Extremely" and Save commits to the form.
+    fireEvent.change(optionTexts(dialog)[0], { target: { value: 'Not at all' } });
+    fireEvent.change(optionTexts(dialog)[1], { target: { value: 'Extremely' } });
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Remove option' })[4]);
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Remove option' })[3]);
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Remove option' })[2]);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save Question' }));
+    expect(screen.queryByRole('dialog', { name: 'Edit question 1' })).toBeNull();
+
+    // Reopening shows the committed draft — the parent array was updated.
+    fireEvent.click(screen.getAllByRole('button', { name: /^Edit question/ })[0]);
+    dialog = screen.getByRole('dialog', { name: 'Edit question 1' });
+    expect(within(dialog).getByLabelText('Custom options')).toBeChecked();
+    expect(optionTexts(dialog)).toHaveLength(2);
+    expect(optionTexts(dialog)[0].value).toBe('Not at all');
+    expect(optionTexts(dialog)[1].value).toBe('Extremely');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    // End to end: the form Save persists text + position + options together.
+    fireEvent.click(screen.getByRole('button', { name: 'Save Assessment' }));
+    await waitFor(() => expect(updateAssessmentTool).toHaveBeenCalledTimes(1));
+    const call = (updateAssessmentTool as jest.Mock).mock.calls[0];
+    expect(call[0]).toBe('tool-brief');
+    expect(call[1].questions).toHaveLength(2);
+    expect(call[1].questions[0]).toEqual(
+      expect.objectContaining({
+        id: 1,
+        text: ORIGINAL_CALM,
+        options: [
+          { value: 0, label: 'Not at all' },
+          { value: 1, label: 'Extremely' },
+        ],
+      }),
+    );
+  });
+
+  it('validates custom answer options inside the modal', async () => {
+    renderView();
+    await screen.findByText('Follow-up Wellness Check');
+    fireEvent.click(cardEditButtons()[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Edit question/ })[0]);
+    const dialog = screen.getByRole('dialog', { name: 'Edit question 1' });
+    fireEvent.click(within(dialog).getByLabelText('Custom options'));
+
+    const removals = () => within(dialog).getAllByRole('button', { name: 'Remove option' });
+    const saveQuestion = () => within(dialog).getByRole('button', { name: 'Save Question' });
+
+    // Fewer than two options blocks Save but keeps the modal open.
+    fireEvent.click(removals()[2]);
+    fireEvent.click(removals()[2]);
+    fireEvent.click(removals()[2]);
+    fireEvent.click(removals()[1]);
+    expect(within(dialog).getAllByLabelText(/^Option \d+ text$/)).toHaveLength(1);
+    fireEvent.click(saveQuestion());
+    expect(within(dialog).getByText('A custom scale needs at least two options.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Edit question 1' })).toBeInTheDocument();
+
+    // A blank label blocks Save.
+    fireEvent.click(within(dialog).getByRole('button', { name: /Add option/ }));
+    fireEvent.click(saveQuestion());
+    expect(within(dialog).getByText('Every option needs a label.')).toBeInTheDocument();
+
+    // Duplicate wording (case-insensitive) blocks Save.
+    fireEvent.change(optionTexts(dialog)[1], { target: { value: 'never' } });
+    fireEvent.click(saveQuestion());
+    expect(within(dialog).getByText(/Duplicate option "never"/)).toBeInTheDocument();
+
+    // A valid pair commits and closes.
+    fireEvent.change(optionTexts(dialog)[1], { target: { value: 'Often' } });
+    fireEvent.click(saveQuestion());
+    expect(screen.queryByRole('dialog', { name: 'Edit question 1' })).toBeNull();
   });
 });

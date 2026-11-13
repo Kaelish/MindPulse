@@ -7,6 +7,7 @@ import {
   AssessmentStatus,
   AssessmentTool,
   AssessmentToolInput,
+  AssessmentToolOption,
   AssessmentToolQuestion,
   createAssessmentTool,
   deleteAssessmentTool,
@@ -76,11 +77,12 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   const [saving, setSaving] = useState(false);
   /** JSON snapshot of the form at open time — drives dirty/pristine tracking. */
   const [formSnapshot, setFormSnapshot] = useState('');
-  /** Open question editor target: the ORIGINAL text/position when it opened. */
+  /** Open question editor target: the ORIGINAL text/position/options at open. */
   const [editingQuestion, setEditingQuestion] = useState<{
     id: number;
     text: string;
     position: number;
+    options?: AssessmentToolOption[];
   } | null>(null);
 
   const [outcomes, setOutcomes] = useState<AssessmentOutcomes | null>(null);
@@ -187,21 +189,35 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   const openQuestionEditor = (id: number) => {
     const index = form.questions.findIndex((question) => question.id === id);
     if (index < 0) return;
-    setEditingQuestion({ id, text: form.questions[index].text, position: index + 1 });
+    setEditingQuestion({
+      id,
+      text: form.questions[index].text,
+      position: index + 1,
+      options: form.questions[index].options,
+    });
   };
 
   /**
-   * Commit a question modal draft: update the text and, when the position
-   * changed, move the question — in ONE atomic form update. Cancelled modals
-   * never reach here, so their drafts die with the modal.
+   * Commit a question modal draft: update the text and options and, when the
+   * position changed, move the question — in ONE atomic form update keyed by
+   * question id. `options` omitted reverts to the default 0–4 scale (the key
+   * is removed entirely, matching how patients' apps read the field).
+   * Cancelled modals never reach here, so their drafts die with the modal.
    */
-  const applyQuestionEdit = (id: number, draft: { text: string; position: number }) => {
+  const applyQuestionEdit = (
+    id: number,
+    draft: { text: string; position: number; options?: AssessmentToolOption[] },
+  ) => {
     setForm((current) => {
       const from = current.questions.findIndex((question) => question.id === id);
       if (from < 0) return current;
-      const questions = current.questions.map((question) =>
-        question.id === id ? { ...question, text: draft.text } : question,
-      );
+      const questions = current.questions.map((question) => {
+        if (question.id !== id) return question;
+        const updated: AssessmentToolQuestion = { ...question, text: draft.text };
+        if (draft.options && draft.options.length) updated.options = draft.options;
+        else delete updated.options;
+        return updated;
+      });
       const target = Math.min(Math.max(draft.position, 1), questions.length) - 1;
       if (target !== from) {
         const [moved] = questions.splice(from, 1);
@@ -745,6 +761,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
           position={editingQuestion.position}
           total={form.questions.length}
           initialText={editingQuestion.text}
+          initialOptions={editingQuestion.options}
           onCancel={() => setEditingQuestion(null)}
           onSave={(draft) => applyQuestionEdit(editingQuestion.id, draft)}
         />

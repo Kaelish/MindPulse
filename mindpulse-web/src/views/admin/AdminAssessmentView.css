@@ -678,7 +678,7 @@
 
 /* Scoped per-question editor modal */
 .assessment-modal.question-modal {
-  width: min(480px, 100%);
+  width: min(560px, 100%);
 }
 
 .question-modal-position input {
@@ -688,6 +688,69 @@
 .question-box-tools .question-box-edit {
   border-color: #cfe6ee;
   color: #0e7f96;
+}
+
+.question-modal-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.question-modal-custom input {
+  margin: 0;
+  accent-color: #0e7f96;
+  cursor: pointer;
+}
+
+.option-row-list {
+  display: grid;
+  gap: 6px;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.option-row input {
+  padding: 6px 8px;
+  border: 1px solid #e3e8ef;
+  border-radius: 6px;
+  background: #fff;
+  color: #182033;
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.option-row input:focus {
+  outline: 0;
+  border-color: #0e7f96;
+}
+
+.option-row .option-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.option-row .option-row-value {
+  width: 74px;
+  flex-shrink: 0;
+}
+
+.option-row .question-box-tools {
+  flex-shrink: 0;
 }
 
 .assessment-modal-actions {
@@ -800,6 +863,21 @@ html[data-theme='dark'] .assessment-field input:disabled {
   color: var(--muted, #96a2b8);
 }
 
+html[data-theme='dark'] .question-modal-custom {
+  color: var(--muted, #96a2b8);
+}
+
+html[data-theme='dark'] .option-row {
+  background: #0f1729;
+  border-color: var(--line, #26314a);
+}
+
+html[data-theme='dark'] .option-row input {
+  background: #0b1220;
+  border-color: var(--line, #26314a);
+  color: var(--text, #e7ebf3);
+}
+
 html[data-theme='dark'] .assessment-show-all:hover {
   background: #0e7f96;
   border-color: #0e7f96;
@@ -876,4 +954,53 @@ html[data-theme='dark'] .assessment-note {
   .assessment-field-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Question editor modal — layout hardening.
+   The shared ".assessment-field input { width:100% }" rule otherwise stretches
+   the options toggle checkbox full-width and makes option rows overflow the
+   modal horizontally, squeezing their text inputs to a sliver. These rules are
+   appended last so they win every specificity tie. */
+.question-modal .assessment-field {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.question-modal .assessment-field input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+html[data-theme='dark'] .question-modal .assessment-field input[type='checkbox'] {
+  background: transparent;
+  border: 0;
+  color: inherit;
+}
+
+.option-row-list {
+  width: 100%;
+}
+
+.option-row .option-row-text {
+  flex: 1 1 0;
+  width: auto; /* override the shared .assessment-field input width */
+  min-width: 0;
+}
+
+.option-row .option-row-value {
+  flex: 0 0 64px;
+  width: 64px;
+}
+
+.option-row .question-box-index {
+  flex: 0 0 auto;
+}
+
+.option-row .question-box-tools {
+  flex: 0 0 auto;
 }
