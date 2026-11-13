@@ -22,6 +22,7 @@ import { DoctorSettingsView } from './views/doctor/DoctorSettingsView';
 import { HelpView } from './views/doctor/HelpView';
 import { AdminDashboardView } from './views/admin/AdminDashboardView';
 import { WebAuth, AuthScreen } from './views/auth/WebAuth';
+import { EmailVerifiedView } from './views/auth/EmailVerifiedView';
 import { LandingPage } from './views/landing/LandingPage';
 import './App.css';
 
@@ -419,4 +420,11 @@ function App() {
   );
 }
 
-export default App;
+function AppEntry() {
+  if (window.location.pathname === '/email-verified') {
+    return <EmailVerifiedView />;
+  }
+  return <App />;
+}
+
+export default AppEntry;

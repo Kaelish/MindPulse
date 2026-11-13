@@ -33,6 +33,20 @@ If the computer changes networks, run `.\dev.ps1` again after clearing the old
 to the new computer LAN address. The iPhone and computer must be on the same
 Wi-Fi network, and Windows Firewall must allow the backend port.
 
+### Confirmation e-mail links
+
+Mobile registration sends confirmation links back to the app through the
+`mindpulse://auth/callback` deep link. Add this exact URI to Supabase
+Dashboard → Authentication → URL Configuration → Redirect URLs:
+
+```
+mindpulse://auth/callback
+```
+
+After changing the app scheme or confirmation-link handling, restart Expo with
+`npx expo start -c`. An installed standalone build must be rebuilt so the
+`mindpulse` scheme is registered on the device.
+
 ## Current Architecture & Workarounds
 
 ### 1. Authentication
