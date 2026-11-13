@@ -154,6 +154,8 @@ export const ceb: Translations = {
       analyzing: 'GISUSI',
       readyTitle: 'Andam na mag-scan',
       readySub: 'Lig-on lang ug i-tap ang kunan',
+      preparingTitle: 'Giapandam ang face analysis…',
+      preparingSub: 'Gipukaw ang emotion service',
       analyzingTitle: 'Gisusi ang imong ekspresyon…',
       analyzingSub: 'Ginabasa ang mga facial landmark ug gihulaan ang emosyon',
       shutter: 'Kuhaa',

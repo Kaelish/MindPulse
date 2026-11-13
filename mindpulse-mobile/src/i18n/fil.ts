@@ -154,6 +154,8 @@ export const fil: Translations = {
       analyzing: 'SINUSURI',
       readyTitle: 'Handa nang mag-scan',
       readySub: 'Manatiling imobil at i-tap ang kunan',
+      preparingTitle: 'Inihahanda ang face analysis…',
+      preparingSub: 'Ginigising ang emotion service',
       analyzingTitle: 'Sinusuri ang iyong ekspresyon…',
       analyzingSub: 'Binabasa ang mga facial landmark at hinuhulaan ang emosyon',
       shutter: 'Kunan',

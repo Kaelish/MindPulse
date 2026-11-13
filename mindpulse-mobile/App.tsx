@@ -44,6 +44,7 @@ import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
 import { loadThemeMode, registerThemeStyles, tone, toneBg, useThemeMode } from './src/theme/theme';
 import { loadLanguage } from './src/i18n/language';
+import { warmEmotionService } from './src/services/emotionScan';
 
 type ScreenMode =
   | 'splash'
@@ -384,6 +385,10 @@ function App() {
 
   /* ── Auth success handler ── */
   const handleAuthSuccess = async (isNewUser: boolean) => {
+    // Warm the face-analysis service in the background. Login and onboarding
+    // stay responsive even when Render needs to wake and load the ML model.
+    void warmEmotionService();
+
     let userId: string | undefined;
     try {
       const { data: { user } } = await supabase.auth.getUser();

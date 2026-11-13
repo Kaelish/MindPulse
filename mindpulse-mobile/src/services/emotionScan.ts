@@ -36,6 +36,12 @@ interface EmotionApiResponse {
   detail?: string;
 }
 
+interface EmotionHealthResponse {
+  warmup?: string;
+}
+
+export type EmotionServiceStatus = 'ready' | 'loading' | 'failed' | 'unreachable';
+
 /** Backend classes (Happy/Neutral/Sad) -> app expression vocabulary. */
 const BACKEND_LABEL_TO_EXPRESSION: Record<string, FaceEmotion> = {
   happy: 'happy',
@@ -50,6 +56,56 @@ const REQUEST_TIMEOUT_MS = 90000;
 // after a genuine timeout.
 const RETRY_DELAY_MS = 1500;
 const RETRY_WINDOW_MS = 15000;
+const HEALTH_TIMEOUT_MS = 10000;
+const WARMUP_POLL_INTERVAL_MS = 3000;
+const WARMUP_MAX_POLLS = 20;
+let warmupPromise: Promise<boolean> | null = null;
+
+const getHealthStatus = async (): Promise<EmotionServiceStatus> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/health/`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) return 'unreachable';
+    const payload = (await response.json()) as EmotionHealthResponse;
+    if (payload.warmup === 'ok') return 'ready';
+    if (payload.warmup === 'failed') return 'failed';
+    return 'loading';
+  } catch {
+    return 'unreachable';
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+/**
+ * Wake Render and wait for the model warm-up without making login depend on it.
+ * A failed warm-up is returned to the caller but never thrown, because capture
+ * can still provide the backend's more specific error.
+ */
+export const warmEmotionService = async (): Promise<boolean> => {
+  if (warmupPromise) return warmupPromise;
+
+  warmupPromise = (async () => {
+    for (let poll = 0; poll < WARMUP_MAX_POLLS; poll += 1) {
+      const status = await getHealthStatus();
+      if (status === 'ready') return true;
+      if (status === 'failed') return false;
+      if (poll < WARMUP_MAX_POLLS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, WARMUP_POLL_INTERVAL_MS));
+      }
+    }
+    return false;
+  })();
+
+  try {
+    return await warmupPromise;
+  } finally {
+    warmupPromise = null;
+  }
+};
 
 const postFrame = async (url: string, body: string): Promise<Response> => {
   const controller = new AbortController();

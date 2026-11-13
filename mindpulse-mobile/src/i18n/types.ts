@@ -197,6 +197,8 @@ export interface Translations {
       analyzing: string;
       readyTitle: string;
       readySub: string;
+      preparingTitle: string;
+      preparingSub: string;
       analyzingTitle: string;
       analyzingSub: string;
       shutter: string;

@@ -161,6 +161,8 @@ export const en: Translations = {
       analyzing: 'ANALYZING',
       readyTitle: 'Ready to scan',
       readySub: 'Hold steady and tap capture',
+      preparingTitle: 'Preparing face analysis…',
+      preparingSub: 'Waking the emotion service',
       analyzingTitle: 'Analyzing your expression…',
       analyzingSub: 'Reading facial landmarks and predicting emotion',
       shutter: 'Capture',

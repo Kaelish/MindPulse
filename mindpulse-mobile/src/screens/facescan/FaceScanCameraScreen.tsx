@@ -6,7 +6,7 @@ import { Colors } from '../../theme/colors';
 import { Spacing, Radius } from '../../theme/typography';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
-import { analyzeFaceImage } from '../../services/emotionScan';
+import { analyzeFaceImage, warmEmotionService } from '../../services/emotionScan';
 import { useTranslation } from '../../i18n/language';
 
 interface Props {
@@ -21,7 +21,22 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void warmEmotionService().then((ready) => {
+      if (!active) return;
+      setIsPreparing(false);
+      if (!ready) {
+        setError('Face analysis is still starting. You can try capture again in a moment.');
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Scanning laser animates only while the backend is analysing the frame.
   const laser = useRef(new Animated.Value(0)).current;
@@ -64,7 +79,7 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
     }
   }, [isCapturing, isAnalyzing, onComplete, t]);
 
-  const busy = isCapturing || isAnalyzing;
+  const busy = isCapturing || isAnalyzing || isPreparing;
 
   const renderCameraBody = () => {
     if (!permission) {
@@ -181,10 +196,18 @@ export const FaceScanCameraScreen: React.FC<Props> = ({ onComplete, onBack }) =>
           />
           <View style={styles.processingTextWrap}>
             <Text style={styles.processingTitle}>
-              {isAnalyzing ? t.faceScan.camera.analyzingTitle : t.faceScan.camera.readyTitle}
+              {isAnalyzing
+                ? t.faceScan.camera.analyzingTitle
+                : isPreparing
+                  ? t.faceScan.camera.preparingTitle
+                  : t.faceScan.camera.readyTitle}
             </Text>
             <Text style={styles.processingSub}>
-              {isAnalyzing ? t.faceScan.camera.analyzingSub : t.faceScan.camera.readySub}
+              {isAnalyzing
+                ? t.faceScan.camera.analyzingSub
+                : isPreparing
+                  ? t.faceScan.camera.preparingSub
+                  : t.faceScan.camera.readySub}
             </Text>
           </View>
         </View>
