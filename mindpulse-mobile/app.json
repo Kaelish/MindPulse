@@ -2,6 +2,7 @@
   "expo": {
     "name": "MindPulseMobile",
     "slug": "mindpulse-mobile",
+    "scheme": "mindpulse",
     "plugins": [
       "expo-audio",
       [

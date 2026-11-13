@@ -11,6 +11,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
@@ -32,6 +33,15 @@ interface AuthScreenProps {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
 const GENDER_OPTIONS = ['Female', 'Male', 'Prefer not to say'];
+const EMAIL_CONFIRMATION_URL =
+  process.env.EXPO_PUBLIC_MINDPULSE_EMAIL_CONFIRMATION_URL?.trim();
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (value: string) => value.length >= 8 },
+  { label: 'One uppercase letter', test: (value: string) => /[A-Z]/.test(value) },
+  { label: 'One lowercase letter', test: (value: string) => /[a-z]/.test(value) },
+  { label: 'One number', test: (value: string) => /\d/.test(value) },
+  { label: 'One special character', test: (value: string) => /[^A-Za-z0-9]/.test(value) },
+];
 
 /**
  * Turns Supabase/GoTrue error payloads into wording a student can act on.
@@ -59,7 +69,7 @@ const describeAuthError = (error: any): string => {
     /6 characters/i.test(msg) ||
     /password should be at least/i.test(msg)
   ) {
-    return 'Your password must be at least 6 characters long.';
+    return 'Your password must be at least 8 characters long and include an uppercase letter, lowercase letter, number, and special character.';
   }
   if (code === 'email_address_invalid' || /invalid.*e?mail|not a valid/i.test(msg)) {
     return 'That e-mail address is not valid. Please check it for typos.';
@@ -170,8 +180,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     if (!regGender) {
       return 'Please select your gender.';
     }
-    if (regPassword.length < 6) {
-      return 'Your password must be at least 6 characters long.';
+    const failedPasswordRule = PASSWORD_RULES.find((rule) => !rule.test(regPassword));
+    if (failedPasswordRule) {
+      return `Password requirement not met: ${failedPasswordRule.label}.`;
     }
     if (regPassword !== regConfirm) {
       return 'The two passwords do not match.';
@@ -187,6 +198,59 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const handleConfirmationUrl = async (url: string | null) => {
+      if (!url || !url.startsWith('mindpulse://')) return;
+
+      const [baseUrl, hash = ''] = url.split('#', 2);
+      const query = baseUrl.split('?')[1] ?? '';
+      const params = new URLSearchParams(hash || query);
+      const errorDescription = params.get('error_description');
+      if (errorDescription) {
+        Alert.alert(
+          'Confirmation link error',
+          errorDescription.replace(/\+/g, ' '),
+        );
+        return;
+      }
+
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const code = params.get('code');
+      if ((!accessToken || !refreshToken) && !code) {
+        Alert.alert(
+          'Confirmation link error',
+          'The confirmation link is incomplete or expired. Request a new link and try again.',
+        );
+        return;
+      }
+
+      const error = code
+        ? (await supabase.auth.exchangeCodeForSession(code)).error
+        : (await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })).error;
+      if (error) {
+        if (active) Alert.alert('Confirmation link error', describeAuthError(error));
+        return;
+      }
+      if (active) onAuthSuccess(true);
+    };
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleConfirmationUrl(url);
+    });
+    void Linking.getInitialURL().then(handleConfirmationUrl);
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [onAuthSuccess]);
 
   const handleForgotPassword = async () => {
     const email = loginEmail.trim();
@@ -283,6 +347,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         email,
         password: regPassword,
         options: {
+          emailRedirectTo: EMAIL_CONFIRMATION_URL || 'mindpulse://auth/callback',
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
@@ -617,6 +682,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     />
                   </Pressable>
                 </View>
+                <View style={styles.passwordRules}>
+                  {PASSWORD_RULES.map((rule) => {
+                    const satisfied = rule.test(regPassword);
+                    return (
+                      <Text
+                        key={rule.label}
+                        style={[styles.passwordRule, satisfied && styles.passwordRuleSatisfied]}
+                      >
+                        {satisfied ? '✓' : '○'} {rule.label}
+                      </Text>
+                    );
+                  })}
+                </View>
 
                 <Text style={styles.label}>Confirm Password</Text>
                 <View style={styles.inputWrap}>
@@ -856,6 +934,9 @@ const makeStyles = () => StyleSheet.create({
     marginTop: 6,
     fontWeight: '600',
   },
+  passwordRules: { marginTop: 6, marginBottom: 8 },
+  passwordRule: { color: tone('#8CA9C3'), fontSize: 12, lineHeight: 18 },
+  passwordRuleSatisfied: { color: tone('#2E8B57') },
 
   /* Remember me row */
   rowBetween: {
