@@ -36,6 +36,21 @@ export interface AssessmentToolInput {
   questions: AssessmentToolQuestion[];
 }
 
+/** Seeded identity of the built-in PSS-10 daily instrument (migration 0005). */
+export const PSS10_TITLE = 'PSS-10 Stress Assessment';
+
+/**
+ * The built-in PSS-10 daily assessment is version-locked (A-10 / C-15): its
+ * Category and Status are read-only and the template cannot be deleted.
+ *
+ * Identified by its seeded title or its Multi-Modal category — both are stable
+ * markers: the seeded title is what migration 0005 guards on, and the category
+ * itself is locked for this tool, so it cannot drift away from the instrument.
+ * Never matched by array index.
+ */
+export const isPss10Tool = (tool: { title: string; category: AssessmentCategory }): boolean =>
+  tool.title === PSS10_TITLE || tool.category === 'Multi-Modal';
+
 const notConfigured = () =>
   new Error('Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_KEY.');
 

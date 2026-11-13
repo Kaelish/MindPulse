@@ -510,6 +510,14 @@
   line-height: 1.45;
 }
 
+/* Read-only lock (built-in PSS-10 Category / Status) */
+.assessment-field select:disabled,
+.assessment-field input:disabled {
+  background: #eef1f5;
+  color: #96a2b8;
+  cursor: not-allowed;
+}
+
 .assessment-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr 100px;
@@ -668,6 +676,20 @@
   background: #e3f6fa;
 }
 
+/* Scoped per-question editor modal */
+.assessment-modal.question-modal {
+  width: min(480px, 100%);
+}
+
+.question-modal-position input {
+  max-width: 110px;
+}
+
+.question-box-tools .question-box-edit {
+  border-color: #cfe6ee;
+  color: #0e7f96;
+}
+
 .assessment-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -770,6 +792,12 @@ html[data-theme='dark'] .assessment-show-all {
   background: #0f1729;
   border-color: var(--line, #26314a);
   color: var(--text, #e7ebf3);
+}
+
+html[data-theme='dark'] .assessment-field select:disabled,
+html[data-theme='dark'] .assessment-field input:disabled {
+  background: #0b1220;
+  color: var(--muted, #96a2b8);
 }
 
 html[data-theme='dark'] .assessment-show-all:hover {

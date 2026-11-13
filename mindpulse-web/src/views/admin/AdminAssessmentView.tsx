@@ -11,12 +11,14 @@ import {
   createAssessmentTool,
   deleteAssessmentTool,
   fetchAssessmentTools,
+  isPss10Tool,
   nextQuestionId,
   sanitizeQuestions,
   updateAssessmentTool,
 } from '../../services/assessmentTools';
 import { AssessmentOutcomes, fetchAssessmentOutcomes } from '../../services/assessmentOutcomes';
 import { AdminResultRow, assessmentNameOf } from '../../services/admin';
+import { QuestionEditModal } from './QuestionEditModal';
 import './AdminAssessmentView.css';
 
 type Mode = 'tools' | 'outcomes';
@@ -72,6 +74,14 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   const [form, setForm] = useState<ToolForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  /** JSON snapshot of the form at open time — drives dirty/pristine tracking. */
+  const [formSnapshot, setFormSnapshot] = useState('');
+  /** Open question editor target: the ORIGINAL text/position when it opened. */
+  const [editingQuestion, setEditingQuestion] = useState<{
+    id: number;
+    text: string;
+    position: number;
+  } | null>(null);
 
   const [outcomes, setOutcomes] = useState<AssessmentOutcomes | null>(null);
   const [outcomesLoading, setOutcomesLoading] = useState(false);
@@ -123,24 +133,83 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   }, [tools, search]);
 
   const openCreate = () => {
+    const next: ToolForm = {
+      ...EMPTY_FORM,
+      questions: EMPTY_FORM.questions.map((question) => ({ ...question })),
+    };
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, questions: EMPTY_FORM.questions.map((question) => ({ ...question })) });
+    setForm(next);
+    setFormSnapshot(JSON.stringify(next));
     setFormError('');
+    setEditingQuestion(null);
     setFormOpen(true);
   };
 
   const openEdit = (tool: AssessmentTool) => {
-    setEditingId(tool.id);
-    setForm({
+    const next: ToolForm = {
       title: tool.title,
       description: tool.description,
       category: tool.category,
       status: tool.status,
       durationMinutes: String(tool.durationMinutes),
       questions: tool.questions.map((question) => ({ ...question })),
-    });
+    };
+    setEditingId(tool.id);
+    setForm(next);
+    setFormSnapshot(JSON.stringify(next));
     setFormError('');
+    setEditingQuestion(null);
     setFormOpen(true);
+  };
+
+  const editingTool = editingId
+    ? tools.find((tool) => tool.id === editingId) ?? null
+    : null;
+  // The built-in PSS-10 daily assessment is version-locked (A-10 / C-15):
+  // Category and Status are read-only in the form and it cannot be deleted.
+  const pss10Locked = Boolean(editingTool && isPss10Tool(editingTool));
+  // Dirty/pristine tracking: the form only counts as changed once it differs
+  // from the snapshot taken when the modal opened.
+  const formDirty = JSON.stringify(form) !== formSnapshot;
+
+  /**
+   * Close the Create/Edit modal. Unsaved edits are discarded only after an
+   * explicit confirmation; saving is never interrupted.
+   */
+  const closeForm = () => {
+    if (saving) return;
+    if (formDirty && !window.confirm('Discard unsaved changes to this assessment?')) return;
+    setFormOpen(false);
+    setEditingQuestion(null);
+  };
+
+  /** Open the scoped editor for one question, snapshotting its current state. */
+  const openQuestionEditor = (id: number) => {
+    const index = form.questions.findIndex((question) => question.id === id);
+    if (index < 0) return;
+    setEditingQuestion({ id, text: form.questions[index].text, position: index + 1 });
+  };
+
+  /**
+   * Commit a question modal draft: update the text and, when the position
+   * changed, move the question — in ONE atomic form update. Cancelled modals
+   * never reach here, so their drafts die with the modal.
+   */
+  const applyQuestionEdit = (id: number, draft: { text: string; position: number }) => {
+    setForm((current) => {
+      const from = current.questions.findIndex((question) => question.id === id);
+      if (from < 0) return current;
+      const questions = current.questions.map((question) =>
+        question.id === id ? { ...question, text: draft.text } : question,
+      );
+      const target = Math.min(Math.max(draft.position, 1), questions.length) - 1;
+      if (target !== from) {
+        const [moved] = questions.splice(from, 1);
+        questions.splice(target, 0, moved);
+      }
+      return { ...current, questions };
+    });
+    setEditingQuestion(null);
   };
 
   /** Patch a single question box; every other box (and its metadata) is untouched. */
@@ -194,11 +263,27 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
       return;
     }
 
+    // Duplicate wording check: two identical questions would score the same
+    // item twice, so block the save and keep the inline error visible.
+    const seenWording = new Set<string>();
+    for (const question of questions) {
+      const wording = question.text.toLowerCase();
+      if (seenWording.has(wording)) {
+        setFormError('Two questions share the same wording — reword or remove the duplicate.');
+        return;
+      }
+      seenWording.add(wording);
+    }
+
     const input: AssessmentToolInput = {
       title: form.title,
       description: form.description,
-      category: form.category,
-      status: form.status,
+      // PSS-10 Category/Status are read-only in the form (the selects are
+      // disabled), so always send the stored values unchanged rather than
+      // anything the draft could carry — client half of the lock; migration
+      // 0033 enforces the same rule server-side.
+      category: pss10Locked && editingTool ? editingTool.category : form.category,
+      status: pss10Locked && editingTool ? editingTool.status : form.status,
       durationMinutes: duration,
       questions,
     };
@@ -209,6 +294,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
       if (editingId) await updateAssessmentTool(editingId, input);
       else await createAssessmentTool(input);
       setFormOpen(false);
+      setEditingQuestion(null);
       await loadTools();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Could not save the assessment.');
@@ -218,6 +304,9 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   };
 
   const removeTool = async (tool: AssessmentTool) => {
+    // The built-in PSS-10 cannot be deleted (A-10 / C-15): its card hides the
+    // delete button, so this early return is only belt-and-braces.
+    if (isPss10Tool(tool)) return;
     if (!window.confirm(`Delete "${tool.title}"? Patients will no longer see it.`)) return;
     try {
       await deleteAssessmentTool(tool.id);
@@ -308,9 +397,17 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                       <button type="button" className="assessment-edit-button" onClick={() => openEdit(tool)}>
                         ✏ Edit
                       </button>
-                      <button type="button" className="assessment-delete-button" onClick={() => void removeTool(tool)}>
-                        🗑
-                      </button>
+                      {/* The built-in PSS-10 template offers no delete action
+                          (A-10 / C-15); every other tool keeps its own. */}
+                      {!isPss10Tool(tool) && (
+                        <button
+                          type="button"
+                          className="assessment-delete-button"
+                          onClick={() => void removeTool(tool)}
+                        >
+                          🗑
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -448,7 +545,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
       </main>
 
       {formOpen && (
-        <div className="assessment-modal-backdrop" role="presentation" onClick={() => !saving && setFormOpen(false)}>
+        <div className="assessment-modal-backdrop" role="presentation" onClick={closeForm}>
           <div
             className="assessment-modal"
             role="dialog"
@@ -458,7 +555,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
           >
             <div className="assessment-modal-head">
               <h2>{editingId ? 'Edit Assessment' : 'Create Assessment'}</h2>
-              <button type="button" onClick={() => !saving && setFormOpen(false)} aria-label="Close">
+              <button type="button" onClick={closeForm} aria-label="Close">
                 ×
               </button>
             </div>
@@ -486,6 +583,8 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 <span>Category</span>
                 <select
                   value={form.category}
+                  disabled={pss10Locked}
+                  title={pss10Locked ? 'Locked for the built-in PSS-10' : undefined}
                   onChange={(event) => setForm({ ...form, category: event.target.value as AssessmentCategory })}
                 >
                   <option value="Multi-Modal">Multi-Modal</option>
@@ -497,6 +596,8 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 <span>Status</span>
                 <select
                   value={form.status}
+                  disabled={pss10Locked}
+                  title={pss10Locked ? 'Locked for the built-in PSS-10' : undefined}
                   onChange={(event) => setForm({ ...form, status: event.target.value as AssessmentStatus })}
                 >
                   <option value="active">Active</option>
@@ -521,6 +622,14 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                 items — translated into English, Filipino and Cebuano — not the copy stored here, so edits made
                 in this form never reach a patient. The question editor is therefore hidden for Multi-Modal
                 tools. To author patient-facing questions of your own, set the category to Supplementary or Brief.
+              </div>
+            )}
+
+            {pss10Locked && (
+              <div className="assessment-note">
+                🔒 <strong>Locked template.</strong> Category and Status are read-only for the built-in
+                PSS-10, and the template cannot be deleted (A-10 / C-15). Title, description and duration
+                remain editable.
               </div>
             )}
 
@@ -550,6 +659,15 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                         Reverse-scored
                       </label>
                       <div className="question-box-tools">
+                        <button
+                          type="button"
+                          className="question-box-edit"
+                          aria-label={`Edit question ${index + 1}`}
+                          title="Edit question"
+                          onClick={() => openQuestionEditor(question.id)}
+                        >
+                          ✏
+                        </button>
                         <button
                           type="button"
                           aria-label="Move question up"
@@ -603,17 +721,33 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               <button
                 type="button"
                 className="assessment-button secondary"
-                onClick={() => setFormOpen(false)}
+                onClick={closeForm}
                 disabled={saving}
               >
                 Cancel
               </button>
-              <button type="button" className="assessment-button primary" onClick={() => void saveTool()} disabled={saving}>
+              <button
+                type="button"
+                className="assessment-button primary"
+                onClick={() => void saveTool()}
+                disabled={saving || !formDirty}
+              >
                 {saving ? 'Saving…' : 'Save Assessment'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {formOpen && editingQuestion && (
+        <QuestionEditModal
+          key={editingQuestion.id}
+          position={editingQuestion.position}
+          total={form.questions.length}
+          initialText={editingQuestion.text}
+          onCancel={() => setEditingQuestion(null)}
+          onSave={(draft) => applyQuestionEdit(editingQuestion.id, draft)}
+        />
       )}
 
       {viewing && (
