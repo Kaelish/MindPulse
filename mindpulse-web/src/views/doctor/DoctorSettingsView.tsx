@@ -54,53 +54,56 @@ const NOTIFICATION_ROWS: { key: keyof NotificationPrefs; label: string; descript
 export const DoctorSettingsView: React.FC = () => {
   const [draft, setDraft] = useState<DoctorPortalSettings>(() => defaultDoctorSettings());
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotifPrefs);
-  const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(loadDoctorSettings()));
-  const [savedNotifPrefs, setSavedNotifPrefs] = useState(() => JSON.stringify(loadNotifPrefs()));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(loadDoctorSettings());
+    const stored = loadDoctorSettings();
+    setDraft(stored);
     setNotifPrefs(loadNotifPrefs());
-    setSavedDraft(JSON.stringify(loadDoctorSettings()));
-    setSavedNotifPrefs(JSON.stringify(loadNotifPrefs()));
   }, []);
 
-  const update = <K extends keyof DoctorPortalSettings>(key: K, value: DoctorPortalSettings[K]) => {
-    setDraft((current) => ({ ...current, [key]: value }));
-    setSaved(false);
+  const flashSaved = () => {
+    setSaved(true);
     setError(null);
+    window.setTimeout(() => setSaved(false), 2500);
   };
 
-  const setNotif = (key: keyof NotificationPrefs) => {
-    setNotifPrefs((current) => ({ ...current, [key]: !current[key] }));
-    setSaved(false);
-    setError(null);
-  };
-
-  const dirty = JSON.stringify(draft) !== savedDraft || JSON.stringify(notifPrefs) !== savedNotifPrefs;
-
-  const save = (event: React.FormEvent) => {
-    event.preventDefault();
+  /** Dark Mode applies the moment the switch is pressed. */
+  const setDarkMode = (value: boolean) => {
+    const next: DoctorPortalSettings = { ...draft, darkMode: value };
+    setDraft(next);
     try {
-      saveDoctorSettings(draft);
-      applyDoctorSettings(draft);
-      window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(notifPrefs));
-      setSavedDraft(JSON.stringify(draft));
-      setSavedNotifPrefs(JSON.stringify(notifPrefs));
-      setSaved(true);
-      setError(null);
-      window.setTimeout(() => setSaved(false), 2500);
+      saveDoctorSettings(next);
+      applyDoctorSettings(next);
+      flashSaved();
     } catch {
       setError('Settings could not be saved in this browser.');
     }
   };
 
-  const cancelEditing = () => {
-    setDraft(JSON.parse(savedDraft) as DoctorPortalSettings);
-    setNotifPrefs(JSON.parse(savedNotifPrefs) as NotificationPrefs);
-    setSaved(false);
-    setError(null);
+  /** Notification switches persist immediately too. */
+  const setNotif = (key: keyof NotificationPrefs) => {
+    const next: NotificationPrefs = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(next);
+    try {
+      window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(next));
+      flashSaved();
+    } catch {
+      setError('Settings could not be saved in this browser.');
+    }
+  };
+
+  const setLanding = (value: DoctorLandingView) => {
+    const next: DoctorPortalSettings = { ...draft, landingView: value };
+    setDraft(next);
+    try {
+      saveDoctorSettings(next);
+      applyDoctorSettings(next);
+      flashSaved();
+    } catch {
+      setError('Settings could not be saved in this browser.');
+    }
   };
 
   return (
@@ -116,7 +119,7 @@ export const DoctorSettingsView: React.FC = () => {
         </div>
       </header>
 
-      <form onSubmit={save}>
+      <form onSubmit={(event) => event.preventDefault()}>
         <section className="doc-settings-card">
           <div className="doc-settings-card-head">
             <h2>Appearance</h2>
@@ -133,7 +136,7 @@ export const DoctorSettingsView: React.FC = () => {
               role="switch"
               aria-checked={draft.darkMode}
               className={`doc-switch ${draft.darkMode ? 'is-on' : ''}`}
-              onClick={() => update('darkMode', !draft.darkMode)}
+              onClick={() => setDarkMode(!draft.darkMode)}
             >
               <span className="doc-switch-knob" />
             </button>
@@ -154,7 +157,8 @@ export const DoctorSettingsView: React.FC = () => {
             <select
               className="doc-settings-select"
               value={draft.landingView}
-              onChange={(event) => update('landingView', event.target.value as DoctorLandingView)}
+              onChange={(event) => setLanding(event.target.value as DoctorLandingView)}
+              aria-label="Default landing view"
             >
               {LANDING_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -190,18 +194,6 @@ export const DoctorSettingsView: React.FC = () => {
 
         {error && <div className="error-inline">{error}</div>}
         {saved && <div className="profile-save-banner">Settings saved.</div>}
-
-        <div className="doc-settings-actions">
-          {dirty && <span className="doc-settings-unsaved">Unsaved changes</span>}
-          {dirty && (
-            <button type="button" className="doc-settings-cancel" onClick={cancelEditing}>
-              Cancel
-            </button>
-          )}
-          <button type="submit" className="primary-button">
-            Save Changes
-          </button>
-        </div>
       </form>
     </main>
   );

@@ -4043,3 +4043,440 @@ html[data-theme='dark'] .doctor-scope .main-panel,
   }
 }
 
+/* =========================================================================
+   Dark mode coverage (html[data-doctor-theme='dark'])
+   The design tokens already carry most of the page; these rules close the
+   gaps where a component stylesheet (or a shared admin rule) hard-codes a
+   light surface, a dark ink colour or a pale border.
+   ========================================================================= */
+
+/* Sidebar: the rail is part of the dark surface, never a white strip. */
+html[data-doctor-theme='dark'] .doctor-scope .sidebar {
+  background: linear-gradient(180deg, var(--doc-sidebar-bg) 0%, var(--doc-sidebar-bg-2) 100%);
+  border-right-color: var(--doc-sidebar-line);
+  color: var(--doc-sidebar-text);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .nav-item:hover {
+  background: var(--doc-soft);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .nav-item.active {
+  background: linear-gradient(180deg, #53c7d7 0%, #3ab2c6 100%);
+  color: #04171d;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .sidebar-profile-card {
+  background: var(--doc-sidebar-card);
+  border-color: var(--doc-sidebar-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .sidebar-profile-card:hover,
+html[data-doctor-theme='dark'] .doctor-scope .sidebar-profile-card.is-active {
+  background: var(--doc-soft);
+  border-color: var(--primary-strong);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .sidebar-signout-btn {
+  background: transparent;
+  border-color: var(--doc-sidebar-line);
+  color: var(--doc-sidebar-text);
+}
+
+/* Notification popover (shared markup, doctor palette). */
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-heading,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item {
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel .notification-heading strong,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-title,
+html[data-doctor-theme='dark'] .doctor-scope .notification-empty-state strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-message,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-time,
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-state,
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-note,
+html[data-doctor-theme='dark'] .doctor-scope .notification-empty-state span,
+html[data-doctor-theme='dark'] .doctor-scope .empty-notifications {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-item.is-clickable:hover,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item.is-clickable:focus-visible {
+  background: var(--doc-soft);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-see-all {
+  background: var(--doc-soft);
+  border-color: var(--doc-line-strong);
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-state button {
+  background: var(--doc-panel-2);
+  border-color: var(--doc-line);
+  color: var(--primary);
+}
+
+/* Patient Cases rows: component styles hard-code dark ink. */
+html[data-doctor-theme='dark'] .doctor-scope .case-student,
+html[data-doctor-theme='dark'] .doctor-scope .case-student strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-table td small,
+html[data-doctor-theme='dark'] .doctor-scope .case-loading,
+html[data-doctor-theme='dark'] .doctor-scope .empty-table {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-table tbody tr:hover td {
+  background: var(--doc-soft);
+}
+
+/* Assessment Results / Transactions cards. */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-list-panel,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-filter-bar,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card p,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card small,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-student small,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card span,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card small {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card strong,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-score strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card.is-clickable:hover,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-card.is-clickable:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .receipt-hint {
+  color: var(--primary);
+}
+
+/* Suggestions / recommendations. */
+html[data-doctor-theme='dark'] .doctor-scope .recommendation-card p,
+html[data-doctor-theme='dark'] .doctor-scope .recommendation-meta {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .suggestion-reply {
+  background: var(--doc-soft);
+  border-left-color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .suggestion-reply strong {
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .suggestion-reply p {
+  color: var(--doc-ink-2);
+}
+
+/* Student case detail (component stylesheet hard-codes a light page). */
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-main {
+  background: var(--doc-bg);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-topbar {
+  border-bottom-color: var(--doc-line);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-topbar .notification-button {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .back-to-cases,
+html[data-doctor-theme='dark'] .doctor-scope .student-profile-heading > div:nth-child(2) > span,
+html[data-doctor-theme='dark'] .doctor-scope .student-profile-heading p,
+html[data-doctor-theme='dark'] .doctor-scope .student-risk small,
+html[data-doctor-theme='dark'] .doctor-scope .student-contact-row {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-profile-heading h1,
+html[data-doctor-theme='dark'] .doctor-scope .student-risk strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-risk span {
+  border: 1px solid var(--doc-danger-line);
+  background: var(--doc-danger-soft);
+  color: var(--doc-danger);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-contact-row {
+  border-top-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-tabs {
+  border-bottom-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-tabs button {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-tabs button.active {
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-tabs button.active::after {
+  background: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .detail-stat,
+html[data-doctor-theme='dark'] .doctor-scope .detail-panel,
+html[data-doctor-theme='dark'] .doctor-scope .detail-assessment-card {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .detail-stat span {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .detail-stat strong,
+html[data-doctor-theme='dark'] .doctor-scope .detail-panel h2,
+html[data-doctor-theme='dark'] .doctor-scope .detail-assessment-card h2 {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .detail-assessment-card p,
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail p,
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail small {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .detail-emotion-bars,
+html[data-doctor-theme='dark'] .doctor-scope .detail-assessment-card footer {
+  border-top-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .trend-chart,
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-main .trend-chart {
+  background: repeating-linear-gradient(to top, transparent 0, transparent 39px, var(--doc-line) 40px);
+  border-bottom-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .chart-y-label,
+html[data-doctor-theme='dark'] .doctor-scope .chart-x-labels,
+html[data-doctor-theme='dark'] .doctor-scope .risk-indicator div {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .risk-indicator b,
+html[data-doctor-theme='dark'] .doctor-scope .detail-emotion b {
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .survey-answer-row {
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .survey-answers,
+html[data-doctor-theme='dark'] .doctor-scope .survey-answers-toggle {
+  background: var(--doc-panel-2);
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .survey-answers h3 {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .survey-answer-row strong {
+  background: var(--doc-soft);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notes-detail label,
+html[data-doctor-theme='dark'] .doctor-scope .file-upload-panel label {
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notes-detail textarea,
+html[data-doctor-theme='dark'] .doctor-scope .file-upload-panel input[type='text'] {
+  background: var(--doc-input-bg);
+  border-color: var(--doc-input-line);
+  color: var(--doc-input-text);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .file-upload-panel input[type='file'] {
+  background: var(--doc-soft);
+  border-color: var(--doc-line-strong);
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .file-upload-panel input[type='file']::file-selector-button {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .patient-file-row {
+  background: var(--doc-panel-2);
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .patient-file-info strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .patient-file-info span,
+html[data-doctor-theme='dark'] .doctor-scope .patient-file-info small {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .condition-chip {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .health-background-group > span,
+html[data-doctor-theme='dark'] .doctor-scope .health-background-panel .health-background-note {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail .consult-summary {
+  background: var(--doc-panel-2);
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail .consult-summary h3 {
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail .consult-summary p {
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .consultation-detail .consult-summary-pending {
+  background: var(--doc-soft);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .student-detail-content .ghost-button.is-danger {
+  border-color: var(--doc-danger-line);
+  color: var(--doc-danger);
+}
+
+/* =========================================================================
+   Search bars and filter selects - one shared dark surface everywhere.
+   Mirrors the Help page search: a single rounded bar, with the inner input
+   fully transparent (no fill, no border) so only the wrapper is visible.
+   ========================================================================= */
+html[data-doctor-theme='dark'] .doctor-scope .case-search,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-search,
+html[data-doctor-theme='dark'] .doctor-scope .help-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  background: var(--doc-input-bg);
+  border: 1px solid var(--doc-line-strong);
+  border-radius: 10px;
+  color: var(--doc-muted);
+  box-shadow: none;
+}
+
+/* The input itself paints nothing: no background, border, outline or shadow.
+   The wrapper above owns the whole bar so it reads as one continuous surface. */
+html[data-doctor-theme='dark'] .doctor-scope .case-search input,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-search input,
+html[data-doctor-theme='dark'] .doctor-scope .help-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  outline: 0;
+  box-shadow: none !important;
+  color: var(--doc-input-text);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-search input:focus,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-search input:focus,
+html[data-doctor-theme='dark'] .doctor-scope .help-search input:focus {
+  outline: 0;
+  box-shadow: none;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-search input::placeholder,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-search input::placeholder,
+html[data-doctor-theme='dark'] .doctor-scope .help-search input::placeholder {
+  color: var(--doc-muted);
+  opacity: 0.9;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-search:focus-within,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-search:focus-within,
+html[data-doctor-theme='dark'] .doctor-scope .help-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(83, 199, 215, 0.16);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-filter-bar select,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-filter-bar select,
+html[data-doctor-theme='dark'] .doctor-scope .recommendation-filters select {
+  background: var(--doc-input-bg);
+  border: 1px solid var(--doc-line-strong);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .case-filter-bar select option,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-filter-bar select option {
+  background: var(--doc-input-bg);
+  color: var(--doc-ink);
+}
+
+/* Pale fixed borders baked into the light buttons. */
+html[data-doctor-theme='dark'] .doctor-scope .view-details-button,
+html[data-doctor-theme='dark'] .doctor-scope .decision-link,
+html[data-doctor-theme='dark'] .doctor-scope .review-button {
+  border-color: var(--doc-line-strong);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .view-details-button:hover,
+html[data-doctor-theme='dark'] .doctor-scope .review-button:hover {
+  border-color: var(--primary-strong);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .review-button.reviewed,
+html[data-doctor-theme='dark'] .doctor-scope .profile-save-banner,
+html[data-doctor-theme='dark'] .doctor-scope .save-confirmation,
+html[data-doctor-theme='dark'] .doctor-scope .recommendation-save-banner {
+  border-color: var(--doc-success);
+}
+
+/* The bell artwork is black line art, nearly invisible on the dark header
+   button. Invert it to solid white so it reads at a glance. */
+html[data-doctor-theme='dark'] .doctor-scope .notification-bell-icon {
+  filter: brightness(0) invert(1);
+}
+
+
+

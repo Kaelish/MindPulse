@@ -254,11 +254,25 @@
   line-height: 1;
 }
 
-/* Keep the admin account card consistent with the white rail in dark mode. */
+/* Dark mode: the rail is part of the dark surface, so it must not stay white. */
 html[data-theme='dark'] aside.admin-sidebar {
-  background: linear-gradient(180deg, #ffffff 0%, #f6fbfd 100%);
-  border-right-color: #e4edf2;
-  color: #47606e;
+  background: linear-gradient(180deg, #101a2e 0%, #0a1220 100%);
+  border-right-color: #26314a;
+  color: #cdd6e4;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.32);
+}
+
+html[data-theme='dark'] aside.admin-sidebar .brand-block {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='dark'] aside.admin-sidebar .brand-name {
+  color: #e8edf7;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .brand-subtitle,
+html[data-theme='dark'] aside.admin-sidebar .nav-label {
+  color: #8fa1ba;
 }
 
 html[data-theme='dark'] aside.admin-sidebar .nav-panel {
@@ -266,25 +280,61 @@ html[data-theme='dark'] aside.admin-sidebar .nav-panel {
 }
 
 html[data-theme='dark'] aside.admin-sidebar .nav-item {
-  color: #47606e;
+  color: #cdd6e4;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .nav-icon {
+  background: rgba(83, 199, 215, 0.12);
 }
 
 html[data-theme='dark'] aside.admin-sidebar .nav-item:hover {
-  background: #edf8fb;
-  color: #0f1c2e;
+  background: #182338;
+  color: #e8edf7;
 }
 
 html[data-theme='dark'] aside.admin-sidebar .nav-item.active {
   background: linear-gradient(135deg, #53c7d7 0%, #3ab2c6 100%);
   color: #06222a;
+  box-shadow: 0 10px 22px rgba(15, 130, 152, 0.24);
+}
+
+html[data-theme='dark'] aside.admin-sidebar .admin-account-area {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='dark'] aside.admin-sidebar .admin-account {
+  border-color: rgba(83, 199, 215, 0.32);
+  background: rgba(83, 199, 215, 0.08);
+  color: #e8edf7;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .admin-account:hover {
+  border-color: rgba(83, 199, 215, 0.6);
+  background: rgba(83, 199, 215, 0.16);
 }
 
 html[data-theme='dark'] aside.admin-sidebar .admin-account strong {
-  color: #13212a;
+  color: #e8edf7;
 }
 
 html[data-theme='dark'] aside.admin-sidebar .admin-account small {
-  color: #647482;
+  color: #9aa8bf;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .admin-account .admin-account-title {
+  color: #7fd6e4;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .sidebar-signout-btn {
+  border-color: #2a3a54;
+  background: #16233a;
+  color: #cfd8e8;
+}
+
+html[data-theme='dark'] aside.admin-sidebar .sidebar-signout-btn:hover {
+  border-color: #7f2b34;
+  background: #2a1c22;
+  color: #fca5a5;
 }
 
 /* collapsed rail */

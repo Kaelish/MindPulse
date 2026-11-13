@@ -362,31 +362,9 @@ export const TransactionsView: React.FC = () => {
           {/* The mode, stated loudly so an in-person payment can never be
               mistaken for an online one. */}
           {receiptTx.consultationMode === 'in_person' && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '3px',
-                margin: '0 0 14px',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                border: '1.5px dashed #E8C766',
-                background: '#FFF3CD',
-              }}
-            >
-              <strong
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 900,
-                  letterSpacing: '0.7px',
-                  color: '#8A5A00',
-                }}
-              >
-                FACE-TO-FACE SESSION
-              </strong>
-              <span style={{ fontSize: '0.82rem', color: '#8A5A00' }}>
-                Held in person at the clinic — not an online video call.
-              </span>
+            <div className="tx-mode-notice">
+              <strong>FACE-TO-FACE SESSION</strong>
+              <span>Held in person at the clinic — not an online video call.</span>
             </div>
           )}
 

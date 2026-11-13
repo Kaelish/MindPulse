@@ -163,3 +163,129 @@
   background: #eef2ff;
   border-color: #93c5fd;
 }
+
+/* =========================================================================
+   Dark mode
+   The popover markup is shared by both portals, so the rules are scoped to
+   each shell and use that shell's tokens. They are deliberately more specific
+   than the component defaults above so import order cannot bring the light
+   text back.
+   ========================================================================= */
+
+/* ---- Admin portal ---- */
+html[data-theme='dark'] .admin-scope .notification-panel,
+html[data-theme='dark'] .admin-scope .admin-dashboard-notification-panel {
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .notification-panel .notification-heading,
+html[data-theme='dark'] .admin-scope .notification-panel .notification-item {
+  border-color: var(--adm-border);
+}
+
+html[data-theme='dark'] .admin-scope .notification-heading strong,
+html[data-theme='dark'] .admin-scope .admin-dashboard-notification-panel > strong,
+html[data-theme='dark'] .admin-scope .notification-item-title,
+html[data-theme='dark'] .admin-scope .notification-empty-state strong {
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .notification-item-time,
+html[data-theme='dark'] .admin-scope .notification-item-message,
+html[data-theme='dark'] .admin-scope .notification-panel-state,
+html[data-theme='dark'] .admin-scope .notification-panel-note,
+html[data-theme='dark'] .admin-scope .notification-empty-state span,
+html[data-theme='dark'] .admin-scope .empty-notifications {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .notification-item.is-clickable:hover,
+html[data-theme='dark'] .admin-scope .notification-item.is-clickable:focus-visible {
+  background: var(--adm-surface-2);
+}
+
+html[data-theme='dark'] .admin-scope .notification-panel-state button {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-accent-2);
+}
+
+html[data-theme='dark'] .admin-scope .notification-see-all {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-accent-2);
+}
+
+html[data-theme='dark'] .admin-scope .notification-see-all:hover {
+  border-color: var(--adm-accent);
+  background: var(--adm-accent-soft);
+}
+
+html[data-theme='dark'] .admin-scope .notification-list {
+  scrollbar-color: var(--adm-border-strong) transparent;
+}
+
+html[data-theme='dark'] .admin-scope .notification-list::-webkit-scrollbar-thumb {
+  background: var(--adm-border-strong);
+}
+
+/* ---- Doctor portal ---- */
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel,
+html[data-doctor-theme='dark'] .doctor-scope .admin-dashboard-notification-panel {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel .notification-heading,
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel .notification-item {
+  border-color: var(--doc-line);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-heading strong,
+html[data-doctor-theme='dark'] .doctor-scope .admin-dashboard-notification-panel > strong,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-title,
+html[data-doctor-theme='dark'] .doctor-scope .notification-empty-state strong {
+  color: var(--doc-ink);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-time,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item-message,
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-state,
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-note,
+html[data-doctor-theme='dark'] .doctor-scope .notification-empty-state span,
+html[data-doctor-theme='dark'] .doctor-scope .empty-notifications {
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-item.is-clickable:hover,
+html[data-doctor-theme='dark'] .doctor-scope .notification-item.is-clickable:focus-visible {
+  background: var(--doc-soft);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-panel-state button {
+  border-color: var(--doc-line-strong);
+  background: var(--doc-panel-2);
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-see-all {
+  border-color: var(--doc-line-strong);
+  background: var(--doc-soft);
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-see-all:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-list {
+  scrollbar-color: var(--doc-line-strong) transparent;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .notification-list::-webkit-scrollbar-thumb {
+  background: var(--doc-line-strong);
+}

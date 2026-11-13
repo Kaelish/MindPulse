@@ -359,6 +359,12 @@
   font-weight: 700;
 }
 
+/* Switches that persist on their own (no Edit/Save row around them). */
+.settings-auto-saved {
+  display: inline-block;
+  margin: 12px 0 0;
+}
+
 .settings-button {
   padding: 9px 16px;
   border-radius: 8px;

@@ -113,3 +113,54 @@
     padding: 18px 16px 32px;
   }
 }
+
+/* ------------------------------------------------------------- dark theme */
+html[data-theme='dark'] .admin-scope .activity-log-main {
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-panel {
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-panel h2,
+html[data-theme='dark'] .admin-scope .activity-log-table td strong {
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-table th {
+  border-bottom-color: var(--adm-border);
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-table td {
+  border-bottom-color: var(--adm-border);
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-table td small,
+html[data-theme='dark'] .admin-scope .activity-log-row-id,
+html[data-theme='dark'] .admin-scope .activity-log-main .empty-table {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .activity-log-table tbody tr:hover td {
+  background: var(--adm-surface-2);
+}
+
+html[data-theme='dark'] .admin-scope .log-chip--created {
+  background: var(--adm-success-soft);
+  color: #6ee7b7;
+}
+
+html[data-theme='dark'] .admin-scope .log-chip--updated {
+  background: var(--adm-info-soft);
+  color: #9db8ff;
+}
+
+html[data-theme='dark'] .admin-scope .log-chip--deleted {
+  background: var(--adm-danger-soft);
+  color: #fca5ad;
+}

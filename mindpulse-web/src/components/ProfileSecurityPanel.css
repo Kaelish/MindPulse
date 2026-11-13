@@ -677,3 +677,148 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Doctor portal: mirror the admin overrides with the doctor palette so the
+   Profile → Security cards follow the doctor's dark appearance. */
+.doctor-scope .profile-security-section {
+  border-color: var(--doc-line);
+  background: var(--doc-panel);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+.doctor-scope .profile-security-section > header h2,
+.doctor-scope .profile-security-toggle-row h2,
+.doctor-scope .profile-security-method strong,
+.doctor-scope .profile-security-method-panel h3,
+.doctor-scope .profile-security-session h3 {
+  color: var(--doc-ink);
+}
+
+.doctor-scope .profile-security-section > header p,
+.doctor-scope .profile-security-toggle-row p,
+.doctor-scope .profile-security-session dt,
+.doctor-scope .profile-security-session header p,
+.doctor-scope .profile-security-password-grid label > span,
+.doctor-scope .profile-security-mfa label > span,
+.doctor-scope .profile-security-method-setup label > span,
+.doctor-scope .profile-security-code-form label > span,
+.doctor-scope .profile-security-method-panel p,
+.doctor-scope .profile-security-qr p,
+.doctor-scope .profile-security-empty,
+.doctor-scope .profile-security-session-error,
+.doctor-scope .profile-security-session-note {
+  color: var(--doc-muted);
+}
+
+.doctor-scope .profile-security-password-grid input,
+.doctor-scope .profile-security-mfa input,
+.doctor-scope .profile-security-method-setup input,
+.doctor-scope .profile-security-code-form input {
+  border-color: var(--doc-input-line);
+  background: var(--doc-input-bg);
+  color: var(--doc-input-text);
+}
+
+.doctor-scope .profile-security-secondary {
+  border-color: var(--doc-line-strong);
+  background: var(--doc-panel);
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .profile-security-method {
+  border-color: var(--doc-line);
+  background: var(--doc-panel);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .profile-security-method.is-selected {
+  border-color: var(--primary);
+  background: var(--doc-soft);
+}
+
+.doctor-scope .profile-security-method.is-active {
+  border-color: var(--doc-success);
+  background: var(--doc-success-soft);
+}
+
+.doctor-scope .profile-security-qr {
+  border-color: var(--doc-line);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .profile-security-mfa,
+.doctor-scope .profile-security-method-panel {
+  border-top-color: var(--doc-line);
+}
+
+.doctor-scope .profile-security-mfa img {
+  border-color: var(--doc-line);
+}
+
+.doctor-scope .profile-security-session {
+  border-color: var(--doc-line);
+  background: var(--doc-panel-2);
+}
+
+.doctor-scope .profile-security-session dd {
+  color: var(--doc-ink-2);
+}
+
+.doctor-scope .profile-security-session-toggle {
+  border-color: var(--doc-line-strong);
+  background: var(--doc-panel);
+  color: var(--primary);
+}
+
+.doctor-scope .profile-security-session-toggle:hover {
+  border-color: var(--primary);
+  background: var(--doc-soft);
+}
+
+.doctor-scope .profile-security-current {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.doctor-scope .profile-security-live {
+  background: var(--doc-soft);
+  color: var(--doc-muted);
+}
+
+.doctor-scope .profile-security-live.is-live {
+  background: var(--doc-success-soft);
+  color: var(--doc-success);
+}
+
+.doctor-scope .profile-security-live.is-connecting,
+.doctor-scope .profile-security-live.is-reconnecting {
+  background: var(--doc-warning-soft);
+  color: var(--doc-warning);
+}
+
+.doctor-scope .profile-security-live.is-offline {
+  background: var(--doc-danger-soft);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .profile-security-logout {
+  border-color: var(--doc-danger-line);
+  background: var(--doc-panel);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .profile-security-alert {
+  border-color: var(--doc-danger-line);
+  background: var(--doc-danger-soft);
+  color: var(--doc-danger);
+}
+
+.doctor-scope .profile-security-notice {
+  border-color: var(--doc-line);
+  background: var(--doc-success-soft);
+  color: var(--doc-success);
+}
+
+.doctor-scope .profile-security-alert-link {
+  color: var(--primary);
+}

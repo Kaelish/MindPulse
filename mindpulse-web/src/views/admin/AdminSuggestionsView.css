@@ -215,3 +215,120 @@
     padding: 18px 16px 32px;
   }
 }
+
+/* ------------------------------------------------------------- dark theme */
+html[data-theme='dark'] .admin-scope .suggestions-admin-main {
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-panel {
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-card {
+  border-color: var(--adm-border);
+  background: var(--adm-surface);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-card-head h2 {
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-from,
+html[data-theme='dark'] .admin-scope .suggestion-date {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-message {
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-filters button {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-filters button:hover {
+  background: var(--adm-surface-3);
+  border-color: var(--adm-accent);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-filters button.active {
+  background: var(--adm-accent);
+  border-color: var(--adm-accent);
+  color: #04171d;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-chip {
+  background: var(--adm-info-soft);
+  color: #9db8ff;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-chip.priority-high {
+  background: var(--adm-danger-soft);
+  color: #fca5ad;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-chip.priority-low,
+html[data-theme='dark'] .admin-scope .suggestion-chip.status-resolved {
+  background: var(--adm-success-soft);
+  color: #6ee7b7;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-chip.status-open {
+  background: var(--adm-warning-soft);
+  color: #f2cc8f;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-chip.status-in-progress {
+  background: var(--adm-info-soft);
+  color: #9db8ff;
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply {
+  border-left-color: var(--adm-accent);
+  background: var(--adm-surface-2);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply strong {
+  color: var(--adm-accent-2);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply p {
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply-form {
+  border-top-color: var(--adm-border);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply-form label {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-reply-form textarea,
+html[data-theme='dark'] .admin-scope .suggestion-status-select select {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .suggestion-save-button {
+  border-color: var(--adm-accent);
+  background: var(--adm-accent);
+  color: #04171d;
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-banner.is-error {
+  background: var(--adm-danger-soft);
+  border-color: var(--adm-danger);
+  color: #fca5ad;
+}
+
+html[data-theme='dark'] .admin-scope .suggestions-admin-main .empty-table {
+  color: var(--adm-muted);
+}

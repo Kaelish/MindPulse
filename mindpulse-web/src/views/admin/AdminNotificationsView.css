@@ -256,3 +256,88 @@
     width: 100%;
   }
 }
+
+/* ------------------------------------------------------------- dark theme */
+/* The same stylesheet is used by the admin shell and by the "See all" popup,
+   which is portalled to <body> and therefore outside .admin-scope. */
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-main {
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  --adm-bg: #0c1524;
+  --adm-surface: #141d31;
+  --adm-surface-2: #101827;
+  --adm-border: #26314a;
+  --adm-border-strong: #33415f;
+  --adm-text: #e8edf7;
+  --adm-text-2: #cfd8e8;
+  --adm-muted: #9aa8bf;
+  --adm-accent: #17a2bb;
+  --adm-accent-2: #1cbcd6;
+  --adm-accent-soft: rgba(23, 162, 187, 0.16);
+  --adm-danger: #ef8a92;
+  --adm-danger-soft: rgba(214, 69, 80, 0.18);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-title p,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-category-filter,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-category-label,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-heading time,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-content > p,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-state {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-card,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-state,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-error {
+  border-color: var(--adm-border);
+  background: var(--adm-surface);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-card.is-read {
+  background: var(--adm-surface-2);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-icon {
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent-2);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-icon.is-alert {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-tabs button,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-category-filter select,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-actions button {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-2);
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-tabs button.active,
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-actions .admin-notification-view-details {
+  border-color: var(--adm-accent);
+  background: var(--adm-accent);
+  color: #04171d;
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-actions .admin-notification-dismiss {
+  border-color: var(--adm-danger);
+  background: transparent;
+  color: var(--adm-danger);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notification-actions .admin-notification-dismiss:hover {
+  background: var(--adm-danger-soft);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-error {
+  border-color: var(--adm-danger);
+  color: var(--adm-danger);
+}
+
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .admin-notifications-state button {
+  color: var(--adm-accent-2);
+}

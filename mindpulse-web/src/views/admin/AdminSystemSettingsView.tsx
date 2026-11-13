@@ -43,6 +43,13 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
 
   useEffect(() => () => clearTimeout(savedTimer.current), []);
 
+  const flashSaved = () => {
+    setSaved('Settings saved.');
+    clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(''), 3000);
+  };
+
+  /** Field edited through Edit Settings → Save Changes. */
   const setField = <S extends keyof AdminSystemSettings, K extends keyof AdminSystemSettings[S]>(
     section: S,
     key: K,
@@ -58,6 +65,35 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     setSaved('');
   };
 
+  /**
+   * Field whose switch applies immediately. The toggle is never disabled by
+   * the Edit/Save flow, which is reserved for System Information and the
+   * minimum password length.
+   *
+   * Only this field is written to storage, so toggling a switch while the
+   * System Information form has unsaved edits does not commit those edits.
+   */
+  const setAutoField = <S extends keyof AdminSystemSettings, K extends keyof AdminSystemSettings[S]>(
+    section: S,
+    key: K,
+    value: AdminSystemSettings[S][K],
+  ) => {
+    setDraft((current) => ({
+      ...current,
+      [section]: { ...current[section], [key]: value },
+    }));
+
+    const stored = JSON.parse(savedSnapshot) as AdminSystemSettings;
+    const nextStored: AdminSystemSettings = {
+      ...stored,
+      [section]: { ...stored[section], [key]: value },
+    };
+    saveAdminSettings(nextStored);
+    applyAdminSettings(nextStored);
+    setSavedSnapshot(JSON.stringify(nextStored));
+    flashSaved();
+  };
+
   const dirty = JSON.stringify(draft) !== savedSnapshot;
 
   const save = () => {
@@ -65,13 +101,27 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     applyAdminSettings(draft);
     setSavedSnapshot(JSON.stringify(draft));
     setEditing(false);
-    setSaved('Settings saved.');
-    clearTimeout(savedTimer.current);
-    savedTimer.current = setTimeout(() => setSaved(''), 3000);
+    flashSaved();
   };
 
   const resetToDefault = () => {
-    setDraft(JSON.parse(JSON.stringify(DEFAULT_ADMIN_SETTINGS)) as AdminSystemSettings);
+    // Only the manually saved fields reset; automatic preferences (theme,
+    // density, alert/security switches) keep their current values.
+    const next: AdminSystemSettings = {
+      ...DEFAULT_ADMIN_SETTINGS,
+      general: {
+        ...DEFAULT_ADMIN_SETTINGS.general,
+        darkMode: draft.general.darkMode,
+        compactView: draft.general.compactView,
+      },
+      notification: { ...draft.notification },
+      security: {
+        ...DEFAULT_ADMIN_SETTINGS.security,
+        sessionTimeout: draft.security.sessionTimeout,
+        requireSpecialChars: draft.security.requireSpecialChars,
+      },
+    };
+    setDraft(next);
     setSaved('');
   };
 
@@ -94,7 +144,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
   const saveButton = (
     <div className="settings-actions">
       {editing && dirty && <span className="settings-dirty">Unsaved changes</span>}
-      {saved && <span className="settings-saved">{saved}</span>}
+      {saved && !dirty && <span className="settings-saved">{saved}</span>}
       {editing && tab === 'general' && (
         <button type="button" className="settings-button secondary" onClick={resetToDefault}>
           Reset to Default
@@ -165,6 +215,8 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               <input disabled={!editing} value={draft.general.description} onChange={(e) => setField('general', 'description', e.target.value)} />
             </label>
 
+            {saveButton}
+
             <div className="settings-divider" />
 
             <div className="settings-card-heading plain">
@@ -174,17 +226,14 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Dark Mode"
               subtitle="Enable dark theme for the interface"
               checked={draft.general.darkMode}
-              disabled={!editing}
-              onChange={(value) => setField('general', 'darkMode', value)}
+              onChange={(value) => setAutoField('general', 'darkMode', value)}
             />
             <Toggle
               title="Compact View"
               subtitle="Use compact layout for data tables"
               checked={draft.general.compactView}
-              disabled={!editing}
-              onChange={(value) => setField('general', 'compactView', value)}
+              onChange={(value) => setAutoField('general', 'compactView', value)}
             />
-            {saveButton}
           </section>
         )}
 
@@ -203,10 +252,9 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="High Stress Alerts"
               subtitle="Notify when high stress is detected"
               checked={draft.notification.highStressAlerts}
-              disabled={!editing}
-              onChange={(value) => setField('notification', 'highStressAlerts', value)}
+              onChange={(value) => setAutoField('notification', 'highStressAlerts', value)}
             />
-            {saveButton}
+            {saved && <span className="settings-saved settings-auto-saved">{saved}</span>}
           </section>
         )}
 
@@ -225,8 +273,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               title="Session Timeout"
               subtitle="Auto-logout after 30 minutes of inactivity"
               checked={draft.security.sessionTimeout}
-              disabled={!editing}
-              onChange={(value) => setField('security', 'sessionTimeout', value)}
+              onChange={(value) => setAutoField('security', 'sessionTimeout', value)}
             />
 
             <div className="settings-divider" />
@@ -238,14 +285,13 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
               disabled={!editing}
               onChange={(value) => setField('security', 'minPasswordLength', value)}
             />
+            {saveButton}
             <Toggle
               title="Require Special Characters"
               subtitle="Passwords must include special characters"
               checked={draft.security.requireSpecialChars}
-              disabled={!editing}
-              onChange={(value) => setField('security', 'requireSpecialChars', value)}
+              onChange={(value) => setAutoField('security', 'requireSpecialChars', value)}
             />
-            {saveButton}
           </section>
         )}
 
@@ -260,12 +306,11 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
             </div>
 
             <div className="settings-export-row">
-              <button type="button" className="settings-button primary" onClick={() => void runExport()} disabled={!editing}>
+              <button type="button" className="settings-button primary" onClick={() => void runExport()}>
                 ⇩ Export Data
               </button>
               {exportState && <span className="settings-export-state">{exportState}</span>}
             </div>
-            {saveButton}
           </section>
         )}
 

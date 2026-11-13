@@ -46,6 +46,29 @@
   --adm-sidebar-text: #9fb0c6;
   --adm-sidebar-text-active: #ffffff;
   --adm-sidebar-line: rgba(255, 255, 255, 0.08);
+
+  /* A few admin sub-pages (Suggestions, Consent Register, Activity Log) were
+     written against the doctor token names. Map them onto the admin palette so
+     they follow the admin light/dark theme too. */
+  --doc-panel: var(--adm-surface);
+  --doc-panel-2: var(--adm-surface-2);
+  --doc-soft: var(--adm-surface-3);
+  --doc-line: var(--adm-border);
+  --doc-line-strong: var(--adm-border-strong);
+  --doc-ink: var(--adm-text);
+  --doc-ink-2: var(--adm-text-2);
+  --doc-muted: var(--adm-muted);
+  --doc-success: var(--adm-success);
+  --doc-success-soft: var(--adm-success-soft);
+  --doc-danger: var(--adm-danger);
+  --doc-danger-soft: var(--adm-danger-soft);
+  --doc-danger-line: var(--adm-border);
+  --doc-warning: var(--adm-warning);
+  --doc-warning-soft: var(--adm-warning-soft);
+  --primary: var(--adm-accent);
+  --primary-strong: var(--adm-accent);
+  --primary-soft: var(--adm-accent-soft);
+  --primary-contrast: var(--adm-accent-contrast);
 }
 
 /* --------------------------------------------------------------- shell */
@@ -2220,4 +2243,10 @@ html[data-theme='dark'] .admin-scope .assessment-table th {
     min-width: 0;
     text-align: left;
   }
+}
+
+/* The bell artwork is black line art; invert it so it stays visible on the
+   dark surface of the header button and the notification history sheet. */
+html[data-theme='dark'] :is(.admin-scope, .notif-hs--admin) .notification-bell-icon {
+  filter: brightness(0) invert(1);
 }

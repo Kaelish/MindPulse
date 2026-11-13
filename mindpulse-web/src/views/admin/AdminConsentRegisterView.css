@@ -100,3 +100,48 @@
     padding: 18px 16px 32px;
   }
 }
+
+/* ------------------------------------------------------------- dark theme */
+html[data-theme='dark'] .admin-scope .consent-register-main {
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-panel {
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-panel h2,
+html[data-theme='dark'] .admin-scope .consent-register-table td strong {
+  color: var(--adm-text);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-table th {
+  border-bottom-color: var(--adm-border);
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-table td {
+  border-bottom-color: var(--adm-border);
+  color: var(--adm-text-2);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-table td small,
+html[data-theme='dark'] .admin-scope .consent-register-main .empty-table {
+  color: var(--adm-muted);
+}
+
+html[data-theme='dark'] .admin-scope .consent-register-table tbody tr:hover td {
+  background: var(--adm-surface-2);
+}
+
+html[data-theme='dark'] .admin-scope .consent-chip {
+  background: var(--adm-info-soft);
+  color: #9db8ff;
+}
+
+html[data-theme='dark'] .admin-scope .consent-chip--face_scan {
+  background: var(--adm-success-soft);
+  color: #6ee7b7;
+}

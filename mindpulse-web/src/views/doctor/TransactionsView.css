@@ -20,6 +20,34 @@
 }
 
 /* ── Receipt dialog ── */
+.tx-mode-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1.5px dashed #e8c766;
+  border-radius: 12px;
+  background: #fff3cd;
+  color: #8a5a00;
+}
+
+.tx-mode-notice strong {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+}
+
+.tx-mode-notice span {
+  font-size: 0.82rem;
+}
+
+html[data-doctor-theme='dark'] .tx-mode-notice {
+  border-color: #7a5a1c;
+  background: #2a2213;
+  color: #e0b463;
+}
+
 .tx-receipt-overlay {
   position: fixed;
   inset: 0;
@@ -148,38 +176,38 @@
 }
 
 /* ── Dark theme (Settings → General → Dark Mode) ── */
-html[data-theme='dark'] .tx-receipt-sheet {
+html[data-doctor-theme='dark'] .tx-receipt-sheet {
   background: #141d31;
   border: 1px solid #26314a;
 }
 
-html[data-theme='dark'] .tx-receipt-head {
+html[data-doctor-theme='dark'] .tx-receipt-head {
   border-bottom-color: #26314a;
 }
 
-html[data-theme='dark'] .tx-receipt-head h2,
-html[data-theme='dark'] .tx-receipt-amount strong,
-html[data-theme='dark'] .tx-receipt-rows dd {
+html[data-doctor-theme='dark'] .tx-receipt-head h2,
+html[data-doctor-theme='dark'] .tx-receipt-amount strong,
+html[data-doctor-theme='dark'] .tx-receipt-rows dd {
   color: #e7ebf3;
 }
 
-html[data-theme='dark'] .tx-receipt-back {
+html[data-doctor-theme='dark'] .tx-receipt-back {
   background: #0f1729;
   border-color: #26314a;
   color: #e7ebf3;
 }
 
-html[data-theme='dark'] .tx-receipt-rows {
+html[data-doctor-theme='dark'] .tx-receipt-rows {
   background: #0f1729;
   border-color: #26314a;
 }
 
-html[data-theme='dark'] .tx-receipt-rows > div {
+html[data-doctor-theme='dark'] .tx-receipt-rows > div {
   border-bottom-color: #26314a;
 }
 
-html[data-theme='dark'] .tx-receipt-rows dt,
-html[data-theme='dark'] .tx-receipt-foot p {
+html[data-doctor-theme='dark'] .tx-receipt-rows dt,
+html[data-doctor-theme='dark'] .tx-receipt-foot p {
   color: #96a2b8;
 }
 
@@ -361,52 +389,52 @@ html[data-theme='dark'] .tx-receipt-foot p {
 }
 
 /* ── Dark theme (Settings → General → Dark Mode) ── */
-html[data-theme='dark'] .walk-in-button {
+html[data-doctor-theme='dark'] .walk-in-button {
   border-color: #2c9fb8;
   color: #6fd3e8;
 }
 
-html[data-theme='dark'] .walk-in-button:hover:not(:disabled),
-html[data-theme='dark'] .walk-in-button:focus-visible {
+html[data-doctor-theme='dark'] .walk-in-button:hover:not(:disabled),
+html[data-doctor-theme='dark'] .walk-in-button:focus-visible {
   background: rgba(44, 159, 184, 0.14);
 }
 
-html[data-theme='dark'] .walk-in-notice {
+html[data-doctor-theme='dark'] .walk-in-notice {
   background: rgba(6, 95, 70, 0.35);
   border-color: #14532d;
   color: #6ee7b7;
 }
 
-html[data-theme='dark'] .tx-walkin-sheet {
+html[data-doctor-theme='dark'] .tx-walkin-sheet {
   background: #141d31;
   border: 1px solid #26314a;
 }
 
-html[data-theme='dark'] .tx-walkin-head {
+html[data-doctor-theme='dark'] .tx-walkin-head {
   border-bottom-color: #26314a;
 }
 
-html[data-theme='dark'] .tx-walkin-head h2,
-html[data-theme='dark'] .walk-in-field select,
-html[data-theme='dark'] .walk-in-field input {
+html[data-doctor-theme='dark'] .tx-walkin-head h2,
+html[data-doctor-theme='dark'] .walk-in-field select,
+html[data-doctor-theme='dark'] .walk-in-field input {
   color: #e7ebf3;
 }
 
-html[data-theme='dark'] .walk-in-field select,
-html[data-theme='dark'] .walk-in-field input {
+html[data-doctor-theme='dark'] .walk-in-field select,
+html[data-doctor-theme='dark'] .walk-in-field input {
   background: #0f1729;
   border-color: #26314a;
 }
 
-html[data-theme='dark'] .walk-in-error {
+html[data-doctor-theme='dark'] .walk-in-error {
   background: rgba(127, 29, 29, 0.3);
   border-color: #7f1d1d;
   color: #fca5a5;
 }
 
-html[data-theme='dark'] .walk-in-empty,
-html[data-theme='dark'] .walk-in-hint,
-html[data-theme='dark'] .walk-in-field span {
+html[data-doctor-theme='dark'] .walk-in-empty,
+html[data-doctor-theme='dark'] .walk-in-hint,
+html[data-doctor-theme='dark'] .walk-in-field span {
   color: #96a2b8;
 }
 
