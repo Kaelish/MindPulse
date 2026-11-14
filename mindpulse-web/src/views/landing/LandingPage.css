@@ -68,7 +68,7 @@
 
 /* --------------------------------------------------------------- navigation */
 .landing-nav {
-  position: sticky;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -76,6 +76,12 @@
   background: #ffffff;
   border-bottom: 1px solid rgba(223, 233, 238, 0.9);
   backdrop-filter: blur(12px);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.landing-nav.is-scrolled {
+  box-shadow: 0 4px 20px rgba(17, 28, 48, 0.08);
+  border-bottom-color: rgba(223, 233, 238, 1);
 }
 
 .landing-nav-inner {
@@ -577,21 +583,42 @@
 /* ------------------------------------------------------------- back to top */
 .landing-back-to-top {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 28px;
+  right: 28px;
   z-index: 110;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--landing-blue);
   color: #ffffff;
   border: none;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   box-shadow: 0 8px 24px rgba(40, 126, 240, 0.32);
-  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px);
+  transition: opacity 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.landing-back-to-top:not(.is-hidden) {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.landing-back-to-top.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px);
+}
+
+.landing-back-to-top.is-just-shown {
+  animation: landing-btt-pop 0.7s ease backwards;
 }
 
 .landing-back-to-top:hover {
@@ -600,22 +627,45 @@
   box-shadow: 0 12px 30px rgba(40, 126, 240, 0.36);
 }
 
+.landing-back-to-top:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(40, 126, 240, 0.28);
+}
+
 .landing-back-to-top:focus-visible {
   outline: 3px solid rgba(40, 126, 240, 0.5);
   outline-offset: 3px;
 }
 
-.landing-back-to-top .arrow-up {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
-  transform: rotate(0deg);
+.landing-back-to-top .btt-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  opacity: 0.9;
+  transform: translateY(1px);
 }
 
-.landing-back-to-top.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px);
+.landing-back-to-top .arrow-up {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  transform: translateY(-1px);
+}
+
+@keyframes landing-btt-pop {
+  0% {
+    transform: scale(0.6) translateY(14px);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08) translateY(-2px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes landing-float {
@@ -1124,6 +1174,7 @@
 /* ---------------------------------------------------------------- faq section */
 .landing-faq {
   padding: 80px 0;
+  scroll-margin-top: 76px;
 }
 
 .landing-faq-grid {

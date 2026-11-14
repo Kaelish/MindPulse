@@ -14,6 +14,7 @@ export { prefersReducedMotion };
 
 export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onLogIn }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -23,6 +24,13 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onLogIn }) => {
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
   }, [menuOpen]);
+
+  // Elevate the sticky navbar slightly once the page is scrolled
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const scrollToSection = (id: 'home' | 'about') => {
     setMenuOpen(false);
@@ -35,7 +43,7 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onLogIn }) => {
   };
 
   return (
-    <header className="landing-nav">
+    <header className={`landing-nav${scrolled ? ' is-scrolled' : ''}`}>
       <div className="landing-container landing-nav-inner">
         <a
           className="landing-brand"
