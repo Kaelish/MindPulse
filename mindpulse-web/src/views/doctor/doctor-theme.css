@@ -334,6 +334,15 @@
   color: var(--doc-ink);
 }
 
+.doctor-scope .assessment-results-topbar h1 {
+  margin: 6px 0 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--doc-ink);
+}
+
 .doctor-scope .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -1025,24 +1034,24 @@
 
 .doctor-scope .case-summary-card span,
 .doctor-scope .assessment-summary-card span {
-  font-size: 0.73rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--doc-muted);
 }
 
 .doctor-scope .case-summary-card strong,
 .doctor-scope .assessment-summary-card strong {
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--doc-ink);
 }
 
 .doctor-scope .assessment-summary-card small {
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 500;
   color: var(--doc-muted);
 }
 
@@ -1684,44 +1693,44 @@
   flex-wrap: wrap;
 }
 .doctor-scope .assessment-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--doc-ink-2);
 }
 .doctor-scope .assessment-pill {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.5px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid;
   white-space: nowrap;
 }
 .doctor-scope .assessment-pill-daily {
-  background: #f0f9ff;
-  color: #0369a1;
-  border-color: rgba(0, 78, 120, 0.6);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  border-color: rgba(15, 130, 152, 0.4);
 }
 .doctor-scope .assessment-pill-supplementary {
-  background: #fbf4ff;
-  color: #6b21a8;
-  border-color: rgba(125, 18, 239, 0.6);
+  background: var(--doc-soft);
+  color: var(--doc-muted);
+  border-color: var(--doc-line);
 }
 .doctor-scope .assessment-case-meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--doc-muted);
   line-height: 1.4;
 }
 .doctor-scope .assessment-case-id {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #0f766e;
+  color: #64748b;
 }
 .doctor-scope .assessment-meta-sep {
   color: #94a3b8;
@@ -1730,7 +1739,7 @@
 }
 .doctor-scope .assessment-stamp,
 .doctor-scope .assessment-protocol {
-  color: #64748b;
+  color: var(--doc-muted);
 }
 
 /* Right side: score summary + grouped actions */
@@ -1745,9 +1754,9 @@
   gap: 10px;
 }
 .doctor-scope .assessment-score-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--doc-ink-2);
   line-height: 1;
   letter-spacing: -0.02em;
 }
@@ -1757,7 +1766,7 @@
 .doctor-scope .assessment-risk-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 0.5px 9px;
   border-radius: 999px;
@@ -1803,8 +1812,8 @@
 }
 .doctor-scope .assessment-btn-review {
   padding: 8px 14px;
-  color: #0f766e;
-  background: rgba(240, 253, 250, 0.7);
+  color: var(--primary-strong);
+  background: var(--primary-soft);
   border-color: rgba(156, 249, 222, 0.8);
 }
 .doctor-scope .assessment-btn-review:hover {
@@ -1814,7 +1823,7 @@
 .doctor-scope .assessment-btn-view {
   padding: 8px 16px;
   color: #ffffff;
-  background: #0f766e;
+  background: var(--primary-strong);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 .doctor-scope .assessment-btn-view:hover {
@@ -1826,9 +1835,9 @@
   gap: 6px;
   padding: 8px 12px;
   border-radius: 0.75rem;
-  color: #0f766e;
-  background: rgba(240, 253, 250, 0.7);
-  font-size: 12px;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -1839,14 +1848,14 @@
   flex: 1;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--doc-line);
 }
 .doctor-scope .assessment-metrics-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--doc-muted);
   margin-bottom: 8px;
   flex-shrink: 0;
 }
@@ -1865,27 +1874,28 @@
   flex: 1 1 0;
   min-width: 0;
   justify-content: space-between;
-  padding: 10px 12px;
-  border: 1px solid #f1f5f9;
-  border-radius: 0.75rem;
-  background: rgba(248, 250, 252, 0.8);
+  padding: 8px 10px;
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-xs);
+  background: var(--doc-panel-2);
 }
 .doctor-scope .assessment-metric-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 .doctor-scope .assessment-metric-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--doc-muted);
   white-space: nowrap;
+  text-transform: none;
 }
 .doctor-scope .assessment-metric-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--doc-ink-2);
   line-height: 1.2;
   min-width: 0;
   white-space: nowrap;
@@ -1896,7 +1906,7 @@
   width: 100%;
   height: 5px;
   margin-top: 6px;
-  background: rgba(226, 232, 240, 0.7);
+  background: var(--doc-line);
   border-radius: 999px;
   overflow: hidden;
   flex-shrink: 0;
@@ -1905,10 +1915,10 @@
   height: 100%;
   border-radius: 999px;
 }
-.doctor-scope .assessment-fill-blue { background: #3b82f6; }
-.doctor-scope .assessment-fill-teal { background: #14b8a6; }
-.doctor-scope .assessment-fill-emerald { background: #10b981; }
-.doctor-scope .assessment-fill-indigo { background: #6366f1; }
+.doctor-scope .assessment-fill-blue { background: var(--primary); }
+.doctor-scope .assessment-fill-teal { background: var(--primary); }
+.doctor-scope .assessment-fill-emerald { background: var(--doc-success); }
+.doctor-scope .assessment-fill-indigo { background: var(--primary); }
 .doctor-scope .assessment-skipped {
   margin-top: 6px;
   display: inline-block;
@@ -1932,6 +1942,24 @@
   background: rgba(226, 232, 240, 0.7);
   text-transform: capitalize;
 }
+
+/* Color-coded emotion value (shown once per tile, no duplicate pill). */
+.doctor-scope .assessment-emotion-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+.doctor-scope .assessment-emotion-value.neutral { color: var(--doc-warning); background: var(--doc-warning-soft); }
+.doctor-scope .assessment-emotion-value.happy { color: var(--doc-success); background: var(--doc-success-soft); }
+.doctor-scope .assessment-emotion-value.sad { color: var(--primary-strong); background: var(--primary-soft); }
+.doctor-scope .assessment-emotion-value.rose { color: var(--doc-danger); background: var(--doc-danger-soft); }
+.doctor-scope .assessment-emotion-value.purple { color: #7e22ce; background: #ede9fe; }
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }

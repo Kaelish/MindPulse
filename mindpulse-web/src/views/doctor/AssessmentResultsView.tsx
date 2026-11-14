@@ -11,6 +11,12 @@ const formatDate = (value: string) => {
     : date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 };
 
+const titleCase = (value: string) =>
+  value
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
 export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = ({ onViewFullCase }) => {
   const [results, setResults] = useState<AdminResultRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +129,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
       <Summary label="Reviewed" value={String(reviewedCount)} change="" tone="green" />
     </section>
     <section className="assessment-filter-bar">
-      <label className="assessment-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users name or ID" /></label>
+      <label className="assessment-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or ID..." /></label>
       <select value={level} onChange={(event) => setLevel(event.target.value)} aria-label="Filter assessment level"><option>All Levels</option><option>Low</option><option>Moderate</option><option>High</option></select>
       <select value={emotion} onChange={(event) => setEmotion(event.target.value)} aria-label="Filter assessment emotion"><option>All Emotions</option>{emotionOptions.map((value) => <option key={value}>{value}</option>)}</select>
       <DoctorResultCount shown={visibleResults.length} total={results.length} noun="results" />
@@ -156,15 +162,15 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
                 </span>
                 <div className="assessment-context">
                   <div className="assessment-name-row">
-                    <span className="assessment-name">{result.studentName}</span>
+                    <span className="assessment-name">{titleCase(result.studentName || 'Unknown patient')}</span>
                     {daily ? <span className="assessment-pill assessment-pill-daily">DAILY ASSESSMENT</span> : <span className="assessment-pill assessment-pill-supplementary">Supplementary assessment</span>}
                   </div>
                   <div className="assessment-case-meta">
-                    <span className="assessment-case-id">{result.id.slice(0, 8)}</span>
+                    <span className="assessment-case-id">{result.id.slice(0, 8).toUpperCase()}</span>
                     <span className="assessment-meta-sep">•</span>
                     <span className="assessment-stamp">{formatDate(result.createdAt)}</span>
                     <span className="assessment-meta-sep">•</span>
-                    <span className="assessment-protocol">{assessmentNameOf(result)}</span>
+                    <span className="assessment-protocol">{titleCase(assessmentNameOf(result))}</span>
                   </div>
                 </div>
               </div>
@@ -192,7 +198,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
                 <MetricTile label="Survey score" value={result.surveyScore == null ? '—' : String(result.surveyScore)} width={result.surveyScore == null ? 0 : Math.max(0, Math.min(100, result.surveyScore))} fill="teal" />
                 <MetricTile label="Reaction time" value={result.reactionTimeMs == null ? '—' : `${result.reactionTimeMs} ms`} width={result.reactionTimeMs == null ? 0 : Math.max(0, Math.min(100, result.reactionTimeMs / 30))} fill="emerald" />
                 <MetricTile label="Facial confidence" value={result.faceConfidence == null ? '—' : `${result.faceConfidence}%`} width={result.faceConfidence == null ? 0 : Math.max(0, Math.min(100, result.faceConfidence))} fill="indigo" skipped={result.faceConfidence == null} />
-                <MetricTile label="Emotion" value={result.emotion ?? 'Neutral'} skipped={result.emotion == null} emotion />
+                <MetricTile label="Emotion" value={result.emotion ?? ''} skipped={result.emotion == null} emotion />
               </div>
             </div>
           </article>;
@@ -210,6 +216,15 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
 };
 
 const Summary: React.FC<{ label: string; value: string; change: string; tone: 'green' | 'red' | 'neutral' }> = ({ label, value, change, tone }) => <article className={`assessment-summary-card ${tone}`}><span>{label}</span><strong>{value}</strong>{change && <small>{change}</small>}</article>;
+const emotionTone = (value: string) => {
+  const v = (value || '').toLowerCase();
+  if (v === 'neutral') return 'neutral';
+  if (v === 'happy') return 'happy';
+  if (v === 'sad') return 'sad';
+  if (v === 'angry' || v === 'fearful' || v === 'stressed') return 'rose';
+  if (v === 'surprised') return 'purple';
+  return 'neutral';
+};
 const MetricTile: React.FC<{
   label: string;
   value: string;
@@ -223,13 +238,15 @@ const MetricTile: React.FC<{
       <div className={`assessment-progress-fill assessment-fill-${fill}`} style={{ width: `${Math.round(width)}%` }} />
     </div>
   );
+  const emotionCapitalized = emotion && value ? (value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()) : value;
+  const emotionToneClass = emotion && value ? `assessment-emotion-value assessment-emotion-${emotionTone(value)}` : '';
   return (
     <div className="assessment-metric-tile">
       <div className="assessment-metric-top">
         <span className="assessment-metric-label">{label}</span>
-        <span className="assessment-metric-value tabular-nums">{value}</span>
+        <span className={`assessment-metric-value tabular-nums ${emotionToneClass}`}>{emotionCapitalized}</span>
       </div>
-      {skipped ? <span className="assessment-skipped">Skipped</span> : emotion ? <span className="assessment-emotion-pill">{value}</span> : bar}
+      {skipped ? <span className="assessment-skipped">Skipped</span> : emotion ? null : bar}
     </div>
   );
 };
