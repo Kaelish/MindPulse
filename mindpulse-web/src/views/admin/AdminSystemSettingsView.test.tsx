@@ -16,7 +16,7 @@ jest.mock('../../components/NotificationPanel', () => ({
 }));
 
 jest.mock('../../services/dataExport', () => ({
-  exportSystemData: jest.fn().mockResolvedValue('mindpulse-export.json'),
+  exportSystemData: jest.fn().mockResolvedValue('mindpulse-export.xlsx'),
 }));
 
 const storedSettings = () =>
