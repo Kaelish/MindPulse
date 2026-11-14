@@ -86,6 +86,7 @@
 .consultation-detail .consult-summary-pending { margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: #f5f7fb; font-style: italic; }
 
 .daily-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #e3f2fd; border: 1px solid #bbd7ea; color: #1565c0; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+.supplementary-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #f3e8ff; border: 1px solid #d8b4fe; color: #7c3aed; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
 
 /* After-visit progress notes popup (scrollable tall form inside the modal). */
 .summary-modal-overlay .web-chat-modal-body { overflow-y: auto; padding: 16px 16px 20px; }

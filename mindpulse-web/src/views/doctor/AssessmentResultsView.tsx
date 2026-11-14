@@ -141,7 +141,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const daily = isDailyAssessment(result);
           return <article className="assessment-card" key={result.id}>
             <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><div className="assessment-meta"><small>{formatDate(result.createdAt)}</small> <span>·</span> <small>{assessmentNameOf(result)}</small></div>{daily && <span className="daily-pill">Daily assessment</span>}</div></div>
+              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><div className="assessment-name-row"><span className="scan-label">{result.studentName}</span>{daily ? <span className="daily-pill">Daily assessment</span> : <span className="supplementary-pill">Supplementary assessment</span>}</div><strong>{result.id.slice(0, 8)}</strong><div className="assessment-meta"><small>{formatDate(result.createdAt)}</small> <span>·</span> <small>{assessmentNameOf(result)}</small></div></div></div>
               <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
               <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
             </div>

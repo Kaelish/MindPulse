@@ -436,7 +436,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             const daily = session.reactionTimeMs != null || (session.notes && session.notes.includes('(multi-modal)'));
             return (
               <section className="detail-assessment-card" key={session.id}>
-                <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span>{daily && <span className="daily-pill">Daily assessment</span>}</h2></div>
+                <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span>{daily ? <span className="daily-pill">Daily assessment</span> : <span className="supplementary-pill">Supplementary assessment</span>}</h2></div>
                 <strong className={band ? `score-${band}` : ''}>{session.score == null ? '—' : `${session.score}%`}<small>Stress Level</small></strong>
                 <div className="detail-emotion-bars">
                   <SessionMetric label="Heart rate" value={session.heartRate == null ? '—' : `${session.heartRate} bpm`} />
