@@ -245,7 +245,6 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
   const selectedConsultation = selectedPatientId
     ? consultations.find((row) => row.patientId === selectedPatientId) ?? null
     : null;
-  const chatTarget = selectedConsultation ?? activeSessionItem ?? consultations[0] ?? null;
 
   // The conversations panel is per PATIENT ACCOUNT, not per consultation: a
   // patient with five bookings must appear once, not five times. The first
@@ -259,6 +258,24 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     seenPatientIds.add(row.patientId);
     conversationItems.push(row);
   }
+
+  // Most recently active conversation first, so opening Messages lands on the
+  // latest thread instead of the oldest booking. Patients with no messages
+  // yet keep their appointment order at the end of the list.
+  const lastActivityAt = new Map<string, string>(
+    webThreads.map((row) => [row.otherId, row.lastAt]),
+  );
+  conversationItems.sort((a, b) => {
+    const aAt = lastActivityAt.get(a.patientId);
+    const bAt = lastActivityAt.get(b.patientId);
+    if (aAt && bAt) return bAt.localeCompare(aAt);
+    if (aAt) return -1;
+    if (bAt) return 1;
+    return 0;
+  });
+
+  // Default to the latest conversation when the doctor has not picked one.
+  const chatTarget = selectedConsultation ?? activeSessionItem ?? conversationItems[0] ?? null;
 
   const totalUnread = webThreads.reduce((sum, row) => sum + row.unreadCount, 0);
 
@@ -366,10 +383,13 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           setWebThreads(threads);
           setChatError(null);
 
-          // Read receipt: stamp incoming messages once the thread is on screen,
-          // then refresh previews so the badge clears.
+          // Read receipt: stamp incoming messages only while this thread is
+          // actually on screen (Messages tab open, or the live session modal).
+          // Otherwise a message that arrives while the doctor is on another tab
+          // would clear its own unread badge before they ever see it.
+          const threadIsVisible = consultTab === 'messages' || !!activeSessionItem;
           const hasUnreadFromPatient = msgs.some((m) => m.sender === 'patient' && !m.readAt);
-          if (hasUnreadFromPatient) {
+          if (threadIsVisible && hasUnreadFromPatient) {
             await markWebThreadRead(targetPatientId);
             const refreshed = await fetchWebChatThreads();
             if (isSubscribed) setWebThreads(refreshed);

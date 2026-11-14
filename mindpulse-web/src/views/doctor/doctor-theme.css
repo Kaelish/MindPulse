@@ -2097,9 +2097,17 @@ html[data-doctor-theme='dark'] .doctor-scope .view-case-btn-primary:hover:not(:d
 }
 
 .doctor-scope .web-msg-bubble.doctor {
-  background: var(--primary-strong);
-  border-color: var(--primary-strong);
+  background: #5b6ef5;
+  border-color: #5b6ef5;
   color: #ffffff;
+}
+
+/* The send button is #5b6ef5, so the doctor bubble matches it. The muted ink
+   used by .web-msg-time elsewhere sits almost on top of this blue, so the
+   timestamp and read/sent marker need an explicit light colour to stay legible. */
+.doctor-scope .web-msg-bubble.doctor .web-msg-time {
+  color: #ffffff;
+  opacity: 1;
 }
 
 .doctor-scope .web-msg-time {
@@ -2985,9 +2993,8 @@ html[data-doctor-theme='dark'] .doctor-scope .recommendation-filters button.acti
   color: #04171d;
 }
 
-html[data-doctor-theme='dark'] .doctor-scope .web-msg-bubble.doctor {
-  color: #04171d;
-}
+/* The doctor bubble keeps the send-button blue (#5b6ef5) with white text in
+   dark mode too, so the timestamp/read-sent marker stays legible. */
 
 /* =========================================================================
    Keep the doctor portal on its own tokens when the ADMIN dark theme
