@@ -389,6 +389,7 @@ export const AssessmentResultScreen: React.FC<Props> = ({ onBack, onBookSession 
         face ? Math.round(Math.min(1, Math.max(0, face.confidence)) * 100) : undefined,
         snapshot ?? null,
         face?.expression,
+        'daily',
       );
 
       // Today is now spent: keep the numbers for review, close every step, and

@@ -33,6 +33,7 @@ interface StudentProfileRow {
 interface SessionLite {
   user_id: string;
   score: number | null;
+  assessment_type: string | null;
   created_at: string;
 }
 
@@ -97,9 +98,9 @@ const pullBundles = async (): Promise<Bundles> => {
   if (profilesError) throw new Error(profilesError.message);
   const students = (profiles ?? []) as StudentProfileRow[];
 
-  const sessions = await fetchAllRows<{ user_id: string; score: number | null; created_at: string }>(
+  const sessions = await fetchAllRows<SessionLite>(
     'stress_sessions',
-    'user_id, score, created_at',
+    'user_id, score, assessment_type, created_at',
   );
 
   const appointments = await fetchAllRows<{
@@ -161,8 +162,11 @@ export interface StudentRecordRow {
 }
 
 const buildRecord = (student: StudentProfileRow, bundles: Bundles): StudentRecordRow => {
-  const sessions = bundles.sessionsByUser.get(student.id) ?? [];
-  const latest = sessions.find((session) => session.score != null) ?? sessions[0] ?? null;
+  // Only DAILY assessments drive the patient's current status/score/trend in the
+  // admin's records sidebar — supplementary sessions feed averages only.
+  const allSessions = bundles.sessionsByUser.get(student.id) ?? [];
+  const dailySessions = allSessions.filter((session) => session.assessment_type === 'daily');
+  const latest = dailySessions.find((session) => session.score != null) ?? dailySessions[0] ?? null;
   const appointments = bundles.appointmentsByPatient.get(student.id) ?? [];
   const name = nameOf(student.first_name, student.last_name, student.email);
 
@@ -176,11 +180,11 @@ const buildRecord = (student: StudentProfileRow, bundles: Bundles): StudentRecor
     program: student.program || 'â€”',
     year: student.year_level || 'â€”',
     createdAt: student.created_at,
-    sessions: sessions.length,
+    sessions: allSessions.length,
     lastAssessment: latest?.created_at ?? null,
     score: latest?.score ?? null,
     level: latest && latest.score != null ? levelForScore(latest.score) : null,
-    trend: trendFor(sessions),
+    trend: trendFor(dailySessions),
     assignedDoctor: appointments.length ? bundles.doctorNames.get(appointments[0].doctor_id) ?? null : null,
   };
 };

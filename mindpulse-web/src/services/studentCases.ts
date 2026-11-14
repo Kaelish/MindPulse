@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
 import { fetchAvatarUrls } from './avatars';
+import type { AssessmentType } from '../types/supabase';
 
 export type StudentCaseStatus = 'High Risk' | 'Moderate Risk' | 'Low Risk' | 'No Assessment';
 
@@ -51,6 +52,7 @@ type SessionRow = {
   score: number | null;
   emotion: string | null;
   face_confidence: number | null;
+  assessment_type: string | null;
   created_at: string;
 };
 
@@ -85,7 +87,9 @@ const formatDate = (value: string | null) =>
     ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'No assessment';
 
-/** Maps one profile + its two newest sessions into the shared case record. */
+/** Maps one profile + its two newest DAILY sessions into the shared case record.
+ *  Supplementary sessions are excluded from status/score/trend — they still
+ *  feed average stress level elsewhere and remain visible in the session history. */
 const buildStudentCase = (
   profile: ProfileRow,
   userSessions: SessionRow[],
@@ -93,8 +97,12 @@ const buildStudentCase = (
 ): StudentCaseRecord => {
   const name =
     `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown patient';
-  const latest = userSessions[0];
-  const previous = userSessions[1];
+
+  // Keep only daily assessments for status/score/trend; supplementary sessions
+  // are excluded per the daily-vs-supplementary separation.
+  const dailySessions = userSessions.filter((s) => s.assessment_type === 'daily');
+  const latest = dailySessions[0];
+  const previous = dailySessions[1];
 
   const score = latest?.score ?? 0;
   const status: StudentCaseStatus = latest ? statusForScore(score) : 'No Assessment';
@@ -148,7 +156,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
-    .select('user_id, score, emotion, face_confidence, created_at')
+    .select('user_id, score, emotion, face_confidence, assessment_type, created_at')
     .order('created_at', { ascending: false });
   if (sessionsError) throw new Error(sessionsError.message);
 
@@ -190,7 +198,7 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
-    .select('user_id, score, emotion, face_confidence, created_at')
+    .select('user_id, score, emotion, face_confidence, assessment_type, created_at')
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
     .limit(2);
@@ -248,6 +256,8 @@ export interface StudentSessionRecord {
   emotion: string | null;
   faceConfidence: number | null;
   notes: string | null;
+  /** 'daily' = multi-modal check-in; 'supplementary' = questionnaire-only. */
+  assessmentType: AssessmentType | null;
   /** Raw questionnaire answers; null for sessions saved before migration 0019. */
   surveyAnswers: SurveyAnswerSet | null;
 }
@@ -260,7 +270,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
 
   const { data, error } = await supabase
     .from('stress_sessions')
-    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, notes, survey_answers')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, notes, assessment_type, survey_answers')
     .eq('user_id', studentId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -276,6 +286,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     emotion: string | null;
     face_confidence: number | null;
     notes: string | null;
+    assessment_type: string | null;
     survey_answers: unknown;
   }[]).map((row) => ({
     id: row.id,
@@ -288,6 +299,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     emotion: row.emotion,
     faceConfidence: row.face_confidence,
     notes: row.notes,
+    assessmentType: (row.assessment_type ?? 'daily') as AssessmentType,
     surveyAnswers: parseSurveyAnswers(row.survey_answers),
   }));
 };

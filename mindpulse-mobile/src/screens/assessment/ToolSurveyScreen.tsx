@@ -77,6 +77,8 @@ export const ToolSurveyScreen = ({ tool, onBack, onComplete }: ToolSurveyScreenP
         undefined,
         undefined,
         surveyAnswers,
+        undefined,
+        'supplementary',
       );
       await recordToolCompletion(tool.id);
       setResultScore(score);

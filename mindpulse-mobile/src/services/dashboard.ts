@@ -18,6 +18,8 @@ export interface StressSessionItem {
   emotion?: string;
   reactionTimeMs?: number;
   faceConfidencePercent?: number;
+  /** 'daily' = multi-modal check-in (drives latest stress level); 'supplementary' = questionnaire-only (feeds averages only). */
+  assessmentType?: 'daily' | 'supplementary';
 }
 
 export interface DashboardMetrics {
@@ -162,6 +164,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
       reactionTimeMs: row.reaction_time_ms ?? undefined,
       faceConfidencePercent: row.face_confidence ?? undefined,
       notes: row.notes ?? '',
+      assessmentType: (row.assessment_type ?? 'daily') as 'daily' | 'supplementary',
     };
   });
 
@@ -189,12 +192,15 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
       type: row.type === 'alert' || row.type === 'appointment' ? row.type : 'info',
     }));
 
-  const latestScore = recentSessions.length > 0 ? recentSessions[0].score : null;
+  // Latest stress level reflects the latest DAILY assessment — supplementary
+  // sessions feed the average but not the patient's current status on home.
+  const dailySessions = recentSessions.filter((session) => session.assessmentType === 'daily');
+  const latestScore = dailySessions.length > 0 ? dailySessions[0].score : null;
   const latestLevel = latestScore !== null ? levelForScore(latestScore) : null;
 
   let latestTrend: DashboardMetrics['latestTrend'] = null;
-  if (recentSessions.length >= 2) {
-    const delta = recentSessions[0].score - recentSessions[1].score;
+  if (dailySessions.length >= 2) {
+    const delta = dailySessions[0].score - dailySessions[1].score;
     latestTrend = delta > 2 ? 'Increasing' : delta < -2 ? 'Decreasing' : 'Stable';
   }
 
@@ -254,6 +260,8 @@ export const saveNewStressSession = async (
   surveyAnswers?: Record<string, unknown> | null,
   /** Dominant expression from the facial scan ('happy' | 'neutral' | 'sad'). */
   emotion?: string,
+  /** 'daily' = multi-modal PSS-10 check-in (drives recents/status); 'supplementary' = questionnaire-only (feeds averages only). Defaults to 'daily'. */
+  assessmentType?: 'daily' | 'supplementary',
 ): Promise<StressSessionItem> => {
   const { id: userId } = await requireUser();
 
@@ -276,6 +284,7 @@ export const saveNewStressSession = async (
       // modal all have a label to read — previously this column stayed NULL.
       emotion: emotion ?? null,
       notes,
+      assessment_type: assessmentType ?? 'daily',
     })
     .select()
     .single();

@@ -506,6 +506,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                             <th>Patient</th>
                             <th>Date</th>
                             <th>Assessment</th>
+                            <th>Type</th>
                             <th>Overall Score</th>
                             <th>Level</th>
                             <th>Survey</th>
@@ -523,6 +524,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                               </td>
                               <td>{formatDate(row.createdAt)}</td>
                               <td>{assessmentNameOf(row)}</td>
+                              <td>{row.assessmentType ? row.assessmentType.charAt(0).toUpperCase() + row.assessmentType.slice(1) : 'Daily'}</td>
                               <td>{row.score == null ? '—' : `${row.score}/100`}</td>
                               <td>
                                 <span className={levelPill(row.stressLevel)}>{row.stressLevel ?? '—'}</span>
@@ -790,6 +792,10 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               <div>
                 <dt>Assessment</dt>
                 <dd>{assessmentNameOf(viewing)}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{viewing.assessmentType ? viewing.assessmentType.charAt(0).toUpperCase() + viewing.assessmentType.slice(1) : 'Daily'}</dd>
               </div>
               <div>
                 <dt>Overall Score</dt>

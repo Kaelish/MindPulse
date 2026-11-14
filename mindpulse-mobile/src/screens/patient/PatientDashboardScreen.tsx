@@ -154,6 +154,9 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   const { userName, greetingDate, metrics, recentSessions } = data;
 
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
+  // The home page's "Latest Stress Level" reflects the daily assessment, so the
+  // card should open that same daily session (not a supplementary one).
+  const latestDailySession = recentSessions.find((session) => session.assessmentType === 'daily');
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
@@ -201,7 +204,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
           {/* Latest Stress Card */}
           <TouchableOpacity style={styles.stressCard} activeOpacity={0.9}
-            onPress={() => recentSessions.length > 0 && setSelectedSession(recentSessions[0])}>
+            onPress={() => latestDailySession && setSelectedSession(latestDailySession)}>
             <View style={styles.stressCardLeft}>
               <Text style={styles.stressCardLabel}>Latest Stress Level</Text>
               <Text style={styles.stressCardLevel}>{metrics.latestLevel ?? 'No data yet'}</Text>

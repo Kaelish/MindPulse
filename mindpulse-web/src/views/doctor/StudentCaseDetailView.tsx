@@ -193,7 +193,10 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const lastContact = contactTimes.length ? formatDate(new Date(Math.max(...contactTimes))) : 'No contact yet';
 
   const trendPoints = useMemo(() => {
-    const scored = sessions.filter((session) => session.score != null).slice(0, 7).reverse();
+    // Trend chart shows daily assessments only — supplementary sessions feed the
+    // average but not the patient's current stress trajectory.
+    const daily = sessions.filter((session) => session.assessmentType === 'daily');
+    const scored = daily.filter((session) => session.score != null).slice(0, 7).reverse();
     return scored.map((session, index, list) => {
       const score = session.score ?? 0;
       return {
@@ -209,7 +212,9 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
     .join(' ');
 
-  const latestSession = sessions[0];
+  // Risk indicators and score tone reflect the latest DAILY assessment —
+  // supplementary sessions feed averages but not the patient's current status.
+  const latestDailySession = sessions.find((session) => session.assessmentType === 'daily');
 
   const statusText = (student.status || '').toLowerCase();
   const riskTone = statusText.includes('high')
@@ -219,19 +224,19 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       : statusText.includes('unassessed')
         ? 'neutral'
         : 'low';
-  const scoreTone = latestSession && latestSession.score != null
-    ? (bandForScore(latestSession.score) === 'low' ? 'good' : bandForScore(latestSession.score) === 'moderate' ? 'warn' : 'bad')
+  const scoreTone = latestDailySession && latestDailySession.score != null
+    ? (bandForScore(latestDailySession.score) === 'low' ? 'good' : bandForScore(latestDailySession.score) === 'moderate' ? 'warn' : 'bad')
     : 'neutral';
-  const heartTone = !latestSession || latestSession.heartRate == null
+  const heartTone = !latestDailySession || latestDailySession.heartRate == null
     ? 'neutral'
-    : latestSession.heartRate >= 60 && latestSession.heartRate <= 100 ? 'good' : 'bad';
-  const reactionTone = !latestSession || latestSession.reactionTimeMs == null
+    : latestDailySession.heartRate >= 60 && latestDailySession.heartRate <= 100 ? 'good' : 'bad';
+  const reactionTone = !latestDailySession || latestDailySession.reactionTimeMs == null
     ? 'neutral'
-    : latestSession.reactionTimeMs <= 1500 ? 'good' : 'bad';
-  const facialTone = !latestSession || latestSession.emotion == null
+    : latestDailySession.reactionTimeMs <= 1500 ? 'good' : 'bad';
+  const facialTone = !latestDailySession || latestDailySession.emotion == null
     ? 'neutral'
-    : latestSession.emotion === 'happy' ? 'good'
-      : latestSession.emotion === 'neutral' ? 'warn'
+    : latestDailySession.emotion === 'happy' ? 'good'
+      : latestDailySession.emotion === 'neutral' ? 'warn'
       : 'bad';
 
   const saveRecommendation = async () => {
@@ -389,39 +394,39 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             </section>
             <section className="detail-panel">
               <h2>Risk Indicators</h2>
-              {!latestSession ? (
-                <p className="empty-table">No assessment yet</p>
+              {!latestDailySession ? (
+                <p className="empty-table">No daily assessment yet</p>
               ) : (
                 <>
                   <RiskIndicator
                     label="Overall score"
                     tone={scoreTone}
-                    level={latestSession.score == null ? 'No score' : `${latestSession.score}% · ${bandLabel(latestSession.score)}`}
-                    value={latestSession.score == null ? '0%' : `${clampPercent(latestSession.score)}%`}
+                    level={latestDailySession.score == null ? 'No score' : `${latestDailySession.score}% · ${bandLabel(latestDailySession.score)}`}
+                    value={latestDailySession.score == null ? '0%' : `${clampPercent(latestDailySession.score)}%`}
                   />
                   <RiskIndicator
                     label="Heart rate"
                     tone={heartTone}
-                    level={latestSession.heartRate == null ? '—' : `${latestSession.heartRate} bpm · ${latestSession.heartRate >= 60 && latestSession.heartRate <= 100 ? 'in 60–100 range' : 'outside 60–100'}`}
-                    value={`${latestSession.heartRate == null ? 0 : clampPercent(latestSession.heartRate)}%`}
+                    level={latestDailySession.heartRate == null ? '—' : `${latestDailySession.heartRate} bpm · ${latestDailySession.heartRate >= 60 && latestDailySession.heartRate <= 100 ? 'in 60–100 range' : 'outside 60–100'}`}
+                    value={`${latestDailySession.heartRate == null ? 0 : clampPercent(latestDailySession.heartRate)}%`}
                   />
                   <RiskIndicator
                     label="Survey score"
                     tone="neutral"
-                    level={latestSession.surveyScore == null ? '—' : String(latestSession.surveyScore)}
-                    value={`${latestSession.surveyScore == null ? 0 : clampPercent(latestSession.surveyScore)}%`}
+                    level={latestDailySession.surveyScore == null ? '—' : String(latestDailySession.surveyScore)}
+                    value={`${latestDailySession.surveyScore == null ? 0 : clampPercent(latestDailySession.surveyScore)}%`}
                   />
                   <RiskIndicator
                     label="Reaction time"
                     tone={reactionTone}
-                    level={latestSession.reactionTimeMs == null ? '—' : `${latestSession.reactionTimeMs} ms · ${latestSession.reactionTimeMs <= 1500 ? 'within 1500 ms' : 'over 1500 ms'}`}
-                    value={`${latestSession.reactionTimeMs == null ? 0 : clampPercent(latestSession.reactionTimeMs / 30)}%`}
+                    level={latestDailySession.reactionTimeMs == null ? '—' : `${latestDailySession.reactionTimeMs} ms · ${latestDailySession.reactionTimeMs <= 1500 ? 'within 1500 ms' : 'over 1500 ms'}`}
+                    value={`${latestDailySession.reactionTimeMs == null ? 0 : clampPercent(latestDailySession.reactionTimeMs / 30)}%`}
                   />
                   <RiskIndicator
                     label="Facial expression"
                     tone={facialTone}
-                    level={latestSession.emotion == null ? '—' : `${latestSession.emotion.charAt(0).toUpperCase() + latestSession.emotion.slice(1)} · ${latestSession.faceConfidence == null ? '—' : latestSession.faceConfidence}% confidence`}
-                    value={`${latestSession.faceConfidence == null ? 0 : latestSession.faceConfidence}%`}
+                    level={latestDailySession.emotion == null ? '—' : `${latestDailySession.emotion.charAt(0).toUpperCase() + latestDailySession.emotion.slice(1)} · ${latestDailySession.faceConfidence == null ? '—' : latestDailySession.faceConfidence}% confidence`}
+                    value={`${latestDailySession.faceConfidence == null ? 0 : latestDailySession.faceConfidence}%`}
                   />
                 </>
               )}
@@ -442,9 +447,10 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             const band = session.score == null ? null : bandForScore(session.score);
             const riskLabel = session.stressLevel ?? (session.score == null ? '—' : bandLabel(session.score));
             const riskClass = (session.stressLevel ?? band ?? '').toLowerCase();
-            /** The daily multi-modal check-in carries reaction time (and face
-             *  scan); supplementary questionnaires save neither. */
-            const daily = session.reactionTimeMs != null || (session.notes && session.notes.includes('(multi-modal)'));
+            /** Daily = multi-modal PSS-10 check-in; supplementary = questionnaire-only. Falls back to the
+             *  legacy reaction-time/notes heuristic for rows saved before migration 0034. */
+            const daily = session.assessmentType === 'daily'
+              || (session.assessmentType == null && (session.reactionTimeMs != null || (session.notes && session.notes.includes('(multi-modal)'))));
             return (
               <section className="detail-assessment-card" key={session.id}>
                 <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span>{daily ? <span className="daily-pill">Daily assessment</span> : <span className="supplementary-pill">Supplementary assessment</span>}</h2></div>

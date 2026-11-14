@@ -47,6 +47,7 @@ export interface DoctorProfile {
 }
 
 export type StressLevel = 'Low' | 'Moderate' | 'High';
+export type AssessmentType = 'daily' | 'supplementary';
 
 export interface StressSession {
   id: string;
@@ -61,6 +62,8 @@ export interface StressSession {
   face_confidence: number | null;
   notes: string | null;
   created_at: string;
+  /** 'daily' = multi-modal PSS-10 check-in (drives recents/status). 'supplementary' = questionnaire-only (feeds averages only). */
+  assessment_type: AssessmentType | null;
 }
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
@@ -162,6 +165,8 @@ export interface PatientCaseEntry {
   last_session_at: string | null;
   last_score: number | null;
   last_stress_level: StressLevel | null;
+  /** 'daily' = status derived from latest multi-modal check-in; 'supplementary' = latest session was a questionnaire-only entry; null = no sessions. */
+  statusBasis: AssessmentType | null;
 }
 
 export interface ApiResponse<T> {

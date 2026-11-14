@@ -72,6 +72,7 @@ interface ProfileRow {
 interface SessionRow {
   user_id: string;
   score: number | null;
+  assessment_type: string | null;
   created_at: string;
 }
 
@@ -177,7 +178,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
       column: 'role',
       values: ['student'],
     }),
-    fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at'),
+    fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, assessment_type, created_at'),
     fetchAllRows<AppointmentRow>('appointments', 'id, patient_id, scheduled_for, status, consultation_mode, created_at, updated_at', {
       column: 'doctor_id',
       values: [doctorId],
@@ -196,7 +197,9 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
     ...appointments.map((row) => row.patient_id),
   ]);
 
-  // Latest stress result + most recent session per student (sessions come newest first).
+  // Latest daily stress result + most recent daily session per student
+  // (sessions come newest first). Supplementary sessions are excluded from
+  // recents/status — they still feed average stress level elsewhere.
   const latestScore = new Map<string, number | null>();
   const latestAt = new Map<string, string>();
   const highRiskAlerts = new Set<string>();
@@ -204,6 +207,7 @@ export const fetchDoctorDashboardOverview = async (): Promise<DoctorDashboardOve
   const weekAgo = now - WEEK_MS;
   const twoWeeksAgo = now - 2 * WEEK_MS;
   for (const row of sessions) {
+    if (row.assessment_type !== 'daily') continue;
     if (!latestScore.has(row.user_id)) {
       latestScore.set(row.user_id, row.score);
       latestAt.set(row.user_id, row.created_at);

@@ -31,6 +31,7 @@ interface ProfileRow {
 interface SessionRow {
   user_id: string;
   score: number | null;
+  assessment_type: string | null;
   created_at: string;
 }
 
@@ -124,7 +125,7 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
 
-  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at');
+  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, assessment_type, created_at');
 
   const { count: appointmentCount, error: appointmentsError } = await supabase
     .from('appointments')
@@ -137,12 +138,21 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
     .eq('is_verified', false);
   if (pendingError) throw new Error(pendingError.message);
 
-  const latest = latestSessionsByUser(sessionRows);
+  // Low/moderate/high bands are derived from each student's latest DAILY
+  // session — supplementary sessions feed the average but not the bands.
+  const latestByUser = new Map<string, SessionRow>();
+  for (const row of sessionRows) {
+    if (row.assessment_type !== 'daily') continue;
+    const current = latestByUser.get(row.user_id);
+    if (!current || new Date(row.created_at).getTime() > new Date(current.created_at).getTime()) {
+      latestByUser.set(row.user_id, row);
+    }
+  }
   let low = 0;
   let moderate = 0;
   let high = 0;
   let assessed = 0;
-  Array.from(latest.values()).forEach((session) => {
+  Array.from(latestByUser.values()).forEach((session) => {
     if (session.score == null) return;
     assessed += 1;
     const band = bandForScore(session.score);
@@ -367,12 +377,15 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
 
   const ids = rows.map((row) => row.id);
 
-  const sessionRows = await fetchAllRows<{ user_id: string; score: number | null; stress_level: string | null; created_at: string }>(
+  const sessionRows = await fetchAllRows<{ user_id: string; score: number | null; stress_level: string | null; assessment_type: string | null; created_at: string }>(
     'stress_sessions',
-    'user_id, score, stress_level, created_at',
+    'user_id, score, stress_level, assessment_type, created_at',
     { column: 'user_id', values: ids },
   );
-  const latest = latestSessionsByUser(sessionRows);
+  // Latest score/level in the account sidebar reflects the latest DAILY
+  // assessment — supplementary sessions feed averages only.
+  const dailySessionRows = sessionRows.filter((row) => row.assessment_type === 'daily');
+  const latest = latestSessionsByUser(dailySessionRows);
 
   const sessionCounts = new Map<string, number>();
   for (const row of sessionRows as SessionRow[]) {
@@ -488,6 +501,8 @@ export interface AdminResultRow {
   emotion: string | null;
   faceConfidence: number | null;
   createdAt: string;
+  /** 'daily' = multi-modal check-in; 'supplementary' = questionnaire-only. */
+  assessmentType: string | null;
   /** Tool title stored in survey_answers.jsonb; null on sessions saved before per-item answers existed. */
   toolTitle: string | null;
   /** When a doctor last marked this result as reviewed; null = not reviewed (A-3). */
@@ -518,10 +533,11 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
     face_confidence: number | null;
     created_at: string;
     reviewed_at: string | null;
+    assessment_type: string | null;
     survey_answers: { toolTitle?: unknown } | null;
   }>(
     'stress_sessions',
-    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at, reviewed_at, survey_answers',
+    'id, user_id, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, created_at, reviewed_at, assessment_type, survey_answers',
   );
   if (!rows.length) return [];
 
@@ -561,6 +577,7 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
       emotion: row.emotion,
       faceConfidence: row.face_confidence,
       createdAt: row.created_at,
+      assessmentType: row.assessment_type ?? null,
       reviewedAt: row.reviewed_at,
       toolTitle: typeof row.survey_answers?.toolTitle === 'string' ? row.survey_answers.toolTitle : null,
     };
@@ -631,7 +648,7 @@ export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> =
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
 
-  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, created_at');
+  const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, assessment_type, created_at');
 
   const now = new Date();
   const periodStart = months > 0 ? new Date(now.getFullYear(), now.getMonth() - (months - 1), 1) : null;
@@ -641,17 +658,21 @@ export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> =
 
   const students = profileRows.filter((row) => row.role === 'student').length;
 
-  // Same definition as the dashboard's "assessed" counter: one student counts
-  // once, from their newest session in the selected period, and only when it
-  // carries a score.
-  const latest = latestSessionsByUser(inPeriod);
+  // Bands / assessed count: latest DAILY session per student in the period
+  // (supplementary feeds the average, not the bands).
+  const latestDailyByUser = new Map<string, SessionRow>();
+  for (const row of inPeriod) {
+    if (row.assessment_type !== 'daily') continue;
+    const current = latestDailyByUser.get(row.user_id);
+    if (!current || new Date(row.created_at).getTime() > new Date(current.created_at).getTime()) {
+      latestDailyByUser.set(row.user_id, row);
+    }
+  }
   let low = 0;
   let moderate = 0;
   let high = 0;
   let assessed = 0;
-  let scoreSum = 0;
-  let scoreCount = 0;
-  Array.from(latest.values()).forEach((session) => {
+  Array.from(latestDailyByUser.values()).forEach((session) => {
     if (session.score == null) return;
     assessed += 1;
     const band = bandForScore(session.score);
@@ -659,6 +680,9 @@ export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> =
     else if (band === 'moderate') moderate += 1;
     else high += 1;
   });
+  // Average stress includes ALL sessions (daily + supplementary) in the period.
+  let scoreSum = 0;
+  let scoreCount = 0;
   for (const session of inPeriod) {
     if (session.score == null) continue;
     scoreSum += session.score;
