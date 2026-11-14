@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NotificationBell } from '../NotificationBell';
 import { NotificationPanel } from '../NotificationPanel';
 import { NotificationHistorySheet } from '../NotificationHistorySheet';

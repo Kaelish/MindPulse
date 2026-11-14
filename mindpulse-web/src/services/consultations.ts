@@ -480,7 +480,7 @@ export const sendWebChatMessage = async (
 
   let stored: { path: string; name: string; kind: 'image' | 'document' } | null = null;
   if (picked) {
-    const path = `${patientId}/${doctorId}/${Date.now()}_${picked.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
+    const path = `${patientId}/${doctorId}/${Date.now()}_${picked.name.replace(/[^\w.-]+/g, '_').slice(-80)}`;
     const { error: uploadError } = await supabase.storage
       .from(CHAT_BUCKET)
       .upload(path, picked.file, { contentType: picked.file.type || 'application/octet-stream', upsert: false });
