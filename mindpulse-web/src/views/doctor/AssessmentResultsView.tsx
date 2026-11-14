@@ -139,21 +139,62 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const riskClass = (result.stressLevel ?? band ?? '').toLowerCase();
           const isReviewed = result.reviewedAt != null;
           const daily = isDailyAssessment(result);
-          return <article className="assessment-card" key={result.id}>
-            <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><div className="assessment-name-row"><span className="scan-label">{result.studentName}</span>{daily ? <span className="daily-pill">Daily assessment</span> : <span className="supplementary-pill">Supplementary assessment</span>}</div><strong>{result.id.slice(0, 8)}</strong><div className="assessment-meta"><small>{formatDate(result.createdAt)}</small> <span>·</span> <small>{assessmentNameOf(result)}</small></div></div></div>
-              <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
-              <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
+          const scoreText = result.score == null ? '—' : `${result.score}%`;
+          return <article className="assessment-summary-card" key={result.id}>
+            <header className="assessment-summary-header">
+              <div className="assessment-student">
+                <span className="assessment-avatar">
+                  {result.avatarUrl ? (
+                    <img
+                      src={result.avatarUrl}
+                      alt={`${result.studentName} profile picture`}
+                      className="assessment-avatar-img"
+                    />
+                  ) : (
+                    ((result.studentName || 'Patient').trim().charAt(0)).toUpperCase()
+                  )}
+                </span>
+                <div className="assessment-context">
+                  <div className="assessment-name-row">
+                    <span className="assessment-name">{result.studentName}</span>
+                    {daily ? <span className="assessment-pill assessment-pill-daily">DAILY ASSESSMENT</span> : <span className="assessment-pill assessment-pill-supplementary">Supplementary assessment</span>}
+                  </div>
+                  <div className="assessment-case-meta">
+                    <span className="assessment-case-id">{result.id.slice(0, 8)}</span>
+                    <span className="assessment-meta-sep">•</span>
+                    <span className="assessment-stamp">{formatDate(result.createdAt)}</span>
+                    <span className="assessment-meta-sep">•</span>
+                    <span className="assessment-protocol">{assessmentNameOf(result)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="assessment-score-side">
+                <div className="assessment-score-block">
+                  <strong className={`assessment-score-value ${result.score == null ? 'assessment-score-empty' : ''}`}>{scoreText}</strong>
+                  <span className={`assessment-risk-badge assessment-risk-${riskClass || 'unknown'}`}>{riskLabel}</span>
+                </div>
+                <div className="assessment-actions">
+                  {isReviewed ? (
+                    <span className="assessment-reviewed" aria-label="Reviewed"><span aria-hidden="true">✓</span> Reviewed</span>
+                  ) : (
+                    <>
+                      <button type="button" className="assessment-btn assessment-btn-review" onClick={() => void toggleReviewed(result)}>Mark as Reviewed</button>
+                      <button type="button" className="assessment-btn assessment-btn-view" onClick={onViewFullCase}>View Full Case</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </header>
+            <div className="assessment-key-metrics">
+              <div className="assessment-metrics-label">KEY METRICS</div>
+              <div className="assessment-metrics-grid">
+                <MetricTile label="Heart rate" value={result.heartRate == null ? '—' : `${result.heartRate} bpm`} width={result.heartRate == null ? 0 : Math.max(0, Math.min(100, result.heartRate))} fill="blue" />
+                <MetricTile label="Survey score" value={result.surveyScore == null ? '—' : String(result.surveyScore)} width={result.surveyScore == null ? 0 : Math.max(0, Math.min(100, result.surveyScore))} fill="teal" />
+                <MetricTile label="Reaction time" value={result.reactionTimeMs == null ? '—' : `${result.reactionTimeMs} ms`} width={result.reactionTimeMs == null ? 0 : Math.max(0, Math.min(100, result.reactionTimeMs / 30))} fill="emerald" />
+                <MetricTile label="Facial confidence" value={result.faceConfidence == null ? '—' : `${result.faceConfidence}%`} width={result.faceConfidence == null ? 0 : Math.max(0, Math.min(100, result.faceConfidence))} fill="indigo" skipped={result.faceConfidence == null} />
+                <MetricTile label="Emotion" value={result.emotion ?? 'Neutral'} skipped={result.emotion == null} emotion />
+              </div>
             </div>
-            <div className="emotion-analysis">
-              <span className="analysis-label">Key<br />Metrics:</span>
-              <MetricBar label="Heart rate" value={result.heartRate == null ? '—' : `${result.heartRate} bpm`} width={result.heartRate == null ? 0 : Math.max(0, Math.min(100, result.heartRate))} color="blue" />
-              <MetricBar label="Survey score" value={result.surveyScore == null ? '—' : String(result.surveyScore)} width={result.surveyScore == null ? 0 : Math.max(0, Math.min(100, result.surveyScore))} color="cyan" />
-              <MetricBar label="Reaction time" value={result.reactionTimeMs == null ? '—' : `${result.reactionTimeMs} ms`} width={result.reactionTimeMs == null ? 0 : Math.max(0, Math.min(100, result.reactionTimeMs / 30))} color="green" />
-              <MetricBar label="Facial confidence" value={result.faceConfidence == null ? '—' : `${result.faceConfidence}%`} width={result.faceConfidence == null ? 0 : Math.max(0, Math.min(100, result.faceConfidence))} color="blue" />
-              <div className="emotion-bar" style={{ gridColumn: '2 / -1' }}><div><span>Emotion</span><b>{result.emotion ?? '—'}</b></div></div>
-            </div>
-            <button type="button" className={`review-button ${isReviewed ? 'reviewed' : ''}`} onClick={() => void toggleReviewed(result)}>{isReviewed ? 'Reviewed' : 'Mark as Reviewed'}</button>
           </article>;
         })}</div>}
         {visibleResults.length === 0 && (results.length === 0
@@ -169,4 +210,26 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
 };
 
 const Summary: React.FC<{ label: string; value: string; change: string; tone: 'green' | 'red' | 'neutral' }> = ({ label, value, change, tone }) => <article className={`assessment-summary-card ${tone}`}><span>{label}</span><strong>{value}</strong>{change && <small>{change}</small>}</article>;
-const MetricBar: React.FC<{ label: string; value: string; width: number; color: 'blue' | 'cyan' | 'green' }> = ({ label, value, width, color }) => <div className="emotion-bar"><div><span>{label}</span><b>{value}</b></div><i className={color} style={{ width: `${Math.round(width)}%` }} /></div>;
+const MetricTile: React.FC<{
+  label: string;
+  value: string;
+  width?: number;
+  fill?: 'blue' | 'teal' | 'emerald' | 'indigo';
+  skipped?: boolean;
+  emotion?: boolean;
+}> = ({ label, value, width = 0, fill = 'blue', skipped, emotion }) => {
+  const bar = (
+    <div className="assessment-progress-track">
+      <div className={`assessment-progress-fill assessment-fill-${fill}`} style={{ width: `${Math.round(width)}%` }} />
+    </div>
+  );
+  return (
+    <div className="assessment-metric-tile">
+      <div className="assessment-metric-top">
+        <span className="assessment-metric-label">{label}</span>
+        <span className="assessment-metric-value tabular-nums">{value}</span>
+      </div>
+      {skipped ? <span className="assessment-skipped">Skipped</span> : emotion ? <span className="assessment-emotion-pill">{value}</span> : bar}
+    </div>
+  );
+};

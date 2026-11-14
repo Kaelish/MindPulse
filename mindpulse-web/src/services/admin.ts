@@ -479,6 +479,7 @@ export interface AdminResultRow {
   id: string;
   studentId: string;
   studentName: string;
+  avatarUrl: string | null;
   score: number | null;
   stressLevel: string | null;
   heartRate: number | null;
@@ -527,11 +528,17 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
   const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, email')
+    .select('id, first_name, last_name, email, avatar_url')
     .in('id', userIds);
   if (profilesError) throw new Error(profilesError.message);
   const byId = new Map(
-    ((profiles ?? []) as { id: string; first_name: string | null; last_name: string | null; email: string | null }[]).map(
+    ((profiles ?? []) as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      avatar_url: string | null;
+    }[]).map(
       (profile) => [profile.id, profile],
     ),
   );
@@ -545,6 +552,7 @@ export const fetchAdminResults = async (): Promise<AdminResultRow[]> => {
       id: row.id,
       studentId: row.user_id,
       studentName: name,
+      avatarUrl: profile?.avatar_url ?? null,
       score: row.score,
       stressLevel: row.stress_level,
       heartRate: row.heart_rate,
