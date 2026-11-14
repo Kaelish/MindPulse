@@ -684,7 +684,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
 const DetailStat: React.FC<{ label: string; value: string; danger?: boolean }> = ({ label, value, danger }) => <article className="detail-stat"><span>{label}</span><strong className={danger ? 'danger-text' : ''}>{value}</strong></article>;
 const RiskIndicator: React.FC<{ label: string; level: string; value: string; tone?: 'good' | 'warn' | 'bad' | 'neutral' }> = ({ label, level, value, tone = 'neutral' }) => <div className={`risk-indicator tone-${tone}`}><div><span>{label}</span><b>{level}</b></div><i style={{ width: value }} /></div>;
-const SessionMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="detail-emotion"><div><span>{label}</span><b>{value}</b></div></div>;
+const SessionMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="detail-emotion"><span>{label}</span><b>{value}</b></div>;
 
 /** One column of the Health Background panel: declared labels, or the honest empty state. */
 const ConditionGroup: React.FC<{ label: string; values: string[] }> = ({ label, values }) => (

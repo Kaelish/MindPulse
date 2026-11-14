@@ -1464,7 +1464,7 @@
 
 .doctor-scope .detail-emotion-bars {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   border-top-color: var(--doc-line);
 }
@@ -1504,13 +1504,19 @@
 
 /* Assessment metrics read as small tiles inside the card. */
 .doctor-scope .detail-emotion {
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 10px;
   border: 1px solid var(--doc-line);
   border-radius: 10px;
   background: var(--doc-panel);
+  text-align: center;
+  min-height: 86px;
 }
 
-.doctor-scope .detail-emotion > div,
 .doctor-scope .emotion-bar > div {
   display: flex;
   align-items: center;
