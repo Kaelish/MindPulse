@@ -10,6 +10,8 @@ const prefersReducedMotion = () =>
   typeof window.matchMedia === 'function'
   && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+export { prefersReducedMotion };
+
 export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onLogIn }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 

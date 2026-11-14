@@ -4,6 +4,7 @@ import { AboutSection } from './AboutSection';
 import { FaqSection } from './FaqSection';
 import { HeroSection } from './HeroSection';
 import { LandingNavbar } from './LandingNavbar';
+import { BackToTopButton } from './BackToTopButton';
 import './LandingPage.css';
 
 interface LandingPageProps {
@@ -26,6 +27,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogIn }) => {
       </a>
 
       <LandingNavbar onLogIn={onLogIn} />
+      <BackToTopButton />
 
       <main id="main-content" tabIndex={-1}>
         <HeroSection />
