@@ -228,6 +228,11 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const reactionTone = !latestSession || latestSession.reactionTimeMs == null
     ? 'neutral'
     : latestSession.reactionTimeMs <= 1500 ? 'good' : 'bad';
+  const facialTone = !latestSession || latestSession.emotion == null
+    ? 'neutral'
+    : latestSession.emotion === 'happy' ? 'good'
+      : latestSession.emotion === 'neutral' ? 'warn'
+      : 'bad';
 
   const saveRecommendation = async () => {
     if (!note.trim()) {
@@ -412,6 +417,12 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                     level={latestSession.reactionTimeMs == null ? '—' : `${latestSession.reactionTimeMs} ms · ${latestSession.reactionTimeMs <= 1500 ? 'within 1500 ms' : 'over 1500 ms'}`}
                     value={`${latestSession.reactionTimeMs == null ? 0 : clampPercent(latestSession.reactionTimeMs / 30)}%`}
                   />
+                  <RiskIndicator
+                    label="Facial expression"
+                    tone={facialTone}
+                    level={latestSession.emotion == null ? '—' : `${latestSession.emotion.charAt(0).toUpperCase() + latestSession.emotion.slice(1)} · ${latestSession.faceConfidence == null ? '—' : latestSession.faceConfidence}% confidence`}
+                    value={`${latestSession.faceConfidence == null ? 0 : latestSession.faceConfidence}%`}
+                  />
                 </>
               )}
             </section>
@@ -442,6 +453,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                   <SessionMetric label="Heart rate" value={session.heartRate == null ? '—' : `${session.heartRate} bpm`} />
                   <SessionMetric label="Survey score" value={session.surveyScore == null ? '—' : String(session.surveyScore)} />
                   <SessionMetric label="Reaction time" value={session.reactionTimeMs == null ? '—' : `${session.reactionTimeMs} ms`} />
+                  <SessionMetric label="Facial confidence" value={session.faceConfidence == null ? '—' : `${session.faceConfidence}%`} />
                 </div>
                 {session.surveyAnswers && (
                   <>

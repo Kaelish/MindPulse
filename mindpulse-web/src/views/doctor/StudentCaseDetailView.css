@@ -35,7 +35,7 @@
 .detail-stat span { display: block; color: #718096; font-size: 0.7rem; }
 .detail-stat strong { display: block; margin-top: 10px; color: #202938; font-size: 0.95rem; }
 .danger-text { color: #ef4444 !important; }
-.detail-panels { display: grid; grid-template-columns: 1.45fr 0.8fr; gap: 16px; }
+.detail-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
 .detail-panel, .detail-assessment-card { padding: 18px; background: #fff; border: 1px solid #e0e7ef; border-radius: 9px; }
 .detail-panel h2, .detail-assessment-card h2 { margin: 0 0 16px; color: #202938; font-size: 0.85rem; }
 .trend-chart { height: 160px; display: flex; align-items: flex-end; gap: 18px; padding: 0 20px 0 35px; border-bottom: 1px solid #dfe6ee; background: repeating-linear-gradient(to top, transparent 0, transparent 39px, #edf1f5 40px); }

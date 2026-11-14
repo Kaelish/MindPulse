@@ -150,6 +150,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
               <MetricBar label="Heart rate" value={result.heartRate == null ? '—' : `${result.heartRate} bpm`} width={result.heartRate == null ? 0 : Math.max(0, Math.min(100, result.heartRate))} color="blue" />
               <MetricBar label="Survey score" value={result.surveyScore == null ? '—' : String(result.surveyScore)} width={result.surveyScore == null ? 0 : Math.max(0, Math.min(100, result.surveyScore))} color="cyan" />
               <MetricBar label="Reaction time" value={result.reactionTimeMs == null ? '—' : `${result.reactionTimeMs} ms`} width={result.reactionTimeMs == null ? 0 : Math.max(0, Math.min(100, result.reactionTimeMs / 30))} color="green" />
+              <MetricBar label="Facial confidence" value={result.faceConfidence == null ? '—' : `${result.faceConfidence}%`} width={result.faceConfidence == null ? 0 : Math.max(0, Math.min(100, result.faceConfidence))} color="blue" />
               <div className="emotion-bar" style={{ gridColumn: '2 / -1' }}><div><span>Emotion</span><b>{result.emotion ?? '—'}</b></div></div>
             </div>
             <button type="button" className={`review-button ${isReviewed ? 'reviewed' : ''}`} onClick={() => void toggleReviewed(result)}>{isReviewed ? 'Reviewed' : 'Mark as Reviewed'}</button>

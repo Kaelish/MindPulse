@@ -1610,7 +1610,7 @@
 
 .doctor-scope .emotion-analysis {
   display: grid;
-  grid-template-columns: 92px repeat(3, minmax(120px, 1fr));
+  grid-template-columns: 92px repeat(4, minmax(120px, 1fr));
   align-items: end;
   gap: 24px;
   padding: 18px 4px 0;

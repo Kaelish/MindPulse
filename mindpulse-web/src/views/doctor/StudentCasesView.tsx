@@ -19,6 +19,8 @@ const CSV_COLUMNS: { key: keyof StudentCase; label: string }[] = [
   { key: 'program', label: 'Program' },
   { key: 'age', label: 'Age' },
   { key: 'status', label: 'Status' },
+  { key: 'emotion', label: 'Emotion' },
+  { key: 'faceConfidence', label: 'Face Confidence' },
   { key: 'lastAssessment', label: 'Last Assessment' },
   { key: 'score', label: 'Stress Level' },
   { key: 'trend', label: 'Trend' },
@@ -144,6 +146,8 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
                       <th>Patient</th>
                       <th>Program</th>
                       <th>Status</th>
+                      <th>Emotion</th>
+                      <th>Face Confidence</th>
                       <th>Last Assessment</th>
                       <th>Stress Level</th>
                       <th>Trend</th>
@@ -172,6 +176,8 @@ export const StudentCasesView: React.FC<StudentCasesViewProps> = ({ onViewDetail
                             {student.status}
                           </span>
                         </td>
+                        <td className="case-muted">{student.emotion ?? '—'}</td>
+                        <td className="case-muted">{student.faceConfidence == null ? '—' : `${student.faceConfidence}%`}</td>
                         <td className="case-muted">{student.lastAssessment}</td>
                         <td>{student.score}</td>
                         <td>

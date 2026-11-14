@@ -22,6 +22,10 @@ export interface StudentCaseRecord {
   lastAssessment: string;
   score: number;
   trend: string;
+  /** Dominant emotion from the latest session's facial scan (happy / neutral / sad). */
+  emotion: string | null;
+  /** Facial confidence from the latest session's facial scan (0–100). */
+  faceConfidence: number | null;
   /** Health background declared at onboarding (B-1); self-reported labels. */
   mentalConditions: string[];
   physicalConditions: string[];
@@ -45,6 +49,8 @@ type ProfileRow = {
 type SessionRow = {
   user_id: string;
   score: number | null;
+  emotion: string | null;
+  face_confidence: number | null;
   created_at: string;
 };
 
@@ -116,6 +122,8 @@ const buildStudentCase = (
     lastAssessment: formatDate(latest?.created_at ?? null),
     score,
     trend,
+    emotion: latest?.emotion ?? null,
+    faceConfidence: latest?.face_confidence ?? null,
     mentalConditions: toStringArray(profile.mental_conditions),
     physicalConditions: toStringArray(profile.physical_conditions),
   };
@@ -140,7 +148,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
-    .select('user_id, score, created_at')
+    .select('user_id, score, emotion, face_confidence, created_at')
     .order('created_at', { ascending: false });
   if (sessionsError) throw new Error(sessionsError.message);
 
@@ -182,7 +190,7 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
-    .select('user_id, score, created_at')
+    .select('user_id, score, emotion, face_confidence, created_at')
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
     .limit(2);
@@ -238,6 +246,7 @@ export interface StudentSessionRecord {
   surveyScore: number | null;
   reactionTimeMs: number | null;
   emotion: string | null;
+  faceConfidence: number | null;
   notes: string | null;
   /** Raw questionnaire answers; null for sessions saved before migration 0019. */
   surveyAnswers: SurveyAnswerSet | null;
@@ -251,7 +260,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
 
   const { data, error } = await supabase
     .from('stress_sessions')
-    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, notes, survey_answers')
+    .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, notes, survey_answers')
     .eq('user_id', studentId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -265,6 +274,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     survey_score: number | null;
     reaction_time_ms: number | null;
     emotion: string | null;
+    face_confidence: number | null;
     notes: string | null;
     survey_answers: unknown;
   }[]).map((row) => ({
@@ -276,6 +286,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     surveyScore: row.survey_score,
     reactionTimeMs: row.reaction_time_ms,
     emotion: row.emotion,
+    faceConfidence: row.face_confidence,
     notes: row.notes,
     surveyAnswers: parseSurveyAnswers(row.survey_answers),
   }));
