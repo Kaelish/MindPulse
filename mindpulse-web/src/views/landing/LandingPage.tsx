@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrandLogo } from '../../components/BrandLogo';
 import { AboutSection } from './AboutSection';
+import { FaqSection } from './FaqSection';
 import { HeroSection } from './HeroSection';
 import { LandingNavbar } from './LandingNavbar';
 import './LandingPage.css';
@@ -29,6 +30,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogIn }) => {
       <main id="main-content" tabIndex={-1}>
         <HeroSection />
         <AboutSection />
+        <FaqSection />
       </main>
 
       <footer className="landing-footer">
