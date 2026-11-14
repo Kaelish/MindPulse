@@ -153,7 +153,7 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
                   {result.avatarUrl ? (
                     <img
                       src={result.avatarUrl}
-                      alt={`${result.studentName} profile picture`}
+                      alt={result.studentName}
                       className="assessment-avatar-img"
                     />
                   ) : (

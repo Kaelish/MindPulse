@@ -4,7 +4,6 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import {
   AdminSystemSettings,
-  DEFAULT_ADMIN_SETTINGS,
   SYSTEM_VERSION,
   applyAdminSettings,
   loadAdminSettings,
@@ -104,27 +103,6 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     flashSaved();
   };
 
-  const resetToDefault = () => {
-    // Only the manually saved fields reset; automatic preferences (theme,
-    // density, alert/security switches) keep their current values.
-    const next: AdminSystemSettings = {
-      ...DEFAULT_ADMIN_SETTINGS,
-      general: {
-        ...DEFAULT_ADMIN_SETTINGS.general,
-        darkMode: draft.general.darkMode,
-        compactView: draft.general.compactView,
-      },
-      notification: { ...draft.notification },
-      security: {
-        ...DEFAULT_ADMIN_SETTINGS.security,
-        sessionTimeout: draft.security.sessionTimeout,
-        requireSpecialChars: draft.security.requireSpecialChars,
-      },
-    };
-    setDraft(next);
-    setSaved('');
-  };
-
   const cancelEditing = () => {
     setDraft(JSON.parse(savedSnapshot) as AdminSystemSettings);
     setEditing(false);
@@ -145,11 +123,6 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     <div className="settings-actions">
       {editing && dirty && <span className="settings-dirty">Unsaved changes</span>}
       {saved && !dirty && <span className="settings-saved">{saved}</span>}
-      {editing && tab === 'general' && (
-        <button type="button" className="settings-button secondary" onClick={resetToDefault}>
-          Reset to Default
-        </button>
-      )}
       {editing && dirty && <button type="button" className="settings-button secondary" onClick={cancelEditing}>Cancel</button>}
       <button
         type="button"
