@@ -77,4 +77,15 @@ export const CALM_TRACKS: CalmTrack[] = [
     origin: 'OpenGameArt',
     sourceUrl: 'https://opengameart.org/content/cave-explorer',
   },
+  {
+    id: 'bangkok_rain',
+    title: 'Raining in Bangkok',
+    subtitle: 'kijjaz',
+    icon: 'rainy-outline',
+    color: '#4FA3D1',
+    source: require('../../assets/audio/bangkok_rain.mp3'),
+    license: CC0,
+    origin: 'Freesound',
+    sourceUrl: 'https://freesound.org/people/kijjaz/sounds/856405/',
+  },
 ];
