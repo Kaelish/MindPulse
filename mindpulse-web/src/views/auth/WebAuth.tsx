@@ -495,6 +495,9 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
           </aside>
 
           <div className="auth-form-panel">
+            <button type="button" className="auth-back-link" onClick={() => setScreen('login')}>
+              <span aria-hidden="true">←</span> Back to sign in
+            </button>
             <h1>Create your doctor account</h1>
             <p>Patients register through the MindPulse mobile app.</p>
             <form className="auth-form" onSubmit={handleRegister}>
