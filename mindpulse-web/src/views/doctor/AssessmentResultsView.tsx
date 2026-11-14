@@ -42,6 +42,11 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
 
   const bandOf = (result: AdminResultRow) => (result.score == null ? null : bandForScore(result.score));
 
+  /** A session is the daily multi-modal check-in when it carries reaction time
+   *  (and/or face confidence) — supplementary questionnaires save neither. */
+  const isDailyAssessment = (result: AdminResultRow) =>
+    result.reactionTimeMs != null || result.faceConfidence != null;
+
   const emotionOptions = useMemo(() => {
     const distinct = Array.from(new Set(results.map((result) => result.emotion).filter((value): value is string => Boolean(value)))).sort();
     return emotion === 'All Emotions' || distinct.includes(emotion) ? distinct : [emotion, ...distinct];
@@ -133,9 +138,10 @@ export const AssessmentResultsView: React.FC<{ onViewFullCase?: () => void }> = 
           const riskLabel = result.stressLevel ?? (band ? BAND_LABELS[band] : '—');
           const riskClass = (result.stressLevel ?? band ?? '').toLowerCase();
           const isReviewed = result.reviewedAt != null;
+          const daily = isDailyAssessment(result);
           return <article className="assessment-card" key={result.id}>
             <div className="assessment-card-header">
-              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><small>{formatDate(result.createdAt)}</small><small>{assessmentNameOf(result)}</small></div></div>
+              <div className="assessment-student"><span className="account-avatar">{(result.studentName || 'Patient').trim().charAt(0).toUpperCase()}</span><div><span className="scan-label">{result.studentName}</span><strong>{result.id.slice(0, 8)}</strong><div className="assessment-meta"><small>{formatDate(result.createdAt)}</small> <span>·</span> <small>{assessmentNameOf(result)}</small></div>{daily && <span className="daily-pill">Daily assessment</span>}</div></div>
               <div className="assessment-score"><strong>{result.score == null ? '—' : `${result.score}%`}</strong><span className={`risk-badge ${riskClass}`}>{riskLabel}</span></div>
               <button type="button" className="view-case-button" onClick={onViewFullCase}>View Full Case</button>
             </div>

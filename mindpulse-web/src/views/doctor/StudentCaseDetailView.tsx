@@ -11,6 +11,8 @@ import {
   StudentConsultationNoteRecord,
   StudentSessionRecord,
 } from '../../services/studentCases';
+import { ConsultationSummaryForm } from '../../components/ConsultationSummaryForm';
+import type { WebConsultationItem } from '../../services/consultations';
 import {
   createRecommendation,
   deleteRecommendation,
@@ -60,6 +62,33 @@ const formatDateTime = (value: string | Date) => {
     : date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 };
 
+/** Builds a WebConsultationItem from the lightweight appointment record so the
+ *  after-visit progress notes editor can open for this patient's booking. */
+const toWebConsultationItem = (student: StudentCase, c: StudentAppointmentRecord): WebConsultationItem => {
+  const statusMap: Record<string, WebConsultationItem['status']> = {
+    scheduled: 'Scheduled',
+    awaiting_payment: 'Awaiting Payment',
+    declined: 'Declined',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+  return {
+    id: c.id,
+    patientId: student.userId,
+    patientName: student.name,
+    studentId: student.id,
+    scheduledTime: c.scheduledFor || formatDateTime(c.createdAt),
+    status: statusMap[c.status] ?? 'Scheduled',
+    rawStatus: c.status as WebConsultationItem['rawStatus'],
+    notes: c.notes ?? undefined,
+    avatarInitials: student.initials,
+    avatarUrl: student.avatarUrl,
+    patientEmail: student.email,
+    consultationMode: 'online',
+  };
+};
+
 const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
 export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ onBack, student }) => {
@@ -68,6 +97,9 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
   const [sessions, setSessions] = useState<StudentSessionRecord[]>([]);
   const [consultations, setConsultations] = useState<StudentAppointmentRecord[]>([]);
   const [consultNotes, setConsultNotes] = useState<Record<string, StudentConsultationNoteRecord>>({});
+  /** The appointment whose after-visit progress notes are being edited in the popup. */
+  const [editingSummaryId, setEditingSummaryId] = useState<string | null>(null);
+  const [editingConsultation, setEditingConsultation] = useState<StudentAppointmentRecord | null>(null);
   const [recommendations, setRecommendations] = useState<DoctorRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -399,9 +431,12 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             const band = session.score == null ? null : bandForScore(session.score);
             const riskLabel = session.stressLevel ?? (session.score == null ? '—' : bandLabel(session.score));
             const riskClass = (session.stressLevel ?? band ?? '').toLowerCase();
+            /** The daily multi-modal check-in carries reaction time (and face
+             *  scan); supplementary questionnaires save neither. */
+            const daily = session.reactionTimeMs != null || (session.notes && session.notes.includes('(multi-modal)'));
             return (
               <section className="detail-assessment-card" key={session.id}>
-                <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span></h2></div>
+                <div><h2>{formatDateTime(session.createdAt)} <span className={`risk-badge ${riskClass}`}>{riskLabel}</span>{daily && <span className="daily-pill">Daily assessment</span>}</h2></div>
                 <strong className={band ? `score-${band}` : ''}>{session.score == null ? '—' : `${session.score}%`}<small>Stress Level</small></strong>
                 <div className="detail-emotion-bars">
                   <SessionMetric label="Heart rate" value={session.heartRate == null ? '—' : `${session.heartRate} bpm`} />
@@ -456,14 +491,31 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
             return (
               <section className="detail-panel consultation-detail" key={consultation.id}>
                 <h2>{consultation.scheduledFor || formatDateTime(consultation.createdAt)} <span className={pillClass}>{statusLabel}</span></h2>
-                {consultation.notes && (<><h3>Booking note</h3><p>{consultation.notes}</p></>)}
-                {note ? (
+                {consultation.notes && (
+                  <>
+                    <h3>Booking note</h3>
+                    <p>{consultation.notes}</p>
+                  </>
+                )}
+                {note && editingSummaryId !== consultation.id ? (
                   <div className="consult-summary">
                     <ConsultationSummaryView note={note} />
                   </div>
-                ) : consultation.status === 'completed' ? (
-                  <p className="consult-summary-pending">This consultation is completed, but no after-visit summary has been written yet.</p>
                 ) : null}
+                {editingSummaryId === consultation.id ? null : (
+                  <>
+                    {consultation.status === 'completed' && !note && (
+                      <p className="consult-summary-pending">This consultation is completed, but no after-visit summary has been written yet.</p>
+                    )}
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => { setEditingConsultation(consultation); setEditingSummaryId(consultation.id); }}
+                    >
+                      {note ? 'Edit progress notes' : 'Write progress notes'}
+                    </button>
+                  </>
+                )}
               </section>
             );
           })}
@@ -577,6 +629,43 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
           </section>
         </div>}
       </>}
+
+      {/* AFTER-VISIT PROGRESS NOTES POPUP */}
+      {editingSummaryId && editingConsultation && (
+        <div className="web-chat-modal-overlay summary-modal-overlay" onClick={() => setEditingSummaryId(null)}>
+          <div className="web-chat-modal-box summary-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="web-chat-modal-header">
+              <div>
+                <h3>After-visit summary</h3>
+                <p>
+                  {student.name} &middot; {editingConsultation.scheduledFor || formatDateTime(editingConsultation.createdAt)}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close summary"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.3rem',
+                  cursor: 'pointer',
+                  color: 'var(--doc-muted)',
+                }}
+                onClick={() => setEditingSummaryId(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="web-chat-modal-body">
+              <ConsultationSummaryForm
+                key={`${editingSummaryId}`}
+                appointment={toWebConsultationItem(student, editingConsultation)}
+                onDone={() => setEditingSummaryId(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

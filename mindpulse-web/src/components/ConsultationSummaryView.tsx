@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   consultationNoteHasContent,
   createConsultationAttachmentUrl,
@@ -115,6 +115,8 @@ export const ConsultationSummaryView = ({
 }: ConsultationSummaryViewProps) => {
   const [scanUrl, setScanUrl] = useState<string | null>(null);
   const [scanError, setScanError] = useState(false);
+  const [isPdfBusy, setIsPdfBusy] = useState(false);
+  const padRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +138,36 @@ export const ConsultationSummaryView = ({
   }, [note.attachmentPath]);
 
   const isLegacy = !has(note.presentingProblem) && !has(note.sessionContent) && consultationNoteHasContent(note);
+
+  const saveAsPdf = async () => {
+    const pad = padRef.current;
+    if (!pad) return;
+    const jsPDF = (await import('jspdf')).default;
+    const html2canvas = (await import('html2canvas')).default;
+    setIsPdfBusy(true);
+    try {
+      const canvas = await html2canvas(pad, { scale: 2, logging: false, useCORS: true });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const scale = pageWidth / canvas.width;
+      const totalHeightMm = canvas.height * scale;
+      let offsetY = 0;
+      pdf.addImage(canvas, 'PNG', 0, offsetY, pageWidth, totalHeightMm);
+      offsetY -= pageHeight;
+      while (-offsetY < totalHeightMm) {
+        pdf.addPage();
+        pdf.addImage(canvas, 'PNG', 0, offsetY, pageWidth, totalHeightMm);
+        offsetY -= pageHeight;
+      }
+      pdf.save(`therapy-progress-note-${note.appointmentId}.pdf`);
+    } catch (error) {
+      window.alert('Unable to save the PDF. Please try printing instead.');
+      console.error(error);
+    } finally {
+      setIsPdfBusy(false);
+    }
+  };
 
   return (
     <div className="therapy-pad-wrap">
@@ -167,7 +199,7 @@ export const ConsultationSummaryView = ({
         </div>
       ) : null}
 
-      <div className="therapy-pad" id={`therapy-pad-${note.appointmentId}`}>
+      <div className="therapy-pad" id={`therapy-pad-${note.appointmentId}`} ref={padRef}>
         <h3 className="tp-pad-title">THERAPY PROGRESS NOTE</h3>
 
         {/* header block */}
@@ -276,12 +308,11 @@ export const ConsultationSummaryView = ({
             ✎ Edit note
           </button>
         ) : null}
-        <button
-          type="button"
-          className="text-button tp-pad-print"
-          onClick={() => window.print()}
-        >
-          Print / Save as PDF
+        <button type="button" className="text-button" onClick={() => window.print()}>
+          Print
+        </button>
+        <button type="button" className="text-button tp-pad-print" onClick={saveAsPdf} disabled={isPdfBusy}>
+          {isPdfBusy ? 'Saving PDF…' : 'Save as PDF'}
         </button>
       </div>
     </div>
