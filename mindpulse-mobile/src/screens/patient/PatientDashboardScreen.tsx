@@ -153,6 +153,46 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
   const { userName, greetingDate, metrics, recentSessions } = data;
 
+  // Level color mapping (matches SessionRow status colors: High=red, Moderate=orange, Low=green)
+  const levelColor =
+    metrics.latestLevel === 'High'
+      ? '#E05C5C'
+      : metrics.latestLevel === 'Moderate'
+        ? '#E08A00'
+        : metrics.latestLevel === 'Low'
+          ? '#27AE60'
+          : Colors.textPrimary;
+
+  // Card background tint by level (High=red tint, Moderate=orange tint, Low=green tint)
+  const cardBg =
+    metrics.latestLevel === 'High'
+      ? '#FFF1F0'
+      : metrics.latestLevel === 'Moderate'
+        ? '#FFF9EC'
+        : metrics.latestLevel === 'Low'
+          ? '#EFFAF3'
+          : toneBg('#FAE5DF');
+
+  // Trend styling: decreasing=green, increasing=red; arrow follows direction
+  const trendRising = metrics.latestTrend === 'Increasing';
+  const trendFalling = metrics.latestTrend === 'Decreasing';
+  const trendColor = trendFalling
+    ? '#27AE60'
+    : trendRising
+      ? '#E05C5C'
+      : Colors.textSecondary;
+  const trendIcon = trendRising ? 'trending-up' : trendFalling ? 'trending-down' : 'trending-up';
+
+  // Avg stress level color (from avgStressStatus: High/Moderate/Low Overall)
+  const avgLevelColor =
+    metrics.avgStressStatus === 'High Overall'
+      ? '#E05C5C'
+      : metrics.avgStressStatus === 'Moderate Overall'
+        ? '#E08A00'
+        : metrics.avgStressStatus === 'Low Overall'
+          ? '#27AE60'
+          : Colors.textSecondary;
+
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
   // The home page's "Latest Stress Level" reflects the daily assessment, so the
   // card should open that same daily session (not a supplementary one).
@@ -203,15 +243,15 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
         <View style={styles.body}>
 
           {/* Latest Stress Card */}
-          <TouchableOpacity style={styles.stressCard} activeOpacity={0.9}
+          <TouchableOpacity style={[styles.stressCard, { backgroundColor: cardBg }]} activeOpacity={0.9}
             onPress={() => latestDailySession && setSelectedSession(latestDailySession)}>
             <View style={styles.stressCardLeft}>
               <Text style={styles.stressCardLabel}>Latest Stress Level</Text>
-              <Text style={styles.stressCardLevel}>{metrics.latestLevel ?? 'No data yet'}</Text>
+              <Text style={[styles.stressCardLevel, { color: levelColor }]}>{metrics.latestLevel ?? 'No data yet'}</Text>
               {metrics.latestTrend !== null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.stressCardTrend}>{metrics.latestTrend}</Text>
+                  <Ionicons name={trendIcon} size={16} color={trendColor} />
+                  <Text style={[styles.stressCardTrend, { color: trendColor }]}>{metrics.latestTrend}</Text>
                 </View>
               )}
             </View>
@@ -261,14 +301,14 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
 
             <TouchableOpacity style={styles.metricCard} activeOpacity={0.85} onPress={() => onNavigate?.('analysis')}>
               <View style={styles.metricLabelRow}>
-                <Ionicons name="trending-up" size={16} color={tone('#E08A00')} />
+                <Ionicons name="trending-up" size={16} color={avgLevelColor} />
                 <Text style={styles.metricLabel}>Avg Stress</Text>
               </View>
               <View style={styles.metricValueRow}>
                 <Text style={styles.metricNum}>{metrics.avgStressScore ?? '—'}</Text>
                 {metrics.avgStressScore !== null && <Text style={styles.metricUnit}>/100</Text>}
               </View>
-              <Text style={[styles.metricStatus, { color: tone('#E08A00') }]}>{metrics.avgStressStatus}</Text>
+              <Text style={[styles.metricStatus, { color: avgLevelColor }]}>{metrics.avgStressStatus}</Text>
             </TouchableOpacity>
           </View>
 
