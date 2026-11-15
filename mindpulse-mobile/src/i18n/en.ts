@@ -372,7 +372,7 @@ export const en: Translations = {
           tapReadAll: 'Tap to read all',
           collapseA11y: 'Collapse this note',
           showAllFmt: 'Show the whole note. {preview}',
-          deleteA11y: 'Delete this note',
+          hideA11y: 'Hide this note',
           months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         },
         pause: {

@@ -23,6 +23,18 @@ jest.mock('../../services/assessmentTools', () => ({
   fetchActiveAssessmentTools: jest.fn(),
 }));
 
+// The hub render must not depend on the live Supabase client: the real
+// auth/session path makes this test's act() flush time vary with network and
+// machine load, which timed out under the full suite. The once-per-day gate is
+// pinned separately in services/dashboard.test.ts.
+jest.mock('../../services/dashboard', () => ({
+  fetchTodayStressSession: jest.fn(() => Promise.resolve(null)),
+}));
+jest.mock('../../services/session', () => ({
+  requireUserId: jest.fn(() => Promise.resolve('test-user')),
+  requireUser: jest.fn(() => Promise.resolve({ id: 'test-user' })),
+}));
+
 const mockedFetch = fetchActiveAssessmentTools as jest.MockedFunction<typeof fetchActiveAssessmentTools>;
 
 const multiModalTool: AssessmentTool = {

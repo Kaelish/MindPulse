@@ -216,7 +216,8 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   };
 
   /**
-   * Dismiss (B-2): remove the row from my own list. Optimistic with a
+   * Archive (B-2): soft-delete the row from my own list — sets is_deleted so
+   * the row is preserved but hidden. Optimistic with a
    * position-preserving rollback, and the unread badge follows the row.
    */
   const dismiss = async (row: FeedNotification) => {
@@ -236,7 +237,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
         return next;
       });
       if (!row.read) setUnread((count) => count + 1);
-      setActionError(e?.message || 'Could not dismiss this notification.');
+      setActionError(e?.message || 'Could not archive this notification.');
     } finally {
       setDismissingId(null);
     }
@@ -421,7 +422,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
                             disabled={dismissingId === row.id}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={`Dismiss notification: ${row.title}`}
+                            accessibilityLabel={`Archive notification: ${row.title}`}
                             style={styles.dismissBtn}
                           >
                             <Ionicons

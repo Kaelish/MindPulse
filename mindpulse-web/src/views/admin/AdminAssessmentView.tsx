@@ -413,7 +413,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                       <button type="button" className="assessment-edit-button" onClick={() => openEdit(tool)}>
                         ✏ Edit
                       </button>
-                      {/* The built-in PSS-10 template offers no delete action
+                      {/* The built-in PSS-10 template offers no archive action
                           (A-10 / C-15); every other tool keeps its own. */}
                       {!isPss10Tool(tool) && (
                         <button
@@ -421,7 +421,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                           className="assessment-delete-button"
                           onClick={() => void archiveTool(tool)}
                         >
-                          🗑
+                          📦 Archive
                         </button>
                       )}
                     </div>
@@ -705,7 +705,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                         <button
                           type="button"
                           className="question-box-remove"
-                          aria-label="Delete question"
+                          aria-label="Remove question"
                           onClick={() => removeQuestion(question.id)}
                         >
                           🗑

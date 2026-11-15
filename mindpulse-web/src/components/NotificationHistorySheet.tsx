@@ -145,8 +145,9 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
   };
 
   /**
-   * Dismiss (B-2): remove the row from my own list. Optimistic with rollback,
-   * and leaving the detail pane when the open row is the one dismissed.
+   * Archive (B-2): soft-delete the row from my own list — sets is_deleted so
+   * the row is preserved but hidden. Optimistic with rollback,
+   * and leaving the detail pane when the open row is the one archived.
    */
   const dismissOne = async (notification: FeedNotification) => {
     setDismissingId(notification.id);
@@ -157,7 +158,7 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
       setSelectedId((current) => (current === notification.id ? null : current));
       onChanged?.();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Unable to dismiss this notification.');
+      setActionError(err instanceof Error ? err.message : 'Unable to archive this notification.');
     } finally {
       setDismissingId(null);
     }
@@ -310,7 +311,7 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
                         <button
                           type="button"
                           className="notif-hs-row-dismiss"
-                          aria-label={`Dismiss notification: ${row.title}`}
+                          aria-label={`Archive notification: ${row.title}`}
                           disabled={dismissingId === row.id}
                           onClick={() => void dismissOne(row)}
                         >
@@ -357,7 +358,7 @@ export const NotificationHistorySheet: React.FC<NotificationHistorySheetProps> =
                       disabled={dismissingId === selected.id}
                       onClick={() => void dismissOne(selected)}
                     >
-                      {dismissingId === selected.id ? 'Dismissing…' : 'Dismiss'}
+                      {dismissingId === selected.id ? 'Archiving…' : 'Archive'}
                     </button>
                     <button type="button" className="notif-hs-primary" onClick={() => jumpToDoctorView(selected)}>
                       View details

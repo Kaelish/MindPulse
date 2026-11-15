@@ -191,14 +191,14 @@ test('the doctor history sheet dismisses a row straight from the list (B-2)', as
   const onChanged = jest.fn();
 
   render(<NotificationHistorySheet scope="doctor" onClose={jest.fn()} onChanged={onChanged} />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Dismiss notification: Doctor Capacity Reached' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Archive notification: Doctor Capacity Reached' }));
 
   await waitFor(() => expect(dismissFeedNotification).toHaveBeenCalledWith('user-alert'));
   await waitFor(() =>
     expect(
-      screen.queryByRole('button', { name: 'Dismiss notification: Doctor Capacity Reached' }),
+      screen.queryByRole('button', { name: 'Archive notification: Doctor Capacity Reached' }),
     ).not.toBeInTheDocument(),
   );
-  expect(screen.getByRole('button', { name: 'Dismiss notification: Critical Patient Alert' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Archive notification: Critical Patient Alert' })).toBeInTheDocument();
   await waitFor(() => expect(onChanged).toHaveBeenCalled());
 });

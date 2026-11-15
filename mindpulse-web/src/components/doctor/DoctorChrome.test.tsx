@@ -30,7 +30,7 @@ jest.mock('../../services/notifications', () => ({
 
 /**
  * Matches only the row opener: since B-2 the list also carries a per-row
- * "Dismiss notification: <title>" button whose label contains the same title.
+ * "Archive notification: <title>" button whose label contains the same title.
  */
 const rowButton = (title: string) => ({
   name: (label: string) => label.startsWith(title),

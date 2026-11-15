@@ -420,7 +420,7 @@ export interface Translations {
           collapseA11y: string;
           /** `{preview}` = the note's own text. */
           showAllFmt: string;
-          deleteA11y: string;
+          hideA11y: string;
           /** Abbreviated month names for entry stamps, Jan → Dec. */
           months: string[];
         };

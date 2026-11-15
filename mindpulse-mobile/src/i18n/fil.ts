@@ -359,7 +359,7 @@ export const fil: Translations = {
           tapReadAll: 'I-tap para basahin lahat',
           collapseA11y: 'I-collapse ang tala na ito',
           showAllFmt: 'Ipakita ang buong tala. {preview}',
-          deleteA11y: 'Tanggalin ang tala na ito',
+          hideA11y: 'Itago ang tala na ito',
           months: ['Ene', 'Peb', 'Mar', 'Abr', 'May', 'Hun', 'Hul', 'Ago', 'Set', 'Okt', 'Nob', 'Dis'],
         },
         pause: {

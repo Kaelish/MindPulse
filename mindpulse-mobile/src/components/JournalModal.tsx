@@ -256,10 +256,10 @@ export const JournalModal: React.FC<Props> = ({ visible, onClose, templateId, hi
                         <TouchableOpacity
                           onPress={() => onDelete(e.id)}
                           style={styles.deleteBtn}
-                          accessibilityLabel={jView.deleteA11y}
+                          accessibilityLabel={jView.hideA11y}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Ionicons name="trash-outline" size={16} color={Colors.textHint} />
+                          <Ionicons name="eye-off-outline" size={16} color={Colors.textHint} />
                         </TouchableOpacity>
                       </View>
                     );

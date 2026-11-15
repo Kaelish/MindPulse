@@ -249,7 +249,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                     disabled={dismissingId === notification.id}
                     onClick={() => void dismissNotification(notification)}
                   >
-                    {dismissingId === notification.id ? 'Dismissing…' : 'Archive'}
+                    {dismissingId === notification.id ? 'Archiving…' : 'Archive'}
                   </button>
                 </div>
               </div>

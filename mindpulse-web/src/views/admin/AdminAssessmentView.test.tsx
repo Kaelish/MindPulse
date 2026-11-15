@@ -101,16 +101,16 @@ describe('AdminAssessmentView', () => {
     expect(isPss10Tool({ title: 'Follow-up Wellness Check', category: 'Brief' })).toBe(false);
   });
 
-  it('locks PSS-10 Category/Status and hides its delete while other tools stay editable', async () => {
+  it('locks PSS-10 Category/Status and hides its archive button while other tools stay editable', async () => {
     renderView();
     await screen.findByText('PSS-10 Stress Assessment');
 
-    // Delete: exactly one delete button exists and it belongs to the brief
-    // tool — the PSS-10 template offers no delete action at all.
-    const deleteButtons = screen.getAllByRole('button', { name: '🗑' });
-    expect(deleteButtons).toHaveLength(1);
+    // Archive: exactly one archive button exists and it belongs to the brief
+    // tool — the PSS-10 template offers no archive action at all.
+    const archiveButtons = screen.getAllByRole('button', { name: '📦 Archive' });
+    expect(archiveButtons).toHaveLength(1);
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(archiveButtons[0]);
     expect(confirmSpy).toHaveBeenCalledWith(
       'Archive "Follow-up Wellness Check"? Patients will no longer see it.',
     );

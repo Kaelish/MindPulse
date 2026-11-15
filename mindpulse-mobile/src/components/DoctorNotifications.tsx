@@ -145,7 +145,8 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
   };
 
   /**
-   * Dismiss (B-2): remove the row from my own list — optimistic removal with a
+   * Archive (B-2): soft-delete the row from my own list — sets is_deleted so
+   * the row is preserved but hidden — optimistic removal with a
    * position-preserving rollback; the unread badge follows the row.
    */
   const dismiss = async (row: FeedNotification) => {
@@ -165,7 +166,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
         return next;
       });
       if (!row.read) setUnread((count) => count + 1);
-      setActionError(e?.message || 'Could not dismiss this notification.');
+      setActionError(e?.message || 'Could not archive this notification.');
     } finally {
       setDismissingId(null);
     }
@@ -320,7 +321,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
                         disabled={dismissingId === row.id}
                         hitSlop={8}
                         accessibilityRole="button"
-                        accessibilityLabel={`Dismiss notification: ${row.title}`}
+                        accessibilityLabel={`Archive notification: ${row.title}`}
                         style={styles.dismissBtn}
                       >
                         <Ionicons

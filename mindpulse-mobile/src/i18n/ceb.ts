@@ -359,7 +359,7 @@ export const ceb: Translations = {
           tapReadAll: 'Pindola para mabasa ang tanan',
           collapseA11y: 'I-collapse kining nota',
           showAllFmt: 'Ipakita ang tibuok nota. {preview}',
-          deleteA11y: 'I-delete kining nota',
+          hideA11y: 'Tago-a kining nota',
           months: ['Ene', 'Peb', 'Mar', 'Abr', 'May', 'Jun', 'Hul', 'Ago', 'Set', 'Okt', 'Nob', 'Dis'],
         },
         pause: {

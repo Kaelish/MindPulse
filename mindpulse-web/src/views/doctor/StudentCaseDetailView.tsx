@@ -335,7 +335,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
       await deleteStudentFile(file);
       setFiles((prev) => prev.filter((row) => row.id !== file.id));
     } catch (error) {
-      setFileError(error instanceof Error ? error.message : 'Unable to delete the file.');
+      setFileError(error instanceof Error ? error.message : 'Unable to hide the file.');
     }
   };
 
@@ -623,7 +623,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                         </button>
                       )}
                       <button type="button" className="ghost-button" onClick={() => void removeRecommendation(item.id)}>
-                        Remove
+                        Hide
                       </button>
                     </div>
                   </li>
