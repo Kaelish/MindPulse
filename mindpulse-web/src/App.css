@@ -2615,6 +2615,31 @@ html[data-theme='dark'] .admin-account strong {
   color: var(--text);
 }
 
+html[data-theme='dark'] .social-btn,
+html[data-theme='dark'] .auth-secondary-button {
+  background: #141d31;
+  border-color: var(--line);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .auth-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+html[data-theme='dark'] .sidebar-profile-card,
+html[data-theme='dark'] .web-chat-modal-box,
+html[data-theme='dark'] .web-chat-input-bar {
+  background: #141d31;
+  border-color: var(--line);
+}
+
+html[data-theme='dark'] .web-msg-bubble.patient {
+  background: #141d31;
+  color: var(--text);
+  border-color: var(--line);
+}
+
 /* ── Telehealth (0006): status pills, decision buttons, inline Jitsi frame ── */
 .status-pill-grey {
   background: #eef1f6;

@@ -484,7 +484,7 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
           title="Send to the chat only, or also file it into the patient's My Files"
           value={fileCategory ?? ''}
           onChange={(event) => setFileCategory((event.target.value || null) as PatientFileCategory | null)}
-          style={{ fontSize: '0.72rem', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--primary)', background: '#fff', color: 'var(--doc-ink)', cursor: 'pointer' }}
+          style={{ fontSize: '0.72rem', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--doc-input-bg)', color: 'var(--doc-ink)', cursor: 'pointer' }}
         >
           <option value="">Chat only</option>
           {PATIENT_FILE_CATEGORIES.map((category) => (
