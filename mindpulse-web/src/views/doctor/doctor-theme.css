@@ -4782,5 +4782,119 @@ html[data-doctor-theme='dark'] .doctor-scope .notification-bell-icon {
   filter: brightness(0) invert(1);
 }
 
+/* =========================================================================
+   Assessment Results - dark mode.
+   The redesigned result card repaints itself with light-only values in the
+   base rules (#ffffff fill, pale borders, light pills), so dark mode has to
+   put every one of them back on tokens. Inert until the doctor theme is dark.
+   ========================================================================= */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card {
+  background: var(--doc-panel);
+  border-color: var(--doc-line);
+  box-shadow: var(--doc-shadow-sm);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card:hover {
+  background: var(--doc-panel);
+  border-color: var(--doc-line-strong);
+  box-shadow: var(--doc-shadow);
+}
+
+/* The tinted stat cards keep their gradient (their light-only border goes). */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card.green,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card.red {
+  box-shadow: var(--doc-shadow-sm);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card.green {
+  background: linear-gradient(150deg, var(--doc-success-soft), var(--doc-panel));
+  border-color: rgba(75, 201, 141, 0.4);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-summary-card.red {
+  background: linear-gradient(150deg, var(--doc-danger-soft), var(--doc-panel));
+  border-color: var(--doc-danger-line);
+}
+
+/* Meta line baked to slate greys that sink into the dark card. */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-case-id,
+html[data-doctor-theme='dark'] .doctor-scope .assessment-meta-sep {
+  color: var(--doc-muted);
+}
+
+/* Risk badges: the pale translucent fills read as glare on a dark card. */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-risk-low {
+  background: var(--doc-success-soft);
+  border-color: rgba(75, 201, 141, 0.45);
+  color: var(--doc-success);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-risk-moderate {
+  background: var(--doc-warning-soft);
+  border-color: rgba(224, 180, 99, 0.45);
+  color: var(--doc-warning);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-risk-high {
+  background: var(--doc-danger-soft);
+  border-color: rgba(239, 138, 146, 0.45);
+  color: var(--doc-danger);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-risk-unknown {
+  background: var(--doc-soft);
+  border-color: var(--doc-line);
+  color: var(--doc-muted);
+}
+
+/* Action buttons: mint-tinted fill and border are light-theme only. */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-btn-review {
+  background: var(--primary-soft);
+  border-color: rgba(83, 199, 215, 0.45);
+  color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-btn-review:hover {
+  background: #16323b;
+  border-color: var(--primary);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-btn-view {
+  color: var(--primary-contrast);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-btn-view:hover {
+  background: var(--primary-strong-hover);
+}
+
+/* "Skipped" chip and the emotion chip fill. */
+html[data-doctor-theme='dark'] .doctor-scope .assessment-skipped {
+  background: var(--doc-soft);
+  color: var(--doc-muted);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-emotion-pill {
+  background: var(--doc-soft);
+  color: var(--doc-ink-2);
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .assessment-emotion-value.purple {
+  color: #c4b5fd;
+  background: #241f3d;
+}
+
+/* Case detail: the daily / supplementary pills ship as light pastel chips. */
+html[data-doctor-theme='dark'] .doctor-scope .daily-pill {
+  background: rgba(47, 111, 237, 0.18);
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #93c5fd;
+}
+
+html[data-doctor-theme='dark'] .doctor-scope .supplementary-pill {
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(196, 181, 253, 0.45);
+  color: #c4b5fd;
+}
+
 
 

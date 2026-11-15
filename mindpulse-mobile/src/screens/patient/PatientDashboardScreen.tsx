@@ -59,8 +59,8 @@ const SessionRow = ({ session, onPress }: { session: StressSessionItem; onPress:
   const isHigh = session.statusColor === 'pink';
   const isModerate = session.statusColor === 'yellow';
 
-  const scoreBg = isHigh ? '#FCE5DE' : isModerate ? '#FFF3CD' : '#D6F5E3';
-  const scoreText = isHigh ? '#E05C5C' : isModerate ? '#E08A00' : '#27AE60';
+  const scoreBg = toneBg(isHigh ? '#FCE5DE' : isModerate ? '#FFF3CD' : '#D6F5E3');
+  const scoreText = tone(isHigh ? '#E05C5C' : isModerate ? '#E08A00' : '#27AE60');
   const pillLabel = isHigh ? 'High' : isModerate ? 'Moderate' : 'Low';
 
   const notes = session.notes ?? '';
@@ -69,8 +69,8 @@ const SessionRow = ({ session, onPress }: { session: StressSessionItem; onPress:
     : notes.startsWith('Completed assessment:')
       ? 'Supplementary Tool'
       : null;
-  const typeBg = typeLabel === 'Supplementary Tool' ? '#EEEDFE' : '#D6F5E3';
-  const typeColor = typeLabel === 'Supplementary Tool' ? '#5B6EF5' : '#27AE60';
+  const typeBg = toneBg(typeLabel === 'Supplementary Tool' ? '#EEEDFE' : '#D6F5E3');
+  const typeColor = tone(typeLabel === 'Supplementary Tool' ? '#5B6EF5' : '#27AE60');
 
   return (
     <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.85}>
@@ -156,41 +156,41 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
   // Level color mapping (matches SessionRow status colors: High=red, Moderate=orange, Low=green)
   const levelColor =
     metrics.latestLevel === 'High'
-      ? '#E05C5C'
+      ? tone('#E05C5C')
       : metrics.latestLevel === 'Moderate'
-        ? '#E08A00'
+        ? tone('#E08A00')
         : metrics.latestLevel === 'Low'
-          ? '#27AE60'
+          ? tone('#27AE60')
           : Colors.textPrimary;
 
   // Card background tint by level (High=red tint, Moderate=orange tint, Low=green tint)
   const cardBg =
     metrics.latestLevel === 'High'
-      ? '#FFF1F0'
+      ? toneBg('#FFF1F0')
       : metrics.latestLevel === 'Moderate'
-        ? '#FFF9EC'
+        ? toneBg('#FFF9EC')
         : metrics.latestLevel === 'Low'
-          ? '#EFFAF3'
+          ? toneBg('#EFFAF3')
           : toneBg('#FAE5DF');
 
   // Trend styling: decreasing=green, increasing=red; arrow follows direction
   const trendRising = metrics.latestTrend === 'Increasing';
   const trendFalling = metrics.latestTrend === 'Decreasing';
   const trendColor = trendFalling
-    ? '#27AE60'
+    ? tone('#27AE60')
     : trendRising
-      ? '#E05C5C'
+      ? tone('#E05C5C')
       : Colors.textSecondary;
   const trendIcon = trendRising ? 'trending-up' : trendFalling ? 'trending-down' : 'trending-up';
 
   // Avg stress level color (from avgStressStatus: High/Moderate/Low Overall)
   const avgLevelColor =
     metrics.avgStressStatus === 'High Overall'
-      ? '#E05C5C'
+      ? tone('#E05C5C')
       : metrics.avgStressStatus === 'Moderate Overall'
-        ? '#E08A00'
+        ? tone('#E08A00')
         : metrics.avgStressStatus === 'Low Overall'
-          ? '#27AE60'
+          ? tone('#27AE60')
           : Colors.textSecondary;
 
   const displaySessions = showAllSessions ? recentSessions : recentSessions.slice(0, 5);
@@ -319,7 +319,7 @@ export const PatientDashboardScreen: React.FC<PatientDashboardScreenProps> = ({
               activeOpacity={0.85}
               onPress={() => setShowSelfCare(true)}
             >
-              <View style={[styles.careIconBox, { backgroundColor: Colors.white }]}>
+              <View style={[styles.careIconBox, { backgroundColor: toneBg(Colors.white) }]}>
                 <Ionicons
                   name={latestBand === 'high' ? 'people' : 'bulb'}
                   size={20}
@@ -478,7 +478,7 @@ const makeStyles = () => StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    backgroundColor: Colors.white,
+    backgroundColor: toneBg(Colors.white),
     alignItems: 'center',
     justifyContent: 'center',
   },
