@@ -95,6 +95,7 @@ export const fetchMyFiles = async (): Promise<PatientFileItem[]> => {
   const { data, error } = await supabase
     .from('patient_files')
     .select('id, category, title, file_name, storage_path, content_type, size_bytes, created_at')
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as PatientFileRow[]).map(toItem);

@@ -51,6 +51,7 @@ export const fetchRecentNotifications = async (limit = 5): Promise<FeedNotificat
     .from('notifications')
     .select(SELECT_COLUMNS)
     .eq('user_id', userId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -64,6 +65,7 @@ export const fetchAllNotifications = async (): Promise<FeedNotification[]> => {
     .from('notifications')
     .select(SELECT_COLUMNS)
     .eq('user_id', userId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return mapVisible((data ?? []) as NotificationRow[]);
@@ -77,6 +79,7 @@ export const fetchUnreadNotificationCount = async (): Promise<number> => {
       .from('notifications')
       .select('id, title, message, type, read')
       .eq('user_id', userId)
+      .eq('is_deleted', false)
       .eq('read', false);
     if (error) throw new Error(error.message);
     // Same settings filter as the list, so the badge never promises a hidden row.
@@ -110,15 +113,14 @@ export const markNotificationRead = async (id: string): Promise<void> => {
 };
 
 /**
- * Dismiss = delete the row from my own list (B-2). RLS `notifications_delete`
- * already scopes the delete to the signed-in account; the extra `user_id`
- * filter keeps the intent explicit and pins it even if the policy widens.
+ * Dismiss = soft-delete the row from my own list (B-2). Sets is_deleted = true
+ * instead of destroying the row, so the notification is preserved for audit.
  */
 export const dismissNotification = async (id: string): Promise<void> => {
   const userId = await requireUserId();
   const { error } = await supabase
     .from('notifications')
-    .delete()
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', userId);
   if (error) throw new Error(error.message);

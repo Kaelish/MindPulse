@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { AdminAssessmentView } from './AdminAssessmentView';
 import {
   createAssessmentTool,
-  deleteAssessmentTool,
+  archiveAssessmentTool,
   fetchAssessmentTools,
   isPss10Tool,
   updateAssessmentTool,
@@ -26,7 +26,7 @@ jest.mock('../../services/assessmentTools', () => ({
   fetchAssessmentTools: jest.fn(),
   createAssessmentTool: jest.fn(),
   updateAssessmentTool: jest.fn(),
-  deleteAssessmentTool: jest.fn(),
+  archiveAssessmentTool: jest.fn(),
 }));
 
 jest.mock('../../services/assessmentOutcomes', () => ({
@@ -92,7 +92,7 @@ describe('AdminAssessmentView', () => {
     (fetchAssessmentTools as jest.Mock).mockResolvedValue([pss10Tool, briefTool]);
     (createAssessmentTool as jest.Mock).mockResolvedValue({});
     (updateAssessmentTool as jest.Mock).mockResolvedValue({});
-    (deleteAssessmentTool as jest.Mock).mockResolvedValue(undefined);
+    (archiveAssessmentTool as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('identifies the PSS-10 by its stable attributes, never by index', () => {
@@ -112,7 +112,7 @@ describe('AdminAssessmentView', () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
     fireEvent.click(deleteButtons[0]);
     expect(confirmSpy).toHaveBeenCalledWith(
-      'Delete "Follow-up Wellness Check"? Patients will no longer see it.',
+      'Archive "Follow-up Wellness Check"? Patients will no longer see it.',
     );
     confirmSpy.mockRestore();
 

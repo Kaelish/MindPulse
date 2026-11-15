@@ -157,6 +157,7 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
   const { data: sessions, error: sessionsError } = await supabase
     .from('stress_sessions')
     .select('user_id, score, emotion, face_confidence, assessment_type, created_at')
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (sessionsError) throw new Error(sessionsError.message);
 
@@ -200,6 +201,7 @@ export const fetchStudentCaseById = async (userId: string): Promise<StudentCaseR
     .from('stress_sessions')
     .select('user_id, score, emotion, face_confidence, assessment_type, created_at')
     .eq('user_id', profile.id)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
     .limit(2);
   if (sessionsError) throw new Error(sessionsError.message);
@@ -272,6 +274,7 @@ export const fetchStudentSessions = async (studentId: string): Promise<StudentSe
     .from('stress_sessions')
     .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, face_confidence, notes, assessment_type, survey_answers')
     .eq('user_id', studentId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 

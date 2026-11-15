@@ -93,6 +93,7 @@ export const fetchMySuggestions = async (): Promise<DoctorSuggestion[]> => {
     .from('doctor_suggestions')
     .select(SUGGESTION_COLUMNS)
     .eq('doctor_id', doctorId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as SuggestionRow[]).map((row) => mapSuggestionRow(row));
@@ -118,6 +119,7 @@ export const fetchAllSuggestions = async (): Promise<DoctorSuggestion[]> => {
   const { data, error } = await supabase
     .from('doctor_suggestions')
     .select(SUGGESTION_COLUMNS)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
@@ -160,9 +162,12 @@ export const updateSuggestion = async (
   if (error) throw new Error(error.message);
 };
 
-/** Doctor action: withdraw a suggestion that has not been handled yet. */
+/** Doctor action: withdraw a suggestion that has not been handled yet. Soft-delete instead of hard-delete. */
 export const withdrawSuggestion = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
-  const { error } = await supabase.from('doctor_suggestions').delete().eq('id', id);
+  const { error } = await supabase
+    .from('doctor_suggestions')
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq('id', id);
   if (error) throw new Error(error.message);
 };

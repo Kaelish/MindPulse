@@ -63,6 +63,9 @@ export const fetchAllRows = async <T>(
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     let query = supabase.from(table).select(columns);
+    // Soft-deleted sessions are archived (0039): they must never feed admin
+    // lists, analytics or reports. Only stress_sessions carries the column.
+    if (table === 'stress_sessions') query = query.eq('is_deleted', false);
     if (filter) query = query.in(filter.column, filter.values);
     const { data, error } = await query
       .order('created_at', { ascending: false })

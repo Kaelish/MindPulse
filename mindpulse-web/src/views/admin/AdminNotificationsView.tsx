@@ -117,8 +117,9 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
   };
 
   /**
-   * Dismiss (B-2): delete the row from my own list — optimistic removal with
-   * rollback, so a failed delete never silently pretends the row is gone.
+   * Dismiss (B-2): soft-delete the row from my own list — sets is_deleted =
+   * true instead of destroying the row. Optimistic removal with rollback, so
+   * a failed dismiss never silently pretends the row is gone.
    */
   const dismissNotification = async (notification: FeedNotification) => {
     setDismissingId(notification.id);
@@ -248,7 +249,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({ 
                     disabled={dismissingId === notification.id}
                     onClick={() => void dismissNotification(notification)}
                   >
-                    {dismissingId === notification.id ? 'Dismissing…' : 'Dismiss'}
+                    {dismissingId === notification.id ? 'Dismissing…' : 'Archive'}
                   </button>
                 </div>
               </div>

@@ -115,9 +115,17 @@ export const updateAssessmentTool = async (id: string, input: AssessmentToolInpu
   return fromRow(data as ToolRow);
 };
 
-export const deleteAssessmentTool = async (id: string): Promise<void> => {
+/**
+ * Archives (soft-deletes) an assessment tool by flipping its status to
+ * 'archived'. The row is preserved — patients stop seeing it because the
+ * RLS select policy already filters status = 'active'. Nothing is hard-deleted.
+ */
+export const archiveAssessmentTool = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
-  const { error } = await supabase.from('assessment_tools').delete().eq('id', id);
+  const { error } = await supabase
+    .from('assessment_tools')
+    .update({ status: 'archived' })
+    .eq('id', id);
   if (error) throw new Error(error.message);
 };
 

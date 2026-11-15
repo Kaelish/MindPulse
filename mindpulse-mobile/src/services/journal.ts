@@ -75,6 +75,8 @@ export interface JournalEntry {
   /** ISO timestamp — used for display on-device only, never transmitted. */
   createdAt: string;
   values: Record<string, string>;
+  /** Soft-delete flag: true means the entry is hidden but preserved locally. */
+  deleted?: boolean;
 }
 
 const STORAGE_KEY = 'journal_entries_v1';
@@ -127,12 +129,14 @@ const parse = (raw: string | null): JournalEntry[] => {
 
 /**
  * Never throws — a missing or corrupt key must not stop the sheet opening.
- * `templateId` narrows to one prompt's entries.
+ * `templateId` narrows to one prompt's entries. Soft-deleted entries are
+ * excluded from results.
  */
 export const loadJournalEntries = async (templateId?: JournalId): Promise<JournalEntry[]> => {
   try {
     const all = parse(await AsyncStorage.getItem(STORAGE_KEY));
-    return templateId ? all.filter((e) => e.templateId === templateId) : all;
+    const active = all.filter((e) => !e.deleted);
+    return templateId ? active.filter((e) => e.templateId === templateId) : active;
   } catch {
     return [];
   }
@@ -159,13 +163,13 @@ export const persistJournalEntry = async (
   return next.filter((e) => e.templateId === templateId);
 };
 
-/** Best-effort removal — the caller already dropped it from its own state. */
+/** Best-effort soft-delete — marks the entry deleted instead of removing it. */
 export const deleteJournalEntry = async (id: string): Promise<void> => {
   try {
     const all = parse(await AsyncStorage.getItem(STORAGE_KEY));
     await AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(all.filter((e) => e.id !== id)),
+      JSON.stringify(all.map((e) => (e.id === id ? { ...e, deleted: true } : e))),
     );
   } catch {
     // Losing a delete is survivable; throwing here would surface an error the

@@ -74,12 +74,12 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
 
   const handleDeleteHistory = () => {
     Alert.alert(
-      'Delete Assessment History',
-      'Are you sure you want to delete all past stress assessment session records? This action cannot be undone.',
+      'Hide Assessment History',
+      'Are you sure you want to hide all past stress assessment session records? The records are kept on file and only removed from view.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete History',
+          text: 'Hide History',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -87,13 +87,13 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               if (!user) throw new Error('Your session has expired. Please sign in again.');
               const { error } = await supabase
                 .from('stress_sessions')
-                .delete()
+                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
                 .eq('user_id', user.id);
               if (error) throw new Error(error.message);
-              showToast('Assessment history deleted.');
+              showToast('Assessment history hidden.');
               onDataChanged?.();
             } catch (e: any) {
-              Alert.alert('Delete Failed', e?.message || 'Could not delete your history.');
+              Alert.alert('Hide Failed', e?.message || 'Could not hide your history.');
             }
           },
         },
@@ -263,7 +263,7 @@ export const PrivacyDataModal: React.FC<PrivacyDataModalProps> = ({
               <TouchableOpacity style={styles.actionBtn} onPress={handleDeleteHistory}>
                 <Ionicons name="refresh-outline" size={18} color={tone('#E08A00')} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.actionBtnTitle, { color: tone('#E08A00') }]}>Delete Assessment History</Text>
+                  <Text style={[styles.actionBtnTitle, { color: tone('#E08A00') }]}>Hide Assessment History</Text>
                   <Text style={styles.actionBtnSub}>Wipe all past session records while preserving your account</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={tone('#CBD5E1')} />

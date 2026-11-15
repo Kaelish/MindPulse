@@ -131,6 +131,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
   const { data: statRows, error: statError } = await supabase
     .from('stress_sessions')
     .select('score, heart_rate')
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
 
   if (statError) {
@@ -142,6 +143,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
   const { data: dbSessions, error: sessionsError } = await supabase
     .from('stress_sessions')
     .select('*')
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
 
   if (sessionsError) {
@@ -172,6 +174,7 @@ export const fetchDashboardData = async (userId?: string): Promise<PatientDashbo
     .from('notifications')
     .select('*')
     .eq('user_id', targetUserId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
     .limit(10);
 
@@ -370,6 +373,7 @@ export const fetchTodayStressSession = async (): Promise<StressSessionItem | nul
     .from('stress_sessions')
     .select('*')
     .eq('user_id', userId)
+    .eq('is_deleted', false)
     .gte('created_at', dayStart.toISOString())
     .lt('created_at', dayEnd.toISOString())
     .order('created_at', { ascending: false })

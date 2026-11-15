@@ -29,7 +29,7 @@ const limit = jest.fn((..._args: any[]) => Promise.resolve({ data: rows, error: 
 const order = jest.fn((..._args: any[]) => ({ limit }));
 const lt = jest.fn((..._args: any[]) => ({ order }));
 const gte = jest.fn((..._args: any[]) => ({ lt }));
-const eq = jest.fn((..._args: any[]) => ({ gte }));
+const eq = jest.fn((..._args: any[]) => ({ eq, gte }));
 const select = jest.fn((..._args: any[]) => ({ eq }));
 const mockFrom = supabase.from as jest.Mock;
 
@@ -108,6 +108,8 @@ describe('fetchTodayStressSession', () => {
 
     expect(mockFrom).toHaveBeenCalledWith('stress_sessions');
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
+    // Soft-deleted (hidden) sessions must never satisfy the once-per-day gate.
+    expect(eq).toHaveBeenCalledWith('is_deleted', false);
 
     const [startColumn, startIso] = gte.mock.calls[0];
     const [endColumn, endIso] = lt.mock.calls[0];

@@ -254,6 +254,7 @@ export const fetchStudentRecordSessions = async (userId: string): Promise<Record
     .from('stress_sessions')
     .select('id, created_at, score, stress_level, heart_rate, survey_score, reaction_time_ms, emotion, survey_answers')
     .eq('user_id', userId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) throw new Error(error.message);

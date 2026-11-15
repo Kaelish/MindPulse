@@ -165,7 +165,7 @@ test('dismissing an admin notification removes the card and tells the caller (B-
 
   render(<AdminNotificationsView onNavigate={jest.fn()} embedded onChanged={onChanged} />);
   const heading = await screen.findByRole('heading', { name: 'Doctor Capacity Reached' });
-  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Dismiss' }));
+  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Archive' }));
 
   await waitFor(() => expect(dismissFeedNotification).toHaveBeenCalledWith('user-alert'));
   await waitFor(() =>
@@ -180,7 +180,7 @@ test('a failed dismiss keeps the row and surfaces the error (B-2)', async () => 
 
   render(<AdminNotificationsView onNavigate={jest.fn()} embedded />);
   const heading = await screen.findByRole('heading', { name: 'Doctor Capacity Reached' });
-  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Dismiss' }));
+  fireEvent.click(within(heading.closest('article') as HTMLElement).getByRole('button', { name: 'Archive' }));
 
   expect(await screen.findByText('Could not reach the server')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Doctor Capacity Reached' })).toBeInTheDocument();

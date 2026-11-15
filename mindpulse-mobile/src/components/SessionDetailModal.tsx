@@ -72,6 +72,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           .from('stress_sessions')
           .select('survey_answers')
           .eq('id', session.id)
+          .eq('is_deleted', false)
           .maybeSingle();
         if (cancelled) return;
         setAnswerItems(readAnswerItems((data as { survey_answers?: unknown } | null)?.survey_answers));

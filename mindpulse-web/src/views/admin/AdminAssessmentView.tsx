@@ -10,7 +10,7 @@ import {
   AssessmentToolOption,
   AssessmentToolQuestion,
   createAssessmentTool,
-  deleteAssessmentTool,
+  archiveAssessmentTool,
   fetchAssessmentTools,
   isPss10Tool,
   nextQuestionId,
@@ -319,16 +319,16 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
     }
   };
 
-  const removeTool = async (tool: AssessmentTool) => {
-    // The built-in PSS-10 cannot be deleted (A-10 / C-15): its card hides the
-    // delete button, so this early return is only belt-and-braces.
+  const archiveTool = async (tool: AssessmentTool) => {
+    // The built-in PSS-10 cannot be archived (A-10 / C-15): its card hides the
+    // archive button, so this early return is only belt-and-braces.
     if (isPss10Tool(tool)) return;
-    if (!window.confirm(`Delete "${tool.title}"? Patients will no longer see it.`)) return;
+    if (!window.confirm(`Archive "${tool.title}"? Patients will no longer see it.`)) return;
     try {
-      await deleteAssessmentTool(tool.id);
+      await archiveAssessmentTool(tool.id);
       await loadTools();
     } catch (error) {
-      setToolsError(error instanceof Error ? error.message : 'Could not delete the assessment.');
+      setToolsError(error instanceof Error ? error.message : 'Could not archive the assessment.');
     }
   };
 
@@ -419,7 +419,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
                         <button
                           type="button"
                           className="assessment-delete-button"
-                          onClick={() => void removeTool(tool)}
+                          onClick={() => void archiveTool(tool)}
                         >
                           🗑
                         </button>

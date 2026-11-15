@@ -10,6 +10,9 @@ const EXPORT_TABLES = [
   'recommendations',
 ] as const;
 
+/** Tables that carry the soft-delete flag (0035-0039): export live rows only. */
+const SOFT_DELETE_TABLES: readonly string[] = ['stress_sessions', 'notifications', 'recommendations'];
+
 /**
  * Downloads every admin-visible table as one Excel workbook (one sheet per
  * table). RLS decides what an administrator can read. Tables that fail are
@@ -23,7 +26,10 @@ export const exportSystemData = async (): Promise<string> => {
   const errors: string[] = [];
 
   for (const table of EXPORT_TABLES) {
-    const { data, error } = await supabase.from(table).select('*').limit(20000);
+    let query = supabase.from(table).select('*');
+    // Archived rows stay in the database but never appear in the workbook.
+    if (SOFT_DELETE_TABLES.includes(table)) query = query.eq('is_deleted', false);
+    const { data, error } = await query.limit(20000);
     if (error) {
       errors.push(`${table}: ${error.message}`);
     } else {

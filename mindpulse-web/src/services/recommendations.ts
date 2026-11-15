@@ -82,7 +82,8 @@ export const fetchDoctorRecommendations = async (studentId?: string): Promise<Do
   let query = supabase
     .from('recommendations')
     .select('id, student_id, doctor_id, category, priority, note, status, created_at')
-    .eq('doctor_id', doctorId);
+    .eq('doctor_id', doctorId)
+    .eq('is_deleted', false);
   if (studentId) query = query.eq('student_id', studentId);
   const { data: rows, error } = await query.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -140,8 +141,15 @@ export const updateRecommendation = async (
   if (error) throw new Error(error.message);
 };
 
+/**
+ * Soft-deletes a recommendation by setting is_deleted = true. The row is
+ * preserved for audit; the doctor simply stops seeing it in the list.
+ */
 export const deleteRecommendation = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
-  const { error } = await supabase.from('recommendations').delete().eq('id', id);
+  const { error } = await supabase
+    .from('recommendations')
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq('id', id);
   if (error) throw new Error(error.message);
 };

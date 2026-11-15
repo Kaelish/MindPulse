@@ -282,18 +282,19 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
 
   /**
    * The issuing doctor withdraws their own recommendation (RLS
-   * `recommendations_delete` already scopes it to doctor_id = auth.uid()).
+   * `recommendations_update` already scopes it to doctor_id = auth.uid()).
    * Completed entries stay withdrawable: a typo-ridden recommendation should
-   * not haunt the record just because it was ticked off.
+   * not haunt the record just because it was ticked off. Soft-delete: the row
+   * is preserved, just hidden from the list.
    */
   const removeRecommendation = async (id: string) => {
-    if (!window.confirm('Remove this recommendation? This cannot be undone.')) return;
+    if (!window.confirm('Hide this recommendation? It will be removed from the list but kept on record.')) return;
     setSaveError('');
     try {
       await deleteRecommendation(id);
       setRecommendations(await fetchDoctorRecommendations(student.userId));
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Unable to remove the recommendation.');
+      setSaveError(error instanceof Error ? error.message : 'Unable to hide the recommendation.');
     }
   };
 
@@ -589,7 +590,7 @@ export const StudentCaseDetailView: React.FC<StudentCaseDetailViewProps> = ({ on
                       </div>
                       <div className="patient-file-actions">
                         <button type="button" className="ghost-button" onClick={() => handleOpenFile(file)}>Open</button>
-                        <button type="button" className="ghost-button is-danger" onClick={() => handleDeleteFile(file)}>Delete</button>
+                        <button type="button" className="ghost-button is-danger" onClick={() => handleDeleteFile(file)}>Hide</button>
                       </div>
                     </li>
                   );

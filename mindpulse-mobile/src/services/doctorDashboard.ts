@@ -180,6 +180,7 @@ export const fetchDoctorDashboard = async (): Promise<DoctorDashboardData> => {
     const { data: sessions, error: sessionsError } = await supabase
       .from('stress_sessions')
       .select('user_id, score, created_at')
+      .eq('is_deleted', false)
       .in('user_id', patientIds)
       .order('created_at', { ascending: false });
     if (sessionsError) throw new Error(sessionsError.message);

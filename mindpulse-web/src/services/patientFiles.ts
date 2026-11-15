@@ -86,6 +86,7 @@ export const fetchStudentFiles = async (patientId: string): Promise<PatientFileR
       'id, patient_id, doctor_id, category, title, file_name, storage_path, content_type, size_bytes, created_at',
     )
     .eq('patient_id', patientId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as PatientFileRow[]).map(toRecord);
@@ -124,10 +125,18 @@ export const uploadStudentFile = async (draft: PatientFileDraft): Promise<Patien
   return toRecord(data as PatientFileRow);
 };
 
+/**
+ * Soft-deletes a patient file row by setting is_deleted = true. The DB row is
+ * preserved; the actual storage object is still removed from the bucket so
+ * orphaned files don't accumulate.
+ */
 export const deleteStudentFile = async (file: PatientFileRecord): Promise<void> => {
   if (!supabase) throw new Error('Supabase is not configured.');
   await requireUserId();
-  const { error } = await supabase.from('patient_files').delete().eq('id', file.id);
+  const { error } = await supabase
+    .from('patient_files')
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq('id', file.id);
   if (error) throw new Error(error.message);
   await supabase.storage.from(BUCKET).remove([file.storagePath]).catch(() => undefined);
 };
