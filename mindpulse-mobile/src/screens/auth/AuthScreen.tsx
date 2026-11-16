@@ -15,6 +15,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase/client';
+import {
+  isAccountDeactivated,
+  reactivateOwnAccount,
+} from '../../services/session';
 import { CalendarDatePicker } from '../../components/CalendarDatePicker';
 import {
   clearRememberedLogin,
@@ -305,6 +309,50 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       } else {
         await clearRememberedLogin();
       }
+
+      // Gate: a deactivated account must be offered reactivation before
+      // entering the app. auth.users still holds the user so sign-in
+      // succeeds; the profile flag is what keeps them out.
+      const deactivated = await isAccountDeactivated();
+      if (deactivated) {
+        const choice = await new Promise<'reactivate' | 'signout' | null>(
+          (resolve) => {
+            Alert.alert(
+              'Account deactivated',
+              'This account was deactivated. Your records are kept on file but are not visible while the account is deactivated. Would you like to reactivate it?',
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+                {
+                  text: 'Yes, reactivate',
+                  style: 'default',
+                  onPress: () => resolve('reactivate'),
+                },
+                {
+                  text: 'No, sign out',
+                  style: 'destructive',
+                  onPress: () => resolve('signout'),
+                },
+              ],
+            );
+          },
+        );
+        if (choice === 'reactivate') {
+          try {
+            await reactivateOwnAccount();
+            onAuthSuccess(false);
+          } catch (cause: any) {
+            Alert.alert(
+              'Reactivation failed',
+              cause?.message ?? 'This account could not be reactivated. Please contact support.',
+            );
+          }
+        } else if (choice === 'signout') {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        }
+        // If the user cancelled (null), they stay on the auth screen.
+        return;
+      }
+
       onAuthSuccess(false);
     } catch (err: any) {
       Alert.alert('Login Failed', err?.message ?? 'Something went wrong.');

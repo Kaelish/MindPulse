@@ -94,6 +94,44 @@ export const sessionExpiredMessage = SESSION_EXPIRED;
 export const serverUnreachableMessage = SERVER_UNREACHABLE;
 
 /**
+ * True when the signed-in account has been deactivated (0042).
+ *
+ * Reads the caller's own profile row. A read failure returns false: a
+ * transient error must never lock a healthy account out of the app.
+ */
+export const isAccountDeactivated = async (): Promise<boolean> => {
+  try {
+    const user = (await getLocalUser()) ?? (await requireUser());
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_deactivated')
+      .eq('id', user.id)
+      .maybeSingle();
+    return profile?.is_deactivated === true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Reactivates the signed-in account (0042): clears is_deactivated,
+ * deactivated_at, deleted_at and deleted_by so the account is active again.
+ */
+export const reactivateOwnAccount = async (): Promise<void> => {
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_deactivated: false,
+      deactivated_at: null,
+      deleted_at: null,
+      deleted_by: null,
+    })
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
+};
+
+/**
  * Current signed-in role from profiles, or null when unavailable.
  *
  * Doctors who have not been approved by the administrator get `'pending'`:

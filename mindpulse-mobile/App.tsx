@@ -8,9 +8,11 @@ import {
   StatusBar,
   StyleSheet,
   Text as RNText,
+  TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingNavigator } from './src/screens/onboarding/OnboardingNavigator';
 import { AuthScreen } from './src/screens/auth/AuthScreen';
 import { PortalNoticeScreen } from './src/screens/auth/PortalNoticeScreen';
@@ -38,7 +40,7 @@ import { BottomNavTab, BottomTabBar } from './src/components/navigation/BottomTa
 import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { recordPlantSession } from './src/services/plantProgress';
-import { AppRole, getCurrentUserRole } from './src/services/session';
+import { AppRole, getCurrentUserRole, isAccountDeactivated, reactivateOwnAccount } from './src/services/session';
 import { isRememberMeEnabled } from './src/services/rememberMe';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
@@ -140,6 +142,67 @@ const SplashScreen = () => {
   );
 };
 
+/**
+ * Shown instead of any screen when profiles.is_deactivated is true (0042).
+ * The account was never removed from auth.users, so signing in succeeded —
+ * the person is asked whether to bring the account back before anything loads.
+ */
+const DeactivatedAccountView = ({
+  onReactivate,
+  onSignOut,
+}: {
+  onReactivate: () => Promise<void>;
+  onSignOut: () => void;
+}) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reactivate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onReactivate();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'This account could not be reactivated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={deactivatedStyles.root}>
+      <View style={deactivatedStyles.center}>
+        <View style={[deactivatedStyles.iconCircle, { backgroundColor: Colors.tagRedBg }]}>
+          <Ionicons name="alert-circle-outline" size={38} color={Colors.tagRedText} />
+        </View>
+        <RNText style={deactivatedStyles.title}>Account deactivated</RNText>
+        <RNText style={deactivatedStyles.body}>
+          Your records are kept on file and are not visible while the account is deactivated.
+        </RNText>
+        <View style={deactivatedStyles.buttonRow}>
+          <TouchableOpacity
+            style={[deactivatedStyles.button, deactivatedStyles.buttonPrimary]}
+            onPress={reactivate}
+            disabled={busy}
+          >
+            <RNText style={deactivatedStyles.buttonText}>
+              {busy ? 'Reactivating…' : 'Yes, reactivate this account'}
+            </RNText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[deactivatedStyles.button, deactivatedStyles.buttonSecondary]}
+            onPress={onSignOut}
+            disabled={busy}
+          >
+            <RNText style={deactivatedStyles.buttonText}>No, sign out</RNText>
+          </TouchableOpacity>
+        </View>
+        {error && <RNText style={deactivatedStyles.errorText}>{error}</RNText>}
+      </View>
+    </SafeAreaView>
+  );
+};
+
 /* ─────────── App ─────────── */
 function App() {
   const [screenMode, setScreenMode] = useState<ScreenMode>('splash');
@@ -159,6 +222,8 @@ function App() {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [incomingCallName, setIncomingCallName] = useState('Your doctor');
   const [autoJoinCall, setAutoJoinCall] = useState(false);
+  // Gate shown when a signed-in account is deactivated: reactivate or sign out.
+  const [deactivatedAccount, setDeactivatedAccount] = useState(false);
 
   /* Theme: the saved mode is restored while the splash screen is up, and every
      later switch re-renders this tree against the rebuilt style sheets.
@@ -417,6 +482,14 @@ function App() {
     const role = await getCurrentUserRole();
     setUserRole(role);
 
+    // A deactivated account must be offered reactivation before entering
+    // any portal. This also covers session restoration on app launch.
+    const deactivated = await isAccountDeactivated();
+    if (deactivated) {
+      setDeactivatedAccount(true);
+      return;
+    }
+
     if (role === 'doctor') {
       setCurrentTab('home');
       changeScreen('main');
@@ -459,6 +532,25 @@ function App() {
 
   /* ── Sign out from role-gated screens (doctor profile / portal notice) ── */
   const handlePortalSignOut = () => {
+    setUserRole(null);
+    setAuthTab('login');
+    changeScreen('auth');
+  };
+
+  /* ── Deactivated account gate handlers ── */
+  const handleDeactivatedReactivate = async () => {
+    try {
+      await reactivateOwnAccount();
+      setDeactivatedAccount(false);
+      // Re-enter the app now that the account is active again.
+      await handleAuthSuccess(false);
+    } catch {
+      // Error is shown inside DeactivatedAccountView by reactivateOwnAccount's caller
+    }
+  };
+
+  const handleDeactivatedSignOut = () => {
+    setDeactivatedAccount(false);
     setUserRole(null);
     setAuthTab('login');
     changeScreen('auth');
@@ -660,6 +752,14 @@ function App() {
             <BottomTabBar activeTab={currentTab} onNavigate={handleTabNavigate} />
           </View>
         )}
+
+        {/* Deactivated account gate — overlays everything when set. */}
+        {deactivatedAccount && (
+          <DeactivatedAccountView
+            onReactivate={handleDeactivatedReactivate}
+            onSignOut={handleDeactivatedSignOut}
+          />
+        )}
         </Animated.View>
 
         <IncomingCallOverlay
@@ -684,6 +784,45 @@ const makeStyles = () => StyleSheet.create({
 
 let styles = makeStyles();
 registerThemeStyles(() => { styles = makeStyles(); });
+
+/* ─────────── Deactivated styles ─────────── */
+const makeDeactivatedStyles = () => StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.pageBg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingHorizontal: 24,
+  },
+  iconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  title: { fontSize: 21, fontWeight: '900', color: Colors.textPrimary, textAlign: 'center' },
+  body: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 8 },
+  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: '#1A2340',
+    borderRadius: 10,
+    paddingVertical: 14,
+  },
+  buttonPrimary: { backgroundColor: Colors.primary },
+  buttonSecondary: { backgroundColor: toneBg('#E2E8F0') },
+  buttonText: { color: Colors.white, fontWeight: '800', fontSize: 14 },
+  errorText: { color: Colors.tagRedText, fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 10 },
+});
+
+const deactivatedStyles = makeDeactivatedStyles();
 
 /* ─────────── Splash Styles ─────────── */
 const makeSplashStyles = () => StyleSheet.create({
