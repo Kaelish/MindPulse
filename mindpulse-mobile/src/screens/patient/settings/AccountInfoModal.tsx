@@ -17,6 +17,7 @@ import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
 import { getAvatarUrl, pickProfilePhoto, uploadProfilePhoto } from '../../../services/profileAvatar';
 import { CalendarDatePicker } from '../../../components/CalendarDatePicker';
+import { MobileSecuritySettings } from '../../../components/MobileSecuritySettings';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AccountInfoModalProps {
@@ -518,6 +519,8 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                 )}
               </TouchableOpacity>
             </View>
+
+            <MobileSecuritySettings email={email || currentEmail} phone={phone} />
 
             <View style={{ height: 24 }} />
           </ScrollView>

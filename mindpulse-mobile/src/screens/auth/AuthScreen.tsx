@@ -21,6 +21,12 @@ import {
   loadRememberedEmail,
   saveRememberedLogin,
 } from '../../services/rememberMe';
+import {
+  prepareSignInVerification,
+  resendSignInChallenge,
+  VerificationChallenge,
+  verifySignInChallenge,
+} from '../../services/signInVerification';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
@@ -112,6 +118,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verificationChallenge, setVerificationChallenge] = useState<VerificationChallenge | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationBusy, setVerificationBusy] = useState(false);
 
   /* Register state */
   const [firstName, setFirstName] = useState('');
@@ -287,6 +296,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       return;
     }
     setLoading(true);
+    let signedIn = false;
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -300,17 +310,61 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         }
         throw new Error(describeAuthError(error));
       }
+      signedIn = true;
       if (rememberMe) {
         await saveRememberedLogin(email);
       } else {
         await clearRememberedLogin();
       }
+      const challenge = await prepareSignInVerification();
+      if (challenge) {
+        setVerificationChallenge(challenge);
+        setVerificationCode('');
+        return;
+      }
       onAuthSuccess(false);
     } catch (err: any) {
+      if (signedIn) await supabase.auth.signOut({ scope: 'local' });
       Alert.alert('Login Failed', err?.message ?? 'Something went wrong.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifySignIn = async () => {
+    if (!verificationChallenge || verificationCode.length !== 6 || verificationBusy) return;
+    setVerificationBusy(true);
+    try {
+      await verifySignInChallenge(verificationChallenge, verificationCode);
+      setVerificationChallenge(null);
+      setVerificationCode('');
+      onAuthSuccess(false);
+    } catch (err: any) {
+      Alert.alert('Verification Failed', err?.message ?? 'The code could not be verified.');
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!verificationChallenge || verificationBusy) return;
+    setVerificationBusy(true);
+    try {
+      setVerificationChallenge(await resendSignInChallenge(verificationChallenge));
+      setVerificationCode('');
+      Alert.alert('Code Sent', `A new code was sent to ${verificationChallenge.destination}.`);
+    } catch (err: any) {
+      Alert.alert('Could Not Resend Code', err?.message ?? 'Please try again.');
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
+
+  const cancelSignInVerification = async () => {
+    await supabase.auth.signOut({ scope: 'local' });
+    setVerificationChallenge(null);
+    setVerificationCode('');
+    setLoginPassword('');
   };
 
   const handleResend = async () => {
@@ -440,11 +494,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
             {/* Heading */}
             <Text style={styles.heading}>
-              {pendingEmail ? 'Confirm Your E-mail' : "Let's Get Started!"}
+              {pendingEmail ? 'Confirm Your E-mail' : verificationChallenge ? 'Verify It’s You' : "Let's Get Started!"}
             </Text>
             <Text style={styles.subheading}>
               {pendingEmail
                 ? 'Almost there — one more step'
+                : verificationChallenge
+                  ? `Enter the six-digit code for ${verificationChallenge.destination}`
                 : activeTab === 'login'
                   ? 'Sign in to your account today'
                   : 'Create your free account today'}
@@ -487,6 +543,41 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   you used a brand-new e-mail address — an address that already
                   has a MindPulse account will not receive a new link.
                 </Text>
+              </View>
+            ) : verificationChallenge ? (
+              <View style={styles.panel}>
+                <Ionicons name="shield-checkmark-outline" size={30} color={ACCENT} />
+                <Text style={styles.panelTitle}>Sign-in Verification</Text>
+                <Text style={styles.panelBody}>
+                  {verificationChallenge.method === 'totp'
+                    ? 'Open your authenticator app and enter the current code.'
+                    : `Enter the code sent to ${verificationChallenge.destination}.`}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={verificationCode}
+                  onChangeText={(value) => setVerificationCode(value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Six-digit code"
+                  placeholderTextColor="#B0C4D8"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  accessibilityLabel="Sign-in verification code"
+                />
+                <Pressable
+                  style={[styles.primaryBtn, (verificationBusy || verificationCode.length !== 6) && { opacity: 0.7 }]}
+                  onPress={() => void handleVerifySignIn()}
+                  disabled={verificationBusy || verificationCode.length !== 6}
+                >
+                  <Text style={styles.primaryBtnText}>{verificationBusy ? 'Verifying…' : 'Verify and Sign In'}</Text>
+                </Pressable>
+                {verificationChallenge.method !== 'totp' && (
+                  <Pressable style={styles.backBtn} onPress={() => void handleResendVerification()} disabled={verificationBusy}>
+                    <Text style={styles.backBtnText}>{verificationBusy ? 'Please wait…' : 'Resend Code'}</Text>
+                  </Pressable>
+                )}
+                <Pressable style={styles.backBtn} onPress={() => void cancelSignInVerification()} disabled={verificationBusy}>
+                  <Text style={styles.backBtnText}>Cancel Sign In</Text>
+                </Pressable>
               </View>
             ) : (
             <>

@@ -21,6 +21,7 @@ import {
   saveDoctorProfile,
 } from '../../services/doctorProfile';
 import { DoctorNotifications } from '../../components/DoctorNotifications';
+import { MobileSecuritySettings } from '../../components/MobileSecuritySettings';
 import { DoctorNotificationsSettings } from './DoctorNotificationsSettings';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../../theme/theme';
 
@@ -242,6 +243,8 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
           )}
         </TouchableOpacity>
       </View>
+
+      <MobileSecuritySettings email={profile.email} phone={profile.phone} />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Preferences</Text>
