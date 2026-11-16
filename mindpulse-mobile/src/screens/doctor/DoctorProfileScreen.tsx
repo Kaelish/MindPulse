@@ -152,6 +152,30 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
     ]);
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Deleting your MindPulse doctor account will permanently erase your profile, consultations, and all associated data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.rpc('delete_my_account');
+              if (error) throw new Error(error.message);
+              await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+              onSignOut?.();
+            } catch (e: any) {
+              Alert.alert('Deletion Failed', e?.message || 'Could not delete your account.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingBox}>
@@ -271,6 +295,11 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={[styles.signOutBtn, styles.deleteAccountBtn]} onPress={handleDeleteAccount}>
+        <Ionicons name="trash-outline" size={18} color={Colors.tagRedText} />
+        <Text style={[styles.signOutText, { color: Colors.tagRedText }]}>Delete Account</Text>
+      </TouchableOpacity>
+
       <DoctorNotificationsSettings visible={notifSettingsOpen} onClose={() => setNotifSettingsOpen(false)} />
     </ScrollView>
   );
@@ -380,6 +409,9 @@ const makeStyles = () => StyleSheet.create({
     backgroundColor: Colors.tagRedBg,
     borderRadius: Radius.md,
     paddingVertical: 13,
+  },
+  deleteAccountBtn: {
+    marginTop: 8,
   },
   signOutText: { color: Colors.tagRedText, fontWeight: '800', fontSize: 14.5 },
 });

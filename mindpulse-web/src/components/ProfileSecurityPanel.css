@@ -530,6 +530,42 @@
   color: #a42b35;
 }
 
+.profile-security-delete {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.profile-security-delete > header h2 {
+  color: #b4232d;
+}
+
+.profile-security-delete > header p {
+  color: #64748b;
+}
+
+.profile-security-delete-btn {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border: 1px solid #b4232d;
+  border-radius: 8px;
+  background: #b4232d;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-security-delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-security-delete-btn:hover:not(:disabled) {
+  background: #9a2228;
+}
+
 .profile-security-empty,
 .profile-security-session-error,
 .profile-security-session-note {
