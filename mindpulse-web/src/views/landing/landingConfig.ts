@@ -1,14 +1,14 @@
 /**
  * Public landing page configuration.
  *
- * Replace the placeholder with the real mobile application destination — either
- * a direct APK link or the app's distribution page. You can also set
+ * The current value is the direct EAS APK artifact URL, not the EAS build
+ * dashboard URL. You can replace it with a permanent release URL later, or set
  * REACT_APP_MOBILE_APP_DOWNLOAD_URL in mindpulse-web/.env.local; the environment
  * value wins over the placeholder below.
  */
 export const MOBILE_APP_DOWNLOAD_URL =
   (process.env.REACT_APP_MOBILE_APP_DOWNLOAD_URL ?? '').trim()
-  || '[MINDPULSE_MOBILE_APP_DOWNLOAD_URL]';
+  || 'https://expo.dev/artifacts/eas/G4n8xJfG0gfSo40hK_-l4a301u8POTkPTMsuqx2ftn4.apk';
 
 /**
  * Optional real screenshot of the MindPulse mobile app (for example

@@ -24,12 +24,15 @@ describe('LandingPage', () => {
     expect(screen.getByText('Mobile application for patients and doctors.')).toBeInTheDocument();
   });
 
-  test('shows the disabled download state when no real URL is configured', () => {
+  test('shows the configured mobile download link', () => {
     render(<LandingPage onLogIn={jest.fn()} />);
 
-    expect(screen.getByText('Download Now')).toBeInTheDocument();
-    expect(screen.getByText('Download link coming soon')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /download now/i })).not.toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /download now/i });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://expo.dev/artifacts/eas/G4n8xJfG0gfSo40hK_-l4a301u8POTkPTMsuqx2ftn4.apk',
+    );
+    expect(screen.queryByText('Download link coming soon')).not.toBeInTheDocument();
   });
 
   test('Log In opens the web portal login, not the mobile download', () => {
