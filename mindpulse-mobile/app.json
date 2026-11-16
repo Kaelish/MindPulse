@@ -3,6 +3,9 @@
     "name": "MindPulseMobile",
     "slug": "mindpulse-mobile",
     "scheme": "mindpulse",
+    "android": {
+      "package": "com.kaelish.mindpulse"
+    },
     "plugins": [
       "expo-audio",
       [
