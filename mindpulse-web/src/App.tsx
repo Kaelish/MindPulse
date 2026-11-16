@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase/client';
-import { getCurrentUserRole } from './services/session';
+import { getCurrentUserRole, isAccountDeactivated } from './services/session';
+import { reactivateOwnAccount } from './services/profile';
 import { reportProfileSessionError, signOutCurrentDevice, startProfileSessionMonitor } from './services/profileSessions';
 import { clearAdminIdentity } from './services/adminIdentity';
 import { prepareSignInVerification, VerificationChallenge } from './services/signInVerification';
@@ -144,6 +145,65 @@ function UnauthorizedView({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
+/**
+ * Shown instead of any portal when profiles.is_deactivated is true (0042).
+ * The account was never removed from auth.users, so signing in succeeded —
+ * the person is asked whether to bring the account back before anything loads.
+ */
+function DeactivatedAccountView({
+  onReactivate,
+  onSignOut,
+}: {
+  onReactivate: () => Promise<void>;
+  onSignOut: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reactivate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onReactivate();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'This account could not be reactivated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="auth-shell">
+      <div className="auth-card auth-card-split">
+        <aside className="auth-side-panel auth-side-panel-soft">
+          <div className="brand-chip">
+            <span className="brand-icon has-image"><BrandLogo className="brand-logo-img" /></span>
+            <span>MindPulse</span>
+          </div>
+          <h2>Account deactivated</h2>
+          <p>Your records are kept on file and are not visible while the account is deactivated.</p>
+        </aside>
+        <div className="auth-form-panel">
+          <h1>This account was deactivated. Would you like to reactivate this account?</h1>
+          <p>
+            Choosing Reactivate restores access with everything as it was. Anything you
+            deleted earlier stays in Recently Deleted until you restore it yourself.
+          </p>
+          <div className="auth-form">
+            <button className="primary-button" type="button" onClick={() => void reactivate()} disabled={busy}>
+              {busy ? 'Reactivating…' : 'Yes, reactivate this account'}
+            </button>
+            <button className="primary-button" type="button" onClick={onSignOut} disabled={busy}>
+              No, sign out
+            </button>
+          </div>
+          {error && <p role="alert">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; onRecheck: () => Promise<Portal> }) {
   const [isChecking, setIsChecking] = useState(false);
   const [statusNote, setStatusNote] = useState<string | null>(null);
@@ -205,6 +265,9 @@ function App() {
   );
   const [verification, setVerification] = useState<VerificationChallenge | null>(null);
   const [verificationFailure, setVerificationFailure] = useState('');
+  // True while the signed-in account is deactivated and the reactivation
+  // prompt is on screen (0042). No portal may mount while this is set.
+  const [deactivated, setDeactivated] = useState(false);
   const portalRef = useRef<Portal | null>(null);
   const routingRef = useRef<Promise<Portal> | null>(null);
 
@@ -232,6 +295,14 @@ function App() {
       setVerification(null);
       setVerificationFailure('');
       const role = await getCurrentUserRole();
+      // Deactivation gate (0042): a deactivated account never reaches a
+      // portal. The prompt owns navigation from here until the person picks.
+      if (await isAccountDeactivated()) {
+        setDeactivated(true);
+        setPortal(null);
+        return 'unauthorized';
+      }
+      setDeactivated(false);
       const next: Portal =
         role === 'doctor' ? 'doctor'
         : role === 'admin' ? 'admin'
@@ -306,6 +377,7 @@ function App() {
     setPortal(null);
     setVerification(null);
     setVerificationFailure('');
+    setDeactivated(false);
     setAuthScreen('login');
     setShowLogin(true);
   };
@@ -388,6 +460,21 @@ function App() {
         onVerified={() => {
           setVerification(null);
           void routeToPortal();
+        }}
+        onSignOut={() => void signOut()}
+      />
+    );
+  }
+
+  // Deactivation gate (0042): takes precedence over every portal so a
+  // deactivated account can never mount a dashboard.
+  if (deactivated) {
+    return (
+      <DeactivatedAccountView
+        onReactivate={async () => {
+          await reactivateOwnAccount();
+          setDeactivated(false);
+          await routeToPortal();
         }}
         onSignOut={() => void signOut()}
       />

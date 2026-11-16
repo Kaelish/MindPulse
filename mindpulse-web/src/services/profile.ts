@@ -99,3 +99,27 @@ export const changeOwnPassword = async (newPassword: string): Promise<void> => {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 };
+
+/**
+ * Reactivates the signed-in account (0042): clears is_deactivated,
+ * deactivated_at, deleted_at and deleted_by so the account is active again.
+ *
+ * Records the user soft-deleted BEFORE deactivating are deliberately left
+ * alone — they stay in Recently Deleted until restored one by one.
+ * The profiles UPDATE policy is ownership-only, so writing NULL back is
+ * permitted (there is no active-row predicate in its WITH CHECK).
+ */
+export const reactivateOwnAccount = async (): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_deactivated: false,
+      deactivated_at: null,
+      deleted_at: null,
+      deleted_by: null,
+    })
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
+};

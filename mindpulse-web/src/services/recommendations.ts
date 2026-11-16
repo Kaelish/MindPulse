@@ -147,9 +147,14 @@ export const updateRecommendation = async (
  */
 export const deleteRecommendation = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
+  const doctorId = await requireUserId();
   const { error } = await supabase
     .from('recommendations')
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: doctorId,
+    })
     .eq('id', id);
   if (error) throw new Error(error.message);
 };

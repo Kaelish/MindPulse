@@ -94,6 +94,8 @@ const pullBundles = async (): Promise<Bundles> => {
     .from('profiles')
     .select('id, first_name, last_name, email, phone, student_no, program, year_level, created_at')
     .eq('role', 'student')
+    // Deactivated accounts never appear in the records / at-risk registers.
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (profilesError) throw new Error(profilesError.message);
   const students = (profiles ?? []) as StudentProfileRow[];

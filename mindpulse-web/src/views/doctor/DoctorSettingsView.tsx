@@ -8,6 +8,7 @@ import {
   saveDoctorSettings,
 } from '../../services/doctorSettings';
 import { DoctorNotifications } from '../../components/doctor/DoctorChrome';
+import { DOCTOR_TRASH_CATEGORIES, RecentlyDeletedPanel } from '../../components/RecentlyDeletedPanel';
 
 const LANDING_OPTIONS: { value: DoctorLandingView; label: string }[] = [
   { value: 'consultations', label: 'Consultations' },
@@ -190,6 +191,14 @@ export const DoctorSettingsView: React.FC = () => {
               </button>
             </div>
           ))}
+        </section>
+
+        <section className="doc-settings-card">
+          <div className="doc-settings-card-head">
+            <h2>Recently Deleted</h2>
+            <p>Restore records you have soft-deleted. Nothing here has been permanently erased.</p>
+          </div>
+          <RecentlyDeletedPanel categories={DOCTOR_TRASH_CATEGORIES} />
         </section>
 
         {error && <div className="error-inline">{error}</div>}

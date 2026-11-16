@@ -63,9 +63,12 @@ export const fetchAllRows = async <T>(
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     let query = supabase.from(table).select(columns);
-    // Soft-deleted sessions are archived (0039): they must never feed admin
-    // lists, analytics or reports. Only stress_sessions carries the column.
+    // Soft-deleted rows are archived (0039 for stress_sessions, 0042 for the
+    // rest): they must never feed admin lists, analytics or reports.
+    // stress_sessions uses the is_deleted flag; profiles / appointments use
+    // deleted_at, which is also what the RLS SELECT policies check.
     if (table === 'stress_sessions') query = query.eq('is_deleted', false);
+    else query = query.is('deleted_at', null);
     if (filter) query = query.in(filter.column, filter.values);
     const { data, error } = await query
       .order('created_at', { ascending: false })
@@ -124,22 +127,32 @@ export const fetchAdminOverview = async (): Promise<AdminOverviewStats> => {
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, role');
+    .select('id, role')
+    // Deactivated / soft-deleted accounts are excluded from every dashboard
+    // count. RLS deliberately keeps the self-read and admin-read branches of
+    // this policy unfiltered (the reactivation gate and the archived-accounts
+    // list need them), so the filter belongs here.
+    .is('deleted_at', null);
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
+  const activeProfileIds = new Set(profileRows.map((row) => row.id));
 
   const sessionRows = await fetchAllRows<SessionRow>('stress_sessions', 'user_id, score, assessment_type, created_at');
 
   const { count: appointmentCount, error: appointmentsError } = await supabase
     .from('appointments')
-    .select('id', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null);
   if (appointmentsError) throw new Error(appointmentsError.message);
 
-  const { count: pendingCount, error: pendingError } = await supabase
+  // Pending approvals: an account an administrator already denied is
+  // deactivated (0042), so it must stop counting as pending.
+  const { data: pendingRows, error: pendingError } = await supabase
     .from('doctor_profiles')
-    .select('user_id', { count: 'exact', head: true })
+    .select('user_id')
     .eq('is_verified', false);
   if (pendingError) throw new Error(pendingError.message);
+  const pendingCount = (pendingRows ?? []).filter((row) => activeProfileIds.has(row.user_id)).length;
 
   // Low/moderate/high bands are derived from each student's latest DAILY
   // session — supplementary sessions feed the average but not the bands.
@@ -344,6 +357,9 @@ export interface AdminAccountRow {
   licenseNo: string | null;
   contactNumber: string | null;
   bio: string | null;
+  /** Account-level deactivation (0042): true when the account was deleted/deactivated. */
+  isDeactivated: boolean;
+  deactivatedAt: string | null;
 }
 
 interface AccountProfileRow {
@@ -358,6 +374,8 @@ interface AccountProfileRow {
   avatar_url: string | null;
   onboarding_complete: boolean;
   created_at: string;
+  is_deactivated: boolean;
+  deactivated_at: string | null;
 }
 
 const initialsOf = (name: string, email: string) => {
@@ -366,14 +384,24 @@ const initialsOf = (name: string, email: string) => {
   return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
 };
 
-export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<AdminAccountRow[]> => {
+/**
+ * Accounts list. By default deactivated/soft-deleted accounts are hidden;
+ * pass `includeDeactivated` to render the archived-accounts view instead.
+ */
+export const fetchAdminAccounts = async (
+  role: 'student' | 'doctor',
+  options?: { includeDeactivated?: boolean },
+): Promise<AdminAccountRow[]> => {
   if (!supabase) throw notConfigured();
 
-  const { data: profiles, error } = await supabase
+  let query = supabase
     .from('profiles')
-    .select('id, first_name, last_name, email, phone, program, year_level, student_no, avatar_url, onboarding_complete, created_at')
+    .select('id, first_name, last_name, email, phone, program, year_level, student_no, avatar_url, onboarding_complete, created_at, is_deactivated, deactivated_at')
     .eq('role', role)
     .order('created_at', { ascending: false });
+  // Hidden from the active list, visible in the archived view.
+  if (!options?.includeDeactivated) query = query.is('deleted_at', null);
+  const { data: profiles, error } = await query;
   if (error) throw new Error(error.message);
   const rows = (profiles ?? []) as AccountProfileRow[];
   if (!rows.length) return [];
@@ -457,6 +485,8 @@ export const fetchAdminAccounts = async (role: 'student' | 'doctor'): Promise<Ad
       licenseNo: professional?.license_no ?? null,
       contactNumber: professional?.contact_number ?? null,
       bio: professional?.bio ?? null,
+      isDeactivated: row.is_deactivated,
+      deactivatedAt: row.deactivated_at,
     };
   });
 };
@@ -482,12 +512,33 @@ export const approveDoctor = async (userId: string): Promise<void> => {
 };
 
 /**
- * Denies a pending registration: removes the account entirely
- * (profiles + doctor_profiles + auth user). Admin-only RPC.
+ * Denies a pending registration — or removes an existing account — by
+ * DEACTIVATING it (0042). The RPC sets is_deactivated / deactivated_at /
+ * deleted_at / deleted_by on the profile; auth.users and every linked row are
+ * left untouched, so the account stays recoverable. Admin-only RPC.
  */
 export const denyDoctor = async (userId: string): Promise<void> => {
   if (!supabase) throw notConfigured();
   const { error } = await supabase.rpc('delete_app_user', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * Brings a deactivated account back: clears is_deactivated, deactivated_at,
+ * deleted_at and deleted_by. Records the user soft-deleted earlier are NOT
+ * restored — they stay in Recently Deleted.
+ */
+export const reactivateAccount = async (userId: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_deactivated: false,
+      deactivated_at: null,
+      deleted_at: null,
+      deleted_by: null,
+    })
+    .eq('id', userId);
   if (error) throw new Error(error.message);
 };
 
@@ -647,7 +698,10 @@ export const fetchAdminAnalytics = async (months = 0): Promise<AdminAnalytics> =
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, role');
+    .select('id, role')
+    // Active accounts only: deactivated accounts must not move the analytics
+    // denominators (0042).
+    .is('deleted_at', null);
   if (profilesError) throw new Error(profilesError.message);
   const profileRows = (profiles ?? []) as ProfileRow[];
 

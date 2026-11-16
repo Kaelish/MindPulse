@@ -49,3 +49,27 @@ export const getCurrentUserRole = async (): Promise<'student' | 'doctor' | 'admi
     return null;
   }
 };
+
+/**
+ * True when the signed-in account has been deactivated (0042).
+ *
+ * This reads the caller's OWN profile row, which the profiles RLS policy
+ * deliberately keeps unfiltered so the reactivation gate can run before any
+ * portal opens. A read failure returns false: a transient error must never
+ * lock a healthy account out of the portal.
+ */
+export const isAccountDeactivated = async (): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return false;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_deactivated')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    return profile?.is_deactivated === true;
+  } catch {
+    return false;
+  }
+};
