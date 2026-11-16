@@ -4,8 +4,8 @@
 **/.git/**
 .git*
 **/.git*
-mindpulse-backend/
-mindpulse-web/
-supabase/
-.vscode/
-mindpulse-expo/
+/mindpulse-backend/
+/mindpulse-web/
+/supabase/
+/.vscode/
+/mindpulse-expo/
