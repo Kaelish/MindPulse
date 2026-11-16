@@ -241,7 +241,6 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
 
   const turnOffVerification = async () => {
     if (verificationBusy) return;
-    if (!window.confirm('Turn off sign-in verification for this account?')) return;
     setVerificationBusy(true);
     setError('');
     setNotice('');

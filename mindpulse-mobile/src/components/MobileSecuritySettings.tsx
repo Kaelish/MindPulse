@@ -141,30 +141,20 @@ export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ 
     }
   };
 
-  const turnOff = () => {
-    Alert.alert('Turn Off Verification?', 'Sign-in will no longer require a verification code.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Turn Off',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            setBusy(true);
-            try {
-              await disableVerification();
-              setActiveMethod(null);
-              setMethod('totp');
-              setSavedDestination('');
-              clearSetup();
-            } catch (cause) {
-              Alert.alert('Could Not Turn Off', cause instanceof Error ? cause.message : 'Unable to turn off verification.');
-            } finally {
-              setBusy(false);
-            }
-          })();
-        },
-      },
-    ]);
+  const turnOff = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await disableVerification();
+      setActiveMethod(null);
+      setMethod('totp');
+      setSavedDestination('');
+      clearSetup();
+    } catch (cause) {
+      Alert.alert('Could Not Turn Off', cause instanceof Error ? cause.message : 'Unable to turn off verification.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const logOutOthers = () => {
@@ -245,7 +235,7 @@ export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ 
             <Text style={styles.description}>
               {activeMethod === 'totp' ? 'Use a code from your authenticator app to sign in.' : `Sign-in codes are sent to ${savedDestination}.`}
             </Text>
-            <Pressable style={styles.secondaryButton} onPress={turnOff} disabled={busy}>
+            <Pressable style={styles.secondaryButton} onPress={() => void turnOff()} disabled={busy}>
               <Text style={styles.secondaryText}>Turn Off Verification</Text>
             </Pressable>
           </View>

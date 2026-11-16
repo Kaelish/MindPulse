@@ -134,7 +134,6 @@ describe('Sign-in Verification method cards', () => {
   });
 
   it('returns to the QR setup after turning verification off without edit mode', async () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     (activeVerificationMethod as jest.Mock).mockResolvedValueOnce('totp');
     (disableVerification as jest.Mock).mockResolvedValueOnce(0);
 
@@ -142,10 +141,12 @@ describe('Sign-in Verification method cards', () => {
       render(<ProfileSecurityPanel editing={false} email="doctor@example.com" />);
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Turn Off Verification' }));
+    const turnOffButton = await screen.findByRole('button', { name: 'Turn Off Verification' });
+    expect(turnOffButton).toBeEnabled();
+    fireEvent.click(turnOffButton);
 
+    expect(disableVerification).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Sign-in verification is turned off.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show QR Code' })).toBeEnabled();
-    confirmSpy.mockRestore();
   });
 });
