@@ -213,6 +213,25 @@ export const dismissFeedNotification = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
+/**
+ * Restore = un-archive a soft-deleted notification. Sets is_deleted = false so
+ * the row reappears in the feed. Pinned to the signed-in account.
+ */
+export const restoreFeedNotification = async (id: string): Promise<void> => {
+  if (!supabase) throw notConfigured();
+  const viewerId = await requireViewerId();
+  const { error } = await supabase
+    .from('notifications')
+    .update({
+      is_deleted: false,
+      deleted_at: null,
+      deleted_by: null,
+    })
+    .eq('id', id)
+    .eq('user_id', viewerId);
+  if (error) throw new Error(error.message);
+};
+
 export const notificationTimeAgo = timeAgo;
 
 const toFeedNotification = (row: NotificationRow): FeedNotification => ({

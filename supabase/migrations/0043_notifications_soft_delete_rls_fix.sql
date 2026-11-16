@@ -22,8 +22,10 @@ create policy "notifications_select" on public.notifications
   using ((user_id = auth.uid() or public.is_admin()) and is_deleted = false);
 
 -- 4. UPDATE: owners and admins may update their own rows, including setting
---    is_deleted = true (soft-delete / archive). The with-check allows the
---    archive write because user_id is unchanged by the update.
+--    is_deleted = true (soft-delete / archive) AND is_deleted = false (restore).
+--    The policy does not gate on is_deleted = false in the `using` clause so
+--    already-archived rows can be un-archived (restored). The with-check only
+--    verifies ownership, not the new column values.
 drop policy if exists "notifications_update" on public.notifications;
 create policy "notifications_update" on public.notifications
   for update to authenticated

@@ -127,6 +127,20 @@ export const dismissNotification = async (id: string): Promise<void> => {
 };
 
 /**
+ * Restore = un-archive a soft-deleted notification. Sets is_deleted = false so
+ * the row reappears in the feed. Pinned to the signed-in account.
+ */
+export const restoreNotification = async (id: string): Promise<void> => {
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_deleted: false, deleted_at: null, deleted_by: null })
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+};
+
+/**
  * True for the rows produced by the chat trigger (`New message from <name>`),
  * which the app routes to the message thread instead of a generic view.
  */
