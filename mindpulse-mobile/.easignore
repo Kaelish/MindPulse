@@ -1,8 +1,14 @@
-node_modules/
+node_modules
+**/node_modules
+.git
 .expo/
 dist/
 build/
 scratch-img/
+web-dist/
+android/.gradle/
+android/build/
+android/app/build/
 *.log
 .env
 .env.*
