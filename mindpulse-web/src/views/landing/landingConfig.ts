@@ -6,9 +6,17 @@
  * REACT_APP_MOBILE_APP_DOWNLOAD_URL in mindpulse-web/.env.local; the environment
  * value wins over the placeholder below.
  */
+const DEFAULT_MOBILE_APP_DOWNLOAD_URL =
+  'https://expo.dev/artifacts/eas/G4n8xJfG0gfSo40hK_-l4a301u8POTkPTMsuqx2ftn4.apk';
+
+const configuredDownloadUrl = (process.env.REACT_APP_MOBILE_APP_DOWNLOAD_URL ?? '').trim();
+
 export const MOBILE_APP_DOWNLOAD_URL =
-  (process.env.REACT_APP_MOBILE_APP_DOWNLOAD_URL ?? '').trim()
-  || 'https://expo.dev/artifacts/eas/G4n8xJfG0gfSo40hK_-l4a301u8POTkPTMsuqx2ftn4.apk';
+  configuredDownloadUrl
+  && !configuredDownloadUrl.includes('[')
+  && !configuredDownloadUrl.includes(']')
+  ? configuredDownloadUrl
+  : DEFAULT_MOBILE_APP_DOWNLOAD_URL;
 
 /**
  * Optional real screenshot of the MindPulse mobile app (for example
