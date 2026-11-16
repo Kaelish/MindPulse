@@ -79,6 +79,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   const [logoutOthersBusy, setLogoutOthersBusy] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [password, setPassword] = useState({ current: '', next: '', confirm: '' });
 
   const [verificationLoading, setVerificationLoading] = useState(true);
@@ -289,6 +290,26 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
       setError(cause instanceof Error ? cause.message : 'Unable to log out other sessions.');
     } finally {
       setLogoutOthersBusy(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Delete your MindPulse doctor account? This permanently erases your profile, consultations, and all associated data. This cannot be undone.',
+    );
+    if (!confirmed || !supabase) return;
+    setDeleteBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw new Error(error.message);
+      await supabase.auth.signOut();
+      setNotice('Account deleted. You have been signed out.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to delete your account.');
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -524,6 +545,21 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
         <p className="profile-security-session-note">
           Logging out a device sends an immediate sign-out signal and removes it from this list. When the session-control function is deployed, its refresh token is also revoked so it cannot silently reconnect. A device appears again the next time it signs in. “Log Out All Other Sessions” always works, even when only one device is listed, because it revokes the refresh tokens on the server.
         </p>
+      </section>
+
+      <section className="profile-security-section profile-security-delete">
+        <header>
+          <h2>Delete Account</h2>
+          <p>Permanently erase your doctor profile, consultations, and all associated data. This cannot be undone.</p>
+        </header>
+        <button
+          type="button"
+          className="profile-security-delete-btn"
+          onClick={handleDeleteAccount}
+          disabled={deleteBusy}
+        >
+          {deleteBusy ? 'Deleting…' : 'Delete Account'}
+        </button>
       </section>
     </div>
   );
