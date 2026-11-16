@@ -165,9 +165,14 @@ export const updateSuggestion = async (
 /** Doctor action: withdraw a suggestion that has not been handled yet. Soft-delete instead of hard-delete. */
 export const withdrawSuggestion = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
+  const doctorId = await requireUserId();
   const { error } = await supabase
     .from('doctor_suggestions')
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: doctorId,
+    })
     .eq('id', id);
   if (error) throw new Error(error.message);
 };

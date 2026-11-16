@@ -607,6 +607,12 @@
   color: var(--adm-warning);
 }
 
+/* Deactivated / deleted account (0042): deliberately neutral, not a warning. */
+.admin-scope .status-deactivated {
+  background: rgba(100, 116, 139, 0.16);
+  color: #64748b;
+}
+
 .admin-scope .status-high,
 .admin-scope .status-critical,
 .admin-scope .status-pill-high {

@@ -203,7 +203,11 @@ export const dismissFeedNotification = async (id: string): Promise<void> => {
   const viewerId = await requireViewerId();
   const { error } = await supabase
     .from('notifications')
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: viewerId,
+    })
     .eq('id', id)
     .eq('user_id', viewerId);
   if (error) throw new Error(error.message);

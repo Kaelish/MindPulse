@@ -10,6 +10,7 @@ import {
   saveAdminSettings,
 } from '../../services/adminSettings';
 import { exportSystemData } from '../../services/dataExport';
+import { ADMIN_TRASH_CATEGORIES, RecentlyDeletedPanel } from '../../components/RecentlyDeletedPanel';
 import './AdminSystemSettingsView.css';
 
 // A-5: tabs whose controls enforced nothing (Detection, Data & Privacy policy
@@ -305,6 +306,16 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
                 Activity Log
               </button>
             </div>
+
+            <div className="settings-divider" />
+
+            <div className="settings-card-heading plain">
+              <div>
+                <h2>Recently Deleted</h2>
+                <p>Restore records that have been soft-deleted. Nothing here has been permanently erased.</p>
+              </div>
+            </div>
+            <RecentlyDeletedPanel categories={ADMIN_TRASH_CATEGORIES} />
           </section>
         )}
       </main>

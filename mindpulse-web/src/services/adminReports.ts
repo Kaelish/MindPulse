@@ -152,6 +152,8 @@ const buildStressOverview = async (options: ReportOptions): Promise<BuiltReport>
     .from('profiles')
     .select('id, first_name, last_name, email, student_no, program, year_level')
     .eq('role', 'student')
+    // Deactivated accounts are excluded from every generated report.
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (profilesError) throw new Error(profilesError.message);
 

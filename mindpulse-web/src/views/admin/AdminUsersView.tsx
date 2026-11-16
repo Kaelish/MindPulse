@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminNavView, AdminSidebar } from '../../components/navigation/AdminSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { AdminAccountRow, approveDoctor, denyDoctor, fetchAdminAccounts, setDoctorVerified } from '../../services/admin';
+import { AdminAccountRow, approveDoctor, denyDoctor, fetchAdminAccounts, reactivateAccount, setDoctorVerified } from '../../services/admin';
 import { requireUserId } from '../../services/session';
 import './AdminUsersView.css';
 
@@ -24,6 +24,9 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const [viewing, setViewing] = useState<AdminAccountRow | null>(null);
+  // Off = the active list (deactivated accounts hidden). On = the archived
+  // accounts list, where they can be brought back (0042).
+  const [showDeactivated, setShowDeactivated] = useState(false);
 
   useEffect(() => {
     if (!viewing) return;
@@ -53,7 +56,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
     let active = true;
     setIsLoading(true);
     setLoadError('');
-    fetchAdminAccounts(activeRole === 'Doctors' ? 'doctor' : 'student')
+    fetchAdminAccounts(activeRole === 'Doctors' ? 'doctor' : 'student', { includeDeactivated: showDeactivated })
       .then((rows) => {
         if (active) setAccounts(rows);
       })
@@ -66,7 +69,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
     return () => {
       active = false;
     };
-  }, [activeRole, reloadKey]);
+  }, [activeRole, reloadKey, showDeactivated]);
 
   const filteredAccounts = useMemo(() => accounts.filter((account) =>
     `${account.name} ${account.email} ${account.program}`.toLowerCase().includes(search.toLowerCase()),
@@ -75,9 +78,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const newThisWeek = accounts.filter((account) => new Date(account.createdAt).getTime() >= weekAgo).length;
   const activeAccounts = accounts.filter((account) =>
-    activeRole === 'Doctors' ? account.isVerified : account.onboardingComplete,
+    !account.isDeactivated && (activeRole === 'Doctors' ? account.isVerified : account.onboardingComplete),
   ).length;
-  const pendingAccounts = accounts.length - activeAccounts;
+  const pendingAccounts = accounts.filter((account) => !account.isDeactivated).length - activeAccounts;
+  const deactivatedAccounts = accounts.filter((account) => account.isDeactivated).length;
 
   const runAction = async (row: AdminAccountRow, action: () => Promise<void>) => {
     setActionError('');
@@ -100,9 +104,12 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
 
   const denyRegistration = (row: AdminAccountRow) => {
     const verb = row.isVerified ? 'Remove' : 'Deny';
-    if (!window.confirm(`${verb} ${row.name}'s account? This cannot be undone.`)) return;
+    if (!window.confirm(`${verb} ${row.name}'s account? The account is deactivated and hidden — an administrator can reactivate it later.`)) return;
     runAction(row, () => denyDoctor(row.id));
   };
+
+  const reactivate = (row: AdminAccountRow) =>
+    runAction(row, () => reactivateAccount(row.id));
 
   const selectRole = (role: UserRole) => {
     setActiveRole(role);
@@ -128,11 +135,12 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
             <Summary label="New This Week" value={String(newThisWeek)} />
             <Summary label="Active" value={String(activeAccounts)} />
             <Summary label="Pending" value={String(pendingAccounts)} />
+            {showDeactivated && <Summary label="Deactivated" value={String(deactivatedAccounts)} />}
           </section>
         )}
 
         <section className="content-panel account-list-panel">
-          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Patients</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button></div><label className="doctor-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole === 'Doctors' ? 'doctor' : 'patient'} name`} /></label></div>
+          <div className="account-list-toolbar"><div className="role-tabs"><button type="button" className={activeRole === 'Students' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Students')}>Patients</button><button type="button" className={activeRole === 'Doctors' ? 'role-tab active' : 'role-tab'} onClick={() => selectRole('Doctors')}>Doctors</button><button type="button" className={showDeactivated ? 'role-tab active' : 'role-tab'} onClick={() => { setShowDeactivated((on) => !on); setActionError(''); setSearch(''); }} title={showDeactivated ? 'Back to the active accounts list' : 'Show accounts that were deleted or deactivated'}>{showDeactivated ? '← Active accounts' : 'Deactivated'}</button></div><label className="doctor-search">⌕<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${activeRole === 'Doctors' ? 'doctor' : 'patient'} name`} /></label></div>
           {actionError && <p className="error-inline">{actionError}</p>}
           {isLoading && <div className="loading-state"><span className="spinner" /></div>}
           {loadError && (
@@ -148,9 +156,11 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                 <tbody>
                   {filteredAccounts.map((account) => {
                     const isSelf = myId !== null && account.id === myId;
-                    const status = activeRole === 'Doctors'
-                      ? (account.isVerified ? 'Active' : 'Pending')
-                      : (account.onboardingComplete ? 'Active' : 'Pending');
+                    const status = account.isDeactivated
+                      ? 'Deactivated'
+                      : activeRole === 'Doctors'
+                        ? (account.isVerified ? 'Active' : 'Pending')
+                        : (account.onboardingComplete ? 'Active' : 'Pending');
                     const busy = busyId === account.id;
                     return (
                       <tr key={account.id}>
@@ -193,20 +203,28 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                             <button type="button" className="view-details-button" onClick={() => setViewing(account)}>
                               View
                             </button>
-                            {activeRole === 'Doctors' && !account.isVerified && (
-                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => approveRegistration(account)}>
-                                {busy ? 'Working…' : 'Approve'}
+                            {account.isDeactivated ? (
+                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => reactivate(account)}>
+                                {busy ? 'Working…' : 'Reactivate'}
                               </button>
-                            )}
-                            {activeRole === 'Doctors' && (
-                              <button type="button" className="table-action" disabled={isSelf || busy} onClick={() => denyRegistration(account)}>
-                                {account.isVerified ? 'Remove' : 'Deny'}
-                              </button>
-                            )}
-                            {activeRole === 'Doctors' && account.isVerified && (
-                              <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => toggleVerified(account)}>
-                                Unverify
-                              </button>
+                            ) : (
+                              <>
+                                {activeRole === 'Doctors' && !account.isVerified && (
+                                  <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => approveRegistration(account)}>
+                                    {busy ? 'Working…' : 'Approve'}
+                                  </button>
+                                )}
+                                {activeRole === 'Doctors' && (
+                                  <button type="button" className="table-action" disabled={isSelf || busy} onClick={() => denyRegistration(account)}>
+                                    {account.isVerified ? 'Remove' : 'Deny'}
+                                  </button>
+                                )}
+                                {activeRole === 'Doctors' && account.isVerified && (
+                                  <button type="button" className="view-details-button" disabled={isSelf || busy} onClick={() => toggleVerified(account)}>
+                                    Unverify
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>
@@ -241,10 +259,12 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                 <div>
                   <h2>{viewing.name}</h2>
                   <p>{viewing.email}</p>
-                  <span className={`status-pill status-${(viewing.isVerified || (viewing.role === 'student' && viewing.onboardingComplete)) ? 'active' : 'pending'}`}>
-                    {viewing.role === 'doctor'
-                      ? (viewing.isVerified ? 'Verified' : 'Pending approval')
-                      : (viewing.onboardingComplete ? 'Onboarding complete' : 'Onboarding incomplete')}
+                  <span className={`status-pill status-${viewing.isDeactivated ? 'deactivated' : (viewing.isVerified || (viewing.role === 'student' && viewing.onboardingComplete)) ? 'active' : 'pending'}`}>
+                    {viewing.isDeactivated
+                      ? 'Deactivated'
+                      : viewing.role === 'doctor'
+                        ? (viewing.isVerified ? 'Verified' : 'Pending approval')
+                        : (viewing.onboardingComplete ? 'Onboarding complete' : 'Onboarding incomplete')}
                   </span>
                 </div>
               </div>

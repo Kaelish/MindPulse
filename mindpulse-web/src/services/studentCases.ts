@@ -146,6 +146,8 @@ export async function fetchStudentCases(): Promise<StudentCaseRecord[]> {
     .from('profiles')
     .select(PROFILE_COLUMNS)
     .eq('role', 'student')
+    // Deactivated accounts drop out of the doctor's patient-case table.
+    .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (profilesError) throw new Error(profilesError.message);
 
