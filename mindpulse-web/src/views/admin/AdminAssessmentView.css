@@ -61,12 +61,25 @@
   margin-bottom: 18px;
 }
 
+/* Search box + status filter travel as one unit so `space-between` on the
+   toolbar only pushes the Create button to the far right, leaving the two
+   controls sitting flush against each other instead of stranding the filter
+   in the middle of an empty gap. */
+.assessment-search-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 720px;
+}
+
 .assessment-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
-  max-width: 560px;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 9px 13px;
   border: 1px solid #dfe5ec;
   border-radius: 9px;
@@ -97,6 +110,29 @@
 
 .assessment-create-button:hover {
   background: #0b6c80;
+}
+
+/* Status filter sitting between the search box and the Create button. */
+.assessment-status-filter {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #dfe5ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #182033;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.assessment-status-filter:hover {
+  border-color: #c6d2e0;
+}
+
+.assessment-status-filter:focus-visible {
+  outline: 2px solid #0e7f96;
+  outline-offset: 1px;
 }
 
 .assessment-banner.error {
@@ -851,9 +887,16 @@ html[data-theme='dark'] .assessment-field textarea,
 html[data-theme='dark'] .assessment-edit-button,
 html[data-theme='dark'] .assessment-delete-button,
 html[data-theme='dark'] .assessment-view-button,
-html[data-theme='dark'] .assessment-show-all {
+html[data-theme='dark'] .assessment-show-all,
+html[data-theme='dark'] .assessment-status-filter {
   background: #0f1729;
   border-color: var(--line, #26314a);
+  color: var(--text, #e7ebf3);
+}
+
+/* The dropdown list is painted by the OS, so it needs its own dark colors. */
+html[data-theme='dark'] .assessment-status-filter option {
+  background: #0f1729;
   color: var(--text, #e7ebf3);
 }
 
@@ -947,8 +990,14 @@ html[data-theme='dark'] .assessment-note {
     align-items: stretch;
   }
 
-  .assessment-search {
+  .assessment-search-group {
+    flex-wrap: wrap;
     max-width: none;
+  }
+
+  /* Stacked layout: the filter takes its own full-width row under the search. */
+  .assessment-status-filter {
+    flex: 1 1 100%;
   }
 
   .assessment-field-row {

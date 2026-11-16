@@ -123,7 +123,9 @@ export const AdminResultsView: React.FC<AdminResultsViewProps> = ({ onSignOut, o
             const levelText = band ? titleCase(band) : (result.stressLevel ?? '—');
             return (
               <article className="scan-row" key={result.id}>
-                <div className="scan-identity"><span className="scan-label">Scan ID</span><strong>{result.id.slice(0, 8)}</strong><div className="scan-user"><span className="account-avatar">●</span><span><b>{result.studentName}</b><small>{formatStamp(result.createdAt)}</small><small>{assessmentNameOf(result)}</small><small className="type-chip">{result.assessmentType ? result.assessmentType.charAt(0).toUpperCase() + result.assessmentType.slice(1) : 'Daily'}</small></span></div></div>
+                <div className="scan-identity"><span className="scan-label">Scan ID</span><strong>{result.id.slice(0, 8)}</strong><div className="scan-user">{result.avatarUrl
+                  ? <img className="account-avatar account-avatar-img" src={result.avatarUrl} alt="" />
+                  : <span className="account-avatar">{result.studentName.trim().charAt(0).toUpperCase()}</span>}<span><b>{result.studentName}</b><small>{formatStamp(result.createdAt)}</small><small>{assessmentNameOf(result)}</small><small className="type-chip">{result.assessmentType ? result.assessmentType.charAt(0).toUpperCase() + result.assessmentType.slice(1) : 'Daily'}</small></span></div></div>
                 <div className="scan-detail"><span>Emotion</span><b className="emotion-badge">{result.emotion ?? '—'}</b><span>Stress Level</span><b className={`stress-text ${levelText.toLowerCase()}`}>{band && result.score != null ? `${levelText} (${result.score})` : levelText}</b></div>
                 <div className="scan-detail"><span>Heart Rate</span><strong>{result.heartRate != null ? `${result.heartRate} bpm` : '— bpm'}</strong><span>Survey Score</span><strong>{result.surveyScore ?? '—'}</strong></div>
                 <div className="tension-detail"><span>Reaction Time</span><strong>{result.reactionTimeMs != null ? `${result.reactionTimeMs} ms` : '—'}</strong></div>

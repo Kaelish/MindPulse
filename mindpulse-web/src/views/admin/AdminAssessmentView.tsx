@@ -69,6 +69,8 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
   const [toolsLoading, setToolsLoading] = useState(true);
   const [toolsError, setToolsError] = useState('');
   const [search, setSearch] = useState('');
+  /** Toolbar status filter — narrows the card grid alongside the text search. */
+  const [statusFilter, setStatusFilter] = useState<AssessmentStatus | 'all'>('all');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -127,12 +129,33 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
 
   const filteredTools = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return tools;
-    return tools.filter(
-      (tool) =>
-        tool.title.toLowerCase().includes(needle) || tool.description.toLowerCase().includes(needle),
-    );
-  }, [tools, search]);
+    return tools.filter((tool) => {
+      if (statusFilter !== 'all' && tool.status !== statusFilter) return false;
+      if (!needle) return true;
+      return (
+        tool.title.toLowerCase().includes(needle) ||
+        tool.description.toLowerCase().includes(needle)
+      );
+    });
+  }, [tools, search, statusFilter]);
+
+  /** Per-status totals for the filter labels — always over the FULL list, so
+   *  picking "Archived (4)" doesn't collapse the count to the filtered result. */
+  const statusCounts = useMemo(() => {
+    const counts: Record<AssessmentStatus | 'all', number> = {
+      all: tools.length,
+      active: 0,
+      draft: 0,
+      archived: 0,
+    };
+    tools.forEach((tool) => {
+      counts[tool.status] += 1;
+    });
+    return counts;
+  }, [tools]);
+
+  /** True once either the text search or the status filter is narrowing the grid. */
+  const hasActiveFilter = Boolean(search.trim()) || statusFilter !== 'all';
 
   const openCreate = () => {
     const next: ToolForm = {
@@ -372,13 +395,26 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
         {mode === 'tools' && (
           <>
             <div className="assessment-toolbar">
-              <div className="assessment-search">
-                <span aria-hidden="true">⌕</span>
-                <input
-                  value={search}
-                  placeholder="Search assessments"
-                  onChange={(event) => setSearch(event.target.value)}
-                />
+              <div className="assessment-search-group">
+                <div className="assessment-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input
+                    value={search}
+                    placeholder="Search assessments"
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </div>
+                <select
+                  className="assessment-status-filter"
+                  value={statusFilter}
+                  aria-label="Filter by status"
+                  onChange={(event) => setStatusFilter(event.target.value as AssessmentStatus | 'all')}
+                >
+                  <option value="all">All statuses ({statusCounts.all})</option>
+                  <option value="active">Active ({statusCounts.active})</option>
+                  <option value="draft">Draft ({statusCounts.draft})</option>
+                  <option value="archived">Archived ({statusCounts.archived})</option>
+                </select>
               </div>
               <button type="button" className="assessment-create-button" onClick={openCreate}>
                 ＋ Create Assessment
@@ -391,7 +427,7 @@ export const AdminAssessmentView: React.FC<AdminAssessmentViewProps> = ({ onSign
               <div className="assessment-empty">Loading assessment tools…</div>
             ) : filteredTools.length === 0 ? (
               <div className="assessment-empty">
-                {search ? 'No assessments match your search.' : 'No assessments yet — create the first one.'}
+                {hasActiveFilter ? 'No assessments match your filters.' : 'No assessments yet — create the first one.'}
               </div>
             ) : (
               <div className="assessment-card-grid">
