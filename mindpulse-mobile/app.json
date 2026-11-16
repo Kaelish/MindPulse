@@ -4,7 +4,14 @@
     "slug": "mindpulse-mobile",
     "scheme": "mindpulse",
     "android": {
-      "package": "com.kaelish.mindpulse"
+      "package": "com.kaelish.mindpulse",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       "expo-audio",
@@ -17,6 +24,12 @@
       "expo-status-bar",
       "expo-font",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4df88f42-d9ba-4689-a6b8-3e31aada796d"
+      }
+    },
+    "owner": "kraeyon"
   }
 }
