@@ -3,8 +3,13 @@
     "name": "MindPulse App",
     "slug": "mindpulse-mobile",
     "scheme": "mindpulse",
+    "icon": "./assets/images/logo.png",
     "android": {
       "package": "com.kaelish.mindpulse",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
