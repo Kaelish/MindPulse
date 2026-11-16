@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { MOBILE_APP_DOWNLOAD_URL, isDownloadUrlConfigured } from './landingConfig';
 
 const DownloadIcon: React.FC = () => (
@@ -35,26 +36,72 @@ export const MobileDownloadButton: React.FC<MobileDownloadButtonProps> = ({
   href = MOBILE_APP_DOWNLOAD_URL,
 }) => {
   const configured = isDownloadUrlConfigured(href);
+  const [qrCode, setQrCode] = useState('');
+  const [qrError, setQrError] = useState('');
+
+  useEffect(() => {
+    if (!configured) {
+      setQrCode('');
+      setQrError('');
+      return;
+    }
+
+    let active = true;
+    setQrError('');
+    void QRCode.toDataURL(href, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 180,
+    })
+      .then((dataUrl) => {
+        if (active) setQrCode(dataUrl);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setQrError(error instanceof Error ? error.message : 'The download QR code could not be generated.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [configured, href]);
 
   return (
     <div className="landing-download">
-      {configured ? (
-        <a className="landing-download-btn" href={href} rel="noopener noreferrer">
-          <DownloadIcon />
-          <span>Download Now</span>
-        </a>
-      ) : (
-        <button type="button" className="landing-download-btn is-disabled" disabled>
-          <DownloadIcon />
-          <span>Download Now</span>
-        </button>
-      )}
+      <div className="landing-download-actions">
+        <div>
+          {configured ? (
+            <a className="landing-download-btn" href={href} rel="noopener noreferrer">
+              <DownloadIcon />
+              <span>Download Now</span>
+            </a>
+          ) : (
+            <button type="button" className="landing-download-btn is-disabled" disabled>
+              <DownloadIcon />
+              <span>Download Now</span>
+            </button>
+          )}
 
-      <p className="landing-download-note">Mobile application for patients and doctors.</p>
+          <p className="landing-download-note">Mobile application for patients and doctors.</p>
+        </div>
+
+        {configured && qrCode && (
+          <div className="landing-download-qr">
+            <img src={qrCode} alt="Scan to download the MindPulse mobile app" />
+            <span>Scan to download</span>
+          </div>
+        )}
+      </div>
 
       {!configured && (
         <p className="landing-download-coming" role="status">
           Download link coming soon
+        </p>
+      )}
+      {configured && qrError && (
+        <p className="landing-download-coming" role="alert">
+          {qrError}
         </p>
       )}
     </div>

@@ -730,6 +730,12 @@
   gap: 10px;
 }
 
+.landing-download-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+}
+
 .landing-download-btn {
   display: inline-flex;
   align-items: center;
@@ -774,6 +780,26 @@
   font-size: 0.86rem;
 }
 
+.landing-download-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: var(--landing-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.landing-download-qr img {
+  width: 112px;
+  height: 112px;
+  padding: 6px;
+  border: 1px solid #dce8ee;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
 .landing-download-coming {
   margin: 0;
   padding: 6px 11px;
@@ -783,6 +809,12 @@
   color: #8a5a12;
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .landing-download-actions {
+    flex-direction: column;
+  }
 }
 
 /* ------------------------------------------------------------------- about */
