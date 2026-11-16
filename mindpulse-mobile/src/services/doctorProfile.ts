@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import { requireUserId } from './session';
+import { normalizePhoneNumber, validatePhoneNumber } from './internationalPhone';
 
 export interface DoctorProfileData {
   userId: string;
@@ -61,6 +62,8 @@ export const fetchDoctorProfile = async (): Promise<DoctorProfileData> => {
 export const saveDoctorProfile = async (
   profile: DoctorProfileData,
 ): Promise<{ success: boolean; message?: string }> => {
+  const phoneError = validatePhoneNumber(profile.phone);
+  if (phoneError) return { success: false, message: phoneError };
   try {
     const userId = await requireUserId();
 
@@ -78,7 +81,7 @@ export const saveDoctorProfile = async (
       {
         user_id: userId,
         specialization: profile.specialty.trim() || null,
-        contact_number: profile.phone.trim() || null,
+        contact_number: normalizePhoneNumber(profile.phone) || null,
         license_no: profile.licenseId.trim() || null,
       },
       { onConflict: 'user_id' },

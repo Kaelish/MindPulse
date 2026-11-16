@@ -17,6 +17,8 @@ import { Colors } from '../../../theme/colors';
 import { supabase } from '../../../supabase/client';
 import { getAvatarUrl, pickProfilePhoto, uploadProfilePhoto } from '../../../services/profileAvatar';
 import { CalendarDatePicker } from '../../../components/CalendarDatePicker';
+import { MobileSecuritySettings } from '../../../components/MobileSecuritySettings';
+import { normalizePhoneNumber, validatePhoneNumber } from '../../../services/internationalPhone';
 import { registerThemeStyles, tone, toneBg } from '../../../theme/theme';
 
 interface AccountInfoModalProps {
@@ -133,11 +135,12 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
       Alert.alert('Validation Error', 'Please enter your full name.');
       return;
     }
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits && (phoneDigits.length < 7 || phoneDigits.length > 15)) {
-      Alert.alert('Validation Error', 'Please enter a valid phone number (7 to 15 digits).');
+    const phoneError = validatePhoneNumber(phone);
+    if (phoneError) {
+      Alert.alert('Validation Error', phoneError);
       return;
     }
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (dob) {
       const dobDate = new Date(`${dob}T00:00:00`);
       if (Number.isNaN(dobDate.getTime()) || dobDate.getTime() > Date.now()) {
@@ -167,9 +170,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
         // (unset) value is never written over a real one by accident.
         if (yearLevel !== savedYear) patch.year_level = yearLevel;
         if (livingSituation !== savedLiving) patch.living_situation = livingSituation;
-        // Phone is compared digit-for-digit, so a stored "0969 346 4427" and a
-        // typed "09693464427" count as the same number (no pointless rewrite).
-        if (phoneDigits !== savedPhone.replace(/\D/g, '')) patch.phone = phoneDigits || null;
+        if (normalizedPhone !== normalizePhoneNumber(savedPhone)) patch.phone = normalizedPhone || null;
         if (dob !== savedDob) patch.birth_date = dob || null;
 
         const { error } = await supabase
@@ -180,7 +181,8 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
 
         setSavedYear(yearLevel);
         setSavedLiving(livingSituation);
-        setSavedPhone(phoneDigits);
+        setPhone(normalizedPhone);
+        setSavedPhone(normalizedPhone);
         setSavedDob(dob);
       }
       showToast('Profile information updated successfully!');
@@ -359,7 +361,7 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                   maxLength={20}
                 />
                 <Text style={styles.fieldNote}>
-                  The number you gave at registration — your doctor sees it on your case record.
+                  The number you gave at registration — your doctor sees it on your case record. Use a valid number for its country.
                 </Text>
               </View>
 
@@ -518,6 +520,8 @@ export const AccountInfoModal: React.FC<AccountInfoModalProps> = ({
                 )}
               </TouchableOpacity>
             </View>
+
+            <MobileSecuritySettings email={email || currentEmail} phone={phone} />
 
             <View style={{ height: 24 }} />
           </ScrollView>

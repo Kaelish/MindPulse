@@ -317,8 +317,9 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
   const setupStarted = Boolean(totpEnrollment || contactChallenge);
   const activeOption = activeMethod ? methodById(activeMethod) : null;
 
-  const destinationValue = method === 'email' ? emailAddress : whatsappNumber;
-  const destinationFieldLabel = method === 'email' ? 'Email address' : 'WhatsApp number';
+  const destinationValue = method === 'email' ? emailAddress : method === 'sms' ? phoneNumber : whatsappNumber;
+  const destinationFieldLabel = method === 'email' ? 'Email address' : method === 'sms' ? 'Mobile number' : 'WhatsApp number';
+  const destinationProblem = method === 'totp' ? null : destinationError(method, destinationValue);
   const projectRef = /https:\/\/([a-z0-9]+)\.supabase\.co/.exec(process.env.REACT_APP_SUPABASE_URL ?? '')?.[1] ?? '';
   const needsResetSetup = /0029_reset_own_mfa_factors|mfa-reset service is not reachable/i.test(error);
 
@@ -414,7 +415,9 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
             {method === 'sms' && (
               <label>
                 <span>MOBILE NUMBER</span>
-                <input type="tel" value={phoneNumber} placeholder={selectedMethod.destinationPlaceholder} onChange={(event) => setPhoneNumber(event.target.value)} disabled={setupStarted} />
+                <input type="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} disabled={setupStarted} />
+                <small className="profile-security-session-note">Use a Philippines local number or include its country calling code.</small>
+                {destinationProblem && <small className="profile-security-session-error" role="alert">{destinationProblem}</small>}
               </label>
             )}
 
@@ -424,10 +427,11 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
                 <input
                   type={method === 'email' ? 'email' : 'tel'}
                   value={destinationValue}
-                  placeholder={selectedMethod.destinationPlaceholder}
                   onChange={(event) => (method === 'email' ? setEmailAddress(event.target.value) : setWhatsappNumber(event.target.value))}
                   disabled={Boolean(contactChallenge)}
                 />
+                {method === 'whatsapp' && <small className="profile-security-session-note">Use a Philippines local number or include its country calling code.</small>}
+                {destinationProblem && <small className="profile-security-session-error" role="alert">{destinationProblem}</small>}
               </label>
             )}
 
@@ -450,7 +454,7 @@ export const ProfileSecurityPanel: React.FC<ProfileSecurityPanelProps> = ({ edit
             )}
 
             {!setupStarted && (
-              <button className="profile-security-primary" type="button" onClick={() => void startVerificationSetup()} disabled={verificationBusy || verificationLoading}>
+              <button className="profile-security-primary" type="button" onClick={() => void startVerificationSetup()} disabled={verificationBusy || verificationLoading || Boolean(destinationProblem)}>
                 {verificationBusy ? 'Starting…' : method === 'totp' ? 'Show QR Code' : method === 'sms' ? 'Send SMS Code' : `Send ${method === 'email' ? 'Email' : 'WhatsApp'} Code`}
               </button>
             )}

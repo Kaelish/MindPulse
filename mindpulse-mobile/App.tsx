@@ -41,6 +41,7 @@ import { BackButton } from './src/components/navigation/BackButton';
 import { saveNewStressSession } from './src/services/dashboard';
 import { recordPlantSession } from './src/services/plantProgress';
 import { AppRole, getCurrentUserRole, isAccountDeactivated, reactivateOwnAccount } from './src/services/session';
+import { startProfileSessionMonitor } from './src/services/profileSessions';
 import { isRememberMeEnabled } from './src/services/rememberMe';
 import { Colors } from './src/theme/colors';
 import { supabase } from './src/supabase/client';
@@ -319,6 +320,38 @@ function App() {
       setClinicTabReq(null);
     }
   }, [currentTab]);
+
+  useEffect(() => {
+    if (screenMode !== 'main') return;
+    let cancelled = false;
+    let stop: (() => void) | undefined;
+    const label = userRole === 'admin' ? 'Admin mobile'
+      : userRole === 'doctor' ? 'Doctor mobile'
+        : 'MindPulse mobile';
+    void startProfileSessionMonitor(label)
+      .then((disconnect) => {
+        if (cancelled) disconnect();
+        else stop = disconnect;
+      })
+      .catch((cause: unknown) => {
+        console.warn('[MindPulse] mobile session tracking could not start', cause);
+      });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [screenMode, userRole]);
+
+  useEffect(() => {
+    if (screenMode !== 'main') return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+      setUserRole(null);
+      setAuthTab('login');
+      changeScreen('onboarding');
+    });
+    return () => subscription.unsubscribe();
+  }, [screenMode]);
 
   useEffect(() => {
     const isStudent =

@@ -1,5 +1,6 @@
 import { Factor } from '@supabase/supabase-js';
 import { supabase } from '../supabase/client';
+import { normalizePhoneNumber, validatePhoneNumber } from './internationalPhone';
 
 export type VerificationMethod = 'totp' | 'sms' | 'email' | 'whatsapp';
 export type VerificationMethodChoice = VerificationMethod | 'none';
@@ -81,7 +82,7 @@ const METADATA_VERIFIED_AT = 'verification_verified_at';
 const METADATA_DISABLED = 'verification_disabled';
 const SESSION_FLAG_PREFIX = 'mindpulse:verified:';
 
-const normalizePhone = (value: string) => value.replace(/[^\d+]/g, '');
+const normalizePhone = (value: string) => normalizePhoneNumber(value.replace(/[^\d+]/g, ''));
 
 export const normalizeVerificationDestination = (method: VerificationMethod, value: string) => {
   if (method === 'email') return value.trim().toLowerCase();
@@ -95,9 +96,8 @@ export const destinationError = (method: VerificationMethod, value: string): str
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(destination) ? null : 'Enter a valid email address.';
   }
   if (method === 'totp') return null;
-  return /^\+[1-9]\d{7,14}$/.test(destination)
-    ? null
-    : 'Enter a phone number in international format, for example +639170000000.';
+  if (!destination) return 'Enter a phone number.';
+  return validatePhoneNumber(destination);
 };
 
 const currentUser = async () => {
