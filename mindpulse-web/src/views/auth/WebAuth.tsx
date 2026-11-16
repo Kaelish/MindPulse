@@ -87,6 +87,8 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
      migration 0031's trigger turns into a consent_records row, via the
      consent_source flag sent with signUp() below. */
   const [regConsent, setRegConsent] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     setShowPassword(false);
@@ -616,7 +618,31 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
                   checked={regConsent}
                   onChange={(e) => setRegConsent(e.target.checked)}
                 />
-                <span>I have read and agree to the Privacy Policy and Terms of Use.</span>
+                <span>
+                  I have read and agree to the{' '}
+                  <button
+                    type="button"
+                    className="auth-consent-link"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setShowPrivacyModal(true);
+                    }}
+                  >
+                    Privacy Policy
+                  </button>{' '}
+                  and{' '}
+                  <button
+                    type="button"
+                    className="auth-consent-link"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setShowTermsModal(true);
+                    }}
+                  >
+                    Terms of Use
+                  </button>
+                  .
+                </span>
               </label>
               {errorMessage && <p className="auth-error">{errorMessage}</p>}
               {infoMessage && <p className="auth-error">{infoMessage}</p>}
@@ -630,6 +656,98 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
                 Sign in
               </button>
             </p>
+
+            {showPrivacyModal && (
+              <div className="policy-modal-overlay" onClick={() => setShowPrivacyModal(false)}>
+                <div className="policy-modal-box" onClick={(event) => event.stopPropagation()}>
+                  <div className="policy-modal-header">
+                    <h3>Privacy Policy</h3>
+                    <button
+                      type="button"
+                      className="policy-modal-close"
+                      onClick={() => setShowPrivacyModal(false)}
+                      aria-label="Close Privacy Policy"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="policy-modal-body">
+                    <p>
+                      MindPulse collects and processes your personal information
+                      (name, email, contact number, addresses, license number,
+                      specialization, and professional details) solely to create
+                      and administer your doctor account, match you with
+                      patients, and operate the care platform.
+                    </p>
+                    <p>
+                      Your data is stored securely and is not sold to third
+                      parties. It may be shared with administrators and the
+                      patients you treat for the purpose of delivering care.
+                      You may request access to, correction of, or deletion of
+                      your data by contacting MindPulse support.
+                    </p>
+                    <p>
+                      By registering, you consent to this processing as
+                      described in this Privacy Policy.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="policy-modal-close-btn"
+                    onClick={() => setShowPrivacyModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showTermsModal && (
+              <div className="policy-modal-overlay" onClick={() => setShowTermsModal(false)}>
+                <div className="policy-modal-box" onClick={(event) => event.stopPropagation()}>
+                  <div className="policy-modal-header">
+                    <h3>Terms of Use</h3>
+                    <button
+                      type="button"
+                      className="policy-modal-close"
+                      onClick={() => setShowTermsModal(false)}
+                      aria-label="Close Terms of Use"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="policy-modal-body">
+                    <p>
+                      These Terms of Use govern your use of the MindPulse
+                      platform as a registered doctor. By creating an account,
+                      you agree to these terms.
+                    </p>
+                    <p>
+                      You must provide accurate professional information and
+                      maintain a valid, active license. You are responsible for
+                      the care you deliver through the platform and for
+                      complying with applicable laws and professional standards.
+                    </p>
+                    <p>
+                      MindPulse may suspend or terminate accounts that violate
+                      these terms. Use of the platform is at your own risk;
+                      MindPulse provides the platform "as is" without warranty.
+                    </p>
+                    <p>
+                      These terms may be updated; continued use after changes
+                      constitutes acceptance of the revised terms.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="policy-modal-close-btn"
+                    onClick={() => setShowTermsModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
