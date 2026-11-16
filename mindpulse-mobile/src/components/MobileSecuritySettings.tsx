@@ -2,15 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { AuthenticatorQrCode } from './AuthenticatorQrCode';
 import { Colors } from '../theme/colors';
 import { tone, toneBg } from '../theme/theme';
 import {
@@ -46,12 +44,6 @@ const initialSessions: ProfileSessionsState = {
   message: 'Connecting to the live session service…',
   notice: '',
 };
-
-const escapeHtml = (value: string) => value
-  .replace(/&/g, '&amp;')
-  .replace(/"/g, '&quot;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;');
 
 export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ email, phone }) => {
   const [method, setMethod] = useState<VerificationMethod>('totp');
@@ -209,9 +201,9 @@ export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ 
   };
 
   const activeOption = VERIFICATION_METHODS.find((item) => item.id === activeMethod);
-  const qrHtml = enrollment
-    ? `<html><meta name="viewport" content="width=device-width, initial-scale=1"><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#fff"><img alt="Authenticator QR code" src="${escapeHtml(enrollment.qrCode)}" style="width:220px;height:220px"></body></html>`
-    : '';
+  const destinationValue = method === 'email' ? emailAddress : method === 'sms' ? phoneNumber : whatsappNumber;
+  const destinationProblem = method === 'totp' ? null : destinationError(method, destinationValue);
+  const confirmDisabled = busy || code.length !== 6;
 
   return (
     <>
@@ -259,39 +251,52 @@ export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ 
           </View>
         ) : (
           <View style={styles.setupArea}>
-            {method === 'sms' && <TextInput style={styles.input} value={phoneNumber} onChangeText={setPhoneNumber} placeholder="+63 917 000 0000" keyboardType="phone-pad" editable={!contactChallenge} />}
-            {method === 'email' && <TextInput style={styles.input} value={emailAddress} onChangeText={setEmailAddress} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" editable={!contactChallenge} />}
-            {method === 'whatsapp' && <TextInput style={styles.input} value={whatsappNumber} onChangeText={setWhatsappNumber} placeholder="+63 917 000 0000" keyboardType="phone-pad" editable={!contactChallenge} />}
+            {method === 'sms' && (
+              <>
+                <Text style={styles.fieldLabel}>Mobile number (Philippines local number or include country code)</Text>
+                <TextInput style={styles.input} value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" editable={!contactChallenge} accessibilityLabel="Mobile number" />
+                {destinationProblem && <Text style={styles.inputError}>{destinationProblem}</Text>}
+              </>
+            )}
+            {method === 'email' && (
+              <>
+                <Text style={styles.fieldLabel}>Email address</Text>
+                <TextInput style={styles.input} value={emailAddress} onChangeText={setEmailAddress} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} editable={!contactChallenge} accessibilityLabel="Email address" />
+                {destinationProblem && <Text style={styles.inputError}>{destinationProblem}</Text>}
+              </>
+            )}
+            {method === 'whatsapp' && (
+              <>
+                <Text style={styles.fieldLabel}>WhatsApp number (Philippines local number or include country code)</Text>
+                <TextInput style={styles.input} value={whatsappNumber} onChangeText={setWhatsappNumber} keyboardType="phone-pad" editable={!contactChallenge} accessibilityLabel="WhatsApp number" />
+                {destinationProblem && <Text style={styles.inputError}>{destinationProblem}</Text>}
+              </>
+            )}
             {enrollment && (
               <>
                 <View style={styles.qrContainer}>
-                  {Platform.OS === 'web' ? (
-                    <Image
-                      source={{ uri: enrollment.qrCode }}
-                      style={styles.qrImage}
-                      resizeMode="contain"
-                      accessibilityLabel="Authenticator enrollment QR code"
-                    />
-                  ) : (
-                    <WebView source={{ html: qrHtml }} originWhitelist={['*']} scrollEnabled={false} />
-                  )}
+                  <AuthenticatorQrCode source={enrollment.qrCode} />
                 </View>
                 <Text style={styles.description}>Scan the QR code with your authenticator app, then enter its six-digit code.</Text>
               </>
             )}
             {(enrollment || contactChallenge) && (
               <>
+                <Text style={styles.fieldLabel}>Verification code</Text>
                 <TextInput
                   style={styles.input}
                   value={code}
                   onChangeText={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Six-digit verification code"
                   keyboardType="number-pad"
                   maxLength={6}
                   accessibilityLabel="Verification code"
                 />
-                <Pressable style={styles.primaryButton} onPress={() => void confirmSetup()} disabled={busy || code.length !== 6}>
-                  <Text style={styles.primaryText}>{busy ? 'Verifying…' : 'Verify and Enable'}</Text>
+                <Pressable
+                  style={[styles.primaryButton, confirmDisabled && styles.buttonDisabled]}
+                  onPress={() => void confirmSetup()}
+                  disabled={confirmDisabled}
+                >
+                  <Text style={[styles.primaryText, confirmDisabled && styles.disabledPrimaryText]}>{busy ? 'Verifying…' : 'Verify and Enable'}</Text>
                 </Pressable>
                 {contactChallenge && (
                   <Pressable
@@ -312,8 +317,12 @@ export const MobileSecuritySettings: React.FC<MobileSecuritySettingsProps> = ({ 
               </>
             )}
             {!enrollment && !contactChallenge && (
-              <Pressable style={styles.primaryButton} onPress={() => void startSetup()} disabled={busy}>
-                {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{method === 'totp' ? 'Set Up Authenticator' : `Send ${method === 'sms' ? 'SMS' : method === 'email' ? 'Email' : 'WhatsApp'} Code`}</Text>}
+              <Pressable
+                style={[styles.primaryButton, (busy || Boolean(destinationProblem)) && styles.buttonDisabled]}
+                onPress={() => void startSetup()}
+                disabled={busy || Boolean(destinationProblem)}
+              >
+                {busy ? <ActivityIndicator color="#fff" /> :                 <Text style={[styles.primaryText, Boolean(destinationProblem) && styles.disabledPrimaryText]}>{method === 'totp' ? 'Set Up Authenticator' : `Send ${method === 'sms' ? 'SMS' : method === 'email' ? 'Email' : 'WhatsApp'} Code`}</Text>}
               </Pressable>
             )}
             <Text style={styles.note}>Email, SMS, and WhatsApp codes use the Supabase verification-code service.</Text>
@@ -371,6 +380,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   description: { fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
+  fieldLabel: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary },
+  inputError: { fontSize: 11, lineHeight: 15, color: tone('#B42318') },
   methodCard: {
     padding: 12,
     gap: 5,
@@ -396,14 +407,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   primaryButton: { backgroundColor: toneBg('#5B6EF5'), borderRadius: 9, padding: 12, alignItems: 'center', minHeight: 42, justifyContent: 'center' },
+  buttonDisabled: { backgroundColor: toneBg('#CBD5E1') },
   primaryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  disabledPrimaryText: { color: tone('#64748B') },
   secondaryButton: { borderWidth: 1, borderColor: toneBg('#D6E0E8'), borderRadius: 9, padding: 11, alignItems: 'center' },
   secondaryText: { color: Colors.textPrimary, fontSize: 12, fontWeight: '700' },
   cancelButton: { alignItems: 'center', padding: 8 },
   note: { color: Colors.textSecondary, fontSize: 10, lineHeight: 15 },
   indicator: { padding: 14 },
   qrContainer: { width: 220, height: 220, overflow: 'hidden', alignSelf: 'center', backgroundColor: '#fff' },
-  qrImage: { width: '100%', height: '100%' },
   sessionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   status: { fontSize: 9, fontWeight: '800', color: tone('#5B6EF5') },
   sessionCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: toneBg('#E2E8F0'), paddingTop: 10 },

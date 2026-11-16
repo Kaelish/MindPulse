@@ -29,7 +29,10 @@ describe('mobile sign-in verification options', () => {
     expect(destinationError('email', 'not-an-email')).toBeTruthy();
     expect(normalizeVerificationDestination('sms', '+63 (917) 000-0000')).toBe('+639170000000');
     expect(destinationError('sms', '+639170000000')).toBeNull();
-    expect(destinationError('whatsapp', '09170000000')).toBeTruthy();
+    expect(destinationError('sms', '+61 41234567')).toMatch(/9 digits/);
+    expect(normalizeVerificationDestination('whatsapp', '09170000000')).toBe('+639170000000');
+    expect(destinationError('whatsapp', '09170000000')).toBeNull();
+    expect(destinationError('email', '')).toBeTruthy();
   });
 
   it('starts the saved email challenge when a sign-in verification method is enabled', async () => {

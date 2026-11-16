@@ -45,6 +45,7 @@ const FALLBACK_SLOTS = [
   '9:00 AM', '10:30 AM', '11:45 AM', '1:30 PM',
   '2:15 PM', '3:30 PM', '4:45 PM', '5:30 PM',
 ];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
@@ -743,6 +744,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
       setScheduleError('Please enter the patient full name and email to continue.');
       return;
     }
+    if (!EMAIL_RE.test(email)) {
+      setScheduleError('Enter a valid patient email address.');
+      return;
+    }
     setScheduleError(null);
     setScheduleChecking(true);
     try {
@@ -768,6 +773,10 @@ export const ConsultationsView: React.FC<ConsultationsViewProps> = ({ openTabReq
     setScheduleError(null);
     if (!patientName.trim() || !patientEmail.trim() || !selectedDate || !selectedTime) {
       setScheduleError('Please fill in the patient name and email, then pick a date and a time slot.');
+      return;
+    }
+    if (!EMAIL_RE.test(patientEmail.trim())) {
+      setScheduleError('Enter a valid patient email address.');
       return;
     }
 

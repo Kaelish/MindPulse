@@ -27,6 +27,7 @@ import {
   VerificationChallenge,
   verifySignInChallenge,
 } from '../../services/signInVerification';
+import { normalizePhoneNumber, validatePhoneNumber } from '../../services/internationalPhone';
 import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
@@ -36,7 +37,7 @@ interface AuthScreenProps {
   onAuthSuccess: (isNewUser: boolean) => void;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
 const GENDER_OPTIONS = ['Female', 'Male', 'Prefer not to say'];
 const EMAIL_CONFIRMATION_URL =
@@ -160,10 +161,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     if (!EMAIL_RE.test(email)) {
       return 'Please enter a valid e-mail address.';
     }
-    const digits = regPhone.replace(/\D/g, '');
-    if (digits.length < 7 || digits.length > 15) {
-      return 'Please enter a valid phone number (7 to 15 digits).';
-    }
+    if (!regPhone.trim()) return 'Please enter a phone number.';
+    const phoneError = validatePhoneNumber(regPhone);
+    if (phoneError) return phoneError;
     if (!DOB_RE.test(regDob)) {
       return 'Please pick your birth date from the calendar.';
     }
@@ -395,6 +395,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       Alert.alert('Check the form', problem);
       return;
     }
+    const normalizedPhone = normalizePhoneNumber(regPhone);
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -406,7 +407,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             mi,
-            phone: regPhone.trim(),
+            phone: normalizedPhone,
             birth_date: regDob,
             sex: regGender,
             // Only sent once the consent box was ticked (handleRegister rejects
@@ -450,7 +451,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
               role: 'student',
-              phone: regPhone.trim(),
+              phone: normalizedPhone,
               sex: regGender,
               birth_date: regDob,
               mi: mi.trim() || null,
@@ -553,12 +554,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     ? 'Open your authenticator app and enter the current code.'
                     : `Enter the code sent to ${verificationChallenge.destination}.`}
                 </Text>
+                <Text style={styles.label}>Verification Code</Text>
                 <TextInput
                   style={styles.input}
                   value={verificationCode}
                   onChangeText={(value) => setVerificationCode(value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Six-digit code"
-                  placeholderTextColor="#B0C4D8"
                   keyboardType="number-pad"
                   maxLength={6}
                   accessibilityLabel="Sign-in verification code"

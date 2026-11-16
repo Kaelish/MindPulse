@@ -23,6 +23,8 @@ interface PasswordInputProps {
   toggleLabel: string;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 const PasswordInput: React.FC<PasswordInputProps> = ({ value, onChange, placeholder, visible, onToggle, toggleLabel }) => (
   <span className="auth-password-field">
     <input
@@ -108,6 +110,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
       || !licenseNo.trim() || !finalSpecialization || !contactNumber.trim()
       || !title.trim() || !birthDate || !gender || !homeAddress.trim() || !clinicAddress.trim()) {
       setErrorMessage('Please complete all required fields to create your doctor account.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setErrorMessage('Enter a valid email address.');
       return;
     }
     if (birthDate > new Date().toISOString().slice(0, 10)) {
@@ -196,6 +202,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
       setErrorMessage('Please enter both your email and password.');
       return;
     }
+    if (!EMAIL_RE.test(email.trim())) {
+      setErrorMessage('Enter a valid email address.');
+      return;
+    }
 
     if (!supabase) {
       setErrorMessage('Supabase is not configured. Add your project URL and publishable key first.');
@@ -229,6 +239,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
 
     if (!email.trim()) {
       setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setErrorMessage('Enter a valid email address.');
       return;
     }
     if (!supabase) {
@@ -297,6 +311,10 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
     setInfoMessage('');
     if (!supabase || !email.trim()) {
       setErrorMessage('Enter your email address first, then request a new confirmation link.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setErrorMessage('Enter a valid email address.');
       return;
     }
     try {

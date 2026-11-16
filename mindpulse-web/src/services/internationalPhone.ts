@@ -47,8 +47,21 @@ export const formatPhoneNumber = (country: PhoneCountry, nationalNumber: string)
   return trimmedNumber ? `${country.callingCode} ${trimmedNumber}` : '';
 };
 
+export const normalizePhoneNumber = (value: string | null | undefined): string => {
+  const compactPhone = (value ?? '').replace(/[^\d+]/g, '');
+  if (compactPhone.startsWith('+') && !PHONE_COUNTRIES.some((country) => compactPhone.startsWith(country.callingCode))) {
+    return compactPhone;
+  }
+  const parsed = parsePhoneNumber(value);
+  return parsed.nationalNumber ? `${parsed.country.callingCode}${parsed.nationalNumber}` : '';
+};
+
 export const validatePhoneNumber = (value: string | null | undefined): string | null => {
   if (!value?.trim()) return null;
+  const compactPhone = value.replace(/[^\d+]/g, '');
+  if (compactPhone.startsWith('+') && !PHONE_COUNTRIES.some((country) => compactPhone.startsWith(country.callingCode))) {
+    return 'This country code is not supported. Select a supported country code.';
+  }
   const { country, nationalNumber } = parsePhoneNumber(value);
   if (!/^\d+$/.test(nationalNumber)) return 'Phone number must contain digits only.';
   if (!country.nationalDigits.includes(nationalNumber.length)) {

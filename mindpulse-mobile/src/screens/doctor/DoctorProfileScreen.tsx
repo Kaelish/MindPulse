@@ -43,7 +43,7 @@ const Field = ({
   value: string;
   onChangeText?: (text: string) => void;
   placeholder?: string;
-  keyboardType?: 'default' | 'numeric' | 'email-address';
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
   editable?: boolean;
 }) => (
   <View style={styles.field}>
@@ -218,7 +218,7 @@ export const DoctorProfileScreen: React.FC<DoctorProfileScreenProps> = ({ onSign
         <Field label="Last name" value={profile.lastName} onChangeText={(t) => update({ lastName: t })} />
         <Field label="Email (login)" value={profile.email} editable={false} />
         <Field label="Specialization" value={profile.specialty} onChangeText={(t) => update({ specialty: t })} placeholder="e.g. Clinical Psychologist" />
-        <Field label="Contact number" value={profile.phone} onChangeText={(t) => update({ phone: t })} placeholder="+63 …" keyboardType="default" />
+        <Field label="Contact number" value={profile.phone} onChangeText={(t) => update({ phone: t })} placeholder="+63 …" keyboardType="phone-pad" />
         <Field label="License no." value={profile.licenseId} onChangeText={(t) => update({ licenseId: t })} placeholder="PRC license number" />
         <Field label="Department" value={profile.department} onChangeText={(t) => update({ department: t })} placeholder="e.g. Guidance Center" />
 
