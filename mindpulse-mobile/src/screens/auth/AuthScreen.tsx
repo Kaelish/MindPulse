@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -143,6 +144,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
      migration 0031's trigger turns into a consent_records row, via the
      consent_source flag sent with signUp() below. */
   const [regConsent, setRegConsent] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   /* Prefill the e-mail (and tick the box) from the last "Remember me" sign-in. */
   useEffect(() => {
@@ -860,20 +863,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <Text style={styles.fieldError}>Passwords do not match</Text>
                 )}
 
-                <Pressable
-                  style={styles.consentRow}
-                  onPress={() => setRegConsent(v => !v)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: regConsent }}
-                  accessibilityLabel="I have read and agree to the Privacy Policy and Terms of Use"
-                >
-                  <View style={[styles.checkbox, { marginTop: 2 }, regConsent && styles.checkboxOn]}>
-                    {regConsent && <Ionicons name="checkmark" size={12} color={tone('#FFF')} />}
-                  </View>
+                <View style={styles.consentRow}>
+                  <Pressable
+                    onPress={() => setRegConsent(v => !v)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: regConsent }}
+                    accessibilityLabel="I agree to the Privacy Policy and Terms of Use"
+                  >
+                    <View style={[styles.checkbox, { marginTop: 2 }, regConsent && styles.checkboxOn]}>
+                      {regConsent && <Ionicons name="checkmark" size={12} color={tone('#FFF')} />}
+                    </View>
+                  </Pressable>
                   <Text style={styles.consentText}>
-                    I have read and agree to the Privacy Policy and Terms of Use.
+                    I have read and agree to the{' '}
+                    <Pressable onPress={() => setShowPrivacyModal(true)}>
+                      <Text style={styles.consentLink}>Privacy Policy</Text>
+                    </Pressable>{' '}
+                    and{' '}
+                    <Pressable onPress={() => setShowTermsModal(true)}>
+                      <Text style={styles.consentLink}>Terms of Use</Text>
+                    </Pressable>
+                    .
                   </Text>
-                </Pressable>
+                </View>
 
                 <Pressable
                   style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
@@ -891,6 +903,56 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     <Text style={styles.switchLink}>Sign In</Text>
                   </Pressable>
                 </View>
+
+                {/* ── Privacy Policy modal ── */}
+                {showPrivacyModal && (
+                  <Modal visible={showPrivacyModal} transparent animationType="fade" onRequestClose={() => setShowPrivacyModal(false)}>
+                    <View style={styles.policyOverlay}>
+                      <View style={[styles.policySheet, { maxHeight: '85%' }]} onStartShouldSetResponder={() => true}>
+                        <View style={styles.policyHandle} />
+                        <View style={styles.policyHeader}>
+                          <Text style={styles.policyHeaderTitle}>Privacy Policy</Text>
+                          <Pressable onPress={() => setShowPrivacyModal(false)} style={styles.policyCloseBtn}>
+                            <Ionicons name="close" size={18} color={tone('#64748B')} />
+                          </Pressable>
+                        </View>
+                        <ScrollView style={styles.policyScroll}>
+                          <Text style={styles.policyText}>
+                            {'MindPulse Privacy Policy (v1.0.0)\n\n1. Information We Collect: We collect name, email, survey answers, heart rate estimation, and reaction time scores.\n\n2. Facial Analysis Guarantee: All facial feature extraction is performed strictly on-device. No images, videos, or raw biometric landmarks are stored or transmitted.\n\n3. Educational Capstone Purpose: Data collected is used solely to calculate stress scores and render progress visualizations within the application.'}
+                          </Text>
+                        </ScrollView>
+                        <Pressable style={styles.policyCloseBtn} onPress={() => setShowPrivacyModal(false)}>
+                          <Text style={styles.policyCloseText}>Close Document</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </Modal>
+                )}
+
+                {/* ── Terms of Use modal ── */}
+                {showTermsModal && (
+                  <Modal visible={showTermsModal} transparent animationType="fade" onRequestClose={() => setShowTermsModal(false)}>
+                    <View style={styles.policyOverlay}>
+                      <View style={[styles.policySheet, { maxHeight: '85%' }]} onStartShouldSetResponder={() => true}>
+                        <View style={styles.policyHandle} />
+                        <View style={styles.policyHeader}>
+                          <Text style={styles.policyHeaderTitle}>Terms of Use</Text>
+                          <Pressable onPress={() => setShowTermsModal(false)} style={styles.policyCloseBtn}>
+                            <Ionicons name="close" size={18} color={tone('#64748B')} />
+                          </Pressable>
+                        </View>
+                        <ScrollView style={styles.policyScroll}>
+                          <Text style={styles.policyText}>
+                            {'MindPulse Terms of Use (v1.0.0)\n\n1. Acceptable Use: MindPulse is intended for personal wellness self-monitoring and research evaluation.\n\n2. Medical Disclaimer: Users acknowledge that MindPulse does not provide clinical diagnosis, emergency crisis care, or medical prescriptions.\n\n3. User Conduct: Accounts must be created using legitimate user information.'}
+                          </Text>
+                        </ScrollView>
+                        <Pressable style={styles.policyCloseBtn} onPress={() => setShowTermsModal(false)}>
+                          <Text style={styles.policyCloseText}>Close Document</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </Modal>
+                )}
               </View>
             )}
             </>
@@ -1106,6 +1168,7 @@ const makeStyles = () => StyleSheet.create({
   /* Registration consent row (M-04 / B-3) */
   consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 16, marginBottom: 2 },
   consentText: { flex: 1, fontSize: 12, lineHeight: 17, color: tone('#6B8CAA') },
+  consentLink: { fontSize: 12, lineHeight: 17, color: ACCENT, fontWeight: '700', textDecorationLine: 'underline' },
 
   /* Primary button */
   primaryBtn: {
@@ -1137,6 +1200,25 @@ const makeStyles = () => StyleSheet.create({
   },
   switchLabel: { fontSize: 13, color: tone('#8CA9C3') },
   switchLink: { fontSize: 13, fontWeight: '800', color: ACCENT },
+
+  /* Policy modals (Privacy Policy / Terms of Use) */
+  policyOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center' },
+  policySheet: {
+    backgroundColor: toneBg('#FAF8F3'),
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    maxHeight: '90%',
+    marginHorizontal: 24,
+    alignSelf: 'center',
+  },
+  policyHandle: { width: 36, height: 4, backgroundColor: toneBg('#CBD5E1'), borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 10 },
+  policyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  policyHeaderTitle: { fontSize: 17, fontWeight: '800', color: tone('#1A2E44') },
+  policyCloseBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: toneBg('#E2E8F0'), alignItems: 'center', justifyContent: 'center' },
+  policyScroll: { maxHeight: 420 },
+  policyText: { fontSize: 11.5, color: tone('#4A6680'), lineHeight: 18 },
+  policyCloseText: { color: tone('#FFF'), fontWeight: '800', fontSize: 13 },
 
   /* "Check your e-mail" panel */
   panel: {
