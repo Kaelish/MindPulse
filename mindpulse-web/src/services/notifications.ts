@@ -200,16 +200,10 @@ export const markFeedNotificationRead = async (id: string): Promise<void> => {
  */
 export const dismissFeedNotification = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
-  const viewerId = await requireViewerId();
-  const { error } = await supabase
-    .from('notifications')
-    .update({
-      is_deleted: true,
-      deleted_at: new Date().toISOString(),
-      deleted_by: viewerId,
-    })
-    .eq('id', id)
-    .eq('user_id', viewerId);
+  await requireViewerId();
+  const { error } = await supabase.rpc('archive_notification', {
+    p_notification_id: id,
+  });
   if (error) throw new Error(error.message);
 };
 
@@ -219,16 +213,10 @@ export const dismissFeedNotification = async (id: string): Promise<void> => {
  */
 export const restoreFeedNotification = async (id: string): Promise<void> => {
   if (!supabase) throw notConfigured();
-  const viewerId = await requireViewerId();
-  const { error } = await supabase
-    .from('notifications')
-    .update({
-      is_deleted: false,
-      deleted_at: null,
-      deleted_by: null,
-    })
-    .eq('id', id)
-    .eq('user_id', viewerId);
+  await requireViewerId();
+  const { error } = await supabase.rpc('restore_notification', {
+    p_notification_id: id,
+  });
   if (error) throw new Error(error.message);
 };
 

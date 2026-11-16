@@ -119,16 +119,10 @@ export const markNotificationRead = async (id: string): Promise<void> => {
  * again by restoreNotification below.
  */
 export const dismissNotification = async (id: string): Promise<void> => {
-  const userId = await requireUserId();
-  const { error } = await supabase
-    .from('notifications')
-    .update({
-      is_deleted: true,
-      deleted_at: new Date().toISOString(),
-      deleted_by: userId,
-    })
-    .eq('id', id)
-    .eq('user_id', userId);
+  await requireUserId();
+  const { error } = await supabase.rpc('archive_notification', {
+    p_notification_id: id,
+  });
   if (error) throw new Error(error.message);
 };
 
@@ -137,12 +131,10 @@ export const dismissNotification = async (id: string): Promise<void> => {
  * the row reappears in the feed. Pinned to the signed-in account.
  */
 export const restoreNotification = async (id: string): Promise<void> => {
-  const userId = await requireUserId();
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_deleted: false, deleted_at: null, deleted_by: null })
-    .eq('id', id)
-    .eq('user_id', userId);
+  await requireUserId();
+  const { error } = await supabase.rpc('restore_notification', {
+    p_notification_id: id,
+  });
   if (error) throw new Error(error.message);
 };
 
