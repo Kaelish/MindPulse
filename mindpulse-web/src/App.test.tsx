@@ -14,8 +14,14 @@ jest.mock('./supabase/client', () => ({
   },
 }));
 
+// App.tsx reads getCurrentUserRole for portal routing AND isAccountDeactivated
+// for the 0042 deactivation gate. Both must exist on the mock: the module is
+// replaced wholesale, so a missing export is `undefined` at the call site and
+// routeToPortal() rejects before it can ever set the portal. That silently
+// fails exactly the tests that sign a session in (pending screen, tab title).
 jest.mock('./services/session', () => ({
   getCurrentUserRole: jest.fn(),
+  isAccountDeactivated: jest.fn(),
 }));
 
 const mockedAuth = {

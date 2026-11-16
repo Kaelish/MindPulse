@@ -115,12 +115,18 @@ export const markNotificationRead = async (id: string): Promise<void> => {
 /**
  * Dismiss = soft-delete the row from my own list (B-2). Sets is_deleted = true
  * instead of destroying the row, so the notification is preserved for audit.
+ * deleted_by records who archived it (mirrors the web portal) and is cleared
+ * again by restoreNotification below.
  */
 export const dismissNotification = async (id: string): Promise<void> => {
   const userId = await requireUserId();
   const { error } = await supabase
     .from('notifications')
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: userId,
+    })
     .eq('id', id)
     .eq('user_id', userId);
   if (error) throw new Error(error.message);

@@ -25,6 +25,7 @@ import {
   notificationFullTime,
   subscribeToMyNotificationFeed,
 } from '../services/notifications';
+import { RecentlyDeletedNotifications } from './RecentlyDeletedNotifications';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../theme/theme';
 
 interface DoctorNotificationsProps {
@@ -58,6 +59,7 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(false);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const listRef = useRef<React.ElementRef<typeof ScrollView> | null>(null);
 
@@ -335,9 +337,35 @@ export const DoctorNotifications: React.FC<DoctorNotificationsProps> = ({ varian
                 </ScrollView>
               )}
             </View>
+
+            {/* Recently Deleted — the archive target of the ✕ above. */}
+            {!loading && !error && (
+              <View style={styles.trashRow}>
+                <TouchableOpacity
+                  style={styles.trashBtn}
+                  onPress={() => setTrashOpen(true)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open recently deleted notifications"
+                >
+                  <Ionicons name="trash-outline" size={15} color={tone('#5B6EF5')} />
+                  <Text style={styles.trashBtnText}>Recently Deleted</Text>
+                  <Ionicons name="chevron-forward" size={15} color={tone('#5B6EF5')} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
+
+      <RecentlyDeletedNotifications
+        visible={trashOpen}
+        onClose={() => setTrashOpen(false)}
+        onRestored={() => {
+          refreshUnread();
+          setReloadKey((key) => key + 1);
+        }}
+      />
     </>
   );
 };
@@ -472,6 +500,26 @@ const makeStyles = () => StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.divider,
   },
+
+  trashRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    marginTop: 2,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+  },
+  trashBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 12,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: tone('#5B6EF5'),
+  },
+  trashBtnText: { fontSize: 13, fontWeight: '900', color: tone('#5B6EF5') },
 });
 
 let styles = makeStyles();

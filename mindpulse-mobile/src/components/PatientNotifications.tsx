@@ -28,6 +28,7 @@ import {
 } from '../services/notifications';
 import { StressBand, stressBandFor } from '../services/selfCareTips';
 import { SelfCareModal } from './SelfCareModal';
+import { RecentlyDeletedNotifications } from './RecentlyDeletedNotifications';
 import { registerThemeStyles, tone, toneBg, toneBtn } from '../theme/theme';
 
 export type PatientNotificationTab = 'home' | 'analysis' | 'clinics' | 'profile';
@@ -132,6 +133,7 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [suggestBand, setSuggestBand] = useState<StressBand>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const refreshUnread = useCallback(() => {
     fetchUnreadNotificationCount()
@@ -472,6 +474,24 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
                 </TouchableOpacity>
               </View>
             )}
+
+            {/* Reachable even when the feed is empty — an empty active list is
+                exactly when you still need to get an archived row back. */}
+            {!loading && !error && (
+              <View style={styles.trashRow}>
+                <TouchableOpacity
+                  style={styles.trashBtn}
+                  onPress={() => setTrashOpen(true)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open recently deleted notifications"
+                >
+                  <Ionicons name="trash-outline" size={15} color={tone('#5B6EF5')} />
+                  <Text style={styles.trashBtnText}>Recently Deleted</Text>
+                  <Ionicons name="chevron-forward" size={15} color={tone('#5B6EF5')} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -483,6 +503,15 @@ export const PatientNotifications: React.FC<PatientNotificationsProps> = ({
         onClose={() => setSuggestBand(null)}
         onOpenAnalysis={() => onNavigateTab?.('analysis')}
         onOpenClinics={() => onNavigateTab?.('clinics')}
+      />
+
+      <RecentlyDeletedNotifications
+        visible={trashOpen}
+        onClose={() => setTrashOpen(false)}
+        onRestored={() => {
+          refreshUnread();
+          setReloadKey((key) => key + 1);
+        }}
       />
     </>
   );
@@ -676,6 +705,23 @@ const makeStyles = () => StyleSheet.create({
   actionText: { fontSize: 13, fontWeight: '900' },
   actionTextFill: { color: '#FFFFFF' },
   actionTextGhost: { color: tone('#5B6EF5') },
+
+  trashRow: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+  },
+  trashBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 12,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: tone('#5B6EF5'),
+  },
+  trashBtnText: { fontSize: 13, fontWeight: '900', color: tone('#5B6EF5') },
 });
 
 let styles = makeStyles();
