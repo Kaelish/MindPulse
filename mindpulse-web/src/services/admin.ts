@@ -399,8 +399,11 @@ export const fetchAdminAccounts = async (
     .select('id, first_name, last_name, email, phone, program, year_level, student_no, avatar_url, onboarding_complete, created_at, is_deactivated, deactivated_at')
     .eq('role', role)
     .order('created_at', { ascending: false });
-  // Hidden from the active list, visible in the archived view.
-  if (!options?.includeDeactivated) query = query.is('deleted_at', null);
+  // Active view: only live accounts. Archived view: only deactivated ones, so
+  // the list is empty when nobody has been deactivated.
+  query = options?.includeDeactivated
+    ? query.eq('is_deactivated', true)
+    : query.is('deleted_at', null).eq('is_deactivated', false);
   const { data: profiles, error } = await query;
   if (error) throw new Error(error.message);
   const rows = (profiles ?? []) as AccountProfileRow[];

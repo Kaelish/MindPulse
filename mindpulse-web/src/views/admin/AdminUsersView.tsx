@@ -130,12 +130,17 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
         </header>
 
         {!isLoading && !loadError && (
-          <section className="user-summary-grid">
-            <Summary label="Total Accounts" value={String(accounts.length)} />
-            <Summary label="New This Week" value={String(newThisWeek)} />
-            <Summary label="Active" value={String(activeAccounts)} />
-            <Summary label="Pending" value={String(pendingAccounts)} />
-            {showDeactivated && <Summary label="Deactivated" value={String(deactivatedAccounts)} />}
+          <section className="user-summary-grid" aria-label="Account summary">
+            {showDeactivated ? (
+              <Summary label="Deactivated" value={String(deactivatedAccounts)} />
+            ) : (
+              <>
+                <Summary label="Total Accounts" value={String(accounts.length)} />
+                <Summary label="New This Week" value={String(newThisWeek)} />
+                <Summary label="Active" value={String(activeAccounts)} />
+                <Summary label="Pending" value={String(pendingAccounts)} />
+              </>
+            )}
           </section>
         )}
 
@@ -233,7 +238,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                   })}
                 </tbody>
               </table>
-              {filteredAccounts.length === 0 && <p className="empty-table">{search ? 'No accounts match your search.' : `No ${activeRole === 'Doctors' ? 'doctor' : 'patient'} accounts yet.`}</p>}
+              {filteredAccounts.length === 0 && (
+                <p className="empty-table">
+                  {search
+                    ? 'No accounts match your search.'
+                    : showDeactivated
+                      ? `No deactivated ${activeRole === 'Doctors' ? 'doctor' : 'patient'} accounts.`
+                      : `No ${activeRole === 'Doctors' ? 'doctor' : 'patient'} accounts yet.`}
+                </p>
+              )}
             </div>
           )}
         </section>
