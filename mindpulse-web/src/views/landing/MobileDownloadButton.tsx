@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import {
   MOBILE_APP_DOWNLOAD_URL,
-  MOBILE_APP_INSTALL_URL,
   isDownloadUrlConfigured,
 } from './landingConfig';
 
@@ -52,7 +51,7 @@ export const MobileDownloadButton: React.FC<MobileDownloadButtonProps> = ({
 
     let active = true;
     setQrError('');
-    void QRCode.toDataURL(MOBILE_APP_INSTALL_URL, {
+    void QRCode.toDataURL(href, {
       errorCorrectionLevel: 'M',
       margin: 2,
       width: 180,
