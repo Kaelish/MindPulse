@@ -73,7 +73,8 @@ test('the Deactivated view asks for archived accounts only and offers Reactivate
   await waitFor(() => expect(mockFetch).toHaveBeenLastCalledWith('doctor', { includeDeactivated: true }));
   const table = within(await screen.findByRole('table'));
   expect(table.getByText('Dr. Reyes')).toBeInTheDocument();
-  expect(table.getByText('Deactivated')).toBeInTheDocument();
+  expect(table.getByText('Inactive')).toBeInTheDocument();
+  expect(table.queryByText('Active')).not.toBeInTheDocument();
   expect(table.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
   expect(summary().getByText('Deactivated')).toBeInTheDocument();
   expect(summary().queryByText('Total Accounts')).not.toBeInTheDocument();

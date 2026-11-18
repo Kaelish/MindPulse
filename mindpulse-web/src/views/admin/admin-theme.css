@@ -608,6 +608,7 @@
 }
 
 /* Deactivated / deleted account (0042): deliberately neutral, not a warning. */
+.admin-scope .status-inactive,
 .admin-scope .status-deactivated {
   background: rgba(100, 116, 139, 0.16);
   color: #64748b;

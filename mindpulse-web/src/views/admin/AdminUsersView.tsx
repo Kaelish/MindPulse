@@ -161,8 +161,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                 <tbody>
                   {filteredAccounts.map((account) => {
                     const isSelf = myId !== null && account.id === myId;
-                    const status = account.isDeactivated
-                      ? 'Deactivated'
+                    // Archived view is deactivated-only, so every row is
+                    // inactive no matter what the verification flags say.
+                    const status = showDeactivated || account.isDeactivated
+                      ? 'Inactive'
                       : activeRole === 'Doctors'
                         ? (account.isVerified ? 'Active' : 'Pending')
                         : (account.onboardingComplete ? 'Active' : 'Pending');
@@ -272,9 +274,9 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onSignOut, onNav
                 <div>
                   <h2>{viewing.name}</h2>
                   <p>{viewing.email}</p>
-                  <span className={`status-pill status-${viewing.isDeactivated ? 'deactivated' : (viewing.isVerified || (viewing.role === 'student' && viewing.onboardingComplete)) ? 'active' : 'pending'}`}>
+                  <span className={`status-pill status-${viewing.isDeactivated ? 'inactive' : (viewing.isVerified || (viewing.role === 'student' && viewing.onboardingComplete)) ? 'active' : 'pending'}`}>
                     {viewing.isDeactivated
-                      ? 'Deactivated'
+                      ? 'Inactive'
                       : viewing.role === 'doctor'
                         ? (viewing.isVerified ? 'Verified' : 'Pending approval')
                         : (viewing.onboardingComplete ? 'Onboarding complete' : 'Onboarding incomplete')}
