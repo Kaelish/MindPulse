@@ -9,6 +9,10 @@
 const DEFAULT_MOBILE_APP_DOWNLOAD_URL =
   'https://expo.dev/artifacts/eas/G4n8xJfG0gfSo40hK_-l4a301u8POTkPTMsuqx2ftn4.apk';
 
+/** EAS install page used by QR scanners, which may not follow APK redirects. */
+export const MOBILE_APP_INSTALL_URL =
+  'https://expo.dev/accounts/kraeyon/projects/mindpulse-mobile/builds/2978fb8f-3bbc-4146-8477-309e7151ad63';
+
 const configuredDownloadUrl = (process.env.REACT_APP_MOBILE_APP_DOWNLOAD_URL ?? '').trim();
 
 export const MOBILE_APP_DOWNLOAD_URL =
