@@ -1,8 +1,8 @@
 /**
  * Public landing page configuration.
  *
- * The current value is the direct EAS APK artifact URL, not the EAS build
- * dashboard URL. You can replace it with a permanent release URL later, or set
+ * The current value is the direct APK artifact URL. You can replace it with a
+ * permanent release URL later, or set
  * REACT_APP_MOBILE_APP_DOWNLOAD_URL in mindpulse-web/.env.local; the environment
  * value wins over the placeholder below.
  */

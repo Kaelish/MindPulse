@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { MOBILE_APP_DOWNLOAD_URL, isDownloadUrlConfigured } from './landingConfig';
+import {
+  MOBILE_APP_DOWNLOAD_URL,
+  isDownloadUrlConfigured,
+} from './landingConfig';
 
 const DownloadIcon: React.FC = () => (
   <svg
