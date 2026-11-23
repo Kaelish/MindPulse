@@ -47,6 +47,25 @@ After changing the app scheme or confirmation-link handling, restart Expo with
 `npx expo start -c`. An installed standalone build must be rebuilt so the
 `mindpulse` scheme is registered on the device.
 
+### Password reset e-mail links
+
+`Forgot Password` is solved in the browser, not with a native screen: the
+recovery link opens the web portal's Reset Password page, the person chooses a
+new password there, then returns to the app and signs in with it. The app sends
+`EXPO_PUBLIC_WEB_PORTAL_URL` (default `https://mindpulse-web.pages.dev`) as the
+Supabase `redirectTo`.
+
+For those mails to land on the reset page, Supabase
+Dashboard → Authentication → URL Configuration must list:
+
+```
+https://mindpulse-web.pages.dev
+https://mindpulse-web.pages.dev/
+```
+
+Set **Site URL** to `https://mindpulse-web.pages.dev` as well, so an older build
+that does not yet send `redirectTo` still falls back to the working web page.
+
 ## Current Architecture & Workarounds
 
 ### 1. Authentication
