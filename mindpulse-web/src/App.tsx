@@ -254,14 +254,29 @@ function PendingApprovalView({ onSignOut, onRecheck }: { onSignOut: () => void; 
   );
 }
 
+/**
+ * Password-recovery e-mails come back to the Site URL with the recovery token
+ * in the URL hash. That session must open the reset form for every role —
+ * otherwise a patient is routed to the staff-only "No portal access" screen
+ * and can never choose a new password.
+ */
+const isPasswordRecoveryLink = () => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return params.get('type') === 'recovery';
+};
+
 function App() {
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
+  // Captured once per mount, before Supabase consumes the recovery hash.
+  const [recoveryMode] = useState(isPasswordRecoveryLink);
+  const recoveringRef = useRef(recoveryMode);
+  const [authScreen, setAuthScreen] = useState<AuthScreen>(recoveryMode ? 'reset' : 'login');
   // Public landing page is the first screen; Log In (or signing out) opens the
   // existing web login without touching the Admin/Doctor portal routing below.
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(recoveryMode);
   const [portal, setPortal] = useState<Portal | null>(null);
   const [checkingSession, setCheckingSession] = useState(
-    () => Boolean(supabase && typeof supabase.auth.getSession === 'function'),
+    () => !recoveryMode && Boolean(supabase && typeof supabase.auth.getSession === 'function'),
   );
   const [verification, setVerification] = useState<VerificationChallenge | null>(null);
   const [verificationFailure, setVerificationFailure] = useState('');
@@ -276,6 +291,7 @@ function App() {
   }, [portal]);
 
   const routeToPortal = async (): Promise<Portal> => {
+    if (recoveringRef.current) return 'unauthorized';
     if (routingRef.current) return routingRef.current;
     const work = (async (): Promise<Portal> => {
       try {
@@ -331,7 +347,13 @@ function App() {
       Promise.resolve(supabase.auth.getSession())
         .then(async ({ data }) => {
           if (cancelled) return;
-          if (data.session) await routeToPortal();
+          if (recoveringRef.current) {
+            // Supabase has stored the recovery session by now. Drop the token
+            // from the address bar and keep the reset form on screen.
+            window.history.replaceState(null, '', window.location.pathname);
+          } else if (data.session) {
+            await routeToPortal();
+          }
           if (!cancelled) setCheckingSession(false);
         })
         .catch(() => {
@@ -343,11 +365,22 @@ function App() {
     if (typeof supabase.auth.onAuthStateChange === 'function') {
       try {
         const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            recoveringRef.current = true;
+            setPortal(null);
+            setVerification(null);
+            setVerificationFailure('');
+            setDeactivated(false);
+            setAuthScreen('reset');
+            setShowLogin(true);
+            return;
+          }
           if (event === 'SIGNED_IN') {
             // A password re-check inside Security also emits SIGNED_IN; do not
             // restart the portal or ask for a fresh verification in that case.
-            if (!portalRef.current) void routeToPortal();
+            if (!recoveringRef.current && !portalRef.current) void routeToPortal();
           } else if (event === 'SIGNED_OUT') {
+            recoveringRef.current = false;
             clearAdminIdentity();
             setPortal(null);
             setVerification(null);
@@ -373,6 +406,7 @@ function App() {
     // Local/this-device only: other signed-in devices stay connected and keep
     // appearing in Active Login Sessions.
     await signOutCurrentDevice();
+    recoveringRef.current = false;
     clearAdminIdentity();
     setPortal(null);
     setVerification(null);

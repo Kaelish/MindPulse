@@ -299,7 +299,16 @@ export const WebAuth: React.FC<WebAuthProps> = ({ screen, setScreen, onBackToLan
         );
         return;
       }
-      setInfoMessage('Password updated. You can sign in now.');
+      setInfoMessage(
+        'Password updated. Sign in with your new password — in the MindPulse mobile app if that is where you normally sign in.',
+      );
+      // The recovery session only exists to authorise this change; end it so
+      // the person signs in deliberately with the new password.
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // The password is already changed; a failed sign-out is not fatal.
+      }
       setScreen('login');
     } catch {
       setErrorMessage('Unable to update your password right now. Please try again.');

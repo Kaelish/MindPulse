@@ -31,6 +31,7 @@ const mockedAuth = {
 };
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/');
   mockedAuth.getSession?.mockResolvedValue({ data: { session: null } });
   (getCurrentUserRole as jest.Mock).mockReset();
 });
@@ -192,6 +193,26 @@ test('landing Log In opens the web login and Back to home returns to the landing
       name: 'Understand Your Stress. Connect with Care.',
     }),
   ).toBeInTheDocument();
+});
+
+test('a password-recovery link opens the reset form instead of the portal gate', async () => {
+  mockedAuth.getSession?.mockResolvedValue({
+    data: { session: { access_token: 'recovery-token', user: { id: 'patient-1' } } },
+  });
+  const mockedRole = getCurrentUserRole as jest.Mock;
+  mockedRole.mockResolvedValue('student');
+  window.history.replaceState(
+    null,
+    '',
+    '/#access_token=recovery-token&refresh_token=refresh-token&type=recovery',
+  );
+
+  render(<App />);
+
+  expect(await screen.findByRole('heading', { name: 'Reset Password' })).toBeInTheDocument();
+  expect(screen.queryByText('No portal access')).not.toBeInTheDocument();
+  expect(mockedRole).not.toHaveBeenCalled();
+  expect(window.location.hash).toBe('');
 });
 
 test('tab title follows the portal instead of always showing the admin name', async () => {

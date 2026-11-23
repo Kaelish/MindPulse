@@ -37,6 +37,14 @@ import { registerThemeStyles, tone, toneBg } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
 
+/**
+ * Password-reset e-mails land on the web reset page: the link opens in the
+ * device browser, the person chooses a new password there, then signs in here.
+ * Override with EXPO_PUBLIC_WEB_PORTAL_URL if the portal moves domains.
+ */
+const PASSWORD_RESET_REDIRECT =
+  process.env.EXPO_PUBLIC_WEB_PORTAL_URL?.trim() || 'https://mindpulse-web.pages.dev';
+
 interface AuthScreenProps {
   initialTab?: 'login' | 'register';
   onAuthSuccess: (isNewUser: boolean) => void;
@@ -279,11 +287,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
     setResetting(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: PASSWORD_RESET_REDIRECT,
+      });
       if (error) throw new Error(describeAuthError(error));
       Alert.alert(
         'Reset link sent',
-        `If ${email} has a MindPulse account, a password reset link is on its way. Open it on this device, then choose a new password. Also check spam/junk.`,
+        `If ${email} has a MindPulse account, a password reset link is on its way. Open it in your browser, set a new password, then return here and sign in with the new password. Also check spam/junk.`,
       );
     } catch (err: any) {
       Alert.alert('Could not send reset e-mail', err?.message ?? 'Something went wrong.');
